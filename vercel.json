@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/download-pdf.js": {
+      "maxDuration": 30
+    },
+    "api/chat.js": {
+      "maxDuration": 60
+    }
+  }
+}
