@@ -288,7 +288,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 								showFullContent ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
 							}`}
 						>
-							Conspat
+							Conspat - Developer
 						</p>
 					</a>
 				</div>
