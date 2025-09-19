@@ -16,7 +16,7 @@ import {
 	ChevronRight,
 	Clipboard,
 	Microscope,
-	Brain,
+	// Brain,
 	FolderSearch,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -449,7 +449,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 						</>
 					)}
 
-					{(isOwner || isAdmin) && (
+					{/* {(isOwner || isAdmin) && (
 						<NavItem
 							to="/chat"
 							icon={<Brain className="stroke-2 size-5 shrink-0" />}
@@ -457,7 +457,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 							showFullContent={showFullContent}
 							onClick={onClose}
 						/>
-					)}
+					)} */}
 				</div>
 			</div>
 
