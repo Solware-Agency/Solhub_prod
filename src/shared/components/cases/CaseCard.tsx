@@ -4,6 +4,7 @@ import { User } from 'lucide-react'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import CaseActionsPopover from './CaseActionsPopover'
 import { getStatusColor } from './status'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
@@ -55,7 +56,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 
 				<div>
 					<p className="text-xs text-gray-500 dark:text-gray-400">Monto</p>
-					<p className="text-sm font-medium text-gray-900 dark:text-gray-100">${case_.total_amount.toLocaleString()}</p>
+					<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(case_.total_amount)}</p>
 				</div>
 			</div>
 

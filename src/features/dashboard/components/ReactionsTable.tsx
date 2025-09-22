@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@lib/supabase/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface ImmunoRequest {
 	id: string
@@ -310,7 +311,7 @@ const ReactionsTable: React.FC = () => {
 												onClick={() => startEditingPrice(request.id, request.precio_unitario)}
 												className="text-blue-600 hover:text-blue-800 hover:underline"
 											>
-												${request.precio_unitario.toFixed(2)}
+												{formatCurrency(request.precio_unitario)}
 											</button>
 										)}
 									</td>
@@ -321,7 +322,7 @@ const ReactionsTable: React.FC = () => {
 												: 'text-green-600 dark:text-green-400'
 										}`}
 									>
-										${request.total.toFixed(2)}
+										{formatCurrency(request.total)}
 									</td>
 								</tr>
 							)

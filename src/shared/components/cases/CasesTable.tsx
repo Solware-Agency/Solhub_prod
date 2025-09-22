@@ -19,6 +19,7 @@ import FiltersModal from './FiltersModal'
 import { getStatusColor } from './status'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface CasesTableProps {
 	cases: UnifiedMedicalRecord[]
@@ -862,14 +863,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														</td>
 														<td className="px-4 py-4">
 															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																${case_.total_amount.toLocaleString()}
+																{formatCurrency(case_.total_amount)}
 															</div>
 															{(() => {
 																const { missingAmount } = calculateCasePaymentStatus(case_)
 																return (
 																	missingAmount > 0 && (
 																		<div className="text-xs text-red-600 dark:text-red-400">
-																			Faltante: ${missingAmount.toFixed(2)}
+																			Faltante: {formatCurrency(missingAmount)}
 																		</div>
 																	)
 																)
@@ -1190,14 +1191,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														</td>
 														<td className="px-4 py-4">
 															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																${case_.total_amount.toLocaleString()}
+																{formatCurrency(case_.total_amount)}
 															</div>
 															{(() => {
 																const { missingAmount } = calculateCasePaymentStatus(case_)
 																return (
 																	missingAmount > 0 && (
 																		<div className="text-xs text-red-600 dark:text-red-400">
-																			Faltante: ${missingAmount.toFixed(2)}
+																			Faltante: {formatCurrency(missingAmount)}
 																		</div>
 																	)
 																)

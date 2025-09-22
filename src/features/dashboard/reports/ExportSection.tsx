@@ -9,6 +9,7 @@ import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 // import { exportTableToPdf } from '@shared/components/ui/pdf-export'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 const ExportSection: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
@@ -22,14 +23,7 @@ const ExportSection: React.FC = () => {
 	const [includeBranches, setIncludeBranches] = useState(true)
 	const [includePaymentStatus, setIncludePaymentStatus] = useState(true)
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	const handleExportPDF = async () => {
 		if (isLoading || !stats) {
@@ -98,199 +92,199 @@ const ExportSection: React.FC = () => {
 				{ content: stats.totalCases.toString() },
 			])
 
-            reportData.push([
-							{ content: 'Casos Pagados', styles: { fontStyle: 'bold' } },
-							{ content: stats.completedCases.toString() },
-							{ content: 'Casos Incompletos', styles: { fontStyle: 'bold' } },
-							{ content: stats.incompleteCases.toString() },
-						])
+			reportData.push([
+				{ content: 'Casos Pagados', styles: { fontStyle: 'bold' } },
+				{ content: stats.completedCases.toString() },
+				{ content: 'Casos Incompletos', styles: { fontStyle: 'bold' } },
+				{ content: stats.incompleteCases.toString() },
+			])
 
-						reportData.push([
-							{ content: 'Pagos Pendientes', styles: { fontStyle: 'bold' } },
-							{ content: formatCurrency(stats.pendingPayments) },
-							{ content: 'Pacientes Únicos', styles: { fontStyle: 'bold' } },
-							{ content: stats.uniquePatients.toString() },
-						])
+			reportData.push([
+				{ content: 'Pagos Pendientes', styles: { fontStyle: 'bold' } },
+				{ content: formatCurrency(stats.pendingPayments) },
+				{ content: 'Pacientes Únicos', styles: { fontStyle: 'bold' } },
+				{ content: stats.uniquePatients.toString() },
+			])
 
-						reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
+			reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
 
-						// Add doctors section if selected
-						if (includeDoctors && stats.topTreatingDoctors && stats.topTreatingDoctors.length > 0) {
-							reportData.push([
-								{
-									content: 'INGRESOS POR MÉDICO TRATANTE',
-									styles: {
-										halign: 'left',
-										fontStyle: 'bold',
-										fontSize: 12,
-										fillColor: [230, 240, 255],
-									},
-									colSpan: 4,
-								},
-							])
+			// Add doctors section if selected
+			if (includeDoctors && stats.topTreatingDoctors && stats.topTreatingDoctors.length > 0) {
+				reportData.push([
+					{
+						content: 'INGRESOS POR MÉDICO TRATANTE',
+						styles: {
+							halign: 'left',
+							fontStyle: 'bold',
+							fontSize: 12,
+							fillColor: [230, 240, 255],
+						},
+						colSpan: 4,
+					},
+				])
 
-							reportData.push([
-								{ content: 'Médico', styles: { fontStyle: 'bold' } },
-								{ content: 'Casos', styles: { fontStyle: 'bold' } },
-								{ content: 'Monto', styles: { fontStyle: 'bold' } },
-								{ content: '% del Total', styles: { fontStyle: 'bold' } },
-							])
+				reportData.push([
+					{ content: 'Médico', styles: { fontStyle: 'bold' } },
+					{ content: 'Casos', styles: { fontStyle: 'bold' } },
+					{ content: 'Monto', styles: { fontStyle: 'bold' } },
+					{ content: '% del Total', styles: { fontStyle: 'bold' } },
+				])
 
-							stats.topTreatingDoctors.forEach((doctor) => {
-								const percentage = ((doctor.revenue / stats.totalRevenue) * 100).toFixed(1)
-								reportData.push([
-									{ content: doctor.doctor },
-									{ content: doctor.cases.toString() },
-									{ content: formatCurrency(doctor.revenue) },
-									{ content: `${percentage}%` },
-								])
-							})
+				stats.topTreatingDoctors.forEach((doctor) => {
+					const percentage = ((doctor.revenue / stats.totalRevenue) * 100).toFixed(1)
+					reportData.push([
+						{ content: doctor.doctor },
+						{ content: doctor.cases.toString() },
+						{ content: formatCurrency(doctor.revenue) },
+						{ content: `${percentage}%` },
+					])
+				})
 
-							reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
-						}
+				reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
+			}
 
-						// Add origins section if selected
-						if (includeOrigins && stats.revenueByOrigin && stats.revenueByOrigin.length > 0) {
-							reportData.push([
-								{
-									content: 'INGRESOS POR PROCEDENCIA',
-									styles: {
-										halign: 'left',
-										fontStyle: 'bold',
-										fontSize: 12,
-										fillColor: [245, 230, 255],
-									},
-									colSpan: 4,
-								},
-							])
+			// Add origins section if selected
+			if (includeOrigins && stats.revenueByOrigin && stats.revenueByOrigin.length > 0) {
+				reportData.push([
+					{
+						content: 'INGRESOS POR PROCEDENCIA',
+						styles: {
+							halign: 'left',
+							fontStyle: 'bold',
+							fontSize: 12,
+							fillColor: [245, 230, 255],
+						},
+						colSpan: 4,
+					},
+				])
 
-							reportData.push([
-								{ content: 'Procedencia', styles: { fontStyle: 'bold' } },
-								{ content: 'Casos', styles: { fontStyle: 'bold' } },
-								{ content: 'Monto', styles: { fontStyle: 'bold' } },
-								{ content: '% del Total', styles: { fontStyle: 'bold' } },
-							])
+				reportData.push([
+					{ content: 'Procedencia', styles: { fontStyle: 'bold' } },
+					{ content: 'Casos', styles: { fontStyle: 'bold' } },
+					{ content: 'Monto', styles: { fontStyle: 'bold' } },
+					{ content: '% del Total', styles: { fontStyle: 'bold' } },
+				])
 
-							stats.revenueByOrigin.forEach((origin) => {
-								reportData.push([
-									{ content: origin.origin },
-									{ content: origin.cases.toString() },
-									{ content: formatCurrency(origin.revenue) },
-									{ content: `${origin.percentage.toFixed(1)}%` },
-								])
-							})
+				stats.revenueByOrigin.forEach((origin) => {
+					reportData.push([
+						{ content: origin.origin },
+						{ content: origin.cases.toString() },
+						{ content: formatCurrency(origin.revenue) },
+						{ content: `${origin.percentage.toFixed(1)}%` },
+					])
+				})
 
-							reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
-						}
+				reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
+			}
 
-						// Add exam types section if selected
-						if (includeExamTypes && stats.revenueByExamType && stats.revenueByExamType.length > 0) {
-							reportData.push([
-								{
-									content: 'INGRESOS POR TIPO DE EXAMEN',
-									styles: {
-										halign: 'left',
-										fontStyle: 'bold',
-										fontSize: 12,
-										fillColor: [230, 255, 240],
-									},
-									colSpan: 4,
-								},
-							])
+			// Add exam types section if selected
+			if (includeExamTypes && stats.revenueByExamType && stats.revenueByExamType.length > 0) {
+				reportData.push([
+					{
+						content: 'INGRESOS POR TIPO DE EXAMEN',
+						styles: {
+							halign: 'left',
+							fontStyle: 'bold',
+							fontSize: 12,
+							fillColor: [230, 255, 240],
+						},
+						colSpan: 4,
+					},
+				])
 
-							reportData.push([
-								{ content: 'Tipo de Examen', styles: { fontStyle: 'bold' } },
-								{ content: 'Casos', styles: { fontStyle: 'bold' } },
-								{ content: 'Monto', styles: { fontStyle: 'bold' } },
-								{ content: '% del Total', styles: { fontStyle: 'bold' } },
-							])
+				reportData.push([
+					{ content: 'Tipo de Examen', styles: { fontStyle: 'bold' } },
+					{ content: 'Casos', styles: { fontStyle: 'bold' } },
+					{ content: 'Monto', styles: { fontStyle: 'bold' } },
+					{ content: '% del Total', styles: { fontStyle: 'bold' } },
+				])
 
-							stats.revenueByExamType.forEach((exam) => {
-								const percentage = ((exam.revenue / stats.totalRevenue) * 100).toFixed(1)
-								reportData.push([
-									{ content: exam.examType },
-									{ content: exam.count.toString() },
-									{ content: formatCurrency(exam.revenue) },
-									{ content: `${percentage}%` },
-								])
-							})
+				stats.revenueByExamType.forEach((exam) => {
+					const percentage = ((exam.revenue / stats.totalRevenue) * 100).toFixed(1)
+					reportData.push([
+						{ content: exam.examType },
+						{ content: exam.count.toString() },
+						{ content: formatCurrency(exam.revenue) },
+						{ content: `${percentage}%` },
+					])
+				})
 
-							reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
-						}
+				reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
+			}
 
-						// Add branches section if selected
-						if (includeBranches && stats.revenueByBranch && stats.revenueByBranch.length > 0) {
-							reportData.push([
-								{
-									content: 'INGRESOS POR SEDE',
-									styles: {
-										halign: 'left',
-										fontStyle: 'bold',
-										fontSize: 12,
-										fillColor: [255, 240, 230],
-									},
-									colSpan: 4,
-								},
-							])
+			// Add branches section if selected
+			if (includeBranches && stats.revenueByBranch && stats.revenueByBranch.length > 0) {
+				reportData.push([
+					{
+						content: 'INGRESOS POR SEDE',
+						styles: {
+							halign: 'left',
+							fontStyle: 'bold',
+							fontSize: 12,
+							fillColor: [255, 240, 230],
+						},
+						colSpan: 4,
+					},
+				])
 
-							reportData.push([
-								{ content: 'Sede', styles: { fontStyle: 'bold' } },
-								{ content: 'Monto', styles: { fontStyle: 'bold' } },
-								{ content: '% del Total', styles: { fontStyle: 'bold' } },
-								{ content: '' },
-							])
+				reportData.push([
+					{ content: 'Sede', styles: { fontStyle: 'bold' } },
+					{ content: 'Monto', styles: { fontStyle: 'bold' } },
+					{ content: '% del Total', styles: { fontStyle: 'bold' } },
+					{ content: '' },
+				])
 
-							stats.revenueByBranch.forEach((branch) => {
-								reportData.push([
-									{ content: branch.branch },
-									{ content: formatCurrency(branch.revenue) },
-									{ content: `${branch.percentage.toFixed(1)}%` },
-									{ content: '' },
-								])
-							})
+				stats.revenueByBranch.forEach((branch) => {
+					reportData.push([
+						{ content: branch.branch },
+						{ content: formatCurrency(branch.revenue) },
+						{ content: `${branch.percentage.toFixed(1)}%` },
+						{ content: '' },
+					])
+				})
 
-							reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
-						}
+				reportData.push([{ content: '', colSpan: 4 }]) // Empty row as separator
+			}
 
-						// Add payment status section if selected
-						if (includePaymentStatus) {
-							reportData.push([
-								{
-									content: 'ESTADO DE PAGOS',
-									styles: {
-										halign: 'left',
-										fontStyle: 'bold',
-										fontSize: 12,
-										fillColor: [255, 230, 230],
-									},
-									colSpan: 4,
-								},
-							])
+			// Add payment status section if selected
+			if (includePaymentStatus) {
+				reportData.push([
+					{
+						content: 'ESTADO DE PAGOS',
+						styles: {
+							halign: 'left',
+							fontStyle: 'bold',
+							fontSize: 12,
+							fillColor: [255, 230, 230],
+						},
+						colSpan: 4,
+					},
+				])
 
-							reportData.push([
-								{ content: 'Estado', styles: { fontStyle: 'bold' } },
-								{ content: 'Casos', styles: { fontStyle: 'bold' } },
-								{ content: '% del Total', styles: { fontStyle: 'bold' } },
-								{ content: 'Monto Pendiente', styles: { fontStyle: 'bold' } },
-							])
+				reportData.push([
+					{ content: 'Estado', styles: { fontStyle: 'bold' } },
+					{ content: 'Casos', styles: { fontStyle: 'bold' } },
+					{ content: '% del Total', styles: { fontStyle: 'bold' } },
+					{ content: 'Monto Pendiente', styles: { fontStyle: 'bold' } },
+				])
 
-							const completedPercentage = ((stats.completedCases / stats.totalCases) * 100).toFixed(1)
-							const incompletePercentage = ((stats.incompleteCases / stats.totalCases) * 100).toFixed(1)
+				const completedPercentage = ((stats.completedCases / stats.totalCases) * 100).toFixed(1)
+				const incompletePercentage = ((stats.incompleteCases / stats.totalCases) * 100).toFixed(1)
 
-							reportData.push([
-								{ content: 'Pagados' },
-								{ content: stats.completedCases.toString() },
-								{ content: `${completedPercentage}%` },
-								{ content: formatCurrency(0) },
-							])
+				reportData.push([
+					{ content: 'Pagados' },
+					{ content: stats.completedCases.toString() },
+					{ content: `${completedPercentage}%` },
+					{ content: formatCurrency(0) },
+				])
 
-							reportData.push([
-								{ content: 'Incompletos' },
-								{ content: stats.incompleteCases.toString() },
-								{ content: `${incompletePercentage}%` },
-								{ content: formatCurrency(stats.pendingPayments) },
-							])
-						}
+				reportData.push([
+					{ content: 'Incompletos' },
+					{ content: stats.incompleteCases.toString() },
+					{ content: `${incompletePercentage}%` },
+					{ content: formatCurrency(stats.pendingPayments) },
+				])
+			}
 
 			// Use the imported exportTableToPdf utility function with correct argument order
 			// await exportTableToPdf(

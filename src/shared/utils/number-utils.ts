@@ -74,26 +74,43 @@ export const formatNumberForInput = (value: number | string, decimals: number = 
 }
 
 /**
- * Formats a number for display with locale-specific formatting
+ * Formats a number for display with European format (dots for thousands, comma for decimals)
  * @param value Number to format
- * @param locale Locale string (default: 'es-VE')
- * @param currency Currency code (optional)
- * @returns Formatted string
+ * @param decimals Number of decimal places (default: 2)
+ * @param showCurrency Whether to show currency symbol (default: false)
+ * @returns Formatted string (e.g., "1.000,12" or "$1.000,12")
  */
-export const formatNumberForDisplay = (value: number | string, locale: string = 'es-VE', currency?: string): string => {
+export const formatNumberForDisplay = (value: number | string, decimals: number = 2, showCurrency: boolean = false): string => {
 	const num = parseDecimalNumber(value)
+	
+	// Format with European style: dots for thousands, comma for decimals
+	const formatted = num.toLocaleString('de-DE', {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals,
+	})
+	
+	// Add currency symbol if requested
+	return showCurrency ? `$${formatted}` : formatted
+}
 
-	const options: Intl.NumberFormatOptions = {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	}
-
-	if (currency) {
-		options.style = 'currency'
-		options.currency = currency
-	}
-
-	return new Intl.NumberFormat(locale, options).format(num)
+/**
+ * Formats a number as currency with European format
+ * @param value Number to format
+ * @param currency Currency code (default: 'USD')
+ * @param decimals Number of decimal places (default: 2)
+ * @returns Formatted currency string (e.g., "$1.000,12")
+ */
+export const formatCurrency = (value: number | string, decimals: number = 2): string => {
+	const num = parseDecimalNumber(value)
+	
+	// Format with European style: dots for thousands, comma for decimals
+	const formatted = num.toLocaleString('de-DE', {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals,
+	})
+	
+	// Add currency symbol
+	return `$${formatted}`
 }
 
 /**

@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 export type StatType =
 	| 'totalRevenue'
@@ -39,14 +40,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 }) => {
 	useBodyScrollLock(isOpen)
 	useGlobalOverlayOpen(isOpen)
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	const getStatTitle = () => {
 		switch (statType) {

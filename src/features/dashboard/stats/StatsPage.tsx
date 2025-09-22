@@ -7,6 +7,7 @@ import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import type { StatType } from '@shared/components/ui/stat-detail-panel'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 // Lazy loaded components
 import {
@@ -35,14 +36,7 @@ const StatsPage: React.FC = () => {
 		console.error('Error loading stats:', error)
 	}
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	const handleMonthBarClick = (monthData: { monthIndex: number }) => {
 		// FIXED: Use the monthIndex to create the correct date
@@ -175,8 +169,8 @@ const StatsPage: React.FC = () => {
 										</TooltipTrigger>
 										<TooltipContent>
 											<p>
-												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel
-												se adaptara y te mostrara los ingresos de ese mes.
+												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
+												adaptara y te mostrara los ingresos de ese mes.
 											</p>
 										</TooltipContent>
 									</Tooltip>

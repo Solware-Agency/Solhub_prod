@@ -21,6 +21,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 // Lazy loaded components
 import { StatDetailPanel } from '@shared/components/lazy-components'
@@ -45,14 +46,7 @@ function MainHome() {
 		console.error('Error loading dashboard stats:', error)
 	}
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	const handleMonthBarClick = (monthData: { monthIndex: number }) => {
 		// FIXED: Use the monthIndex to create the correct date
@@ -169,9 +163,7 @@ function MainHome() {
 						isSelected={selectedStat === 'totalCases' && isDetailPanelOpen}
 					/>
 					{/* Grid 6 - 12-Month Sales Trend Chart with Year Selector */}
-					<Card
-						className="col-span-1 sm:col-span-2 lg:col-span-12 row-span-1 lg:row-span-2 dark:bg-background bg-white rounded-xl py-2 sm:py-3 md:py-5 px-2 sm:px-4 md:px-6 cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300"
-					>
+					<Card className="col-span-1 sm:col-span-2 lg:col-span-12 row-span-1 lg:row-span-2 dark:bg-background bg-white rounded-xl py-2 sm:py-3 md:py-5 px-2 sm:px-4 md:px-6 cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
 						<div className="h-full flex flex-col">
 							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3">
 								<h3 className="text-xs sm:text-sm md:text-base font-bold text-gray-700 dark:text-gray-300 mb-1 sm:mb-0">
@@ -191,8 +183,8 @@ function MainHome() {
 										</TooltipTrigger>
 										<TooltipContent>
 											<p>
-												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel
-												se adaptara y te mostrara los ingresos de ese mes.
+												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
+												adaptara y te mostrara los ingresos de ese mes.
 											</p>
 										</TooltipContent>
 									</Tooltip>

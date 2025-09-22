@@ -4,14 +4,13 @@ import { Stethoscope, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 const DoctorRevenueReport: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
 	const isDesktop = useBreakpoint('lg')
 
-	const formatCurrency = (amount: number) => {
-		return `$${amount.toLocaleString('es-VE')}`
-	}
+	// formatCurrency is now imported from number-utils
 
 	return (
 		<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">

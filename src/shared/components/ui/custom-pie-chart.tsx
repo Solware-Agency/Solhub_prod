@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface PieChartData {
 	branch: string
@@ -26,9 +27,7 @@ const COLORS = [
 export const CustomPieChart: React.FC<CustomPieChartProps> = ({ data, total, isLoading }) => {
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
-	const formatCurrency = (value: number) => {
-		return `USD ${Math.round(value).toLocaleString()}`
-	}
+	// formatCurrency is now imported from number-utils
 
 	// Función para obtener el color según el nombre de la sede
 	const getBranchColor = (branchName: string) => {

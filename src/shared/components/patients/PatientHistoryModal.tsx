@@ -14,6 +14,7 @@ import { Input } from '@shared/components/ui/input'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import EditPatientInfoModal from './EditPatientInfoModal'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 import type { Patient } from '@lib/patients-service'
 
@@ -140,11 +141,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 							onClick={onClose}
 						>
 							<div
-										className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
+								className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
 								onClick={(e) => e.stopPropagation()}
 							>
 								{/* Header */}
-										<div className="sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
+								<div className="sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
 									<div className="flex items-center justify-between">
 										<div>
 											<div>
@@ -168,7 +169,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 								{/* Content */}
 								<div className="flex-1 overflow-hidden flex flex-col">
 									{/* Patient Info */}
-														<div className="p-4 sm:p-6 bg-white/80 dark:bg-black">
+									<div className="p-4 sm:p-6 bg-white/80 dark:bg-black">
 										<div className="flex flex-col sm:flex-row sm:items-center gap-4">
 											<div className="flex items-center gap-3">
 												<div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
@@ -213,7 +214,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 													<a
 														href={`mailto:${patient.email}`}
 														className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start"
-															title="Enviar mensaje por correo"
+														title="Enviar mensaje por correo"
 													>
 														<Mail className="h-4 w-4 text-gray-500 group-hover:text-blue-600 transition-colors duration-200" />
 														<span className="text-sm font-medium">{patient.email}</span>
@@ -326,7 +327,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 
 															<div>
 																<p className="text-xs text-gray-500 dark:text-gray-400">Monto Total</p>
-																<p className="text-sm font-medium">${caseItem.total_amount.toLocaleString()}</p>
+																<p className="text-sm font-medium">{formatCurrency(caseItem.total_amount)}</p>
 															</div>
 
 															<div>

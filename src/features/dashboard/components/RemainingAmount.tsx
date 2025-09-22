@@ -3,18 +3,12 @@ import { DollarSign, AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 const RemainingAmount: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	// Calculate pending payments percentage
 	const pendingPaymentsPercentage = stats?.totalRevenue ? (stats.pendingPayments / stats.totalRevenue) * 100 : 0

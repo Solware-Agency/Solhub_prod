@@ -3,20 +3,14 @@ import { Card } from '@shared/components/ui/card'
 import { Building } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 const BranchRevenueReport: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
 	const [hoveredBranchIndex, setHoveredBranchIndex] = useState<number | null>(null)
 	const isDesktop = useBreakpoint('lg')
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat('es-VE', {
-			style: 'currency',
-			currency: 'USD',
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount)
-	}
+	// formatCurrency is now imported from number-utils
 
 	const getBranchColor = (index: number) => {
 		const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
@@ -64,7 +58,8 @@ const BranchRevenueReport: React.FC = () => {
 												onMouseLeave={() => setHoveredBranchIndex(null)}
 												style={{
 													cursor: 'pointer',
-													filter: hoveredBranchIndex === index ? `drop-shadow(0 0 3px ${getBranchColor(index)})` : 'none',
+													filter:
+														hoveredBranchIndex === index ? `drop-shadow(0 0 3px ${getBranchColor(index)})` : 'none',
 												}}
 											></circle>
 										)
@@ -112,9 +107,7 @@ const BranchRevenueReport: React.FC = () => {
 											<td className="py-2 px-2">
 												<div className="flex items-center gap-1.5">
 													<div
-														className={`w-2 h-2 rounded-full ${
-															hoveredBranchIndex === index ? 'animate-pulse' : ''
-														}`}
+														className={`w-2 h-2 rounded-full ${hoveredBranchIndex === index ? 'animate-pulse' : ''}`}
 														style={{ backgroundColor: getBranchColor(index) }}
 													></div>
 													<p className="font-medium text-gray-700 dark:text-gray-300 text-xs">{branch.branch}</p>
@@ -178,9 +171,7 @@ const BranchRevenueReport: React.FC = () => {
 										<div className="flex items-center justify-between mb-1">
 											<div className="flex items-center gap-1.5">
 												<div
-													className={`w-2 h-2 rounded-full ${
-														hoveredBranchIndex === index ? 'animate-pulse' : ''
-													}`}
+													className={`w-2 h-2 rounded-full ${hoveredBranchIndex === index ? 'animate-pulse' : ''}`}
 													style={{ backgroundColor: getBranchColor(index) }}
 												></div>
 												<p className="font-medium text-gray-700 dark:text-gray-300 text-xs">{branch.branch}</p>
