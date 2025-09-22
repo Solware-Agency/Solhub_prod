@@ -115,5 +115,5 @@
     "vite": "^6.3.5",
     "vite-bundle-visualizer": "^1.0.1"
   },
-  "packageManager": "pnpm@10.15.0"
+  "packageManager": "pnpm@10.17.1"
 }
