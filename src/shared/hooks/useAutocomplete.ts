@@ -229,28 +229,62 @@ export const useAutocomplete = (fieldName: string) => {
 	}, [fieldName]) // Only depend on fieldName, not hasPreloadedData
 
 	// Function to get filtered suggestions based on search term - memoized with useCallback
-	const getFilteredSuggestions = useCallback((searchTerm: string): AutocompleteOption[] => {
-		if (!searchTerm || searchTerm.length === 0) {
-			return [] // No mostrar sugerencias aleatorias cuando el campo está vacío
-		}
+	const getFilteredSuggestions = useCallback(
+		(searchTerm: string): AutocompleteOption[] => {
+			if (!searchTerm || searchTerm.length === 0) {
+				return [] // No mostrar sugerencias aleatorias cuando el campo está vacío
+			}
 
-		const filtered = allFieldValues.filter(item =>
-			item.value.toLowerCase().includes(searchTerm.toLowerCase())
-		)
+			const filtered = allFieldValues.filter((item) => {
+				// Para el campo idNumber, buscar tanto en el formato completo como solo en el número
+				if (fieldName === 'idNumber') {
+					const fullCedula = item.value.toLowerCase()
+					const cedulaNumber = fullCedula.replace(/^[vejc]-/, '') // Remover prefijo V-, E-, J-, C-
+					const searchLower = searchTerm.toLowerCase()
 
-		// Sort filtered results by relevance
-		return filtered.sort((a, b) => {
-			// Prioritize items that start with the search term
-			const aStartsWith = a.value.toLowerCase().startsWith(searchTerm.toLowerCase())
-			const bStartsWith = b.value.toLowerCase().startsWith(searchTerm.toLowerCase())
+					return fullCedula.includes(searchLower) || cedulaNumber.includes(searchLower)
+				}
 
-			if (aStartsWith && !bStartsWith) return -1
-			if (!aStartsWith && bStartsWith) return 1
+				// Para otros campos, búsqueda normal
+				return item.value.toLowerCase().includes(searchTerm.toLowerCase())
+			})
 
-			// Then by frequency
-			return b.count - a.count
-		}).slice(0, 8)
-	}, [allFieldValues])
+			// Sort filtered results by relevance
+			return filtered
+				.sort((a, b) => {
+					// Para idNumber, priorizar coincidencias exactas del número
+					if (fieldName === 'idNumber') {
+						const aNumber = a.value.replace(/^[VEJC]-/, '')
+						const bNumber = b.value.replace(/^[VEJC]-/, '')
+						const searchLower = searchTerm.toLowerCase()
+
+						const aExactMatch = aNumber.toLowerCase() === searchLower
+						const bExactMatch = bNumber.toLowerCase() === searchLower
+
+						if (aExactMatch && !bExactMatch) return -1
+						if (!aExactMatch && bExactMatch) return 1
+
+						const aStartsWith = aNumber.toLowerCase().startsWith(searchLower)
+						const bStartsWith = bNumber.toLowerCase().startsWith(searchLower)
+
+						if (aStartsWith && !bStartsWith) return -1
+						if (!aStartsWith && bStartsWith) return 1
+					} else {
+						// Para otros campos, priorizar items que empiecen con el término de búsqueda
+						const aStartsWith = a.value.toLowerCase().startsWith(searchTerm.toLowerCase())
+						const bStartsWith = b.value.toLowerCase().startsWith(searchTerm.toLowerCase())
+
+						if (aStartsWith && !bStartsWith) return -1
+						if (!aStartsWith && bStartsWith) return 1
+					}
+
+					// Then by frequency
+					return b.count - a.count
+				})
+				.slice(0, 8)
+		},
+		[allFieldValues, fieldName],
+	)
 
 	// getSuggestions now only processes preloaded data, no async calls - memoized with useCallback
 	const getSuggestions = useCallback((searchTerm: string = '') => {

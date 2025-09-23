@@ -14,9 +14,10 @@ export const usePatientAutofill = (setValue: UseFormSetValue<FormValues>) => {
 
 		try {
 			// Buscar el paciente en la nueva tabla patients
+			// La cédula ahora viene en formato V-12345678, E-12345678, etc.
 			const { data, error } = await supabase
 				.from('patients')
-				.select('nombre, telefono, edad, email')
+				.select('nombre, telefono, edad, email, cedula')
 				.eq('cedula', idNumber)
 				.single()
 
@@ -34,6 +35,17 @@ export const usePatientAutofill = (setValue: UseFormSetValue<FormValues>) => {
 
 				// Pequeño delay para asegurar que las sugerencias se oculten antes de llenar
 				setTimeout(() => {
+					// Parsear la cédula para extraer tipo y número
+					const cedulaMatch = data.cedula.match(/^([VEJC])-(.+)$/)
+					if (cedulaMatch) {
+						setValue('idType', cedulaMatch[1] as 'V' | 'E' | 'J' | 'C')
+						setValue('idNumber', cedulaMatch[2])
+					} else {
+						// Si no tiene formato, asumir V- y usar toda la cédula como número
+						setValue('idType', 'V')
+						setValue('idNumber', data.cedula)
+					}
+
 					// Llenar automáticamente los campos del paciente
 					setValue('fullName', data.nombre)
 					setValue('phone', data.telefono || '')

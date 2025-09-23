@@ -15,6 +15,9 @@ export const formSchema = z.object({
 		.string()
 		.min(1, 'Nombre completo es requerido')
 		.regex(/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]+$/, 'Nombre solo debe contener letras y espacios'),
+	idType: z.enum(['V', 'E', 'J', 'C'], {
+		required_error: 'Debe seleccionar el tipo de cédula.',
+	}),
 	idNumber: z
 		.string()
 		.min(1, 'La cédula es requerida')

@@ -12,6 +12,7 @@ import { validateFormPayments, calculatePaymentDetails } from '../features/form/
 // Tipo de formulario (evita importación circular)
 export interface FormValues {
 	fullName: string
+	idType: 'V' | 'E' | 'J' | 'C'
 	idNumber: string
 	phone: string
 	ageValue: number
@@ -144,11 +145,12 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 			isNewPatient = true
 		} else {
 			// CASO B: Paciente existente - verificar si hay cambios
-			console.log('👤 Paciente existe, verificando cambios...')
+			console.log(`👤 Paciente existe (${patient.cedula}), verificando cambios...`)
 			const hasChanges = detectPatientChanges(patient, patientData)
 
 			if (hasChanges) {
 				console.log('📝 Cambios detectados en el paciente, actualizando...')
+				// Si la cédula cambió, actualizar el registro existente
 				patient = await updatePatient(patient.id, patientData, user.id)
 				patientUpdated = true
 			} else {
@@ -195,7 +197,7 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?: number) => {
 	// Datos del paciente (tabla patients)
 	const patientData: PatientInsert = {
-		cedula: formData.idNumber,
+		cedula: `${formData.idType}-${formData.idNumber}`,
 		nombre: formData.fullName,
 		edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
 		telefono: formData.phone,
@@ -263,8 +265,8 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
  * Detectar si hay cambios en los datos del paciente
  */
 const detectPatientChanges = (existingPatient: PatientInsert, newPatientData: PatientInsert): boolean => {
-	// Comparar campos principales
-	const fields = ['nombre', 'edad', 'telefono', 'email'] as const
+	// Comparar campos principales incluyendo cédula
+	const fields = ['cedula', 'nombre', 'edad', 'telefono', 'email'] as const
 
 	for (const field of fields) {
 		const existingValue = existingPatient[field]
@@ -310,10 +312,21 @@ export const searchPatientForForm = async (cedula: string) => {
 			}
 		}
 
+		// Parsear la cédula para extraer tipo y número
+		const cedulaMatch = patient.cedula.match(/^([VEJC])-(.+)$/)
+		let idType: 'V' | 'E' | 'J' | 'C' = 'V'
+		let idNumber = patient.cedula
+
+		if (cedulaMatch) {
+			idType = cedulaMatch[1] as 'V' | 'E' | 'J' | 'C'
+			idNumber = cedulaMatch[2]
+		}
+
 		// Convertir datos del paciente al formato del formulario
 		return {
 			fullName: patient.nombre,
-			idNumber: patient.cedula,
+			idType: idType,
+			idNumber: idNumber,
 			phone: patient.telefono || '',
 			edad: patient.edad || '',
 			email: patient.email || '',
@@ -334,8 +347,11 @@ export const validateRegistrationData = (formData: FormValues, exchangeRate?: nu
 	const errors: string[] = []
 
 	// Validaciones obligatorias
+	if (!formData.idType) {
+		errors.push('El tipo de cédula es obligatorio')
+	}
 	if (!formData.idNumber) {
-		errors.push('La cédula es obligatoria')
+		errors.push('El número de cédula es obligatorio')
 	}
 
 	if (!formData.fullName) {

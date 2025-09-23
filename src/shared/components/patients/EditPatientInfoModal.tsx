@@ -36,11 +36,24 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	// Parse the initial edad value
 	const initialEdad = parseEdad(patient.edad)
 
+	// Parse the cedula to extract type and number
+	const parseCedula = (cedula: string) => {
+		const match = cedula.match(/^([VEJC])-(.+)$/)
+		if (match) {
+			return { type: match[1], number: match[2] }
+		}
+		return { type: 'V', number: cedula }
+	}
+
+	const initialCedula = parseCedula(patient.cedula)
+
 	const [formData, setFormData] = useState({
 		nombre: patient.nombre,
 		telefono: patient.telefono || '',
 		email: patient.email || '',
 		edad: patient.edad || '',
+		cedulaType: initialCedula.type,
+		cedulaNumber: initialCedula.number,
 	})
 
 	const [edadValue, setEdadValue] = useState(initialEdad.value)
@@ -49,6 +62,18 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target
 		setFormData((prev) => ({ ...prev, [name]: value }))
+	}
+
+	const handleCedulaTypeChange = (type: string) => {
+		setFormData((prev) => ({ ...prev, cedulaType: type }))
+	}
+
+	const handleCedulaNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const { value } = e.target
+		// Only allow numbers
+		if (/^[0-9]*$/.test(value)) {
+			setFormData((prev) => ({ ...prev, cedulaNumber: value }))
+		}
 	}
 
 	const handleEdadChange = (value: number | '') => {
@@ -79,12 +104,22 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 			// Preparar los cambios para el registro usando nueva estructura
 			const changes = []
+			const newCedula = `${formData.cedulaType}-${formData.cedulaNumber}`
+			
 			if (formData.nombre !== patient.nombre) {
 				changes.push({
 					field: 'nombre',
 					fieldLabel: 'Nombre Completo',
 					oldValue: patient.nombre,
 					newValue: formData.nombre,
+				})
+			}
+			if (newCedula !== patient.cedula) {
+				changes.push({
+					field: 'cedula',
+					fieldLabel: 'Cédula',
+					oldValue: patient.cedula,
+					newValue: newCedula,
 				})
 			}
 			if (formData.telefono !== (patient.telefono || '')) {
@@ -124,6 +159,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 			const { error: updateError } = await supabase
 				.from('patients')
 				.update({
+					cedula: newCedula,
 					nombre: formData.nombre,
 					telefono: formData.telefono || null,
 					email: formData.email || null,
@@ -229,6 +265,28 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Nombre Completo</label>
 													<Input name="nombre" value={formData.nombre} onChange={handleChange} required />
+												</div>
+
+												<div className="space-y-2">
+													<label className="text-sm text-gray-500 dark:text-gray-400">Cédula</label>
+													<div className="grid grid-cols-4 gap-2">
+														<CustomDropdown
+															options={createDropdownOptions(['V', 'E', 'J', 'C'])}
+															value={formData.cedulaType}
+															onChange={handleCedulaTypeChange}
+															placeholder="Tipo"
+															className="text-sm"
+															direction="auto"
+														/>
+														<Input
+															name="cedulaNumber"
+															value={formData.cedulaNumber}
+															onChange={handleCedulaNumberChange}
+															placeholder="12345678"
+															className="col-span-3 text-sm"
+															required
+														/>
+													</div>
 												</div>
 
 												<div className="space-y-2">

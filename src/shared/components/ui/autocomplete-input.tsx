@@ -143,8 +143,9 @@ export const AutocompleteInput = React.memo(React.forwardRef<
     // If it's ID number field, trigger patient selection silently
     if (fieldName === 'idNumber' && onPatientSelect) {
       setTimeout(() => {
-        onPatientSelect(suggestion);
-      }, 100);
+				// Pass the full cedula (with prefix) to the autofill function
+				onPatientSelect(suggestion)
+			}, 100);
     }
     
     // Create synthetic event for compatibility
