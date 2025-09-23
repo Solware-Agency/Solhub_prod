@@ -114,6 +114,26 @@ export const formatCurrency = (value: number | string, decimals: number = 2): st
 }
 
 /**
+ * Formats a number as currency with custom symbol
+ * @param value Number to format
+ * @param symbol Currency symbol (e.g., '$', 'Bs')
+ * @param decimals Number of decimal places
+ * @returns Formatted currency string
+ */
+export const formatCurrencyWithSymbol = (value: number | string, symbol: string = '$', decimals: number = 2): string => {
+	const num = parseDecimalNumber(value)
+	
+	// Format with European style: dots for thousands, comma for decimals
+	const formatted = num.toLocaleString('de-DE', {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals,
+	})
+	
+	// Add currency symbol
+	return `${symbol}${formatted}`
+}
+
+/**
  * Validates if a string represents a valid number
  * @param value String to validate
  * @returns True if valid number

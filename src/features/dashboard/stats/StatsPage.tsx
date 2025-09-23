@@ -5,6 +5,7 @@ import { YearSelector } from '@shared/components/ui/year-selector'
 import StatCard from '@shared/components/ui/stat-card'
 import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
+import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import type { StatType } from '@shared/components/ui/stat-detail-panel'
 import { formatCurrency } from '@shared/utils/number-utils'
@@ -238,17 +239,43 @@ const StatsPage: React.FC = () => {
 				</div>
 
 				{/* Charts Grid */}
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 					{/* Exam Type Pie Chart */}
 					<Suspense fallback={<ComponentFallback />}>
 						<ExamTypePieChart />
 					</Suspense>
 
+				{/* Currency Distribution Chart - Same style as Branch Distribution */}
+					<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
+						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
+							<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
+								Distribución por Moneda{' '}
+								<Tooltip>
+									<TooltipTrigger>
+										<Info className="size-4" />
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>
+											Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el mes
+											seleccionado.
+										</p>
+									</TooltipContent>
+								</Tooltip>
+							</h3>
+							{/* Currency Donut Chart */}
+							<CurrencyDonutChart
+								bolivaresTotal={stats?.monthlyRevenueBolivares || 0}
+								dollarsTotal={stats?.monthlyRevenueDollars || 0}
+								isLoading={isLoading}
+							/>
+						</div>
+					</Card>
 					{/* Remaining Amount */}
 					<Suspense fallback={<ComponentFallback />}>
 						<RemainingAmount />
 					</Suspense>
 				</div>
+
 
 				{/* Additional Reports Grid */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
