@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@lib/supabase/config'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { isVESPaymentMethod } from '@shared/utils/number-utils'
 
 // Tipo local para casos médicos con información del paciente
 export interface MedicalCaseWithPatient {
@@ -72,6 +73,9 @@ export interface DashboardStats {
 	topTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
 	totalCases: number
+	// Nuevas estadísticas por moneda
+	monthlyRevenueBolivares: number
+	monthlyRevenueDollars: number
 }
 
 // Function to normalize exam type names
@@ -171,6 +175,28 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 
 				// Calculate monthly revenue
 				const monthlyRevenue = monthRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
+
+				// Calculate monthly revenue by currency (Bs vs $)
+				let monthlyRevenueBolivares = 0
+				let monthlyRevenueDollars = 0
+
+				monthRecords?.forEach((record) => {
+					// Revisar todos los métodos de pago del caso
+					for (let i = 1; i <= 4; i++) {
+						const method = record[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string | null
+						const amount = record[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number | null
+
+						if (method && amount && amount > 0) {
+							if (isVESPaymentMethod(method)) {
+								// Si es método en bolívares, sumar directamente
+								monthlyRevenueBolivares += amount
+							} else {
+								// Si es método en dólares, sumar directamente
+								monthlyRevenueDollars += amount
+							}
+						}
+					}
+				})
 
 				// Calculate new patients this month - usando patient_id de la nueva estructura
 				const existingPatientIds = new Set(
@@ -333,6 +359,8 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					topTreatingDoctors,
 					revenueByOrigin,
 					totalCases,
+					monthlyRevenueBolivares,
+					monthlyRevenueDollars,
 				}
 			} catch (error) {
 				console.error('Error fetching dashboard stats:', error)
