@@ -1,31 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
 import { Card } from '@shared/components/ui/card'
 import { Stethoscope, Activity, FlaskRound, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 const ExamTypePieChart: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
-	const [hoveredSegmentIndex, setHoveredSegmentIndex] = useState<number | null>(null)
-	const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
-	const containerRef = useRef<HTMLDivElement>(null)
-
-	// Update chart size based on container size
-	useEffect(() => {
-		const updateSize = () => {
-			if (containerRef.current) {
-				const { width } = containerRef.current.getBoundingClientRect()
-				const size = Math.min(width * 0.7, 220) // Limit max size
-				setChartSize({ width: size, height: size })
-			}
-		}
-
-		updateSize()
-		window.addEventListener('resize', updateSize)
-		return () => window.removeEventListener('resize', updateSize)
-	}, [])
-
-	// formatCurrency is now imported from number-utils
+	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
 	// Get exam type icon based on type (tolerant to accents/variants)
 	const getExamTypeIcon = (examType: string) => {
@@ -54,173 +36,161 @@ const ExamTypePieChart: React.FC = () => {
 	// Calculate total revenue
 	const totalRevenue = stats?.revenueByExamType?.reduce((sum, item) => sum + item.revenue, 0) || 0
 
-	// Prepare data for pie chart
+	// Prepare data for pie chart with percentages
 	const pieData =
 		stats?.revenueByExamType?.map((item, index) => ({
 			...item,
 			percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
 			color: getExamTypeColor(index),
-			startAngle:
-				index === 0
-					? 0
-					: stats.revenueByExamType
-							.slice(0, index)
-							.reduce((sum, i) => sum + (totalRevenue > 0 ? (i.revenue / totalRevenue) * 360 : 0), 0),
-			endAngle: stats.revenueByExamType
-				.slice(0, index + 1)
-				.reduce((sum, i) => sum + (totalRevenue > 0 ? (i.revenue / totalRevenue) * 360 : 0), 0),
 		})) || []
 
-	// SVG path for pie slice
-	const createPieSlice = (startAngle: number, endAngle: number, radius: number, centerX: number, centerY: number) => {
-		const start = {
-			x: centerX + radius * Math.cos((startAngle - 90) * (Math.PI / 180)),
-			y: centerY + radius * Math.sin((startAngle - 90) * (Math.PI / 180)),
-		}
-		const end = {
-			x: centerX + radius * Math.cos((endAngle - 90) * (Math.PI / 180)),
-			y: centerY + radius * Math.sin((endAngle - 90) * (Math.PI / 180)),
-		}
-
-		const largeArcFlag = endAngle - startAngle <= 180 ? 0 : 1
-
-		return `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y} Z`
+	if (isLoading) {
+		return (
+			<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
+					<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
+						Tipos de Exámenes Más Solicitados{' '}
+						<Tooltip>
+							<TooltipTrigger>
+								<Info className="size-4" />
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>En esta estadística puedes ver las ganancias totales por tipo de examen.</p>
+							</TooltipContent>
+						</Tooltip>
+					</h3>
+					<div className="flex items-center justify-center h-64">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+					</div>
+				</div>
+			</Card>
+		)
 	}
 
 	return (
 		<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
-			<div className="bg-white dark:bg-background rounded-xl p-3 overflow-hidden flex flex-col h-full">
-				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3">
-					<h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0">
-						Tipos de Exámenes Más Solicitados{' '}
-					</h3>
+			<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
+				<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
+					Tipos de Exámenes Más Solicitados{' '}
 					<Tooltip>
 						<TooltipTrigger>
 							<Info className="size-4" />
 						</TooltipTrigger>
 						<TooltipContent>
-							<p>En esta estadistica puedes ver las ganancias totales por tipo de examen.</p>
+							<p>En esta estadística puedes ver las ganancias totales por tipo de examen.</p>
 						</TooltipContent>
 					</Tooltip>
-				</div>
+				</h3>
 
-				<div className="flex flex-col lg:flex-row items-center gap-3 flex-1">
-					{/* Pie Chart */}
-					<div
-						ref={containerRef}
-						className="relative flex items-center justify-center w-full lg:w-1/2 flex-shrink-0 p-2"
-					>
-						{isLoading ? (
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-						) : pieData.length > 0 ? (
-							<div className="relative">
-								<svg
-									width={chartSize.width}
-									height={chartSize.height}
-									viewBox={`-10 -10 ${chartSize.width + 20} ${chartSize.height + 20}`}
-									className="transform -rotate-90"
-								>
-									{pieData.map((item, index) => {
-										const radius = (chartSize.width - 20) / 2
-										const centerX = chartSize.width / 2
-										const centerY = chartSize.height / 2
-										const isHovered = hoveredSegmentIndex === index
-
-										return (
-											<path
-												key={index}
-												d={createPieSlice(
-													item.startAngle,
-													item.endAngle,
-													radius * (isHovered ? 0.95 : 0.9),
-													centerX,
-													centerY,
-												)}
-												fill={item.color}
-												stroke="white"
-												strokeWidth={isHovered ? 3 : 1}
-												onMouseEnter={() => setHoveredSegmentIndex(index)}
-												onMouseLeave={() => setHoveredSegmentIndex(null)}
+				{pieData.length > 0 ? (
+					<div className="w-full lg:grid grid-cols-1 gap-4 justify-center items-center">
+						{/* Pie Chart */}
+						<div className="h-64 relative">
+							<ResponsiveContainer width="100%" height="100%">
+								<PieChart>
+									<Pie
+										data={pieData}
+										cx="50%"
+										cy="50%"
+										labelLine={false}
+										label={false} // Sin porcentajes dentro del donut
+										outerRadius={90}
+										innerRadius={55} // Esto crea el efecto donut
+										fill="#8884d8"
+										dataKey="percentage"
+										strokeWidth={0} // Sin borde blanco
+										strokeLinecap="round" // Bordes redondeados
+										paddingAngle={0} // Espacio adicional entre segmentos
+									>
+										{pieData.map((entry, index) => (
+											<Cell
+												key={`cell-${index}`}
+												fill={entry.color}
+												className="cursor-pointer"
+												strokeWidth={0}
 												style={{
-													transition: 'all 0.3s ease',
-													cursor: 'pointer',
-													filter: isHovered ? 'drop-shadow(0 0 5px rgba(0,0,0,0.3))' : 'none',
+													opacity: hoveredIndex === index || hoveredIndex === null ? 1 : 0.6,
+													filter: hoveredIndex === index ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
+													transform: hoveredIndex === index ? 'scale(1.05)' : 'scale(1)',
+													transformOrigin: 'center',
+													transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
 												}}
+												onMouseEnter={() => setHoveredIndex(index)}
+												onMouseLeave={() => setHoveredIndex(null)}
 											/>
-										)
-									})}
+										))}
+									</Pie>
+								</PieChart>
+							</ResponsiveContainer>
 
-									{/* Center circle for donut effect */}
-									<circle
-										cx={chartSize.width / 2}
-										cy={chartSize.height / 2}
-										r={(chartSize.width - 20) / 4}
-										fill="white"
-										className="dark:fill-background"
-									/>
-								</svg>
-
-								{/* Total amount in center - positioned absolutely for better centering */}
-								<div className="absolute inset-0 flex flex-col items-center justify-center">
+							{/* Total en el centro del donut */}
+							<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-full size-32 flex flex-col items-center justify-center">
 									<p className="text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">
 										{formatCurrency(totalRevenue)}
 									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+									<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total del Mes</p>
 								</div>
 							</div>
-						) : (
-							<div className="text-center py-8">
-								<Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-								<p className="text-gray-500 dark:text-gray-400">No hay datos disponibles</p>
-							</div>
-						)}
-					</div>
+						</div>
 
-					{/* Legend */}
-					<div className="max-w-full lg:w-1/2 space-y-2 lg:mt-0 flex-1 min-h-0">
-						{isLoading ? (
-							<div className="space-y-2">
-								{[1, 2, 3].map((i) => (
-									<div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 rounded-lg"></div>
-								))}
-							</div>
-						) : pieData.length > 0 ? (
-							<div className="space-y-1.5 max-h-full overflow-y-auto pr-2">
-								{pieData.map((item, index) => (
-									<div
-										key={index}
-										className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-transform duration-200 cursor-pointer"
-										onMouseEnter={() => setHoveredSegmentIndex(index)}
-										onMouseLeave={() => setHoveredSegmentIndex(null)}
-									>
-										<div className="flex items-center gap-2">
-											<div
-												className="w-7 h-7 rounded-lg flex items-center justify-center"
-												style={{ backgroundColor: item.color }}
-											>
-												{getExamTypeIcon(item.examType)}
-											</div>
-											<div>
-												<p className="font-medium text-gray-700 dark:text-gray-300 text-sm">{item.examType}</p>
-												<div className="flex items-center gap-2">
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{item.count} caso{item.count !== 1 ? 's' : ''}
-													</span>
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{Math.round(item.percentage)}%
-													</span>
-												</div>
-											</div>
+						{/* Leyenda personalizada - Estilo original del SVG */}
+						<div className="flex flex-col">
+							{pieData.map((entry, index) => (
+								<div
+									key={entry.examType}
+									className={`flex items-center justify-between transition-all duration-300 cursor-pointer p-2 rounded-lg ${
+										hoveredIndex === index ? 'scale-105' : ''
+									}`}
+									onMouseEnter={() => setHoveredIndex(index)}
+									onMouseLeave={() => setHoveredIndex(null)}
+								>
+									<div className="flex items-center gap-2">
+										<div
+											className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+												hoveredIndex === index ? 'scale-125' : ''
+											}`}
+											style={{ backgroundColor: entry.color }}
+										>
+											{getExamTypeIcon(entry.examType)}
 										</div>
-										<p className="text-sm font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-											{formatCurrency(item.revenue)}
-										</p>
+										<div>
+											<span
+												className={` flex items-center gap-2 text-sm transition-all duration-300 ${
+													hoveredIndex === index
+														? 'text-gray-900 dark:text-gray-100 font-medium'
+														: 'text-gray-600 dark:text-gray-400'
+												}`}
+											>
+												{entry.examType}
+											<div className="text-xs text-gray-500 dark:text-gray-400">
+												({entry.count} caso{entry.count !== 1 ? 's' : ''})
+											</div>
+											</span>
+										</div>
 									</div>
-								))}
-							</div>
-						) : null}
+									<span
+										className={`text-sm transition-all duration-300 ${
+											hoveredIndex === index
+												? 'text-gray-900 dark:text-gray-100 font-semibold'
+												: 'text-gray-700 dark:text-gray-300 font-medium'
+										}`}
+									>
+										{Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
+									</span>
+								</div>
+							))}
+						</div>
 					</div>
-				</div>
+				) : (
+					<div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+						<div className="text-center">
+							<Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+							<p className="text-lg font-medium">Sin datos disponibles</p>
+							<p className="text-sm">No hay exámenes registrados para este período</p>
+						</div>
+					</div>
+				)}
 			</div>
 		</Card>
 	)

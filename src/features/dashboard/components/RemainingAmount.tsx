@@ -41,7 +41,7 @@ const RemainingAmount: React.FC = () => {
 					) : (
 						<div className="flex-1 flex flex-col">
 							{/* Summary Cards */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1">
+							<div className="grid grid-cols-1 gap-3 flex-1">
 								{/* Amount Card */}
 								<div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-3 border border-red-200 dark:border-red-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
 									<div className="flex flex-col items-center text-center mb-2">
