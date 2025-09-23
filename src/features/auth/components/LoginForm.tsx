@@ -267,7 +267,7 @@ function LoginForm() {
 							<button
 								type="submit"
 								disabled={loading || isRedirecting}
-								className="w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm transform hover:scale-[1.02] active:scale-[0.98]"
+								className="w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm dark:shadow-primary/20 transform hover:scale-[1.02] active:scale-[0.98]"
 							>
 								{loading || isRedirecting ? (
 									<>
