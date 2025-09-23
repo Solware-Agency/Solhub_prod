@@ -48,20 +48,46 @@ export interface PatientUpdate {
 
 /**
  * Buscar paciente por cédula (único)
+ * Busca tanto por formato completo como solo por número para evitar duplicados
  */
 export const findPatientByCedula = async (cedula: string): Promise<Patient | null> => {
 	try {
-		const { data, error } = await supabase.from('patients').select('*').eq('cedula', cedula).single()
+		// Primero intentar búsqueda exacta
+		const { data: exactMatch, error: exactError } = await supabase
+			.from('patients')
+			.select('*')
+			.eq('cedula', cedula)
+			.single()
 
-		if (error) {
-			// Si no encuentra el paciente, es normal
-			if (error.code === 'PGRST116') {
-				return null
-			}
-			throw error
+		if (exactMatch && !exactError) {
+			return exactMatch
 		}
 
-		return data
+		// Si no hay coincidencia exacta, buscar por número de cédula (sin prefijo)
+		const cedulaNumber = cedula.replace(/^[VEJC]-/, '')
+		
+		// Buscar pacientes que tengan el mismo número pero diferente prefijo
+		const { data: numberMatch, error: numberError } = await supabase
+			.from('patients')
+			.select('*')
+			.like('cedula', `%-${cedulaNumber}`)
+			.single()
+
+		if (numberMatch && !numberError) {
+			console.log(`⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${numberMatch.cedula} (buscando: ${cedula})`)
+			return numberMatch
+		}
+
+		// Si no encuentra nada, retornar null
+		if (exactError?.code === 'PGRST116' || numberError?.code === 'PGRST116') {
+			return null
+		}
+
+		// Si hay otro tipo de error, lanzarlo
+		if (exactError) throw exactError
+		if (numberError) throw numberError
+
+		return null
 	} catch (error) {
 		console.error('Error buscando paciente por cédula:', error)
 		throw error
@@ -117,6 +143,14 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 		const currentPatient = await findPatientById(id)
 		if (!currentPatient) {
 			throw new Error('Paciente no encontrado')
+		}
+
+		// Si se está actualizando la cédula, verificar si ya existe otro paciente con esa cédula
+		if (updates.cedula && updates.cedula !== currentPatient.cedula) {
+			const existingPatient = await findPatientByCedula(updates.cedula)
+			if (existingPatient && existingPatient.id !== id) {
+				throw new Error(`Ya existe un paciente con la cédula ${updates.cedula}`)
+			}
 		}
 
 		// Preparar datos de actualización
@@ -309,6 +343,97 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 		return data || []
 	} catch (error) {
 		console.error('Error buscando pacientes:', error)
+		throw error
+	}
+}
+
+/**
+ * Encontrar pacientes duplicados por número de cédula
+ * Útil para limpiar duplicados existentes
+ */
+export const findDuplicatePatients = async () => {
+	try {
+		// Obtener todos los pacientes
+		const { data: allPatients, error } = await supabase
+			.from('patients')
+			.select('id, cedula, nombre, created_at')
+			.order('created_at', { ascending: true })
+
+		if (error) {
+			throw error
+		}
+
+		// Agrupar por número de cédula (sin prefijo)
+		const groupedByNumber: Record<string, any[]> = {}
+		
+		allPatients?.forEach(patient => {
+			const cedulaNumber = patient.cedula.replace(/^[VEJC]-/, '')
+			if (!groupedByNumber[cedulaNumber]) {
+				groupedByNumber[cedulaNumber] = []
+			}
+			groupedByNumber[cedulaNumber].push(patient)
+		})
+
+		// Encontrar duplicados
+		const duplicates: Array<{ cedulaNumber: string; patients: any[] }> = []
+		
+		Object.entries(groupedByNumber).forEach(([cedulaNumber, patients]) => {
+			if (patients.length > 1) {
+				duplicates.push({ cedulaNumber, patients })
+			}
+		})
+
+		return duplicates
+	} catch (error) {
+		console.error('Error buscando pacientes duplicados:', error)
+		throw error
+	}
+}
+
+/**
+ * Consolidar pacientes duplicados
+ * Mantiene el paciente más reciente y elimina los duplicados
+ */
+export const consolidateDuplicatePatients = async (duplicates: Array<{ cedulaNumber: string; patients: any[] }>) => {
+	try {
+		const results = []
+		
+		for (const { cedulaNumber, patients } of duplicates) {
+			// Ordenar por fecha de creación (más reciente primero)
+			const sortedPatients = patients.sort((a, b) => 
+				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			)
+			
+			const keepPatient = sortedPatients[0] // El más reciente
+			const deletePatients = sortedPatients.slice(1) // Los duplicados
+			
+			console.log(`🔄 Consolidando cédula ${cedulaNumber}:`)
+			console.log(`   ✅ Mantener: ${keepPatient.cedula} (${keepPatient.nombre})`)
+			
+			// Eliminar duplicados
+			for (const patient of deletePatients) {
+				console.log(`   ❌ Eliminar: ${patient.cedula} (${patient.nombre})`)
+				
+				const { error: deleteError } = await supabase
+					.from('patients')
+					.delete()
+					.eq('id', patient.id)
+				
+				if (deleteError) {
+					console.error(`Error eliminando paciente ${patient.id}:`, deleteError)
+				} else {
+					results.push({
+						action: 'deleted',
+						patient: patient,
+						kept: keepPatient
+					})
+				}
+			}
+		}
+		
+		return results
+	} catch (error) {
+		console.error('Error consolidando pacientes duplicados:', error)
 		throw error
 	}
 }

@@ -17,6 +17,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 const getInitialFormValues = (): FormValues => ({
 	fullName: '',
+	idType: 'V' as const,
 	idNumber: '',
 	phone: '',
 	ageValue: 0,

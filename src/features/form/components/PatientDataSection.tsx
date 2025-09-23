@@ -32,9 +32,20 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 	// Memoize the handler to prevent unnecessary re-renders
 	const handlePatientSelect = useCallback(
 		(idNumber: string) => {
+			// Si la cédula viene en formato completo (V-12345678), extraer el número
+			const cedulaMatch = idNumber.match(/^([VEJC])-(.+)$/)
+			if (cedulaMatch) {
+				const [, type, number] = cedulaMatch
+				setValue('idType', type as 'V' | 'E' | 'J' | 'C')
+				setValue('idNumber', number)
+			} else {
+				// Si no tiene formato, asumir V- y usar toda la cédula como número
+				setValue('idType', 'V')
+				setValue('idNumber', idNumber)
+			}
 			fillPatientData(idNumber, true) // Silencioso
 		},
-		[fillPatientData],
+		[fillPatientData, setValue],
 	)
 
 	return (
@@ -53,34 +64,55 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 			</CardHeader>
 			<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
 				{/* Cédula - CON AUTOCOMPLETADO Y AUTOFILL */}
-				<FormField
-					control={control}
-					name="idNumber"
-					render={({ field }) => (
-						<FormItem className="flex flex-col">
-							<FormLabel>Cédula *</FormLabel>
-							<FormControl>
-								<AutocompleteInput
-									fieldName="idNumber"
-									placeholder="12345678"
-									iconRight={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-									{...field}
-									onPatientSelect={handlePatientSelect}
-									onChange={(e) => {
-										const { value } = e.target
-										if (/^[0-9]*$/.test(value)) {
-											field.onChange(e)
-										}
-									}}
-									className={cn(inputStyles, isLoadingPatient && 'border-blue-300 transition-none')}
-								/>
-							</FormControl>
-							<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight">
-								💡 Haz clic en una cédula para llenar automáticamente los datos del paciente
-							</p>
-						</FormItem>
-					)}
-				/>
+				<div className="grid grid-cols-5 gap-2">
+					<FormField
+						control={control}
+						name="idType"
+						render={({ field }) => (
+							<FormItem className="space-y-2 flex flex-col col-span-1">
+								<FormLabel>Cédula *</FormLabel>
+								<FormControl>
+									<FormDropdown
+										options={createDropdownOptions(['V', 'E', 'J', 'C'])}
+										value={field.value || 'V'}
+										onChange={field.onChange}
+										placeholder="Tipo"
+										className={inputStyles + ' transition-none'}
+										id="patient-id-type"
+									/>
+								</FormControl>
+							</FormItem>
+						)}
+					/>
+					<FormField
+						control={control}
+						name="idNumber"
+						render={({ field }) => (
+							<FormItem className="flex flex-col col-span-4">
+								<FormLabel className="text-transparent">Unidad</FormLabel>
+								<FormControl>
+									<AutocompleteInput
+										fieldName="idNumber"
+										placeholder="12345678"
+										iconRight={<CreditCard className="h-4 w-4 text-muted-foreground" />}
+										{...field}
+										onPatientSelect={handlePatientSelect}
+										onChange={(e) => {
+											const { value } = e.target
+											if (/^[0-9]*$/.test(value)) {
+												field.onChange(e)
+											}
+										}}
+										className={cn(inputStyles, isLoadingPatient && 'border-blue-300 transition-none')}
+									/>
+								</FormControl>
+							</FormItem>
+						)}
+					/>
+					<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight w-full col-span-full">
+						💡 Haz clic en una cédula para llenar automáticamente los datos del paciente
+					</p>
+				</div>
 
 				{/* Nombre Completo - CON AUTOCOMPLETADO */}
 				<FormField
