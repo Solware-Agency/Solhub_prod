@@ -45,14 +45,14 @@ export const CurrencyDonutChart: React.FC<CurrencyDonutChartProps> = ({
 
 	const data = [
 		{
-			name: 'Bolívares (VES)',
+			name: 'Bolívares',
 			value: bolivaresTotal,
 			currency: 'VES ',
 			color: COLORS.bolivares,
 			percentage: 0, // Se calculará después
 		},
 		{
-			name: 'Dólares (USD)',
+			name: 'Dólares',
 			value: dollarsTotal,
 			currency: 'USD ',
 			color: COLORS.dollars,
