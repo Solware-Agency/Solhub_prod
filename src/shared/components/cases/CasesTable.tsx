@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { ChevronUp, ChevronDown, Search, Maximize2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, Search, Maximize2, Download } from 'lucide-react'
 import type { MedicalCaseWithPatient } from '@lib/medical-cases-service'
 import type { DateRange } from 'react-day-picker'
+import { Button } from '@shared/components/ui/button'
 
 // Tipo unificado que incluye todos los campos necesarios para compatibilidad
 type UnifiedMedicalRecord = MedicalCaseWithPatient
@@ -9,6 +10,8 @@ import { useToast } from '@shared/hooks/use-toast'
 import { Input } from '@shared/components/ui/input'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useExportToExcel } from '@shared/hooks/useExportToExcel'
+import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal'
 import RequestCaseModal from './RequestCaseModal'
 import UnifiedCaseModal from './UnifiedCaseModal'
 import HorizontalLinearStepper from './StepsCaseModal'
@@ -75,6 +78,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		useAuth()
 		const { profile } = useUserProfile()
 		const { toast } = useToast()
+		const { exportToExcel, isModalOpen, setIsModalOpen, pendingExport, handleConfirmExport, handleCancelExport } =
+			useExportToExcel()
 		const [searchTerm, setSearchTerm] = useState('')
 		const [statusFilter, setStatusFilter] = useState<string>('all')
 		const [branchFilter, setBranchFilter] = useState<string>('all')
@@ -366,6 +371,47 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			},
 			[onCaseSelect],
 		)
+
+		// Función para manejar la exportación
+		const handleExportToExcel = useCallback(() => {
+			// Validar que cases esté disponible
+			if (!cases || !Array.isArray(cases)) {
+				toast({
+					title: '❌ Error',
+					description: 'No hay datos disponibles para exportar.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			const currentFilters = {
+				statusFilter,
+				branchFilter,
+				showPdfReadyOnly,
+				selectedDoctors,
+				citologyPositiveFilter,
+				citologyNegativeFilter,
+				searchTerm,
+				dateRange,
+			}
+
+			exportToExcel(cases, currentFilters, () => {
+				// Callback que se ejecuta después de confirmar
+				console.log('Exportación confirmada')
+			})
+		}, [
+			cases,
+			statusFilter,
+			branchFilter,
+			showPdfReadyOnly,
+			selectedDoctors,
+			citologyPositiveFilter,
+			citologyNegativeFilter,
+			searchTerm,
+			dateRange,
+			exportToExcel,
+			toast,
+		])
 
 		// Memoize the filtered and sorted cases to improve performance - OPTIMIZED
 		const filteredAndSortedCases = useMemo(() => {
@@ -707,6 +753,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 								{/* Results count */}
 								<div className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block"></div>
 
+								{/* Export Button */}
+								<Button
+									variant="outline"
+									className="flex items-center gap-2 cursor-pointer"
+									title="Exportar"
+									onClick={handleExportToExcel}
+								>
+									<Download className="w-4 h-4" />
+									<span className="hidden sm:inline">Exportar</span>
+								</Button>
+
 								{/* Close button */}
 								<button
 									onClick={() => setIsFullscreen(false)}
@@ -1031,17 +1088,26 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 									onClearAllFilters={handleClearAllFilters}
 								/>
 
-								{/* Results count */}
-								<div className="text-sm text-gray-600 dark:text-gray-400 hidden sm:flex"></div>
+								<Button
+									variant="outline"
+									className="flex items-center gap-2 cursor-pointer"
+									title="Exportar"
+									onClick={handleExportToExcel}
+								>
+									<Download className="w-4 h-4" />
+									Exportar
+								</Button>
 
 								{/* Fullscreen Button */}
-								<button
+								<Button
 									onClick={() => setIsFullscreen(true)}
-									className="hidden lg:flex items-center gap-2 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary dark:bg-background dark:text-white text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-primary hover:shadow-sm transition-transform duration-200 flex-shrink-0 whitespace-nowrap"
+									variant="outline"
+									className="flex items-center gap-2 cursor-pointer"
+									title="Expandir"
 								>
 									<Maximize2 className="w-4 h-4" />
 									Expandir
-								</button>
+								</Button>
 							</div>
 						</div>
 					</div>
@@ -1307,6 +1373,15 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 						isFullscreen={isFullscreen}
 					/>
 				)}
+
+				{/* Export Confirmation Modal */}
+				<ExportConfirmationModal
+					isOpen={isModalOpen}
+					onOpenChange={setIsModalOpen}
+					onConfirm={handleConfirmExport}
+					onCancel={handleCancelExport}
+					casesCount={pendingExport?.cases.length || 0}
+				/>
 			</>
 		)
 	},

@@ -97,7 +97,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 			<DialogTrigger asChild>
 				<Button
 					variant={hasActiveFilters ? 'default' : 'outline'}
-					className="flex items-center gap-2"
+					className="flex items-center gap-2 cursor-pointer"
 					title="Filtros avanzados"
 				>
 					<Filter className="w-4 h-4" />
