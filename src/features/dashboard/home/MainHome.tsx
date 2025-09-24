@@ -21,7 +21,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 // Lazy loaded components
 import { StatDetailPanel } from '@shared/components/lazy-components'
@@ -149,11 +149,11 @@ function MainHome() {
 					{/* Grid 4 - KPI Card: Total de Casos */}
 					<StatCard
 						title="Casos"
-						value={isLoading ? '...' : stats?.totalCases || 0}
+						value={isLoading ? '...' : formatNumber(stats?.totalCases || 0)}
 						description="casos registrados"
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 						trend={{
-							value: isLoading ? '...' : `+${stats?.newPatientsThisMonth || 0}`,
+							value: isLoading ? '...' : `+${formatNumber(stats?.newPatientsThisMonth || 0)}`,
 							icon: <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
 							positive: true,
 						}}
@@ -268,7 +268,8 @@ function MainHome() {
 														{doctor.doctor}
 													</p>
 													<p className="text-xs text-gray-500 dark:text-gray-400">
-														{doctor.cases} caso{doctor.cases !== 1 ? 's' : ''} • {formatCurrency(doctor.revenue)}
+														{formatNumber(doctor.cases)} caso{doctor.cases !== 1 ? 's' : ''} •{' '}
+														{formatCurrency(doctor.revenue)}
 													</p>
 												</div>
 											</div>
@@ -353,7 +354,7 @@ function MainHome() {
 													</div>
 												</div>
 												<span className={`text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
-													{exam.count} casos
+													{formatNumber(exam.count)} casos
 												</span>
 											</div>
 										)
@@ -395,7 +396,9 @@ function MainHome() {
 										</span>
 									</div>
 									<p className="text-[10px] sm:text-xs text-orange-700 dark:text-orange-300">
-										{isLoading ? 'Cargando...' : `${stats?.incompleteCases || 0} casos pendientes de completar`}
+										{isLoading
+											? 'Cargando...'
+											: `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de completar`}
 									</p>
 								</div>
 

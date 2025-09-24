@@ -1,0 +1,5 @@
+---
+description: please use pnpm instead of npm for everything
+globs:
+alwaysApply: true
+---

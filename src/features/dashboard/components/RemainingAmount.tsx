@@ -1,20 +1,52 @@
-import React from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { DollarSign, AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 const RemainingAmount: React.FC = () => {
 	const { data: stats, isLoading } = useDashboardStats()
+	const cardRef = useRef<HTMLDivElement>(null)
+	const [isVisible, setIsVisible] = useState(false)
+	const [animationTriggered, setAnimationTriggered] = useState(false)
 
 	// formatCurrency is now imported from number-utils
 
 	// Calculate pending payments percentage
 	const pendingPaymentsPercentage = stats?.totalRevenue ? (stats.pendingPayments / stats.totalRevenue) * 100 : 0
 
+	// Intersection Observer para detectar cuando el componente es visible
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				if (entry.isIntersecting && !animationTriggered) {
+					setIsVisible(true)
+					setAnimationTriggered(true)
+				}
+			},
+			{
+				threshold: 0.3, // Se activa cuando el 30% del componente es visible
+				rootMargin: '0px 0px -50px 0px', // Se activa un poco antes de que esté completamente visible
+			},
+		)
+
+		if (cardRef.current) {
+			observer.observe(cardRef.current)
+		}
+
+		return () => {
+			if (cardRef.current) {
+				observer.unobserve(cardRef.current)
+			}
+		}
+	}, [animationTriggered])
+
 	return (
-		<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+		<Card
+			ref={cardRef}
+			className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full"
+		>
 			<div className="bg-white dark:bg-background rounded-xl p-3 flex flex-col h-full">
 				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3">
 					<h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0 flex items-center gap-2">
@@ -55,10 +87,13 @@ const RemainingAmount: React.FC = () => {
 											</p>
 										</div>
 									</div>
-									<div className="w-full bg-red-200 dark:bg-red-800/50 rounded-full h-2.5">
+									<div className="w-full bg-red-200 dark:bg-red-800/50 rounded-full h-2.5 overflow-hidden">
 										<div
-											className="bg-red-500 h-2.5 rounded-full flex items-center justify-end pr-2"
-											style={{ width: `${Math.min(pendingPaymentsPercentage, 100)}%` }}
+											className="bg-red-500 h-2.5 rounded-full flex items-center justify-end pr-2 transition-all duration-1000 ease-out"
+											style={{
+												width: isVisible ? `${Math.min(pendingPaymentsPercentage, 100)}%` : '0%',
+												transitionDelay: isVisible ? '0.2s' : '0s',
+											}}
 										>
 											{pendingPaymentsPercentage > 15 && (
 												<span className="text-xs text-white font-medium">{Math.round(pendingPaymentsPercentage)}%</span>
@@ -81,15 +116,18 @@ const RemainingAmount: React.FC = () => {
 										<div>
 											<p className="text-sm text-orange-700 dark:text-orange-300">Casos Incompletos</p>
 											<p className="text-xl font-bold text-orange-800 dark:text-orange-200">
-												{stats?.incompleteCases || 0}
+												{formatNumber(stats?.incompleteCases || 0)}
 											</p>
 										</div>
 									</div>
-									<div className="w-full bg-orange-200 dark:bg-orange-800/50 rounded-full h-2.5">
+									<div className="w-full bg-orange-200 dark:bg-orange-800/50 rounded-full h-2.5 overflow-hidden">
 										<div
-											className="bg-orange-500 h-2.5 rounded-full flex items-center justify-end pr-2"
+											className="bg-orange-500 h-2.5 rounded-full flex items-center justify-end pr-2 transition-all duration-1000 ease-out"
 											style={{
-												width: `${stats?.totalCases ? (stats.incompleteCases / stats.totalCases) * 100 : 0}%`,
+												width: isVisible
+													? `${stats?.totalCases ? (stats.incompleteCases / stats.totalCases) * 100 : 0}%`
+													: '0%',
+												transitionDelay: isVisible ? '0.6s' : '0s',
 											}}
 										>
 											{stats?.totalCases && (stats.incompleteCases / stats.totalCases) * 100 > 15 && (

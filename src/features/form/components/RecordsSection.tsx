@@ -7,6 +7,7 @@ import { type MedicalRecord } from '@shared/types/types'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@lib/supabase/config'
+import { formatNumber } from '@shared/utils/number-utils'
 
 interface RecordsSectionProps {
 	cases: MedicalRecord[]
@@ -408,7 +409,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 								<p className="text-xs font-bold text-muted-foreground">PDF Pendientes</p>
 							</div>
 							<div className="absolute right-3 top-1/2 -translate-y-1/2 text-right tabular-nums">
-								<p className="text-xl font-bold">{pendingPdfCases}</p>
+								<p className="text-xl font-bold">{formatNumber(pendingPdfCases)}</p>
 							</div>
 						</button>
 
@@ -457,7 +458,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<Activity className="h-3 w-3 text-pink-600" />
 									<span className="text-xs font-medium">Biopsia</span>
 								</div>
-								<span className="text-sm font-bold">{examTypeCounts['biopsia'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(examTypeCounts['biopsia'] || 0)}</span>
 							</div>
 
 							{/* Citología */}
@@ -473,7 +474,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<Stethoscope className="h-3 w-3 text-purple-600" />
 									<span className="text-xs font-medium">Citología</span>
 								</div>
-								<span className="text-sm font-bold">{examTypeCounts['citologia'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(examTypeCounts['citologia'] || 0)}</span>
 							</div>
 
 							{/* Inmunohistoquímica */}
@@ -489,7 +490,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<FlaskConical className="h-3 w-3 text-blue-500" />
 									<span className="text-xs font-medium">Inmunohistoquímica</span>
 								</div>
-								<span className="text-sm font-bold">{examTypeCounts['inmunohistoquimica'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(examTypeCounts['inmunohistoquimica'] || 0)}</span>
 							</div>
 						</div>
 					</CardContent>
@@ -532,7 +533,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<FileText className="h-3 w-3 text-red-500" />
 									<span className="text-xs font-medium">Faltante</span>
 								</div>
-								<span className="text-sm font-bold">{docAprobadoCounts['faltante'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(docAprobadoCounts['faltante'] || 0)}</span>
 							</div>
 
 							{/* Pendiente */}
@@ -548,7 +549,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<FileText className="h-3 w-3 text-yellow-500" />
 									<span className="text-xs font-medium">Pendiente</span>
 								</div>
-								<span className="text-sm font-bold">{docAprobadoCounts['pendiente'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(docAprobadoCounts['pendiente'] || 0)}</span>
 							</div>
 
 							{/* Rechazado */}
@@ -564,7 +565,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<FileText className="h-3 w-3 text-orange-500" />
 									<span className="text-xs font-medium">Rechazado</span>
 								</div>
-								<span className="text-sm font-bold">{docAprobadoCounts['rechazado'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(docAprobadoCounts['rechazado'] || 0)}</span>
 							</div>
 
 							{/* Aprobado */}
@@ -580,7 +581,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 									<FileText className="h-3 w-3 text-green-500" />
 									<span className="text-xs font-medium">Aprobado</span>
 								</div>
-								<span className="text-sm font-bold">{docAprobadoCounts['aprobado'] || 0}</span>
+								<span className="text-sm font-bold">{formatNumber(docAprobadoCounts['aprobado'] || 0)}</span>
 							</div>
 						</div>
 					</CardContent>

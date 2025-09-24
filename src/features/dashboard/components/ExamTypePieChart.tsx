@@ -163,9 +163,9 @@ const ExamTypePieChart: React.FC = () => {
 												}`}
 											>
 												{entry.examType}
-											<div className="text-xs text-gray-500 dark:text-gray-400">
-												({entry.count} caso{entry.count !== 1 ? 's' : ''})
-											</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">
+													({entry.count} caso{entry.count !== 1 ? 's' : ''})
+												</div>
 											</span>
 										</div>
 									</div>
