@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 export type StatType =
 	| 'totalRevenue'
@@ -218,7 +218,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 														{formatCurrency(exam.revenue)}
 													</span>
-													<span className="text-xs text-gray-500 dark:text-gray-400">{exam.count} casos</span>
+													<span className="text-xs text-gray-500 dark:text-gray-400">
+														{formatNumber(exam.count)} casos
+													</span>
 												</div>
 											</div>
 										)
@@ -256,15 +258,21 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalCases}</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(stats.totalCases)}
+									</p>
 								</div>
 								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Casos Pagados</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.completedCases}</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(stats.completedCases)}
+									</p>
 								</div>
 								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Casos Incompletos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.incompleteCases}</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(stats.incompleteCases)}
+									</p>
 								</div>
 							</div>
 						</div>
@@ -285,7 +293,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{exam.count} casos
+														{formatNumber(exam.count)} casos
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatCurrency(exam.revenue)}
@@ -313,7 +321,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{doctor.cases} casos
+														{formatNumber(doctor.cases)} casos
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatCurrency(doctor.revenue)}
@@ -696,7 +704,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{exam.count} casos
+														{formatNumber(exam.count)} casos
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatCurrency(exam.revenue)}
@@ -730,7 +738,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
 												</div>
 												<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-													<span>{exam.count} casos</span>
+													<span>{formatNumber(exam.count)} casos</span>
 													<span>
 														{stats.monthlyRevenue > 0 ? ((exam.revenue / stats.monthlyRevenue) * 100).toFixed(1) : 0}%
 														del total del mes

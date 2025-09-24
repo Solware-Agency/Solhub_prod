@@ -81,7 +81,7 @@ export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = (
 							<ul className="mt-2 text-xs text-blue-700 dark:text-blue-400 space-y-1 ml-6">
 								<li>• Información del paciente y caso médico</li>
 								<li>• Estado de pagos y montos</li>
-								<li>• Datos de citología y PDF</li>
+								<li>• Datos de citología y EXCEL</li>
 								<li>• Filtros aplicados en el nombre del archivo</li>
 							</ul>
 						</div>

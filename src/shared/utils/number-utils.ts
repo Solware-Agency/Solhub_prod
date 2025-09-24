@@ -134,6 +134,21 @@ export const formatCurrencyWithSymbol = (value: number | string, symbol: string 
 }
 
 /**
+ * Formats a number with dots as thousands separators (for integers and whole numbers)
+ * @param value Number to format
+ * @returns Formatted string with dots for thousands (e.g., "1.241", "12.345")
+ */
+export const formatNumber = (value: number | string): string => {
+	const num = parseDecimalNumber(value)
+	
+	// Format with European style: dots for thousands, no decimals for integers
+	return num.toLocaleString('de-DE', {
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0,
+	})
+}
+
+/**
  * Validates if a string represents a valid number
  * @param value String to validate
  * @returns True if valid number

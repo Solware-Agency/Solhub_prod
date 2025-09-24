@@ -8,7 +8,7 @@ import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import type { StatType } from '@shared/components/ui/stat-detail-panel'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 // Lazy loaded components
 import {
@@ -102,8 +102,8 @@ const StatsPage: React.FC = () => {
 						title="Pacientes Nuevos Este Mes"
 						// value={isLoading ? '...' : stats?.uniquePatients || 0}
 						// description={`Nuevos este mes: ${isLoading ? '...' : stats?.newPatientsThisMonth || 0}`}
-						value={`${isLoading ? '...' : stats?.newPatientsThisMonth || 0}`}
-						description={`Total: ${isLoading ? '...' : stats?.uniquePatients || 0}`}
+						value={`${isLoading ? '...' : formatNumber(stats?.newPatientsThisMonth || 0)}`}
+						description={`Total: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)}`}
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 						trend={{
 							value: isLoading ? '...' : '+8%',
@@ -118,8 +118,8 @@ const StatsPage: React.FC = () => {
 					{/* Paid Cases Card */}
 					<StatCard
 						title="Casos Pagados"
-						value={isLoading ? '...' : stats?.completedCases || 0}
-						description={`Total casos: ${isLoading ? '...' : stats?.totalCases || 0}`}
+						value={isLoading ? '...' : formatNumber(stats?.completedCases || 0)}
+						description={`Total casos: ${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}`}
 						icon={<CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
 							value: isLoading ? '...' : `${Math.round(completionRate)}%`,
@@ -134,7 +134,7 @@ const StatsPage: React.FC = () => {
 					{/* Incomplete Cases Card */}
 					<StatCard
 						title="Casos Incompletos"
-						value={isLoading ? '...' : stats?.incompleteCases || 0}
+						value={isLoading ? '...' : formatNumber(stats?.incompleteCases || 0)}
 						description={`Pagos pendientes: ${isLoading ? '...' : formatCurrency(stats?.pendingPayments || 0)}`}
 						icon={<AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />}
 						trend={{
@@ -245,7 +245,7 @@ const StatsPage: React.FC = () => {
 						<ExamTypePieChart />
 					</Suspense>
 
-				{/* Currency Distribution Chart - Same style as Branch Distribution */}
+					{/* Currency Distribution Chart - Same style as Branch Distribution */}
 					<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
@@ -275,7 +275,6 @@ const StatsPage: React.FC = () => {
 						<RemainingAmount />
 					</Suspense>
 				</div>
-
 
 				{/* Additional Reports Grid */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
