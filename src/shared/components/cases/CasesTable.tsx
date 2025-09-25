@@ -865,8 +865,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										{paginatedCases.length > 0 ? (
 											// Render paginated cases
 											paginatedCases.map((case_) => {
-												const ageDisplay = case_.edad || ''
-
 												return (
 													<tr key={case_.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
 														<td className="px-4 py-4">
@@ -900,12 +898,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																</div>
 																<div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
 																	<span>{case_.cedula}</span>
-																	{ageDisplay && (
-																		<>
-																			<span>•</span>
-																			<span>{ageDisplay}</span>
-																		</>
-																	)}
 																</div>
 															</div>
 														</td>
@@ -1203,7 +1195,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										{paginatedCases.length > 0 ? (
 											// Render paginated cases
 											paginatedCases.map((case_) => {
-												const ageDisplay = case_.edad || ''
 												return (
 													<tr key={case_.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
 														<td className="px-4 py-4">
@@ -1237,12 +1228,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																</div>
 																<div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
 																	<span>{case_.cedula}</span>
-																	{ageDisplay && (
-																		<>
-																			<span>•</span>
-																			<span>{ageDisplay}</span>
-																		</>
-																	)}
 																</div>
 															</div>
 														</td>

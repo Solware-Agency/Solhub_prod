@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import {
-	History,
-	Filter,
-	Calendar,
-	FileText,
-	RefreshCw,
-	ArrowUpDown,
-	Eye,
-	Trash2,
-	AlertCircle,
-} from 'lucide-react'
+import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
@@ -23,13 +13,14 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { supabase } from '@lib/supabase/config'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
+import type { DateRange } from 'react-day-picker'
 
 // Type for the actual data returned from the query - updated for new structure
 type ChangeLogData = {
 	id: string
 	medical_record_id: string | null
-	patient_id: string | null  // Nueva columna
-	entity_type: string | null  // Nueva columna: 'patient' o 'medical_case'
+	patient_id: string | null // Nueva columna
+	entity_type: string | null // Nueva columna: 'patient' o 'medical_case'
 	user_id: string
 	user_email: string
 	user_display_name?: string | null
@@ -108,7 +99,7 @@ const ChangelogTable: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')
 	const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all') // Nuevo filtro
-	const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
 	const [rowsPerPage, setRowsPerPage] = useState(20)
@@ -165,19 +156,28 @@ const ChangelogTable: React.FC = () => {
 				matchesEntityType = log.entity_type === 'medical_case'
 			}
 
-			// Date filter
+			// Date range filter
 			let matchesDate = true
-			if (dateFilter) {
+			if (dateRange?.from || dateRange?.to) {
 				const logDate = new Date(log.changed_at)
-				matchesDate =
-					logDate.getDate() === dateFilter.getDate() &&
-					logDate.getMonth() === dateFilter.getMonth() &&
-					logDate.getFullYear() === dateFilter.getFullYear()
+				const fromDate = dateRange.from
+				const toDate = dateRange.to
+
+				if (fromDate && toDate) {
+					// Rango completo: desde fecha hasta fecha
+					matchesDate = logDate >= fromDate && logDate <= toDate
+				} else if (fromDate) {
+					// Solo fecha desde
+					matchesDate = logDate >= fromDate
+				} else if (toDate) {
+					// Solo fecha hasta
+					matchesDate = logDate <= toDate
+				}
 			}
 
 			return matchesSearch && matchesAction && matchesEntityType && matchesDate
 		})
-	}, [logsData?.data, searchTerm, actionFilter, entityTypeFilter, dateFilter])
+	}, [logsData?.data, searchTerm, actionFilter, entityTypeFilter, dateRange])
 
 	// Function to delete a change log entry (only for owners)
 
@@ -222,7 +222,7 @@ const ChangelogTable: React.FC = () => {
 		setSearchTerm('')
 		setActionFilter('all')
 		setEntityTypeFilter('all') // Nuevo filtro
-		setDateFilter(undefined)
+		setDateRange(undefined)
 	}
 
 	// Get action type display text and icon
@@ -323,7 +323,7 @@ const ChangelogTable: React.FC = () => {
 								onChange={(v) => setEntityTypeFilter(v)}
 								placeholder="Tipo de entidad"
 								options={[
-									{ value: 'all', label: 'Todas las entidades' },
+									{ value: 'all', label: 'Todos los tipos' },
 									{ value: 'patient', label: 'Pacientes' },
 									{ value: 'medical_case', label: 'Casos Médicos' },
 								]}
@@ -331,32 +331,43 @@ const ChangelogTable: React.FC = () => {
 						</div>
 					</div>
 
-					{/* Date Filter */}
+					{/* Date Range Filter */}
 					<div className="flex items-center gap-2">
 						<Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
 							<PopoverTrigger asChild>
 								<Button variant="outline" className="flex items-center gap-2">
 									<Calendar className="w-4 h-4 text-gray-400" />
-									{dateFilter ? format(dateFilter, 'PPP', { locale: es }) : 'Filtrar por fecha'}
+									{dateRange?.from && dateRange?.to
+										? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', {
+												locale: es,
+										  })}`
+										: dateRange?.from
+										? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
+										: 'Filtrar por rango de fechas'}
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0">
 								<CalendarComponent
-									mode="single"
-									selected={dateFilter}
-									onSelect={(date) => {
-										setDateFilter(date)
-										setIsDatePickerOpen(false)
+									mode="range"
+									selected={dateRange}
+									onSelect={(range) => {
+										setDateRange(range)
+										if (range?.from && range?.to) {
+											setIsDatePickerOpen(false)
+										}
 									}}
 									initialFocus
 									locale={es}
+									toDate={new Date()}
+									disabled={{ after: new Date() }}
+									numberOfMonths={1}
 								/>
 							</PopoverContent>
 						</Popover>
 					</div>
 
 					{/* Clear Filters */}
-					{(searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateFilter) && (
+					{(searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateRange?.from || dateRange?.to) && (
 						<Button variant="ghost" onClick={clearFilters} className="text-sm">
 							Limpiar filtros
 						</Button>
@@ -379,7 +390,7 @@ const ChangelogTable: React.FC = () => {
 							<History className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
 							<p className="text-lg font-medium text-gray-500 dark:text-gray-400">No se encontraron registros</p>
 							<p className="text-sm text-gray-400 dark:text-gray-500">
-								{searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateFilter
+								{searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateRange?.from || dateRange?.to
 									? 'Intenta ajustar los filtros de búsqueda'
 									: 'Aún no hay registros en el historial de cambios'}
 							</p>
@@ -495,7 +506,9 @@ const ChangelogTable: React.FC = () => {
 																</span>
 															) : (
 																<div className="text-sm flex items-start gap-4">
-																	<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">{translateFieldLabel(log.field_name, log.field_label)}</p>
+																	<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">
+																		{translateFieldLabel(log.field_name, log.field_label)}
+																	</p>
 																	<div className="flex-1 min-w-0">
 																		<div className="text-xs text-gray-500 dark:text-gray-400">
 																			<span className="line-through">Antes: {log.old_value || '(vacío)'}</span>
@@ -594,7 +607,9 @@ const ChangelogTable: React.FC = () => {
 															</span>
 														) : (
 															<div className="text-sm flex items-start gap-3">
-																<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">{translateFieldLabel(log.field_name, log.field_label)}</p>
+																<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">
+																	{translateFieldLabel(log.field_name, log.field_label)}
+																</p>
 																<div className="flex-1 min-w-0">
 																	<div className="text-xs text-gray-500 dark:text-gray-400">
 																		<span className="line-through">Antes: {log.old_value || '(vacío)'}</span>

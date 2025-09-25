@@ -258,6 +258,45 @@ export const createMedicalCase = async (caseData: MedicalCaseInsert): Promise<Me
 			throw error
 		}
 
+		// Registrar la creación en change_logs
+		if (data && caseData.created_by) {
+			try {
+				// Obtener información del usuario
+				const { data: user } = await supabase.auth.getUser()
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('display_name, email')
+					.eq('id', caseData.created_by)
+					.single()
+
+				const userEmail = profile?.email || user.user?.email || 'unknown@email.com'
+				const userDisplayName = profile?.display_name || user.user?.user_metadata?.display_name || 'Usuario'
+
+				const changeLog = {
+					medical_record_id: data.id,
+					user_id: caseData.created_by,
+					user_email: userEmail,
+					user_display_name: userDisplayName,
+					field_name: 'created_record',
+					field_label: 'Registro Creado',
+					old_value: null,
+					new_value: `Registro médico creado: ${data.code || data.id}`,
+					changed_at: new Date().toISOString(),
+					entity_type: 'medical_case',
+				}
+
+				const { error: logError } = await supabase.from('change_logs').insert(changeLog)
+				if (logError) {
+					console.error('Error logging case creation:', logError)
+				} else {
+					console.log('✅ Changelog de creación registrado')
+				}
+			} catch (logError) {
+				console.error('Error logging case creation:', logError)
+				// Continue even if logging fails
+			}
+		}
+
 		console.log('✅ Caso médico creado exitosamente:', data)
 		return data as MedicalCase
 	} catch (error) {
@@ -868,9 +907,7 @@ export const findCaseByCode = async (code: string): Promise<MedicalCaseWithPatie
  */
 export const getMedicalCasesStats = async (filters?: { dateFrom?: string; dateTo?: string; branch?: string }) => {
 	try {
-		let query = supabase
-			.from('medical_records_clean')
-			.select('total_amount, payment_status, exam_type, branch, date')
+		let query = supabase.from('medical_records_clean').select('total_amount, payment_status, exam_type, branch, date')
 
 		// Aplicar filtros
 		if (filters?.dateFrom) {
@@ -931,10 +968,10 @@ export const deleteMedicalCase = async (caseId: string): Promise<{ success: bool
 			return { success: false, error: 'ID del caso requerido' }
 		}
 
-		// Primero verificar que el caso existe
+		// Primero verificar que el caso existe y obtener más información
 		const { data: existingCase, error: fetchError } = await supabase
 			.from('medical_records_clean')
-			.select('id, code, patient_id')
+			.select('id, code, patient_id, exam_type')
 			.eq('id', caseId)
 			.single()
 
@@ -943,6 +980,47 @@ export const deleteMedicalCase = async (caseId: string): Promise<{ success: bool
 				return { success: false, error: 'Caso no encontrado' }
 			}
 			throw fetchError
+		}
+
+		// Obtener información del usuario actual
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) {
+			return { success: false, error: 'Usuario no autenticado' }
+		}
+
+		// Obtener información del perfil del usuario
+		const { data: profile } = await supabase.from('profiles').select('display_name, email').eq('id', user.id).single()
+
+		const userEmail = profile?.email || user.email || 'unknown@email.com'
+		const userDisplayName = profile?.display_name || user.user_metadata?.display_name || 'Usuario'
+
+		// Crear el log de eliminación ANTES de eliminar el caso
+		const recordInfo = `${existingCase.code || 'Sin código'} - ${existingCase.exam_type || 'Sin tipo de examen'}`
+
+		const changeLog = {
+			medical_record_id: existingCase.id,
+			patient_id: existingCase.patient_id,
+			user_id: user.id,
+			user_email: userEmail,
+			user_display_name: userDisplayName,
+			field_name: 'deleted_record',
+			field_label: 'Registro Eliminado',
+			old_value: recordInfo,
+			new_value: null,
+			deleted_record_info: recordInfo,
+			changed_at: new Date().toISOString(),
+			entity_type: 'medical_case',
+		}
+
+		// Insertar el log de eliminación
+		const { error: logError } = await supabase.from('change_logs').insert(changeLog)
+		if (logError) {
+			console.error('Error logging case deletion:', logError)
+			// Continue with deletion even if logging fails
+		} else {
+			console.log('✅ Changelog de eliminación registrado')
 		}
 
 		// Eliminar el caso médico
