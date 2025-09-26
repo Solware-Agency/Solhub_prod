@@ -64,54 +64,75 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 			</CardHeader>
 			<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
 				{/* Cédula - CON AUTOCOMPLETADO Y AUTOFILL */}
-				<div className="grid grid-cols-5 gap-2">
+				<div className="grid grid-cols-7 gap-2">
+					<div className="grid grid-cols-4 gap-2 col-span-5">
+						<FormField
+							control={control}
+							name="idType"
+							render={({ field }) => (
+								<FormItem className="space-y-2 flex flex-col col-span-1">
+									<FormLabel>Cédula *</FormLabel>
+									<FormControl>
+										<FormDropdown
+											options={createDropdownOptions(['V', 'E', 'J', 'C'])}
+											value={field.value || 'V'}
+											onChange={field.onChange}
+											placeholder="Tipo"
+											className={inputStyles + ' transition-none'}
+											id="patient-id-type"
+										/>
+									</FormControl>
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={control}
+							name="idNumber"
+							render={({ field }) => (
+								<FormItem className="flex flex-col col-span-3">
+									<FormLabel className="text-transparent">Unidad</FormLabel>
+									<FormControl>
+										<AutocompleteInput
+											fieldName="idNumber"
+											placeholder="12345678"
+											iconRight={<CreditCard className="h-4 w-4 text-muted-foreground" />}
+											{...field}
+											onPatientSelect={handlePatientSelect}
+											onChange={(e) => {
+												const { value } = e.target
+												if (/^[0-9]*$/.test(value)) {
+													field.onChange(e)
+												}
+											}}
+											className={cn(inputStyles, isLoadingPatient && 'border-blue-300 transition-none')}
+										/>
+									</FormControl>
+								</FormItem>
+							)}
+						/>
+						<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight w-full col-span-full">
+							💡 Haz clic en una cédula para llenar automáticamente los datos del paciente
+						</p>
+					</div>
 					<FormField
 						control={control}
-						name="idType"
+						name="gender"
 						render={({ field }) => (
-							<FormItem className="space-y-2 flex flex-col col-span-1">
-								<FormLabel>Cédula *</FormLabel>
+							<FormItem className="space-y-2 flex flex-col col-span-2">
+								<FormLabel>Género *</FormLabel>
 								<FormControl>
 									<FormDropdown
-										options={createDropdownOptions(['V', 'E', 'J', 'C'])}
-										value={field.value || 'V'}
+										options={createDropdownOptions(['masculino', 'femenino'])}
+										value={field.value as string}
 										onChange={field.onChange}
-										placeholder="Tipo"
+										placeholder="Género"
 										className={inputStyles + ' transition-none'}
-										id="patient-id-type"
+										id="patient-gender"
 									/>
 								</FormControl>
 							</FormItem>
 						)}
 					/>
-					<FormField
-						control={control}
-						name="idNumber"
-						render={({ field }) => (
-							<FormItem className="flex flex-col col-span-4">
-								<FormLabel className="text-transparent">Unidad</FormLabel>
-								<FormControl>
-									<AutocompleteInput
-										fieldName="idNumber"
-										placeholder="12345678"
-										iconRight={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-										{...field}
-										onPatientSelect={handlePatientSelect}
-										onChange={(e) => {
-											const { value } = e.target
-											if (/^[0-9]*$/.test(value)) {
-												field.onChange(e)
-											}
-										}}
-										className={cn(inputStyles, isLoadingPatient && 'border-blue-300 transition-none')}
-									/>
-								</FormControl>
-							</FormItem>
-						)}
-					/>
-					<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight w-full col-span-full">
-						💡 Haz clic en una cédula para llenar automáticamente los datos del paciente
-					</p>
 				</div>
 
 				{/* Nombre Completo - CON AUTOCOMPLETADO */}

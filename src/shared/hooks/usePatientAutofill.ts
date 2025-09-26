@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@lib/supabase/config'
-import { type UseFormSetValue } from 'react-hook-form'
-import type { FormValues } from '@lib/registration-service'
 
-export const usePatientAutofill = (setValue: UseFormSetValue<FormValues>) => {
+export const usePatientAutofill = (setValue: any) => {
 	const [isLoading, setIsLoading] = useState(false)
 	const [lastFilledPatient, setLastFilledPatient] = useState<string | null>(null)
 
@@ -17,7 +15,7 @@ export const usePatientAutofill = (setValue: UseFormSetValue<FormValues>) => {
 			// La cédula ahora viene en formato V-12345678, E-12345678, etc.
 			const { data, error } = await supabase
 				.from('patients')
-				.select('nombre, telefono, edad, email, cedula')
+				.select('nombre, telefono, edad, email, cedula, gender')
 				.eq('cedula', idNumber)
 				.single()
 
@@ -50,6 +48,12 @@ export const usePatientAutofill = (setValue: UseFormSetValue<FormValues>) => {
 					setValue('fullName', data.nombre)
 					setValue('phone', data.telefono || '')
 					setValue('email', data.email || '')
+
+					// Llenar gender solo si el paciente ya tiene un género asignado
+					if (data.gender && data.gender !== null) {
+						setValue('gender', data.gender)
+					}
+					// Si no tiene género (null), dejar placeholder
 
 					// Parsear la edad del paciente para extraer valor y unidad
 					if (data.edad) {

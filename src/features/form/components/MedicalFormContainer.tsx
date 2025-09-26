@@ -12,7 +12,8 @@ import { CommentsSection } from './CommentsSection'
 import { FilePlus2, Loader2, Trash2 } from 'lucide-react'
 import { useExchangeRate } from '@shared/hooks/useExchangeRate'
 import { useResetForm } from '@shared/hooks/useResetForm'
-import { registerMedicalCase, validateRegistrationData, type FormValues } from '@lib/registration-service'
+import { registerMedicalCase, validateRegistrationData } from '@lib/registration-service'
+import { type FormValues } from '@features/form/lib/form-schema'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 const getInitialFormValues = (): FormValues => ({
@@ -23,6 +24,7 @@ const getInitialFormValues = (): FormValues => ({
 	ageValue: 0,
 	ageUnit: 'Años' as const,
 	email: '',
+	gender: '' as any, // Sin valor por defecto - placeholder
 	examType: '',
 	doctorName: '',
 	treatingDoctor: '',

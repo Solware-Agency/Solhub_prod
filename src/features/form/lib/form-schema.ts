@@ -38,6 +38,11 @@ export const formSchema = z.object({
 		required_error: 'Debe seleccionar la unidad de edad.',
 	}),
 	email: z.string().email('Correo electrónico inválido').optional().or(z.literal('')),
+	gender: z
+		.enum(['masculino', 'femenino'], {
+			required_error: 'Debe seleccionar el género.',
+		})
+		.or(z.literal('')),
 	registrationDate: z.date({ required_error: 'La fecha de registro es requerida.' }),
 	examType: z.string().min(1, 'El tipo de exámen es requerido'),
 	origin: z
