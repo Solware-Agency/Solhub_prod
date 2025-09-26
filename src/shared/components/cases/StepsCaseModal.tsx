@@ -5,7 +5,7 @@ import type { Tables } from '@shared/types/types'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@shared/components/ui/button'
 import { supabase } from '@lib/supabase/config'
-import { X, User, ArrowLeft, ArrowRight, Sparkles, Heart, Shredder, FileCheck, Download } from 'lucide-react'
+import { X, User, ArrowLeft, ArrowRight, Sparkles, Heart, Shredder, FileCheck, Download, Send } from 'lucide-react'
 import {
 	markCaseAsPending,
 	approveCaseDocument,
@@ -76,6 +76,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const [isCompleting, setIsCompleting] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+	const [isSending, setIsSending] = useState(false)
 	const { toast } = useToast()
 	const { profile } = useUserProfile()
 	useBodyScrollLock(isOpen)
@@ -93,6 +94,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const [docUrl, setDocUrl] = useState<string | null>(case_?.googledocs_url ?? null)
 
 	const [citoStatus, setCitoStatus] = useState<'positivo' | 'negativo' | null>(case_?.cito_status ?? null)
+
+	const isPdfGenerated = case_?.informe_qr && case_.informe_qr.trim() !== ''
 
 	// Construir los pasos dinámicamente: si es owner, agregamos "Aprobar" antes del PDF; el PDF siempre es el último
 	const computedSteps = useMemo(() => {
@@ -693,6 +696,67 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 	}
 
+	const handleSendCase = async () => {
+		setIsSending(true)
+
+		try {
+			// Verificar que tenemos los datos necesarios
+			if (!case_?.email) {
+				toast({
+					title: '❌ Error',
+					description: 'Este caso no tiene un correo electrónico asociado.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			if (!case_?.informe_qr) {
+				toast({
+					title: '❌ Error',
+					description: 'El PDF del caso aún no está disponible.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			// Enviar email usando el endpoint del backend
+			const response = await fetch('http://localhost:3001/api/send-email', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					patientEmail: case_.email,
+					patientName: case_.full_name,
+					caseCode: case_.code || case_.id,
+					pdfUrl: case_.informe_qr,
+				}),
+			})
+
+			const result = await response.json()
+
+			if (!response.ok) {
+				console.error('Error del servidor:', result)
+				throw new Error(result.error || result.details || 'Error al enviar el email')
+			}
+
+			toast({
+				title: '✅ Correo enviado',
+				description: `Se ha enviado el informe al correo ${case_.email}`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
+		} catch (error) {
+			console.error('Error enviando correo:', error)
+			toast({
+				title: '❌ Error',
+				description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsSending(false)
+		}
+	}
+
 	const renderStepContent = () => {
 		const currentStepId = computedSteps[activeStep]?.id
 		switch (currentStepId) {
@@ -898,6 +962,25 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 										<>
 											<Download className="w-4 h-4 mr-2" />
 											Descargar PDF
+										</>
+									)}
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleSendCase}
+									className="flex-1"
+									disabled={!docUrl || docAprobado !== 'aprobado' || !isPdfGenerated}
+								>
+									{isSending ? (
+										<>
+											<div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mr-2" />
+											Enviando...
+										</>
+									) : (
+										<>
+											<Send className="w-4 h-4 mr-2" />
+											Enviar Caso
 										</>
 									)}
 								</Button>
