@@ -721,8 +721,10 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				return
 			}
 
-			// Enviar email usando el endpoint del backend
-			const response = await fetch('http://localhost:3001/api/send-email', {
+			// Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
+			const isDevelopment = import.meta.env.DEV
+			const apiUrl = isDevelopment ? 'http://localhost:3001/api/send-email' : '/api/send-email'
+			const response = await fetch(apiUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -735,7 +737,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				}),
 			})
 
-			const result = await response.json()
+			let result
+			try {
+				result = await response.json()
+			} catch (jsonError) {
+				console.error('Error parseando JSON:', jsonError)
+				throw new Error(`Error del servidor (${response.status}): ${response.statusText}`)
+			}
 
 			if (!response.ok) {
 				console.error('Error del servidor:', result)
