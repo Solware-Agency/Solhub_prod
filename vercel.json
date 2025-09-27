@@ -18,6 +18,9 @@
     },
     "api/send-email.js": {
       "maxDuration": 30
+    },
+    "api/test-config.js": {
+      "maxDuration": 10
     }
   }
 }

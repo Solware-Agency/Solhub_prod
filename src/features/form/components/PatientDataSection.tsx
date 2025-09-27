@@ -64,7 +64,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 			</CardHeader>
 			<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
 				{/* Cédula - CON AUTOCOMPLETADO Y AUTOFILL */}
-				<div className="grid grid-cols-7 gap-2">
+				<div className="grid grid-cols-8 gap-2">
 					<div className="grid grid-cols-4 gap-2 col-span-5">
 						<FormField
 							control={control}
@@ -118,7 +118,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 						control={control}
 						name="gender"
 						render={({ field }) => (
-							<FormItem className="space-y-2 flex flex-col col-span-2">
+							<FormItem className="space-y-2 flex flex-col col-span-3">
 								<FormLabel>Género *</FormLabel>
 								<FormControl>
 									<FormDropdown
