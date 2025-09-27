@@ -13,6 +13,7 @@ export interface Patient {
 	edad: string | null
 	telefono: string | null
 	email: string | null
+	gender: 'masculino' | 'femenino' | null
 	created_at: string | null
 	updated_at: string | null
 	version: number | null
@@ -25,6 +26,7 @@ export interface PatientInsert {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
+	gender?: 'masculino' | 'femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
@@ -37,6 +39,7 @@ export interface PatientUpdate {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
+	gender?: 'masculino' | 'femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
@@ -65,7 +68,7 @@ export const findPatientByCedula = async (cedula: string): Promise<Patient | nul
 
 		// Si no hay coincidencia exacta, buscar por número de cédula (sin prefijo)
 		const cedulaNumber = cedula.replace(/^[VEJC]-/, '')
-		
+
 		// Buscar pacientes que tengan el mismo número pero diferente prefijo
 		const { data: numberMatch, error: numberError } = await supabase
 			.from('patients')
@@ -74,7 +77,9 @@ export const findPatientByCedula = async (cedula: string): Promise<Patient | nul
 			.single()
 
 		if (numberMatch && !numberError) {
-			console.log(`⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${numberMatch.cedula} (buscando: ${cedula})`)
+			console.log(
+				`⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${numberMatch.cedula} (buscando: ${cedula})`,
+			)
 			return numberMatch
 		}
 
@@ -202,6 +207,7 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 			edad: 'Edad',
 			telefono: 'Teléfono',
 			email: 'Email',
+			gender: 'Género',
 		}
 
 		// Detectar cambios
@@ -314,6 +320,7 @@ export const getPatientStatistics = async (patientId: string) => {
 			edad: patient.edad,
 			telefono: patient.telefono,
 			email: patient.email,
+			gender: patient.gender,
 			total_cases: totalCases,
 			total_spent: totalSpent,
 			last_visit: lastVisit,
@@ -331,7 +338,7 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 	try {
 		const { data, error } = await supabase
 			.from('patients')
-			.select('id, cedula, nombre, telefono')
+			.select('id, cedula, nombre, telefono, gender')
 			.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
 			.limit(limit)
 			.order('nombre')

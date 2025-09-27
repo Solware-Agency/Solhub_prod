@@ -309,6 +309,7 @@ export type Database = {
 					created_at: string | null
 					edad: string | null
 					email: string | null
+					gender: Database['public']['Enums']['gender_type'] | null
 					id: string
 					nombre: string
 					telefono: string | null
@@ -320,6 +321,7 @@ export type Database = {
 					created_at?: string | null
 					edad?: string | null
 					email?: string | null
+					gender?: Database['public']['Enums']['gender_type'] | null
 					id?: string
 					nombre: string
 					telefono?: string | null
@@ -331,6 +333,7 @@ export type Database = {
 					created_at?: string | null
 					edad?: string | null
 					email?: string | null
+					gender?: Database['public']['Enums']['gender_type'] | null
 					id?: string
 					nombre?: string
 					telefono?: string | null
@@ -455,6 +458,7 @@ export type Database = {
 		Enums: {
 			cito_status_type: 'positivo' | 'negativo'
 			doc_aprobado_status: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+			gender_type: 'masculino' | 'femenino'
 		}
 		CompositeTypes: {
 			[_ in never]: never
@@ -473,7 +477,7 @@ export type Tables<
 	}
 		? keyof (Database[DefaultSchemaTableNameOrOptions['schema']] extends { Tables: any; Views: any }
 				? Database[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-					Database[DefaultSchemaTableNameOrOptions['schema']]['Views']
+						Database[DefaultSchemaTableNameOrOptions['schema']]['Views']
 				: never)
 		: never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
@@ -637,6 +641,7 @@ export interface MedicalRecord {
 	edad: string | null
 	telefono: string | null
 	patient_email: string | null
+	gender: 'masculino' | 'femenino' | null
 	// Alias para compatibilidad con el código existente
 	full_name: string // apunta a nombre
 	id_number: string // apunta a cedula

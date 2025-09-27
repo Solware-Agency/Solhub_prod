@@ -18,6 +18,7 @@ export interface FormValues {
 	ageValue: number
 	ageUnit: 'Años' | 'Meses'
 	email?: string
+	gender: 'masculino' | 'femenino' | ''
 	examType: string
 	doctorName: string
 	treatingDoctor: string
@@ -47,6 +48,7 @@ export interface PatientInsert {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
+	gender?: 'masculino' | 'femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
@@ -202,6 +204,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 		edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
 		telefono: formData.phone,
 		email: formData.email || null,
+		gender: formData.gender || null, // Si está vacío, guardar como null
 	}
 
 	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
@@ -266,7 +269,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
  */
 const detectPatientChanges = (existingPatient: PatientInsert, newPatientData: PatientInsert): boolean => {
 	// Comparar campos principales incluyendo cédula
-	const fields = ['cedula', 'nombre', 'edad', 'telefono', 'email'] as const
+	const fields = ['cedula', 'nombre', 'edad', 'telefono', 'email', 'gender'] as const
 
 	for (const field of fields) {
 		const existingValue = existingPatient[field]
@@ -330,6 +333,7 @@ export const searchPatientForForm = async (cedula: string) => {
 			phone: patient.telefono || '',
 			edad: patient.edad || '',
 			email: patient.email || '',
+			gender: patient.gender || '', // Incluir gender si existe, sino cadena vacía
 			// Otros campos se llenan con valores por defecto
 			ageValue: ageValue,
 			ageUnit: ageUnit,
