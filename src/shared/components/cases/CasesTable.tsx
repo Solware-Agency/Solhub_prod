@@ -712,7 +712,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 									<div className="w-full sm:max-w-md relative flex-1">
 										<Input
 											type="text"
-											placeholder="Buscar por nombre, código, cédula, estudio o médico..."
+											placeholder="Buscar por nombre, código, cédula, estudio o médico"
 											value={searchTerm}
 											onChange={handleSearchChange}
 											onKeyDown={handleSearchKeyDown}
@@ -765,12 +765,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 								</Button>
 
 								{/* Close button */}
-								<button
+								<Button
+									variant="outline"
 									onClick={() => setIsFullscreen(false)}
 									className="text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-2 sm:px-3 py-1 rounded-md ml-auto sm:ml-0 transition-all duration-200 mr-8"
 								>
 									<span className="hidden sm:inline">Cerrar</span> ✕
-								</button>
+								</Button>
 							</div>
 						</div>
 
@@ -1043,7 +1044,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 								<div className="flex-1 min-w-[200px] relative">
 									<Input
 										type="text"
-										placeholder="Buscar por nombre, código, cédula, estudio o médico..."
+										placeholder="Buscar por nombre, código, cédula, estudio o médico"
 										value={searchTerm}
 										onChange={handleSearchChange}
 										onKeyDown={handleSearchKeyDown}

@@ -426,6 +426,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 					{isAdmin && (
 						<>
 							<NavItem
+								to="/medic/form"
+								icon={<FileText className="stroke-2 size-5 shrink-0" />}
+								label="Formulario"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+							<NavItem
 								to="/medic/cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
 								label="Casos"

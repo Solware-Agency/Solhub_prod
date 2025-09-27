@@ -374,7 +374,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 										}`}
 									/>
 								</div>
-								<p className="text-xs font-bold text-muted-foreground">Casos Pendientes</p>
+								<p className="text-xs font-medium">Casos Pendientes</p>
 							</div>
 							<div className="absolute right-3 top-1/2 -translate-y-1/2 text-right tabular-nums">
 								<p className="text-xl font-bold">
@@ -406,7 +406,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 										}`}
 									/>
 								</div>
-								<p className="text-xs font-bold text-muted-foreground">PDF Pendientes</p>
+								<p className="text-xs font-medium">PDF Pendientes</p>
 							</div>
 							<div className="absolute right-3 top-1/2 -translate-y-1/2 text-right tabular-nums">
 								<p className="text-xl font-bold">{formatNumber(pendingPdfCases)}</p>
