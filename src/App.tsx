@@ -153,6 +153,7 @@ function App() {
 							>
 								{/* Nested routes that will render in the Outlet */}
 								<Route index element={<CasesPage />} />
+								<Route path="form" element={<MedicalForm />} />
 								<Route path="cases" element={<CasesPage />} />
 								{/* <Route path="my-cases" element={<MyCasesPage />} /> */}
 								<Route path="users" element={<UsersPage />} />

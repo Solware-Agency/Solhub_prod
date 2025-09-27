@@ -181,15 +181,6 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 						{/* Content */}
 						<div className="p-3 sm:p-6 overflow-y-auto flex-1">
 							<div className="space-y-4 sm:space-y-6">
-								{/* Case Type Indicator */}
-								<div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-									<div className="flex items-center gap-2">
-										{getCaseTypeIcon(caseType)}
-										<span className="font-medium text-blue-800 dark:text-blue-300">
-											Tipo de caso: {getCaseTypeTitle(caseType)}
-										</span>
-									</div>
-								</div>
 
 								{/* Dynamic Content Based on Case Type */}
 								{caseType === 'biopsia' && (
@@ -223,7 +214,7 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 															id="request-inmuno-reactions"
 															value={inmunorreacciones ?? []}
 															onChange={setInmunorreacciones}
-															placeholder="Escribir inmunorreacción y presionar Enter..."
+															placeholder="Escribir inmunorreacción y presionar Enter"
 															maxTags={20}
 															allowDuplicates={false}
 															className="bg-white dark:bg-gray-800"
