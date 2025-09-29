@@ -228,18 +228,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 										/>
 									</DatePopoverContent>
 								</DatePopover>
-
-								{(dateRange?.from || dateRange?.to) && (
-									<Button
-										onClick={() => onDateRangeChange(undefined)}
-										variant="ghost"
-										size="sm"
-										className="text-xs px-2 py-1 cursor-pointer"
-										title="Limpiar rango de fechas"
-									>
-										<X className="w-4 h-4" />
-									</Button>
-								)}
 							</div>
 						</div>
 

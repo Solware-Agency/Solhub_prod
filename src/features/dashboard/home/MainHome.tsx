@@ -51,6 +51,17 @@ function MainHome() {
 	const handleMonthBarClick = (monthData: { monthIndex: number }) => {
 		// FIXED: Use the monthIndex to create the correct date
 		const clickedDate = new Date(selectedYear, monthData.monthIndex, 1)
+
+		// Verificar si el mes clickeado es futuro al mes actual
+		const currentDate = new Date()
+		const currentYear = currentDate.getFullYear()
+		const currentMonth = currentDate.getMonth()
+
+		// Si estamos en el año actual y el mes clickeado es futuro, no permitir selección
+		if (selectedYear === currentYear && monthData.monthIndex > currentMonth) {
+			return // No hacer nada si es un mes futuro
+		}
+
 		setSelectedMonth(clickedDate)
 	}
 
@@ -133,7 +144,7 @@ function MainHome() {
 					<StatCard
 						title="Ingresos"
 						value={isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}
-						description={format(selectedMonth, 'MMMM yyyy', { locale: es })}
+						description={format(selectedMonth, 'MMMM yyyy', { locale: es }).replace(/^\w/, (c) => c.toUpperCase())}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
 							value: isLoading ? '...' : '+13%',
@@ -150,7 +161,7 @@ function MainHome() {
 					<StatCard
 						title="Casos"
 						value={isLoading ? '...' : formatNumber(stats?.totalCases || 0)}
-						description="casos registrados"
+						description="Casos registrados"
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 						trend={{
 							value: isLoading ? '...' : `+${formatNumber(stats?.newPatientsThisMonth || 0)}`,
@@ -200,17 +211,30 @@ function MainHome() {
 										const maxRevenue = Math.max(...(stats?.salesTrendByMonth.map((m) => m.revenue) || [1]))
 										const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0
 										const isSelected = month.isSelected
+
+										// Verificar si el mes es futuro al mes actual
+										const currentDate = new Date()
+										const currentYear = currentDate.getFullYear()
+										const currentMonth = currentDate.getMonth()
+										const isFutureMonth = selectedYear === currentYear && month.monthIndex > currentMonth
+
 										return (
 											<div
 												key={month.month}
-												className={`flex-1 rounded-t-sm hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer ${
-													isSelected
-														? 'bg-gradient-to-b from-purple-500 to-purple-600 hover:from-purple-500 hover:to-purple-700 shadow-lg'
-														: 'bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-500 hover:to-blue-700'
+												className={`flex-1 rounded-t-sm transition-transform duration-200 ${
+													isFutureMonth
+														? 'cursor-not-allowed opacity-50 bg-gradient-to-b from-gray-300 to-gray-400'
+														: isSelected
+														? 'cursor-pointer hover:translate-y-[-4px] bg-gradient-to-b from-purple-500 to-purple-600 hover:from-purple-500 hover:to-purple-700 shadow-lg'
+														: 'cursor-pointer hover:translate-y-[-4px] bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-500 hover:to-blue-700'
 												}`}
 												style={{ height: `${Math.max(height, 20)}%` }} // FIXED: Increased minimum height for better UX
-												title={`${month.month}: ${formatCurrency(month.revenue)}`}
-												onClick={() => handleMonthBarClick(month)}
+												title={
+													isFutureMonth
+														? `${month.month}: Mes futuro - No disponible`
+														: `${month.month}: ${formatCurrency(month.revenue)}`
+												}
+												onClick={() => !isFutureMonth && handleMonthBarClick(month)}
 											></div>
 										)
 									})

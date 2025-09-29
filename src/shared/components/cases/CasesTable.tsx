@@ -117,7 +117,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		// Dropdown options
 		const statusOptions = useMemo(
 			() => [
-				{ value: 'all', label: 'Estado de Pago' },
 				{ value: 'Pagado', label: 'Pagado' },
 				{ value: 'Incompleto', label: 'Incompleto' },
 			],
@@ -126,7 +125,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		const branchOptions = useMemo(
 			() => [
-				{ value: 'all', label: 'Todas las sedes' },
 				{ value: 'PMG', label: 'PMG' },
 				{ value: 'CPC', label: 'CPC' },
 				{ value: 'CNX', label: 'CNX' },
@@ -1250,7 +1248,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																return (
 																	missingAmount > 0 && (
 																		<div className="text-xs text-red-600 dark:text-red-400">
-																			Faltante: {formatCurrency(missingAmount)}
+																			{formatCurrency(missingAmount)}
 																		</div>
 																	)
 																)

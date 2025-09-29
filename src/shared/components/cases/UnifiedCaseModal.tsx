@@ -35,11 +35,7 @@ import { createDropdownOptions, FormDropdown } from '@shared/components/ui/form-
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
 import { AutocompleteInput } from '@shared/components/ui/autocomplete-input'
 import { useAuth } from '@app/providers/AuthContext'
-import { useUserProfile } from '@shared/hooks/useUserProfile'
-import TagInput from '@shared/components/ui/tag-input'
 import { WhatsAppIcon } from '@shared/components/icons/WhatsAppIcon'
-// Payment utilities removed - not needed in new structure
-// import { ... } from '@shared/utils/number-utils'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
@@ -93,18 +89,6 @@ interface CaseDetailPanelProps {
 	onDelete?: () => void
 	onCaseSelect: (case_: MedicalCaseWithPatient) => void
 	isFullscreen?: boolean
-}
-
-interface ImmunoRequest {
-	id: string
-	case_id: string
-	inmunorreacciones: string
-	n_reacciones: number
-	precio_unitario: number
-	total: number
-	pagado: boolean
-	created_at: string
-	updated_at: string
 }
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
@@ -166,7 +150,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		useGlobalOverlayOpen(isOpen)
 		const { toast } = useToast()
 		const { user } = useAuth()
-		const { profile } = useUserProfile()
 		const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 		const [isDeleting, setIsDeleting] = useState(false)
 		const [isEditing, setIsEditing] = useState(false)
@@ -176,10 +159,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false)
 		// const [newPayment, setNewPayment] = useState({...})
 		const [isChangelogOpen, setIsChangelogOpen] = useState(false)
-
-		// Immunohistochemistry specific states
-		const [immunoReactions, setImmunoReactions] = useState<string[]>([])
-		const [isRequestingImmuno, setIsRequestingImmuno] = useState(false)
 
 		// Payment editing states
 		const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -192,24 +171,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Converter states
 		const [converterUsdValue, setConverterUsdValue] = useState('')
-
-		// Query to get existing immuno request for this case
-		const { data: existingImmunoRequest, refetch: refetchImmunoRequest } = useQuery({
-			queryKey: ['immuno-request', case_?.id],
-			queryFn: async () => {
-				if (!case_?.id) return null
-
-				const { data, error } = await supabase.from('immuno_requests').select('*').eq('case_id', case_.id).single()
-
-				if (error && error.code !== 'PGRST116') {
-					console.error('Error fetching immuno request:', error)
-					return null
-				}
-
-				return data as ImmunoRequest | null
-			},
-			enabled: !!case_?.id && isOpen && case_?.exam_type?.toLowerCase().includes('inmuno'),
-		})
 
 		// Query to get the user who created the record
 		const { data: creatorData } = useQuery({
@@ -407,19 +368,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			}
 		}, [currentCase, isEditing])
 
-		// Initialize immuno reactions from existing request
-		useEffect(() => {
-			if (existingImmunoRequest) {
-				const reactions = existingImmunoRequest.inmunorreacciones
-					.split(',')
-					.map((r) => r.trim())
-					.filter((r) => r)
-				setImmunoReactions(reactions)
-			} else {
-				setImmunoReactions([])
-			}
-		}, [existingImmunoRequest])
-
 		const handleEditClick = () => {
 			if (!currentCase) return
 			setIsEditing(true)
@@ -431,14 +379,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			setPaymentMethods([])
 			setNewPaymentMethod({ method: '', amount: 0, reference: '' })
 			setIsAddingNewPayment(false)
-			setImmunoReactions(
-				existingImmunoRequest
-					? existingImmunoRequest.inmunorreacciones
-							.split(',')
-							.map((r) => r.trim())
-							.filter((r) => r)
-					: [],
-			)
 		}
 
 		const handleDeleteClick = () => {
@@ -549,65 +489,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				// Iniciar el proceso de agregar uno nuevo
 				setIsAddingNewPayment(true)
 				setNewPaymentMethod({ method: '', amount: 0, reference: '' })
-			}
-		}
-
-		const handleRequestImmunoReactions = async () => {
-			if (!case_ || !user || immunoReactions.length === 0) return
-
-			setIsRequestingImmuno(true)
-			try {
-				const inmunorreaccionesString = immunoReactions.join(',')
-				const nReacciones = immunoReactions.length
-				const precioUnitario = 18.0
-				const total = nReacciones * precioUnitario
-
-				// First, update the ims column in medical_records_clean
-				const { error: updateError } = await supabase
-					.from('medical_records_clean')
-					.update({ ims: inmunorreaccionesString })
-					.eq('id', case_.id)
-
-				if (updateError) {
-					throw updateError
-				}
-
-				// Then, create or update the immuno_requests record
-				const { error: upsertError } = await supabase.from('immuno_requests').upsert(
-					{
-						case_id: case_.id,
-						inmunorreacciones: inmunorreaccionesString,
-						n_reacciones: nReacciones,
-						precio_unitario: precioUnitario,
-						total: total,
-						pagado: false,
-					},
-					{
-						onConflict: 'case_id',
-					},
-				)
-
-				if (upsertError) {
-					throw upsertError
-				}
-
-				// Refetch the immuno request data
-				refetchImmunoRequest()
-
-				toast({
-					title: '✅ Inmunorreacciones solicitadas',
-					description: `Se han solicitado ${nReacciones} inmunorreacciones por un total de $${total.toFixed(2)}.`,
-					className: 'bg-green-100 border-green-400 text-green-800',
-				})
-			} catch (error) {
-				console.error('Error requesting immuno reactions:', error)
-				toast({
-					title: '❌ Error al solicitar inmunorreacciones',
-					description: 'Hubo un problema al procesar la solicitud. Inténtalo de nuevo.',
-					variant: 'destructive',
-				})
-			} finally {
-				setIsRequestingImmuno(false)
 			}
 		}
 
@@ -1048,13 +929,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			}
 		}, [])
 
-		// Check if this is an immunohistochemistry case
-		const isImmunoCase = case_?.exam_type?.toLowerCase().includes('inmuno')
-		const isAdmin = profile?.role === 'admin'
-		const canEditImmuno = isAdmin && isImmunoCase
-
-		// (removed inline InfoRow; now using top-level memoized InfoRow)
-
 		// Memoize the InfoSection component
 		const InfoSection = useCallback(
 			({
@@ -1333,98 +1207,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												: 'Fecha no disponible'}
 										</p>
 									</div>
-									{/* Immunohistochemistry Section - Only for admin users and immuno cases */}
-									{canEditImmuno && (
-										<InfoSection title="Inmunorreacciones" icon={Stethoscope}>
-											<div className="space-y-4">
-												<div>
-													<label
-														htmlFor="immuno-reactions"
-														className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block"
-													>
-														Agregar Inmunorreacciones
-													</label>
-													<TagInput
-														id="immuno-reactions"
-														value={immunoReactions}
-														onChange={setImmunoReactions}
-														placeholder="Escribir inmunorreacción y presionar Enter (ej: RE, RP, CERB2)"
-														className="w-full"
-														disabled={isRequestingImmuno}
-													/>
-													<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-														Escribe cada inmunorreacción y presiona Enter para agregarla como etiqueta
-													</p>
-												</div>
-
-												{existingImmunoRequest && (
-													<div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-														<h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Solicitud Existente</h4>
-														<div className="grid grid-cols-2 gap-2 text-sm">
-															<div>
-																<span className="text-blue-700 dark:text-blue-400">Inmunorreacciones:</span>
-																<p className="font-medium">{existingImmunoRequest.inmunorreacciones}</p>
-															</div>
-															<div>
-																<span className="text-blue-700 dark:text-blue-400">Cantidad:</span>
-																<p className="font-medium">{existingImmunoRequest.n_reacciones}</p>
-															</div>
-															<div>
-																<span className="text-blue-700 dark:text-blue-400">Precio Unitario:</span>
-																<p className="font-medium">${existingImmunoRequest.precio_unitario}</p>
-															</div>
-															<div>
-																<span className="text-blue-700 dark:text-blue-400">Total:</span>
-																<p className="font-medium">${existingImmunoRequest.total}</p>
-															</div>
-															<div className="col-span-2">
-																<span className="text-blue-700 dark:text-blue-400">Estado:</span>
-																<span
-																	className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-																		existingImmunoRequest.pagado
-																			? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-																			: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-																	}`}
-																>
-																	{existingImmunoRequest.pagado ? 'Pagado' : 'Incompleto'}
-																</span>
-															</div>
-														</div>
-													</div>
-												)}
-
-												{immunoReactions.length > 0 && (
-													<div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-														<div>
-															<p className="text-sm font-medium">
-																{immunoReactions.length} inmunorreacciones seleccionadas
-															</p>
-															<p className="text-xs text-gray-500 dark:text-gray-400">
-																Total estimado: ${(immunoReactions.length * 18).toFixed(2)}
-															</p>
-														</div>
-														<Button
-															onClick={handleRequestImmunoReactions}
-															disabled={isRequestingImmuno || immunoReactions.length === 0}
-															className="bg-orange-600 hover:bg-orange-700 text-white"
-														>
-															{isRequestingImmuno ? (
-																<>
-																	<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-																	Solicitando...
-																</>
-															) : (
-																<>
-																	<Send className="w-4 h-4 mr-2" />
-																	Solicitar inmunorreacciones
-																</>
-															)}
-														</Button>
-													</div>
-												)}
-											</div>
-										</InfoSection>
-									)}
 
 									{/* Changelog Section */}
 									{isChangelogOpen && !isEditing && (

@@ -6,7 +6,8 @@ import { TagInput } from '@shared/components/ui/tag-input'
 import { useToast } from '@shared/hooks/use-toast'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { updateMedicalRecordWithLog, createOrUpdateImmunoRequest } from '@lib/supabase-service'
+import { updateMedicalCase } from '@lib/medical-cases-service'
+import { createOrUpdateImmunoRequest } from '@lib/supabase-service'
 import type { MedicalRecord } from '@shared/types/types'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
@@ -24,8 +25,8 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 	const { toast } = useToast()
 	const { user } = useAuth()
 	const { profile } = useUserProfile()
-  useBodyScrollLock(isOpen)
-  useGlobalOverlayOpen(isOpen)
+	useBodyScrollLock(isOpen)
+	useGlobalOverlayOpen(isOpen)
 
 	// Determine case type from exam_type
 	const getCaseType = (examType: string): 'biopsia' | 'inmunohistoquimica' | 'citologia' => {
@@ -52,24 +53,7 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 		try {
 			// 1. Actualizar la columna ims en medical_records_clean
 			const imsString = inmunorreacciones.join(',')
-			const { error: updateError } = await updateMedicalRecordWithLog(
-				case_.id!,
-				{ ims: imsString },
-				[
-					{
-						field: 'ims',
-						fieldLabel: 'Inmunorreacciones Solicitadas',
-						oldValue: case_.ims || null,
-						newValue: imsString,
-					},
-				],
-				user.id,
-				user.email || 'unknown@email.com',
-			)
-
-			if (updateError) {
-				throw updateError
-			}
+			await updateMedicalCase(case_.id!, { ims: imsString }, user.id)
 
 			// 2. Crear/actualizar registro en immuno_requests
 			const { error: immunoError } = await createOrUpdateImmunoRequest(
@@ -181,77 +165,62 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 						{/* Content */}
 						<div className="p-3 sm:p-6 overflow-y-auto flex-1">
 							<div className="space-y-4 sm:space-y-6">
-
-								{/* Dynamic Content Based on Case Type */}
-								{caseType === 'biopsia' && (
-									<div className="space-y-4">
-										<h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Biopsia</h3>
-										<p className="text-sm text-gray-600 dark:text-gray-400">Configuración para casos de biopsia.</p>
-									</div>
-								)}
-
 								{caseType === 'inmunohistoquimica' && (
 									<div className="space-y-4">
 										{/* Sección de Inmunorreacciones - Solo para Admin */}
-										{profile?.role === 'admin' && (
-											<div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-												<div className="flex items-center gap-2 mb-3">
-													<Heart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-													<h4 className="font-semibold text-purple-800 dark:text-purple-300">
-														Solicitar Inmunorreacciones
-													</h4>
-												</div>
-
-												<div className="space-y-3">
-													<div>
-														<label
-															htmlFor="request-inmuno-reactions"
-															className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2"
-														>
-															Agregar Inmunorreacciones
-														</label>
-														<TagInput
-															id="request-inmuno-reactions"
-															value={inmunorreacciones ?? []}
-															onChange={setInmunorreacciones}
-															placeholder="Escribir inmunorreacción y presionar Enter"
-															maxTags={20}
-															allowDuplicates={false}
-															className="bg-white dark:bg-gray-800"
-														/>
-														<p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-															Ejemplo: RE, RP, CK7, CK20, etc. Presiona Enter después de cada una.
-														</p>
+										{profile?.role === 'admin' ||
+											(profile?.role === 'owner' && (
+												<div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+													<div className="flex items-center gap-2 mb-3">
+														<Heart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+														<h4 className="font-semibold text-purple-800 dark:text-purple-300">
+															Solicitar Inmunorreacciones
+														</h4>
 													</div>
 
-													<Button
-														type="button"
-														onClick={handleRequestImmunoreactions}
-														disabled={inmunorreacciones.length === 0 || isRequestingImmuno}
-														className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-													>
-														{isRequestingImmuno ? (
-															<>
-																<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-																Solicitando...
-															</>
-														) : (
-															<>
-																<Heart className="w-4 h-4 mr-2" />
-																Solicitar inmunorreacciones ({inmunorreacciones.length})
-															</>
-														)}
-													</Button>
-												</div>
-											</div>
-										)}
-									</div>
-								)}
+													<div className="space-y-3">
+														<div>
+															<label
+																htmlFor="request-inmuno-reactions"
+																className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2"
+															>
+																Agregar Inmunorreacciones
+															</label>
+															<TagInput
+																id="request-inmuno-reactions"
+																value={inmunorreacciones ?? []}
+																onChange={setInmunorreacciones}
+																placeholder="Escribir inmunorreacción y presionar Enter"
+																maxTags={20}
+																allowDuplicates={false}
+																className="bg-white dark:bg-gray-800"
+															/>
+															<p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+																Ejemplo: RE, RP, CK7, CK20, etc. Presiona Enter después de cada una.
+															</p>
+														</div>
 
-								{caseType === 'citologia' && (
-									<div className="space-y-4">
-										<h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Citología</h3>
-										<p className="text-sm text-gray-600 dark:text-gray-400">Configuración para casos de citología.</p>
+														<Button
+															type="button"
+															onClick={handleRequestImmunoreactions}
+															disabled={inmunorreacciones.length === 0 || isRequestingImmuno}
+															className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+														>
+															{isRequestingImmuno ? (
+																<>
+																	<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+																	Solicitando...
+																</>
+															) : (
+																<>
+																	<Heart className="w-4 h-4 mr-2" />
+																	Solicitar inmunorreacciones ({inmunorreacciones.length})
+																</>
+															)}
+														</Button>
+													</div>
+												</div>
+											))}
 									</div>
 								)}
 							</div>

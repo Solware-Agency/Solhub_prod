@@ -18,10 +18,10 @@ interface ImmunoRequest {
 	medical_records_clean?: {
 		code: string | null
 		patient_id: string | null
-	}
-	patients?: {
-		nombre: string
-		cedula: string
+		patients?: {
+			nombre: string
+			cedula: string
+		}
 	}
 }
 
@@ -55,7 +55,7 @@ const ReactionsTable: React.FC = () => {
 		}
 	}, [queryClient])
 
-	// Query to fetch immuno requests - temporarily disabled due to table structure issues
+	// Query to fetch immuno requests
 	const {
 		data: immunoRequests,
 		isLoading,
@@ -64,9 +64,35 @@ const ReactionsTable: React.FC = () => {
 	} = useQuery({
 		queryKey: ['immuno-requests'],
 		queryFn: async () => {
-			// TODO: Fix immuno_requests table structure or permissions
-			console.warn('⚠️ immuno_requests query temporarily disabled')
-			return [] as ImmunoRequest[]
+			try {
+				const { data, error } = await supabase
+					.from('immuno_requests')
+					.select(
+						`
+						*,
+						medical_records_clean!inner(
+							code,
+							patient_id,
+							patients!inner(
+								nombre,
+								cedula
+							)
+						)
+					`,
+					)
+					.order('created_at', { ascending: false })
+
+				if (error) {
+					console.error('Error fetching immuno requests:', error)
+					throw error
+				}
+
+				console.log('✅ Immuno requests loaded:', data?.length || 0)
+				return (data || []) as ImmunoRequest[]
+			} catch (error) {
+				console.error('Error in immuno requests query:', error)
+				throw error
+			}
 		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
