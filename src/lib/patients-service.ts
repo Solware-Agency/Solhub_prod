@@ -13,7 +13,7 @@ export interface Patient {
 	edad: string | null
 	telefono: string | null
 	email: string | null
-	gender: 'masculino' | 'femenino' | null
+	gender: 'Masculino' | 'Femenino' | null
 	created_at: string | null
 	updated_at: string | null
 	version: number | null
@@ -26,7 +26,7 @@ export interface PatientInsert {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
-	gender?: 'masculino' | 'femenino' | null
+	gender?: 'Masculino' | 'Femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
@@ -39,7 +39,7 @@ export interface PatientUpdate {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
-	gender?: 'masculino' | 'femenino' | null
+	gender?: 'Masculino' | 'Femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null

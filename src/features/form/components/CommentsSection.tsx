@@ -23,7 +23,7 @@ export const CommentsSection = memo(({ control, inputStyles }: CommentsSectionPr
 					<FormItem>
 						<FormControl>
 							<Textarea
-								placeholder="Añadir comentarios adicionales..."
+								placeholder="Añadir comentarios adicionales"
 								className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
 								{...field}
 							/>

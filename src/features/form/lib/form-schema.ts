@@ -39,7 +39,7 @@ export const formSchema = z.object({
 	}),
 	email: z.string().email('Correo electrónico inválido').optional().or(z.literal('')),
 	gender: z
-		.enum(['masculino', 'femenino'], {
+		.enum(['Masculino', 'Femenino'], {
 			required_error: 'Debe seleccionar el género.',
 		})
 		.or(z.literal('')),

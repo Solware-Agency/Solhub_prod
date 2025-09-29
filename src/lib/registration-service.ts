@@ -18,7 +18,7 @@ export interface FormValues {
 	ageValue: number
 	ageUnit: 'Años' | 'Meses'
 	email?: string
-	gender: 'masculino' | 'femenino' | ''
+	gender: 'Masculino' | 'Femenino' | ''
 	examType: string
 	doctorName: string
 	treatingDoctor: string
@@ -48,7 +48,7 @@ export interface PatientInsert {
 	edad?: string | null
 	telefono?: string | null
 	email?: string | null
-	gender?: 'masculino' | 'femenino' | null
+	gender?: 'Masculino' | 'Femenino' | null
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null

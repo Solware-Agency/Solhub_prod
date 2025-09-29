@@ -1045,11 +1045,15 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 						initial={{ opacity: 0, scale: 0.9, y: 20 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.9, y: 20 }}
+						onClick={handleClose}
 						className={`fixed inset-0 modal-content flex items-center justify-center p-4 ${
 							isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
 						}`}
 					>
-						<div className="w-full max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] rounded-2xl shadow-2xl border border-input overflow-hidden">
+						<div
+							className="w-full max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] rounded-2xl shadow-2xl border border-input overflow-hidden"
+							onClick={(e) => e.stopPropagation()}
+						>
 							{/* Header */}
 							<div className="bg-background px-6 py-4">
 								<div className="flex items-center justify-between">

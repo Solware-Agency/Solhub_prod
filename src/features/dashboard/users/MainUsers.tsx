@@ -520,6 +520,51 @@ const MainUsers: React.FC = () => {
 				</p>
 			</div>
 
+			{/* Instrucciones */}
+			<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 mb-3 sm:mb-5">
+				<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
+					{profile?.role === 'admin' ? 'Información de Médicos' : 'Instrucciones de Uso'}
+				</h3>
+				<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
+					{profile?.role === 'admin' ? (
+						<>
+							<li>
+								<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
+							</li>
+							<li>
+								<strong>Asignación de Sede:</strong> Los médicos con una sede asignada solo podrán ver los casos médicos
+								de esa sede.
+							</li>
+							<li>
+								<strong>Generación de Casos:</strong> Los médicos pueden generar diagnósticos para casos de biopsia.
+							</li>
+						</>
+					) : (
+						<>
+							<li>
+								<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
+								aprobados por un propietario antes de poder acceder al sistema.
+							</li>
+							<li>
+								<strong>Asignación de Sede:</strong> Los Recepcionistas con una sede asignada solo podrán ver los casos
+								médicos de esa sede.
+							</li>
+							<li>
+								<strong>Sin Restricción:</strong> Los Recepcionistas sin sede asignada pueden ver todos los casos.
+							</li>
+							<li>
+								<strong>Propietarios:</strong> Los usuarios con rol de propietario siempre pueden ver todos los casos,
+								independientemente de la sede asignada.
+							</li>
+							<li>
+								<strong>Administradores:</strong> Los usuarios con rol de administrador tienen acceso a registros, casos
+								generados, médicos y ajustes.
+							</li>
+						</>
+					)}
+				</ul>
+			</div>
+
 			{/* Filtros, búsqueda y estadísticas */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg mb-3 sm:mb-5">
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-6">
@@ -531,7 +576,7 @@ const MainUsers: React.FC = () => {
 							<div className="relative w-56">
 								<Input
 									type="text"
-									placeholder="Buscar usuarios..."
+									placeholder="Buscar usuarios"
 									value={searchTerm}
 									onChange={(e) => setSearchTerm(e.target.value)}
 								/>
@@ -821,7 +866,7 @@ const MainUsers: React.FC = () => {
 										Sede Asignada
 									</th>
 									<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Aprobación
+										Estado
 									</th>
 									<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Fecha de Registro
@@ -986,51 +1031,6 @@ const MainUsers: React.FC = () => {
 					)}
 				</div>
 			</Card>
-
-			{/* Instrucciones */}
-			<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
-				<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
-					{profile?.role === 'admin' ? 'Información de Médicos' : 'Instrucciones de Uso'}
-				</h3>
-				<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-					{profile?.role === 'admin' ? (
-						<>
-							<li>
-								<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
-							</li>
-							<li>
-								<strong>Asignación de Sede:</strong> Los médicos con una sede asignada solo podrán ver los casos médicos
-								de esa sede.
-							</li>
-							<li>
-								<strong>Generación de Casos:</strong> Los médicos pueden generar diagnósticos para casos de biopsia.
-							</li>
-						</>
-					) : (
-						<>
-							<li>
-								<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
-								aprobados por un propietario antes de poder acceder al sistema.
-							</li>
-							<li>
-								<strong>Asignación de Sede:</strong> Los Recepcionistas con una sede asignada solo podrán ver los casos
-								médicos de esa sede.
-							</li>
-							<li>
-								<strong>Sin Restricción:</strong> Los Recepcionistas sin sede asignada pueden ver todos los casos.
-							</li>
-							<li>
-								<strong>Propietarios:</strong> Los usuarios con rol de propietario siempre pueden ver todos los casos,
-								independientemente de la sede asignada.
-							</li>
-							<li>
-								<strong>Administradores:</strong> Los usuarios con rol de administrador tienen acceso a registros, casos
-								generados, médicos y ajustes.
-							</li>
-						</>
-					)}
-				</ul>
-			</div>
 
 			{/* Diálogo de confirmación para cambio a admin */}
 			<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>

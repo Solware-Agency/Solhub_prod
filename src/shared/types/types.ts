@@ -458,7 +458,7 @@ export type Database = {
 		Enums: {
 			cito_status_type: 'positivo' | 'negativo'
 			doc_aprobado_status: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
-			gender_type: 'masculino' | 'femenino'
+			gender_type: 'Masculino' | 'Femenino'
 		}
 		CompositeTypes: {
 			[_ in never]: never
@@ -641,7 +641,7 @@ export interface MedicalRecord {
 	edad: string | null
 	telefono: string | null
 	patient_email: string | null
-	gender: 'masculino' | 'femenino' | null
+	gender: 'Masculino' | 'Femenino' | null
 	// Alias para compatibilidad con el código existente
 	full_name: string // apunta a nombre
 	id_number: string // apunta a cedula
