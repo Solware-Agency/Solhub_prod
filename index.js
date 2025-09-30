@@ -1,10 +1,10 @@
-// src/index.js - Archivo principal para Vercel
+// index.js - Archivo principal para Vercel (en la raíz)
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import chatRoutes from '../backend/routes/chat.js';
-import emailRoutes from '../backend/routes/email.js';
+import chatRoutes from './backend/routes/chat.js';
+import emailRoutes from './backend/routes/email.js';
 
 dotenv.config();
 
@@ -16,7 +16,7 @@ app.use(cors({
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://*.vercel.app', // Para preview deployments
-    'https://conspat.solhub.agency', // Reemplaza con tu dominio real si lo tienes
+    'https://conspat.solhub.agency',
     'https://dev.conspat.solhub.agency'
   ],
   credentials: true,
