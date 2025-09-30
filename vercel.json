@@ -4,9 +4,17 @@
     {
       "src": "index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/download-pdf.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/api/download-pdf",
+      "dest": "/api/download-pdf.js"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/index.js"
@@ -15,10 +23,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "api/download-pdf.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
