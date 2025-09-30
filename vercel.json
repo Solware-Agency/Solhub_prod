@@ -8,6 +8,10 @@
     {
       "src": "api/download-pdf.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -21,7 +25,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/dist/index.html"
     }
   ]
 }
