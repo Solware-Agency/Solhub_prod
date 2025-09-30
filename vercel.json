@@ -10,17 +10,11 @@
     }
   ],
   "functions": {
+    "src/index.js": {
+      "maxDuration": 30
+    },
     "api/download-pdf.js": {
       "maxDuration": 30
-    },
-    "api/chat.js": {
-      "maxDuration": 60
-    },
-    "api/send-email.js": {
-      "maxDuration": 30
-    },
-    "api/test-config.js": {
-      "maxDuration": 10
     }
   }
 }
