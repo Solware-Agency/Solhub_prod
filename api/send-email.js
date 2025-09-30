@@ -1,9 +1,9 @@
 // api/send-email.js
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
+  // Importación dinámica dentro de la función
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
   // Solo permitir POST
   if (req.method !== 'POST') {
     return res.status(405).json({ 
