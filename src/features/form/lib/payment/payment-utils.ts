@@ -54,7 +54,7 @@ export const calculatePaymentDetails = (
 		}
 	}, 0)
 
-	let paymentStatus: string | null = null
+	let paymentStatus: 'Incompleto' | 'Pagado' | null = null
 	let isPaymentComplete = false
 	let missingAmount = 0
 
@@ -71,7 +71,7 @@ export const calculatePaymentDetails = (
 			missingAmount = 0
 		} else if (missingAmount > 0.009) {
 			// If missing less than 1 cent, don't show anything
-			paymentStatus = `Incompleto`
+			paymentStatus = 'Incompleto'
 		}
 	}
 

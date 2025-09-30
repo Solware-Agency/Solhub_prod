@@ -20,7 +20,7 @@ export interface MedicalCase {
 	date: string
 	code: string | null
 	total_amount: number
-	payment_status: string
+	payment_status: 'Incompleto' | 'Pagado'
 	remaining: number | null
 	payment_method_1: string | null
 	payment_amount_1: number | null
@@ -76,7 +76,7 @@ export interface MedicalCaseInsert {
 	date: string
 	code?: string | null
 	total_amount: number
-	payment_status: string
+	payment_status: 'Incompleto' | 'Pagado'
 	remaining?: number
 	payment_method_1?: string | null
 	payment_amount_1?: number | null
@@ -135,7 +135,7 @@ export interface MedicalCaseUpdate {
 	date?: string
 	code?: string
 	total_amount?: number
-	payment_status?: string
+	payment_status?: 'Incompleto' | 'Pagado'
 	remaining?: number
 	payment_method_1?: string | null
 	payment_amount_1?: number | null
@@ -196,7 +196,7 @@ export interface MedicalCaseWithPatient {
 	date: string
 	total_amount: number
 	exchange_rate: number | null
-	payment_status: string
+	payment_status: 'Incompleto' | 'Pagado'
 	remaining: number
 	payment_method_1: string | null
 	payment_amount_1: number | null
@@ -360,7 +360,7 @@ export const getCasesWithPatientInfo = async (
 		dateFrom?: string
 		dateTo?: string
 		examType?: string
-		paymentStatus?: string
+		paymentStatus?: 'Incompleto' | 'Pagado'
 	},
 ) => {
 	try {
@@ -463,7 +463,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 	dateFrom?: string
 	dateTo?: string
 	examType?: string
-	paymentStatus?: string
+	paymentStatus?: 'Incompleto' | 'Pagado'
 }) => {
 	try {
 		// Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing

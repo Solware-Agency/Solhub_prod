@@ -68,7 +68,7 @@ export interface MedicalCaseInsert {
 	date: string
 	code?: string
 	total_amount: number
-	payment_status: string
+	payment_status: 'Incompleto' | 'Pagado'
 	remaining?: number
 	payment_method_1?: string | null
 	payment_amount_1?: number | null
@@ -211,7 +211,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
 	// Calcular remaining amount usando la lógica correcta de conversión de monedas
-	const { paymentStatus, missingAmount } = calculatePaymentDetails(
+	const { missingAmount } = calculatePaymentDetails(
 		formData.payments || [],
 		formData.totalAmount,
 		exchangeRate,
@@ -233,7 +233,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 
 		// Información financiera
 		total_amount: formData.totalAmount,
-		payment_status: paymentStatus || 'Incompleto',
+		payment_status: 'Incompleto',
 		remaining: remaining,
 		exchange_rate: exchangeRate || null,
 

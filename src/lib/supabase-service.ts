@@ -151,7 +151,7 @@ export const insertMedicalRecord = async (
 			branch: submissionData.branch,
 			total_amount: submissionData.total_amount,
 			exchange_rate: submissionData.exchange_rate || undefined,
-			payment_status: submissionData.payment_status,
+			payment_status: submissionData.payment_status as 'Incompleto' | 'Pagado',
 			remaining: submissionData.remaining,
 			payment_method_1: submissionData.payment_method_1,
 			payment_amount_1: submissionData.payment_amount_1,
@@ -356,7 +356,7 @@ export const updateMedicalRecord = async (id: string, updates: Partial<MedicalRe
 		// Add calculated fields and timestamp to updates
 		const updatesWithCalculations = {
 			...updates,
-			payment_status: paymentStatus || 'N/A',
+			payment_status: 'Incompleto',
 			remaining: missingAmount,
 			updated_at: new Date().toISOString(),
 		}

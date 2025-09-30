@@ -191,7 +191,7 @@ export type Database = {
 					payment_reference_2: string | null
 					payment_reference_3: string | null
 					payment_reference_4: string | null
-					payment_status: string
+					payment_status: Database['public']['Enums']['payment_status_type']
 					pdf_en_ready: boolean | null
 					relationship: string | null
 					remaining: number | null
@@ -459,6 +459,7 @@ export type Database = {
 			cito_status_type: 'positivo' | 'negativo'
 			doc_aprobado_status: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
 			gender_type: 'Masculino' | 'Femenino'
+			payment_status_type: 'Incompleto' | 'Pagado'
 		}
 		CompositeTypes: {
 			[_ in never]: never
@@ -604,7 +605,7 @@ export interface MedicalRecord {
 	date: string
 	total_amount: number
 	exchange_rate: number | null
-	payment_status: string
+	payment_status: 'Incompleto' | 'Pagado'
 	remaining: number
 	payment_method_1: string | null
 	payment_amount_1: number | null
