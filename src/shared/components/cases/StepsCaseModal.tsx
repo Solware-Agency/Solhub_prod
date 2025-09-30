@@ -97,7 +97,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 	const isPdfGenerated = case_?.informe_qr && case_.informe_qr.trim() !== ''
 
-	const isProduction = true
+	const isProduction = false
 
 	// Construir los pasos dinámicamente: si es owner, agregamos "Aprobar" antes del PDF; el PDF siempre es el último
 	const computedSteps = useMemo(() => {
