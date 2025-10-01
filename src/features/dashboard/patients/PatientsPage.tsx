@@ -78,19 +78,11 @@ const PatientsPage: React.FC = React.memo(() => {
 				<div className="relative max-w-md flex-1">
 					<Input
 						type="text"
-						placeholder="Buscar por nombre, cédula o teléfono..."
+						placeholder="Buscar por nombre, cédula o teléfono"
 						value={searchTerm}
 						onChange={handleSearchChange}
 					/>
 				</div>
-
-				{/* Mostrar estadísticas */}
-				{patientsData && (
-					<div className="text-sm text-gray-600 dark:text-gray-400">
-						{patientsData.count} paciente{patientsData.count !== 1 ? 's' : ''} registrado
-						{patientsData.count !== 1 ? 's' : ''}
-					</div>
-				)}
 			</div>
 
 			{/* Resultados */}
