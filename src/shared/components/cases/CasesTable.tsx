@@ -89,6 +89,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [isViewModalOpen, setIsViewModalOpen] = useState(false)
 		const [showPdfReadyOnly, setShowPdfReadyOnly] = useState(false)
 		const [selectedDoctors, setSelectedDoctors] = useState<string[]>([])
+		const [selectedOrigins, setSelectedOrigins] = useState<string[]>([])
 		const [isSearching, setIsSearching] = useState(false)
 		const [isStepsModalOpen, setIsStepsModalOpen] = useState(false)
 		const [shouldUpdateSelectedCase, setShouldUpdateSelectedCase] = useState(false)
@@ -104,6 +105,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(undefined)
 		const [tempShowPdfReadyOnly, setTempShowPdfReadyOnly] = useState(false)
 		const [tempSelectedDoctors, setTempSelectedDoctors] = useState<string[]>([])
+		const [tempSelectedOrigins, setTempSelectedOrigins] = useState<string[]>([])
 		const [tempCitologyPositiveFilter, setTempCitologyPositiveFilter] = useState(false)
 		const [tempCitologyNegativeFilter, setTempCitologyNegativeFilter] = useState(false)
 
@@ -292,6 +294,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setDateRange(undefined)
 			setShowPdfReadyOnly(false)
 			setSelectedDoctors([])
+			setSelectedOrigins([])
 			setCitologyPositiveFilter(false)
 			setCitologyNegativeFilter(false)
 			setSearchTerm('')
@@ -301,6 +304,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setTempDateRange(undefined)
 			setTempShowPdfReadyOnly(false)
 			setTempSelectedDoctors([])
+			setTempSelectedOrigins([])
 			setTempCitologyPositiveFilter(false)
 			setTempCitologyNegativeFilter(false)
 		}, [])
@@ -312,6 +316,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setDateRange(tempDateRange)
 			setShowPdfReadyOnly(tempShowPdfReadyOnly)
 			setSelectedDoctors(tempSelectedDoctors)
+			setSelectedOrigins(tempSelectedOrigins)
 			setCitologyPositiveFilter(tempCitologyPositiveFilter)
 			setCitologyNegativeFilter(tempCitologyNegativeFilter)
 		}, [
@@ -320,6 +325,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			tempDateRange,
 			tempShowPdfReadyOnly,
 			tempSelectedDoctors,
+			tempSelectedOrigins,
 			tempCitologyPositiveFilter,
 			tempCitologyNegativeFilter,
 		])
@@ -343,6 +349,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		const handleTempDoctorFilterChange = useCallback((doctors: string[]) => {
 			setTempSelectedDoctors(doctors)
+		}, [])
+
+		const handleTempOriginFilterChange = useCallback((origins: string[]) => {
+			setTempSelectedOrigins(origins)
 		}, [])
 
 		const handleTempCitologyPositiveFilterToggle = useCallback(() => {
@@ -421,6 +431,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				branchFilter !== 'all' ||
 				showPdfReadyOnly ||
 				selectedDoctors.length > 0 ||
+				selectedOrigins.length > 0 ||
 				citologyPositiveFilter ||
 				citologyNegativeFilter ||
 				(searchTerm && searchTerm.trim() !== '') ||
@@ -439,6 +450,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				const matchesDoctor =
 					selectedDoctors.length === 0 ||
 					(case_.treating_doctor && selectedDoctors.includes(case_.treating_doctor.trim()))
+
+				// Origin filter
+				const matchesOrigin =
+					selectedOrigins.length === 0 || (case_.origin && selectedOrigins.includes(case_.origin.trim()))
 
 				// Status filter - use calculated payment status instead of database field
 				let matchesStatus = true
@@ -564,6 +579,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					matchesDate &&
 					matchesSearch &&
 					matchesDoctor &&
+					matchesOrigin &&
 					matchesCitology
 				)
 			})
@@ -605,6 +621,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			searchTerm,
 			onSearch,
 			selectedDoctors,
+			selectedOrigins,
 			dateRange,
 			citologyPositiveFilter,
 			citologyNegativeFilter,
@@ -733,6 +750,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										onPdfFilterToggle={handleTempPdfFilterToggle}
 										selectedDoctors={tempSelectedDoctors}
 										onDoctorFilterChange={handleTempDoctorFilterChange}
+										selectedOrigins={tempSelectedOrigins}
+										onOriginFilterChange={handleTempOriginFilterChange}
 										citologyPositiveFilter={tempCitologyPositiveFilter}
 										onCitologyPositiveFilterToggle={handleTempCitologyPositiveFilterToggle}
 										citologyNegativeFilter={tempCitologyNegativeFilter}
@@ -1065,6 +1084,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 									onPdfFilterToggle={handleTempPdfFilterToggle}
 									selectedDoctors={tempSelectedDoctors}
 									onDoctorFilterChange={handleTempDoctorFilterChange}
+									selectedOrigins={tempSelectedOrigins}
+									onOriginFilterChange={handleTempOriginFilterChange}
 									citologyPositiveFilter={tempCitologyPositiveFilter}
 									onCitologyPositiveFilterToggle={handleTempCitologyPositiveFilterToggle}
 									citologyNegativeFilter={tempCitologyNegativeFilter}

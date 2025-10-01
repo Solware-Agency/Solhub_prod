@@ -21,8 +21,10 @@ import {
 	Settings,
 	CheckCircle,
 	XCircle,
+	MapPin,
 } from 'lucide-react'
 import DoctorFilterPanel from './DoctorFilterPanel'
+import PatientOriginFilterPanel from './PatientOriginFilterPanel'
 import type { MedicalCaseWithPatient } from '@lib/medical-cases-service'
 import type { DateRange } from 'react-day-picker'
 
@@ -40,6 +42,8 @@ interface FiltersModalProps {
 	onPdfFilterToggle: () => void
 	selectedDoctors: string[]
 	onDoctorFilterChange: (doctors: string[]) => void
+	selectedOrigins?: string[]
+	onOriginFilterChange?: (origins: string[]) => void
 	// Filtros de citología
 	citologyPositiveFilter: boolean
 	onCitologyPositiveFilterToggle: () => void
@@ -68,6 +72,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 	onPdfFilterToggle,
 	selectedDoctors,
 	onDoctorFilterChange,
+	selectedOrigins,
+	onOriginFilterChange,
 	citologyPositiveFilter,
 	onCitologyPositiveFilterToggle,
 	citologyNegativeFilter,
@@ -80,6 +86,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 }) => {
 	const [isDateRangeOpen, setIsDateRangeOpen] = useState(false)
 	const [showDoctorFilter, setShowDoctorFilter] = useState(false)
+	const [showOriginFilter, setShowOriginFilter] = useState(false)
 
 	// Check if there are any active filters
 	const hasActiveFilters =
@@ -87,6 +94,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 		branchFilter !== 'all' ||
 		showPdfReadyOnly ||
 		selectedDoctors.length > 0 ||
+		(selectedOrigins && selectedOrigins.length > 0) ||
 		dateRange?.from ||
 		dateRange?.to ||
 		citologyPositiveFilter ||
@@ -109,6 +117,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								branchFilter !== 'all' ? 1 : 0,
 								showPdfReadyOnly ? 1 : 0,
 								selectedDoctors.length,
+								selectedOrigins ? selectedOrigins.length : 0,
 								dateRange?.from || dateRange?.to ? 1 : 0,
 								citologyPositiveFilter ? 1 : 0,
 								citologyNegativeFilter ? 1 : 0,
@@ -157,7 +166,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							</div>
 						</div>
 
-						{/* Doctor and PDF Filters - Same line */}
+						{/* Doctor and Origin Filters - Same line */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{/* Doctor Filter */}
 							<div className="space-y-3">
@@ -175,17 +184,34 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								)}
 							</div>
 
-							{/* PDF Ready Filter */}
+							{/* Origin Filter */}
 							<div className="space-y-3">
 								<Button
-									onClick={onPdfFilterToggle}
-									variant={showPdfReadyOnly ? 'default' : 'outline'}
+									onClick={() => setShowOriginFilter(!showOriginFilter)}
+									variant={showOriginFilter ? 'default' : 'outline'}
 									className="w-full justify-start"
+									disabled={!onOriginFilterChange}
 								>
-									<FileText className="w-4 h-4 mr-2" />
-									{showPdfReadyOnly ? 'Mostrando solo PDF disponibles' : 'Mostrar solo PDF disponibles'}
+									<MapPin className="w-4 h-4 mr-2" />
+									Filtrar por Procedencia
 								</Button>
+
+								{showOriginFilter && onOriginFilterChange && (
+									<PatientOriginFilterPanel cases={cases} onFilterChange={onOriginFilterChange} filters={true} />
+								)}
 							</div>
+						</div>
+
+						{/* PDF Ready Filter */}
+						<div className="space-y-3">
+							<Button
+								onClick={onPdfFilterToggle}
+								variant={showPdfReadyOnly ? 'default' : 'outline'}
+								className="w-full justify-start"
+							>
+								<FileText className="w-4 h-4 mr-2" />
+								{showPdfReadyOnly ? 'Mostrando solo PDF disponibles' : 'Mostrar solo PDF disponibles'}
+							</Button>
 						</div>
 
 						{/* Date Range Filter */}
@@ -271,6 +297,18 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 											<button
 												onClick={() => onDateRangeChange(undefined)}
 												className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+											>
+												<X className="w-3 h-3" />
+											</button>
+										</span>
+									)}
+
+									{selectedOrigins && selectedOrigins.length > 0 && (
+										<span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full">
+											Procedencia: {selectedOrigins.length} seleccionada{selectedOrigins.length > 1 ? 's' : ''}
+											<button
+												onClick={() => onOriginFilterChange && onOriginFilterChange([])}
+												className="ml-1 hover:text-indigo-600 dark:hover:text-indigo-200"
 											>
 												<X className="w-3 h-3" />
 											</button>
