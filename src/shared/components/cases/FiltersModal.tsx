@@ -12,17 +12,7 @@ import {
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import {
-	Filter,
-	Stethoscope,
-	FileText,
-	Calendar as CalendarIcon,
-	X,
-	Settings,
-	CheckCircle,
-	XCircle,
-	MapPin,
-} from 'lucide-react'
+import { Filter, Stethoscope, Calendar as CalendarIcon, X, Settings, CheckCircle, XCircle, MapPin } from 'lucide-react'
 import DoctorFilterPanel from './DoctorFilterPanel'
 import PatientOriginFilterPanel from './PatientOriginFilterPanel'
 import type { MedicalCaseWithPatient } from '@lib/medical-cases-service'
@@ -49,6 +39,15 @@ interface FiltersModalProps {
 	onCitologyPositiveFilterToggle: () => void
 	citologyNegativeFilter: boolean
 	onCitologyNegativeFilterToggle: () => void
+	// Nuevos filtros
+	pendingCasesFilter: string
+	onPendingCasesFilterChange: (value: string) => void
+	pdfStatusFilter: string
+	onPdfStatusFilterChange: (value: string) => void
+	examTypeFilter: string
+	onExamTypeFilterChange: (value: string) => void
+	documentStatusFilter: string
+	onDocumentStatusFilterChange: (value: string) => void
 	// Opciones para los dropdowns
 	statusOptions: Array<{ value: string; label: string }>
 	branchOptions: Array<{ value: string; label: string }>
@@ -78,6 +77,14 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 	onCitologyPositiveFilterToggle,
 	citologyNegativeFilter,
 	onCitologyNegativeFilterToggle,
+	pendingCasesFilter,
+	onPendingCasesFilterChange,
+	pdfStatusFilter,
+	onPdfStatusFilterChange,
+	examTypeFilter,
+	onExamTypeFilterChange,
+	documentStatusFilter,
+	onDocumentStatusFilterChange,
 	statusOptions,
 	branchOptions,
 	cases,
@@ -98,7 +105,11 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 		dateRange?.from ||
 		dateRange?.to ||
 		citologyPositiveFilter ||
-		citologyNegativeFilter
+		citologyNegativeFilter ||
+		pendingCasesFilter !== 'all' ||
+		pdfStatusFilter !== 'all' ||
+		examTypeFilter !== 'all' ||
+		documentStatusFilter !== 'all'
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -121,6 +132,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								dateRange?.from || dateRange?.to ? 1 : 0,
 								citologyPositiveFilter ? 1 : 0,
 								citologyNegativeFilter ? 1 : 0,
+								pendingCasesFilter !== 'all' ? 1 : 0,
+								pdfStatusFilter !== 'all' ? 1 : 0,
+								examTypeFilter !== 'all' ? 1 : 0,
+								documentStatusFilter !== 'all' ? 1 : 0,
 							].reduce((a, b) => a + b, 0)}
 						</span>
 					)}
@@ -166,6 +181,71 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							</div>
 						</div>
 
+						{/* New Filters Row 1: Pending Cases and PDF Status */}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="space-y-3">
+								<CustomDropdown
+									options={[
+										{ value: 'all', label: 'Todos los casos' },
+										{ value: 'pagados', label: 'Casos Pagados' },
+										{ value: 'incompletos', label: 'Casos Incompletos' },
+									]}
+									value={pendingCasesFilter}
+									placeholder="Estado de Casos"
+									onChange={onPendingCasesFilterChange}
+									data-testid="pending-cases-filter"
+								/>
+							</div>
+
+							<div className="space-y-3">
+								<CustomDropdown
+									options={[
+										{ value: 'all', label: 'Todos los PDF' },
+										{ value: 'pendientes', label: 'PDF Pendientes' },
+										{ value: 'faltantes', label: 'PDF Faltantes' },
+									]}
+									value={pdfStatusFilter}
+									placeholder="Estado de PDF"
+									onChange={onPdfStatusFilterChange}
+									data-testid="pdf-status-filter"
+								/>
+							</div>
+						</div>
+
+						{/* New Filters Row 2: Exam Type and Document Status */}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="space-y-3">
+								<CustomDropdown
+									options={[
+										{ value: 'all', label: 'Todos los tipos' },
+										{ value: 'biopsia', label: 'Biopsia' },
+										{ value: 'citologia', label: 'Citología' },
+										{ value: 'inmunohistoquimica', label: 'Inmunohistoquímica' },
+									]}
+									value={examTypeFilter}
+									placeholder="Tipo de Examen"
+									onChange={onExamTypeFilterChange}
+									data-testid="exam-type-filter"
+								/>
+							</div>
+
+							<div className="space-y-3">
+								<CustomDropdown
+									options={[
+										{ value: 'all', label: 'Todos los estatus' },
+										{ value: 'faltante', label: 'Faltante' },
+										{ value: 'pendiente', label: 'Pendiente' },
+										{ value: 'aprobado', label: 'Aprobado' },
+										{ value: 'rechazado', label: 'Rechazado' },
+									]}
+									value={documentStatusFilter}
+									placeholder="Estatus de Documento"
+									onChange={onDocumentStatusFilterChange}
+									data-testid="document-status-filter"
+								/>
+							</div>
+						</div>
+
 						{/* Doctor and Origin Filters - Same line */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{/* Doctor Filter */}
@@ -179,9 +259,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 									Filtrar por Médico
 								</Button>
 
-								{showDoctorFilter && (
-									<DoctorFilterPanel cases={cases} onFilterChange={onDoctorFilterChange} filters={true} />
-								)}
+								{showDoctorFilter && <DoctorFilterPanel cases={cases} onFilterChange={onDoctorFilterChange} />}
 							</div>
 
 							{/* Origin Filter */}
@@ -197,21 +275,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								</Button>
 
 								{showOriginFilter && onOriginFilterChange && (
-									<PatientOriginFilterPanel cases={cases} onFilterChange={onOriginFilterChange} filters={true} />
+									<PatientOriginFilterPanel cases={cases} onFilterChange={onOriginFilterChange} />
 								)}
 							</div>
-						</div>
-
-						{/* PDF Ready Filter */}
-						<div className="space-y-3">
-							<Button
-								onClick={onPdfFilterToggle}
-								variant={showPdfReadyOnly ? 'default' : 'outline'}
-								className="w-full justify-start"
-							>
-								<FileText className="w-4 h-4 mr-2" />
-								{showPdfReadyOnly ? 'Mostrando solo PDF disponibles' : 'Mostrar solo PDF disponibles'}
-							</Button>
 						</div>
 
 						{/* Date Range Filter */}
@@ -345,6 +411,66 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 											<button
 												onClick={onCitologyNegativeFilterToggle}
 												className="ml-1 hover:text-red-600 dark:hover:text-red-200"
+											>
+												<X className="w-3 h-3" />
+											</button>
+										</span>
+									)}
+
+									{pendingCasesFilter !== 'all' && (
+										<span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-sm rounded-full">
+											Casos: {pendingCasesFilter === 'pagados' ? 'Pagados' : 'Incompletos'}
+											<button
+												onClick={() => onPendingCasesFilterChange('all')}
+												className="ml-1 hover:text-amber-600 dark:hover:text-amber-200"
+											>
+												<X className="w-3 h-3" />
+											</button>
+										</span>
+									)}
+
+									{pdfStatusFilter !== 'all' && (
+										<span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm rounded-full">
+											PDF: {pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes'}
+											<button
+												onClick={() => onPdfStatusFilterChange('all')}
+												className="ml-1 hover:text-emerald-600 dark:hover:text-emerald-200"
+											>
+												<X className="w-3 h-3" />
+											</button>
+										</span>
+									)}
+
+									{examTypeFilter !== 'all' && (
+										<span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full">
+											Tipo:{' '}
+											{examTypeFilter === 'biopsia'
+												? 'Biopsia'
+												: examTypeFilter === 'citologia'
+												? 'Citología'
+												: 'Inmunohistoquímica'}
+											<button
+												onClick={() => onExamTypeFilterChange('all')}
+												className="ml-1 hover:text-indigo-600 dark:hover:text-indigo-200"
+											>
+												<X className="w-3 h-3" />
+											</button>
+										</span>
+									)}
+
+									{documentStatusFilter !== 'all' && (
+										<span className="inline-flex items-center gap-1 px-3 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 text-sm rounded-full">
+											Doc:{' '}
+											{documentStatusFilter === 'faltante'
+												? 'Faltante'
+												: documentStatusFilter === 'pendiente'
+												? 'Pendiente'
+												: documentStatusFilter === 'aprobado'
+												? 'Aprobado'
+												: 'Rechazado'}
+											<button
+												onClick={() => onDocumentStatusFilterChange('all')}
+												className="ml-1 hover:text-cyan-600 dark:hover:text-cyan-200"
 											>
 												<X className="w-3 h-3" />
 											</button>
