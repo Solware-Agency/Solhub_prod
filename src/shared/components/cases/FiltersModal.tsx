@@ -183,24 +183,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
 						{/* New Filters Row 1: Pending Cases and PDF Status */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div className="space-y-3">
-								<CustomDropdown
-									options={[
-										{ value: 'all', label: 'Todos los casos' },
-										{ value: 'pagados', label: 'Casos Pagados' },
-										{ value: 'incompletos', label: 'Casos Incompletos' },
-									]}
-									value={pendingCasesFilter}
-									placeholder="Estado de Casos"
-									onChange={onPendingCasesFilterChange}
-									data-testid="pending-cases-filter"
-								/>
-							</div>
 
-							<div className="space-y-3">
+							<div className="space-y-3 col-span-2">
 								<CustomDropdown
 									options={[
-										{ value: 'all', label: 'Todos los PDF' },
 										{ value: 'pendientes', label: 'PDF Pendientes' },
 										{ value: 'faltantes', label: 'PDF Faltantes' },
 									]}
@@ -217,7 +203,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							<div className="space-y-3">
 								<CustomDropdown
 									options={[
-										{ value: 'all', label: 'Todos los tipos' },
 										{ value: 'biopsia', label: 'Biopsia' },
 										{ value: 'citologia', label: 'Citología' },
 										{ value: 'inmunohistoquimica', label: 'Inmunohistoquímica' },
@@ -232,7 +217,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							<div className="space-y-3">
 								<CustomDropdown
 									options={[
-										{ value: 'all', label: 'Todos los estatus' },
 										{ value: 'faltante', label: 'Faltante' },
 										{ value: 'pendiente', label: 'Pendiente' },
 										{ value: 'aprobado', label: 'Aprobado' },
