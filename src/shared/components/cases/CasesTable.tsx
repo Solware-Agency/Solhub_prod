@@ -19,6 +19,7 @@ import CaseActionsPopover from './CaseActionsPopover'
 import CaseCard from './CaseCard'
 import Pagination from './Pagination'
 import FiltersModal from './FiltersModal'
+import ActiveFiltersDisplay from './ActiveFiltersDisplay'
 import { getStatusColor } from './status'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
@@ -81,6 +82,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [statusFilter, setStatusFilter] = useState<string>('all')
 		const [branchFilter, setBranchFilter] = useState<string>('all')
 		const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+		// Nuevos filtros reales
+		const [pendingCasesFilter, setPendingCasesFilter] = useState<string>('all')
+		const [pdfStatusFilter, setPdfStatusFilter] = useState<string>('all')
+		const [examTypeFilter, setExamTypeFilter] = useState<string>('all')
+		const [documentStatusFilter, setDocumentStatusFilter] = useState<string>('all')
 		const [sortField, setSortField] = useState<SortField>('created_at')
 		const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 		const [selectedCaseForGenerate, setSelectedCaseForGenerate] = useState<UnifiedMedicalRecord | null>(null)
@@ -89,6 +95,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [isViewModalOpen, setIsViewModalOpen] = useState(false)
 		const [showPdfReadyOnly, setShowPdfReadyOnly] = useState(false)
 		const [selectedDoctors, setSelectedDoctors] = useState<string[]>([])
+		const [selectedOrigins, setSelectedOrigins] = useState<string[]>([])
 		const [isSearching, setIsSearching] = useState(false)
 		const [isStepsModalOpen, setIsStepsModalOpen] = useState(false)
 		const [shouldUpdateSelectedCase, setShouldUpdateSelectedCase] = useState(false)
@@ -104,12 +111,22 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(undefined)
 		const [tempShowPdfReadyOnly, setTempShowPdfReadyOnly] = useState(false)
 		const [tempSelectedDoctors, setTempSelectedDoctors] = useState<string[]>([])
+		const [tempSelectedOrigins, setTempSelectedOrigins] = useState<string[]>([])
 		const [tempCitologyPositiveFilter, setTempCitologyPositiveFilter] = useState(false)
 		const [tempCitologyNegativeFilter, setTempCitologyNegativeFilter] = useState(false)
+		// Nuevos filtros temporales
+		const [tempPendingCasesFilter, setTempPendingCasesFilter] = useState<string>('all')
+		const [tempPdfStatusFilter, setTempPdfStatusFilter] = useState<string>('all')
+		const [tempExamTypeFilter, setTempExamTypeFilter] = useState<string>('all')
+		const [tempDocumentStatusFilter, setTempDocumentStatusFilter] = useState<string>('all')
 
 		// Paginación
 		const [currentPage, setCurrentPage] = useState(1)
 		const [itemsPerPage, setItemsPerPage] = useState(20)
+
+		const isAdmin = profile?.role === 'admin'
+		// const isOwner = profile?.role === 'owner'
+		// const isEmployee = profile?.role === 'employee'
 
 		// Dropdown options
 		const statusOptions = useMemo(
@@ -292,17 +309,29 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setDateRange(undefined)
 			setShowPdfReadyOnly(false)
 			setSelectedDoctors([])
+			setSelectedOrigins([])
 			setCitologyPositiveFilter(false)
 			setCitologyNegativeFilter(false)
 			setSearchTerm('')
+			// Limpiar nuevos filtros reales
+			setPendingCasesFilter('all')
+			setPdfStatusFilter('all')
+			setExamTypeFilter('all')
+			setDocumentStatusFilter('all')
 			// También limpiar los filtros temporales
 			setTempStatusFilter('all')
 			setTempBranchFilter('all')
 			setTempDateRange(undefined)
 			setTempShowPdfReadyOnly(false)
 			setTempSelectedDoctors([])
+			setTempSelectedOrigins([])
 			setTempCitologyPositiveFilter(false)
 			setTempCitologyNegativeFilter(false)
+			// Limpiar nuevos filtros temporales
+			setTempPendingCasesFilter('all')
+			setTempPdfStatusFilter('all')
+			setTempExamTypeFilter('all')
+			setTempDocumentStatusFilter('all')
 		}, [])
 
 		// Handle apply filters from modal
@@ -312,16 +341,27 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setDateRange(tempDateRange)
 			setShowPdfReadyOnly(tempShowPdfReadyOnly)
 			setSelectedDoctors(tempSelectedDoctors)
+			setSelectedOrigins(tempSelectedOrigins)
 			setCitologyPositiveFilter(tempCitologyPositiveFilter)
 			setCitologyNegativeFilter(tempCitologyNegativeFilter)
+			// Aplicar nuevos filtros
+			setPendingCasesFilter(tempPendingCasesFilter)
+			setPdfStatusFilter(tempPdfStatusFilter)
+			setExamTypeFilter(tempExamTypeFilter)
+			setDocumentStatusFilter(tempDocumentStatusFilter)
 		}, [
 			tempStatusFilter,
 			tempBranchFilter,
 			tempDateRange,
 			tempShowPdfReadyOnly,
 			tempSelectedDoctors,
+			tempSelectedOrigins,
 			tempCitologyPositiveFilter,
 			tempCitologyNegativeFilter,
+			tempPendingCasesFilter,
+			tempPdfStatusFilter,
+			tempExamTypeFilter,
+			tempDocumentStatusFilter,
 		])
 
 		// Handle temp filter changes
@@ -345,6 +385,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setTempSelectedDoctors(doctors)
 		}, [])
 
+		const handleTempOriginFilterChange = useCallback((origins: string[]) => {
+			setTempSelectedOrigins(origins)
+		}, [])
+
 		const handleTempCitologyPositiveFilterToggle = useCallback(() => {
 			setTempCitologyPositiveFilter(!tempCitologyPositiveFilter)
 		}, [tempCitologyPositiveFilter])
@@ -352,6 +396,23 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const handleTempCitologyNegativeFilterToggle = useCallback(() => {
 			setTempCitologyNegativeFilter(!tempCitologyNegativeFilter)
 		}, [tempCitologyNegativeFilter])
+
+		// Handlers para los nuevos filtros temporales
+		const handleTempPendingCasesFilterChange = useCallback((value: string) => {
+			setTempPendingCasesFilter(value)
+		}, [])
+
+		const handleTempPdfStatusFilterChange = useCallback((value: string) => {
+			setTempPdfStatusFilter(value)
+		}, [])
+
+		const handleTempExamTypeFilterChange = useCallback((value: string) => {
+			setTempExamTypeFilter(value)
+		}, [])
+
+		const handleTempDocumentStatusFilterChange = useCallback((value: string) => {
+			setTempDocumentStatusFilter(value)
+		}, [])
 
 		const handleCaseSelect = useCallback(
 			(case_: UnifiedMedicalRecord) => {
@@ -421,8 +482,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				branchFilter !== 'all' ||
 				showPdfReadyOnly ||
 				selectedDoctors.length > 0 ||
+				selectedOrigins.length > 0 ||
 				citologyPositiveFilter ||
 				citologyNegativeFilter ||
+				pendingCasesFilter !== 'all' ||
+				pdfStatusFilter !== 'all' ||
+				examTypeFilter !== 'all' ||
+				documentStatusFilter !== 'all' ||
 				(searchTerm && searchTerm.trim() !== '') ||
 				(onSearch && searchTerm && searchTerm.trim() !== '')
 
@@ -439,6 +505,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				const matchesDoctor =
 					selectedDoctors.length === 0 ||
 					(case_.treating_doctor && selectedDoctors.includes(case_.treating_doctor.trim()))
+
+				// Origin filter
+				const matchesOrigin =
+					selectedOrigins.length === 0 || (case_.origin && selectedOrigins.includes(case_.origin.trim()))
 
 				// Status filter - use calculated payment status instead of database field
 				let matchesStatus = true
@@ -556,6 +626,71 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					}
 				}
 
+				// Nuevos filtros
+				// Pending Cases Filter
+				let matchesPendingCases = true
+				if (pendingCasesFilter !== 'all') {
+					const { paymentStatus } = calculateCasePaymentStatus(case_)
+					const paymentStatusNormalized = paymentStatus.toLowerCase()
+					if (pendingCasesFilter === 'pagados') {
+						matchesPendingCases = paymentStatusNormalized === 'pagado'
+					} else if (pendingCasesFilter === 'incompletos') {
+						matchesPendingCases = paymentStatusNormalized !== 'pagado'
+					}
+				}
+
+				// PDF Status Filter
+				let matchesPdfStatus = true
+				if (pdfStatusFilter !== 'all') {
+					const pdfReadyValue = case_.pdf_en_ready
+					if (pdfStatusFilter === 'pendientes') {
+						// PDF pendientes = pdf_en_ready es false
+						if (typeof pdfReadyValue === 'string') {
+							matchesPdfStatus = pdfReadyValue === 'FALSE'
+						} else if (typeof pdfReadyValue === 'boolean') {
+							matchesPdfStatus = pdfReadyValue === false
+						} else {
+							matchesPdfStatus = false
+						}
+					} else if (pdfStatusFilter === 'faltantes') {
+						// PDF faltantes = pdf_en_ready es true
+						if (typeof pdfReadyValue === 'string') {
+							matchesPdfStatus = pdfReadyValue === 'TRUE'
+						} else if (typeof pdfReadyValue === 'boolean') {
+							matchesPdfStatus = pdfReadyValue === true
+						} else {
+							matchesPdfStatus = false
+						}
+					}
+				}
+
+				// Exam Type Filter
+				let matchesExamTypeNew = true
+				if (examTypeFilter !== 'all') {
+					if (!case_.exam_type) {
+						matchesExamTypeNew = false
+					} else {
+						const type = case_.exam_type.toLowerCase().trim()
+						let normalizedType = type
+						if (type.includes('inmuno')) {
+							normalizedType = 'inmunohistoquimica'
+						} else if (type.includes('citolog')) {
+							normalizedType = 'citologia'
+						} else if (type.includes('biops')) {
+							normalizedType = 'biopsia'
+						}
+						matchesExamTypeNew = normalizedType === examTypeFilter.toLowerCase()
+					}
+				}
+
+				// Document Status Filter
+				let matchesDocumentStatus = true
+				if (documentStatusFilter !== 'all') {
+					const raw = case_.doc_aprobado as string | undefined | null
+					const status = (raw ? String(raw) : 'faltante').toLowerCase().trim()
+					matchesDocumentStatus = status === documentStatusFilter
+				}
+
 				return (
 					matchesStatus &&
 					matchesBranch &&
@@ -564,7 +699,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					matchesDate &&
 					matchesSearch &&
 					matchesDoctor &&
-					matchesCitology
+					matchesOrigin &&
+					matchesCitology &&
+					matchesPendingCases &&
+					matchesPdfStatus &&
+					matchesExamTypeNew &&
+					matchesDocumentStatus
 				)
 			})
 
@@ -605,9 +745,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			searchTerm,
 			onSearch,
 			selectedDoctors,
+			selectedOrigins,
 			dateRange,
 			citologyPositiveFilter,
 			citologyNegativeFilter,
+			pendingCasesFilter,
+			pdfStatusFilter,
+			examTypeFilter,
+			documentStatusFilter,
 		])
 
 		// Paginación
@@ -733,10 +878,20 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										onPdfFilterToggle={handleTempPdfFilterToggle}
 										selectedDoctors={tempSelectedDoctors}
 										onDoctorFilterChange={handleTempDoctorFilterChange}
+										selectedOrigins={tempSelectedOrigins}
+										onOriginFilterChange={handleTempOriginFilterChange}
 										citologyPositiveFilter={tempCitologyPositiveFilter}
 										onCitologyPositiveFilterToggle={handleTempCitologyPositiveFilterToggle}
 										citologyNegativeFilter={tempCitologyNegativeFilter}
 										onCitologyNegativeFilterToggle={handleTempCitologyNegativeFilterToggle}
+										pendingCasesFilter={tempPendingCasesFilter}
+										onPendingCasesFilterChange={handleTempPendingCasesFilterChange}
+										pdfStatusFilter={tempPdfStatusFilter}
+										onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
+										examTypeFilter={tempExamTypeFilter}
+										onExamTypeFilterChange={handleTempExamTypeFilterChange}
+										documentStatusFilter={tempDocumentStatusFilter}
+										onDocumentStatusFilterChange={handleTempDocumentStatusFilterChange}
 										statusOptions={statusOptions}
 										branchOptions={branchOptions}
 										cases={cases}
@@ -841,6 +996,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
+											{!isAdmin && (
 											<th className="px-4 py-3 text-left">
 												<button
 													onClick={() => handleSort('total_amount')}
@@ -850,6 +1006,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 													<SortIcon field="total_amount" />
 												</button>
 											</th>
+											)}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -906,6 +1063,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
+														{!isAdmin && (
 														<td className="px-4 py-4">
 															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
 																{formatCurrency(case_.total_amount)}
@@ -921,6 +1079,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																)
 															})()}
 														</td>
+														)}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover
@@ -1029,6 +1188,22 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		return (
 			<>
+		<div className="px-3 sm:px-6 pb-4">
+			<ActiveFiltersDisplay
+				statusFilter={statusFilter}
+				branchFilter={branchFilter}
+				dateRange={dateRange}
+				showPdfReadyOnly={showPdfReadyOnly}
+				selectedDoctors={selectedDoctors}
+				selectedOrigins={selectedOrigins}
+				citologyPositiveFilter={citologyPositiveFilter}
+				citologyNegativeFilter={citologyNegativeFilter}
+				pendingCasesFilter={pendingCasesFilter}
+				pdfStatusFilter={pdfStatusFilter}
+				examTypeFilter={examTypeFilter}
+				documentStatusFilter={documentStatusFilter}
+			/>
+		</div>
 				<div className="bg-white dark:bg-background rounded-xl h-full overflow-hidden border border-gray-200 dark:border-gray-700">
 					{/* Search and Filter Controls */}
 					<div className="p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -1065,10 +1240,20 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 									onPdfFilterToggle={handleTempPdfFilterToggle}
 									selectedDoctors={tempSelectedDoctors}
 									onDoctorFilterChange={handleTempDoctorFilterChange}
+									selectedOrigins={tempSelectedOrigins}
+									onOriginFilterChange={handleTempOriginFilterChange}
 									citologyPositiveFilter={tempCitologyPositiveFilter}
 									onCitologyPositiveFilterToggle={handleTempCitologyPositiveFilterToggle}
 									citologyNegativeFilter={tempCitologyNegativeFilter}
 									onCitologyNegativeFilterToggle={handleTempCitologyNegativeFilterToggle}
+									pendingCasesFilter={tempPendingCasesFilter}
+									onPendingCasesFilterChange={handleTempPendingCasesFilterChange}
+									pdfStatusFilter={tempPdfStatusFilter}
+									onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
+									examTypeFilter={tempExamTypeFilter}
+									onExamTypeFilterChange={handleTempExamTypeFilterChange}
+									documentStatusFilter={tempDocumentStatusFilter}
+									onDocumentStatusFilterChange={handleTempDocumentStatusFilterChange}
 									statusOptions={statusOptions}
 									branchOptions={branchOptions}
 									cases={cases}
@@ -1129,7 +1314,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					{/* Desktop View - Table */}
 					<div className="hidden lg:block">
 						<div className="overflow-x-auto responsive-table">
-							<div className="max-h-[45vh] overflow-y-auto">
+							<div className="max-h-[55vh] overflow-y-auto">
 								<table className="w-full min-w-[800px]">
 									<thead className="bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]">
 										<tr>
@@ -1171,6 +1356,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
+											{!isAdmin && (
 											<th className="px-4 py-3 text-left">
 												<button
 													onClick={() => handleSort('total_amount')}
@@ -1180,6 +1366,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 													<SortIcon field="total_amount" />
 												</button>
 											</th>
+											)}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -1236,6 +1423,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
+														{!isAdmin && (
 														<td className="px-4 py-4">
 															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
 																{formatCurrency(case_.total_amount)}
@@ -1251,6 +1439,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																)
 															})()}
 														</td>
+														)}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover
