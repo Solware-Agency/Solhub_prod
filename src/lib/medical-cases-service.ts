@@ -361,6 +361,7 @@ export const getCasesWithPatientInfo = async (
 		dateTo?: string
 		examType?: string
 		paymentStatus?: 'Incompleto' | 'Pagado'
+		userRole?: 'owner' | 'employee' | 'residente'
 	},
 ) => {
 	try {
@@ -419,6 +420,11 @@ export const getCasesWithPatientInfo = async (
 			query = query.eq('payment_status', filters.paymentStatus)
 		}
 
+		// Si el usuario es residente, solo mostrar casos de biopsia
+		if (filters?.userRole === 'residente') {
+			query = query.eq('exam_type', 'Biopsia')
+		}
+
 		// Paginación
 		const from = (page - 1) * limit
 		const to = from + limit - 1
@@ -464,6 +470,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 	dateTo?: string
 	examType?: string
 	paymentStatus?: 'Incompleto' | 'Pagado'
+	userRole?: 'owner' | 'employee' | 'residente'
 }) => {
 	try {
 		// Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing
@@ -622,6 +629,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 					filteredData = filteredData.filter((item) => item.payment_status === filters.paymentStatus)
 				}
 
+				// Si el usuario es residente, solo mostrar casos de biopsia
+				if (filters?.userRole === 'residente') {
+					filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia')
+				}
+
 				console.log(`✅ Obtenidos ${filteredData.length} casos médicos con búsqueda`)
 
 				return {
@@ -675,6 +687,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 
 			if (filters?.paymentStatus) {
 				query = query.eq('payment_status', filters.paymentStatus)
+			}
+
+			// Si el usuario es residente, solo mostrar casos de biopsia
+			if (filters?.userRole === 'residente') {
+				query = query.eq('exam_type', 'Biopsia')
 			}
 
 			// Paginación

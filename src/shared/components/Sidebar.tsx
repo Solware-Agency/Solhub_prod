@@ -425,13 +425,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 
 					{isResidente && (
 						<>
-							<NavItem
+							{/* <NavItem
 								to="/medic/form"
 								icon={<FileText className="stroke-2 size-5 shrink-0" />}
 								label="Formulario"
 								showFullContent={showFullContent}
 								onClick={onClose}
-							/>
+							/> */}
 							<NavItem
 								to="/medic/cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
@@ -446,13 +446,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 								showFullContent={showFullContent}
 								onClick={onClose}
 							/> */}
-							<NavItem
+							{/* <NavItem
 								to="/medic/users"
 								icon={<Users className="stroke-2 size-5 shrink-0" />}
 								label="Usuarios"
 								showFullContent={showFullContent}
 								onClick={onClose}
-							/>
+							/> */}
 						</>
 					)}
 

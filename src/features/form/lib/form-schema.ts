@@ -15,13 +15,13 @@ export const formSchema = z.object({
 		.string()
 		.min(1, 'Nombre completo es requerido')
 		.regex(/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]+$/, 'Nombre solo debe contener letras y espacios'),
-	idType: z.enum(['V', 'E', 'J', 'C'], {
+	idType: z.enum(['V', 'E', 'J', 'C', 'S/C'], {
 		required_error: 'Debe seleccionar el tipo de cédula.',
 	}),
 	idNumber: z
 		.string()
-		.min(1, 'La cédula es requerida')
-		.regex(/^[0-9]+$/, 'Cédula solo debe contener números'),
+		.optional()
+		.refine((val) => !val || /^[0-9]+$/.test(val), 'Cédula solo debe contener números'),
 	phone: z
 		.string()
 		.min(1, 'El número de teléfono es requerido')

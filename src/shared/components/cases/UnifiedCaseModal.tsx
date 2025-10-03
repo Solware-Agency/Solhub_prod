@@ -42,6 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/t
 import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
 import { calculateTotalPaidUSD } from '@features/form/lib/payment/payment-utils'
 import { createCalculatorInputHandler } from '@shared/utils/number-utils'
+import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 interface ChangeLogEntry {
 	id: string
@@ -148,6 +149,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 	({ case_, isOpen, onClose, onSave, onDelete, isFullscreen = false }) => {
 		useBodyScrollLock(isOpen)
 		useGlobalOverlayOpen(isOpen)
+		const { profile } = useUserProfile()
 		const { toast } = useToast()
 		const { user } = useAuth()
 		const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -1001,6 +1003,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const remainingVES = remainingUSD * exchangeRate
 		const isPaymentComplete = totalPaidUSD >= totalAmount
 
+		const isResidente = profile?.role === 'residente'
+		// const isEmployee = profile?.role === 'employee'
+		// const isOwner = profile?.role === 'owner'
+
 		// Render modal content
 		const modalContent = (
 			<>
@@ -1112,6 +1118,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														</TooltipContent>
 													</Tooltip>
 												)}
+												{!isResidente && (
 												<span
 													className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
 														currentCase.payment_status,
@@ -1119,9 +1126,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												>
 													{currentCase.payment_status}
 												</span>
+												)}
 												{/* PDF download temporarily disabled in new structure */}
 											</div>
 											{/* Action Buttons */}
+											{!isResidente && (
 											<div className="flex gap-2 mt-4">
 												{isEditing ? (
 													<>
@@ -1184,6 +1193,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													</>
 												)}
 											</div>
+											)}
 										</div>
 										<div className="flex items-center gap-2">
 											<button
@@ -1518,9 +1528,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</InfoSection>
 
 									{/* Financial Information */}
+									{!isResidente && (
 									<InfoSection title="Información Financiera" icon={CreditCard}>
 										<div className="space-y-4">
-											{/* Total Amount - Editable */}
 											<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto total:</span>
 												{isEditing ? (
@@ -1570,8 +1580,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													</span>
 												)}
 											</div>
-
-											{/* Exchange Rate - NOT Editable */}
+											
 											<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
 													Tasa de cambio (USD/VES):
@@ -1581,7 +1590,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</span>
 											</div>
 
-											{/* Currency Converter - Only visible in edit mode */}
 											{isEditing && (
 												<div className="py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 													<div className="w-full space-y-2">
@@ -1649,7 +1657,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* Payment Status Display */}
 											{isPaymentComplete ? (
 												<div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
 													<div className="flex items-center gap-2 mb-2">
@@ -1694,7 +1701,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											) : null}
 
-											{/* Payment Methods Section */}
 											<div className="mt-4">
 												<div className="flex items-center justify-between mb-3">
 													<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Métodos de Pago:</h4>
@@ -1710,7 +1716,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													)}
 												</div>
 												<div className="flex flex-col gap-2">
-													{/* Existing Payment Methods */}
 													{effectivePaymentMethods.length > 0 ? (
 														<div className="space-y-3">
 															{effectivePaymentMethods.map((payment, index) => (
@@ -1836,7 +1841,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														</div>
 													)}
 
-													{/* Add New Payment Method Form */}
 													{isEditing && isAddingNewPayment && (
 														<div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
 															<div className="flex items-center justify-between mb-2">
@@ -1919,7 +1923,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											</div>
 										</div>
 									</InfoSection>
-
+									)}
 									{/* Additional Information */}
 									<InfoSection title="Información Adicional" icon={FileText}>
 										<div className="space-y-1">
@@ -1954,6 +1958,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</InfoSection>
 
 									{/* Bottom Action Buttons */}
+									{!isResidente && (
 									<div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 										<button
 											onClick={handleDeleteClick}
@@ -1963,6 +1968,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											Eliminar
 										</button>
 									</div>
+									)}
 								</div>
 							</motion.div>
 						</>

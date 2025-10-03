@@ -12,7 +12,7 @@ import { validateFormPayments, calculatePaymentDetails } from '../features/form/
 // Tipo de formulario (evita importación circular)
 export interface FormValues {
 	fullName: string
-	idType: 'V' | 'E' | 'J' | 'C'
+	idType: 'V' | 'E' | 'J' | 'C' | 'S/C'
 	idNumber: string
 	phone: string
 	ageValue: number
@@ -199,7 +199,7 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?: number) => {
 	// Datos del paciente (tabla patients)
 	const patientData: PatientInsert = {
-		cedula: `${formData.idType}-${formData.idNumber}`,
+		cedula: formData.idType === 'S/C' ? 'S/C' : `${formData.idType}-${formData.idNumber}`,
 		nombre: formData.fullName,
 		edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
 		telefono: formData.phone,
@@ -211,11 +211,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
 	// Calcular remaining amount usando la lógica correcta de conversión de monedas
-	const { missingAmount } = calculatePaymentDetails(
-		formData.payments || [],
-		formData.totalAmount,
-		exchangeRate,
-	)
+	const { missingAmount } = calculatePaymentDetails(formData.payments || [], formData.totalAmount, exchangeRate)
 	const remaining = missingAmount || 0
 
 	// Datos del caso médico (tabla medical_records_clean)
@@ -317,7 +313,7 @@ export const searchPatientForForm = async (cedula: string) => {
 
 		// Parsear la cédula para extraer tipo y número
 		const cedulaMatch = patient.cedula.match(/^([VEJC])-(.+)$/)
-		let idType: 'V' | 'E' | 'J' | 'C' = 'V'
+		let idType: 'V' | 'E' | 'J' | 'C' | 'S/C' = 'V'
 		let idNumber = patient.cedula
 
 		if (cedulaMatch) {
@@ -354,7 +350,7 @@ export const validateRegistrationData = (formData: FormValues, exchangeRate?: nu
 	if (!formData.idType) {
 		errors.push('El tipo de cédula es obligatorio')
 	}
-	if (!formData.idNumber) {
+	if (!formData.idNumber && formData.idType !== 'S/C') {
 		errors.push('El número de cédula es obligatorio')
 	}
 

@@ -46,20 +46,6 @@ interface StepsCaseModalProps {
 	isFullscreen?: boolean
 }
 
-const baseSteps = [
-	{
-		id: 'patient',
-		title: 'Datos',
-		icon: User,
-		description: 'Generar Documento',
-	},
-	{
-		id: 'complete',
-		title: 'Marcar',
-		icon: Shredder,
-		description: 'Completar Documento',
-	},
-]
 
 const pdfStep = {
 	id: 'pdf',
@@ -101,19 +87,42 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 	const isProduction = false
 
-	// Construir los pasos dinámicamente: si es owner, agregamos "Aprobar" antes del PDF; el PDF siempre es el último
+	// Construir los pasos dinámicamente basado en roles y permisos
 	const computedSteps = useMemo(() => {
-		const stepsList = [...baseSteps]
-		if (!isEmployee && isCitology) {
+		const stepsList = []
+		
+		// Paso 1: Datos del paciente - Solo para empleados (no residentes)
+		if (!isResidente) {
+			stepsList.push({
+				id: 'patient',
+				title: 'Datos',
+				icon: User,
+				description: 'Generar Documento',
+			})
+		}
+		
+		// Paso 2: Marcar como completado - Solo para empleados (no residentes)
+		if (!isResidente) {
+			stepsList.push({
+				id: 'complete',
+				title: 'Marcar',
+				icon: Shredder,
+				description: 'Completar Documento',
+			})
+		}
+
+		// Paso 3: Citología - Solo para no empleados cuando es citología
+		if (!isEmployee && isCitology && !isResidente) {
 			stepsList.push({
 				id: 'citology',
 				title: 'Citología',
 				icon: FileCheck,
-				description: 'Aprobar Documento',
+				description: 'Evaluar Citología',
 			})
 		}
 
-		if (!isEmployee && isCitoAdmin) {
+		// Paso 4: Aprobar - Solo para administradores de citología
+		if (!isEmployee && !isResidente) {
 			stepsList.push({
 				id: 'approve',
 				title: 'Autorizar',
@@ -121,9 +130,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				description: 'Aprobar Documento',
 			})
 		}
+		
+		// Paso final: PDF - Siempre disponible para todos
 		stepsList.push(pdfStep)
+		
 		return stepsList
-	}, [isOwner])
+	}, [isResidente, isEmployee, isCitology, isCitoAdmin])
 
 	// Función para determinar el paso inicial basado en el estado del documento
 	const getInitialStep = () => {
@@ -504,6 +516,36 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		try {
 			setIsSaving(true)
 			setIsGeneratingPDF(true)
+
+			// Verificar si ya existe tanto informepdf_url como informe_qr
+			console.log('[1] Verificando si ya existe informepdf_url e informe_qr para el caso', case_.id)
+			const { data: initialData, error: initialError } = await supabase
+				.from('medical_records_clean')
+				.select('informepdf_url, informe_qr, token')
+				.eq('id', case_.id)
+				.single<MedicalRecord & { token?: string }>()
+
+			if (initialError) {
+				console.error('Error al obtener URLs del PDF:', initialError)
+				toast({
+					title: '❌ Error',
+					description: 'No se pudo obtener el estado del PDF.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			if (initialData?.informepdf_url && initialData?.informe_qr) {
+				console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
+				window.open(initialData.informe_qr, '_blank')
+				// Ejecutar handleNext automáticamente después de abrir el QR
+				setTimeout(() => {
+					handleNext()
+				}, 1000)
+				return
+			}
+
+			console.log('[2] No existen ambos archivos, enviando POST a n8n...')
 
 			console.log('Sending request to n8n webhook with case ID:', case_.id)
 
@@ -1074,7 +1116,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 							{/* Steps Indicator */}
 							<div className="px-6 py-4 bg-card">
-								<div className="flex items-center justify-between">
+								<div className={`flex items-center ${isResidente ? 'justify-center' : 'justify-between'}`}>
 									{computedSteps.map((step, index) => {
 										const Icon = step.icon
 										const isActive = index === activeStep

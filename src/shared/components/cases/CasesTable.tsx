@@ -213,7 +213,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		// const canGenerate = profile?.role === 'owner' || profile?.role === 'residente'
 		const canRequest = profile?.role === 'owner' || profile?.role === 'residente'
 
-		// const isResidente = profile?.role === 'residente'
+		const isResidente = profile?.role === 'residente'
 		// const isOwner = profile?.role === 'owner'
 		// const isEmployee = profile?.role === 'employee'
 
@@ -996,7 +996,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{/* {!isResidente && ( */}
+											{!isResidente && (
 												<th className="px-4 py-3 text-left">
 													<button
 														onClick={() => handleSort('total_amount')}
@@ -1006,7 +1006,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<SortIcon field="total_amount" />
 													</button>
 												</th>
-											{/* )} */}
+											)}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -1356,7 +1356,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{/* {!isResidente && ( */}
+											{!isResidente && (
 												<th className="px-4 py-3 text-left">
 													<button
 														onClick={() => handleSort('total_amount')}
@@ -1366,7 +1366,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<SortIcon field="total_amount" />
 													</button>
 												</th>
-											{/* )} */}
+											)}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -1423,7 +1423,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
-														{/* {!isResidente && ( */}
+														{!isResidente && (
 															<td className="px-4 py-4">
 																<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
 																	{formatCurrency(case_.total_amount)}
@@ -1439,7 +1439,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	)
 																})()}
 															</td>
-														{/* )} */}
+														)}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover

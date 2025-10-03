@@ -9,6 +9,7 @@ import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@lib/supabase/config'
 import type { ChangeLog } from '@lib/supabase-service'
 import type { Patient } from '@lib/patients-service'
+import { cn } from '@shared/lib/cn'
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
 function parseEdad(edad: string | null | undefined): { value: number | ''; unit: 'Años' | 'Meses' | '' } {
@@ -65,7 +66,12 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	}
 
 	const handleCedulaTypeChange = (type: string) => {
-		setFormData((prev) => ({ ...prev, cedulaType: type }))
+		setFormData((prev) => ({
+			...prev,
+			cedulaType: type,
+			// Limpiar el número de cédula cuando se selecciona S/C
+			cedulaNumber: type === 'S/C' ? '' : prev.cedulaNumber,
+		}))
 	}
 
 	const handleCedulaNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,7 +111,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 			// Preparar los cambios para el registro usando nueva estructura
 			const changes = []
 			const newCedula = `${formData.cedulaType}-${formData.cedulaNumber}`
-			
+
 			if (formData.nombre !== patient.nombre) {
 				changes.push({
 					field: 'nombre',
@@ -271,7 +277,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 													<label className="text-sm text-gray-500 dark:text-gray-400">Cédula</label>
 													<div className="grid grid-cols-4 gap-2">
 														<CustomDropdown
-															options={createDropdownOptions(['V', 'E', 'J', 'C'])}
+															options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
 															value={formData.cedulaType}
 															onChange={handleCedulaTypeChange}
 															placeholder="Tipo"
@@ -282,9 +288,13 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 															name="cedulaNumber"
 															value={formData.cedulaNumber}
 															onChange={handleCedulaNumberChange}
-															placeholder="12345678"
-															className="col-span-3 text-sm"
-															required
+															placeholder={formData.cedulaType === 'S/C' ? 'No aplica' : '12345678'}
+															className={cn(
+																'col-span-3 text-sm',
+																formData.cedulaType === 'S/C' && 'opacity-50 cursor-not-allowed',
+															)}
+															disabled={formData.cedulaType === 'S/C'}
+															required={formData.cedulaType !== 'S/C'}
 														/>
 													</div>
 												</div>
