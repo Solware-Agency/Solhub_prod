@@ -21,7 +21,7 @@ export interface AuthResponse {
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'admin'
+	role: 'owner' | 'employee' | 'residente'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -42,7 +42,7 @@ export const signUp = async (
 		console.log('Attempting to sign up user:', email)
 		console.log('Using redirect URL:', `${REDIRECT_URL}/auth/callback`)
 
-    const normalizedDisplayName = normalizeDisplayName(displayName ?? null)
+		const normalizedDisplayName = normalizeDisplayName(displayName ?? null)
 
 		const { data, error } = await supabase.auth.signUp({
 			email,
@@ -52,7 +52,7 @@ export const signUp = async (
 				emailRedirectTo: `${REDIRECT_URL}/auth/callback`,
 				data: {
 					email_confirm: true,
-          display_name: normalizedDisplayName,
+					display_name: normalizedDisplayName,
 					phone: phone || null,
 				},
 			},
@@ -390,16 +390,16 @@ export const updateUserProfile = async (
 			normalizedPhone = normalizedPhone === null ? null : String(normalizedPhone).replace(/\D/g, '')
 		}
 
-    // Normalizar display_name si viene presente
-    const normalizedDisplayName =
-      updates.display_name !== undefined ? normalizeDisplayName(updates.display_name ?? null) : undefined
+		// Normalizar display_name si viene presente
+		const normalizedDisplayName =
+			updates.display_name !== undefined ? normalizeDisplayName(updates.display_name ?? null) : undefined
 
 		// First update the profile in the profiles table
 		const { error: profileError } = await supabase
 			.from('profiles')
 			.update({
-        ...updates,
-        ...(normalizedDisplayName !== undefined ? { display_name: normalizedDisplayName } : {}),
+				...updates,
+				...(normalizedDisplayName !== undefined ? { display_name: normalizedDisplayName } : {}),
 				...(typeof normalizedPhone !== 'undefined' ? { phone: normalizedPhone } : {}),
 				updated_at: new Date().toISOString(),
 			})
@@ -411,7 +411,7 @@ export const updateUserProfile = async (
 		}
 
 		// If display_name or phone is being updated, also update it in auth.users metadata
-    if (updates.display_name !== undefined || typeof normalizedPhone !== 'undefined') {
+		if (updates.display_name !== undefined || typeof normalizedPhone !== 'undefined') {
 			// Get current user metadata
 			const { data: userData } = await supabase.auth.getUser()
 
@@ -419,10 +419,10 @@ export const updateUserProfile = async (
 				// Update the display_name in user metadata
 				const { error: metadataError } = await updateUserMetadata({
 					...userData.user.user_metadata,
-          display_name:
-            normalizedDisplayName !== undefined
-              ? normalizedDisplayName
-              : userData.user.user_metadata?.display_name ?? null,
+					display_name:
+						normalizedDisplayName !== undefined
+							? normalizedDisplayName
+							: userData.user.user_metadata?.display_name ?? null,
 					phone: typeof normalizedPhone !== 'undefined' ? normalizedPhone : userData.user.user_metadata?.phone ?? null,
 				})
 
@@ -446,7 +446,7 @@ export const updateUserProfile = async (
 }
 
 // Check if user has specific role
-export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'admin'): Promise<boolean> => {
+export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente'): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
 		return profile?.role === role || false
@@ -467,8 +467,8 @@ export const isEmployee = async (userId: string): Promise<boolean> => {
 }
 
 // Check if user is admin
-export const isAdmin = async (userId: string): Promise<boolean> => {
-	return hasRole(userId, 'admin')
+export const isResidente = async (userId: string): Promise<boolean> => {
+	return hasRole(userId, 'residente')
 }
 
 // Admin function to completely delete a user (for development/testing)

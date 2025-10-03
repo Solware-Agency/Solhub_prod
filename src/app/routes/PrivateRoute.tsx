@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'admin' | Array<'owner' | 'employee' | 'admin'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | Array<'owner' | 'employee' | 'residente'>
 }
 
 /**
@@ -91,7 +91,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 			switch (profile.role) {
 				case 'owner':
 					return <Navigate to="/dashboard/home" replace />
-				case 'admin':
+				case 'residente':
 					return <Navigate to="/medic/cases" replace />
 				case 'employee':
 					return <Navigate to="/employee/home" replace />

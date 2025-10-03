@@ -83,10 +83,10 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	useGlobalOverlayOpen(isOpen)
 
 	const isOwner = profile?.role === 'owner'
-	const isAdmin = profile?.role === 'admin'
+	const isResidente = profile?.role === 'residente'
 	const isEmployee = profile?.role === 'employee'
 
-	const isCitoAdmin = profile?.role === 'admin' && case_?.exam_type === 'Citología'
+	const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
 
 	const isCitology = case_?.exam_type === 'Citología'
 
@@ -133,7 +133,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		} else if (isOwner && docAprobado === 'pendiente' && isCitology && citoStatus === 'positivo') {
 			// Si el usuario es owner y el caso está pendiente y es citología y es positivo, ir directamente al paso de autorizar
 			return computedSteps.findIndex((step) => step.id === 'approve')
-		} else if (isAdmin && docAprobado === 'pendiente' && isCitology && citoStatus === 'negativo') {
+		} else if (isResidente && docAprobado === 'pendiente' && isCitology && citoStatus === 'negativo') {
 			// Si el usuario es admin y el caso está pendiente y es citología y es negativo, ir directamente al paso de autorizar
 			return computedSteps.findIndex((step) => step.id === 'approve')
 		} else if (!isEmployee && docAprobado === 'pendiente' && isCitology) {
@@ -903,7 +903,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 											isSaving ||
 											docAprobado === 'aprobado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isAdmin) ||
+											(isCitology && citoStatus === 'positivo' && isResidente) ||
 											(isCitology && citoStatus === 'negativo' && isOwner)
 										}
 									>
@@ -918,7 +918,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 											isSaving ||
 											docAprobado === 'rechazado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isAdmin) ||
+											(isCitology && citoStatus === 'positivo' && isResidente) ||
 											(isCitology && citoStatus === 'negativo' && isOwner)
 										}
 									>

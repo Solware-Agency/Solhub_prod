@@ -17,7 +17,7 @@ interface UseSecureRedirectOptions {
 interface UseSecureRedirectReturn {
 	isRedirecting: boolean
 	redirectUser: () => void
-	canAccess: (requiredRole?: 'owner' | 'employee' | 'admin') => boolean
+	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente') => boolean
 }
 
 /**
@@ -95,7 +95,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'owner':
 				redirectPath = ownerPath
 				break
-			case 'admin':
+			case 'residente':
 				redirectPath = adminPath
 				break
 			case 'employee':
@@ -120,7 +120,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Checks if user can access a specific role-protected route
 	 */
-	const canAccess = (requiredRole?: 'owner' | 'employee' | 'admin'): boolean => {
+	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente'): boolean => {
 		if (!user || !profile || !user.email_confirmed_at || profileError) {
 			return false
 		}
