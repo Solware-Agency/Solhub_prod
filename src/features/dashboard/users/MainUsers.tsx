@@ -45,7 +45,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/t
 interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'admin'
+	role: 'owner' | 'employee' | 'residente'
 	created_at: string
 	updated_at: string
 	email_confirmed_at?: string
@@ -72,7 +72,7 @@ const MainUsers: React.FC = () => {
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
 		email: string
-		newRole: 'owner' | 'employee' | 'admin'
+		newRole: 'owner' | 'employee' | 'residente'
 	} | null>(null)
 
 	// Query para obtener usuarios
@@ -101,7 +101,7 @@ const MainUsers: React.FC = () => {
 						email_confirmed_at: undefined, // Placeholder
 						last_sign_in_at: undefined, // Placeholder
 						password: '********', // Contraseña simulada para demostración
-						role: profile.role as 'owner' | 'employee' | 'admin', // Asegurar que el tipo sea correcto
+						role: profile.role as 'owner' | 'employee' | 'residente', // Asegurar que el tipo sea correcto
 						created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
 						updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
 						estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
@@ -118,9 +118,9 @@ const MainUsers: React.FC = () => {
 
 	// Set default filter for admin users
 	useEffect(() => {
-		if (profile?.role === 'admin') {
+		if (profile?.role === 'residente') {
 			// Admin users can only see admin users
-			setRoleFilter('admin')
+			setRoleFilter('residente')
 		}
 	}, [profile?.role])
 
@@ -155,7 +155,7 @@ const MainUsers: React.FC = () => {
 				return <Crown className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
 			case 'employee':
 				return <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-			case 'admin':
+			case 'residente':
 				return <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
 			default:
 				return <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -168,7 +168,7 @@ const MainUsers: React.FC = () => {
 				return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
 			case 'employee':
 				return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-			case 'admin':
+			case 'residente':
 				return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
 			default:
 				return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
@@ -233,7 +233,7 @@ const MainUsers: React.FC = () => {
 		}
 	}
 
-	const handleRoleChange = async (userId: string, newRole: 'owner' | 'employee' | 'admin') => {
+	const handleRoleChange = async (userId: string, newRole: 'owner' | 'employee' | 'residente') => {
 		// Verificar permisos antes de permitir edición
 		if (!canManage) {
 			toast({
@@ -266,7 +266,7 @@ const MainUsers: React.FC = () => {
 		}
 
 		// Si el nuevo rol es admin, mostrar diálogo de confirmación
-		if (newRole === 'admin') {
+		if (newRole === 'residente') {
 			setUserToUpdate({
 				id: userId,
 				email: userToEdit.email,
@@ -287,7 +287,7 @@ const MainUsers: React.FC = () => {
 			toast({
 				title: '✅ Rol actualizado',
 				description: `El rol del usuario ha sido cambiado a ${
-					{ owner: 'Propietario', admin: 'Administrador', employee: 'Recepcionista' }[newRole]
+					{ owner: 'Propietario', residente: 'Residente', employee: 'Recepcionista' }[newRole]
 				}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
@@ -317,7 +317,7 @@ const MainUsers: React.FC = () => {
 			toast({
 				title: '✅ Rol actualizado',
 				description: `El rol del usuario ha sido cambiado a ${
-					{ owner: 'Propietario', admin: 'Administrador', employee: 'Recepcionista' }[userToUpdate.newRole]
+					{ owner: 'Propietario', residente: 'Residente', employee: 'Recepcionista' }[userToUpdate.newRole]
 				}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
@@ -432,7 +432,7 @@ const MainUsers: React.FC = () => {
 	const filteredUsers =
 		users?.filter((user) => {
 			// If current user is admin, only show admin users
-			if (profile?.role === 'admin' && user.role !== 'admin') {
+			if (profile?.role === 'residente' && user.role !== 'residente') {
 				return false
 			}
 
@@ -464,7 +464,7 @@ const MainUsers: React.FC = () => {
 		total: users?.length || 0,
 		owners: users?.filter((u) => u.role === 'owner').length || 0,
 		employees: users?.filter((u) => u.role === 'employee').length || 0,
-		admins: users?.filter((u) => u.role === 'admin').length || 0,
+		admins: users?.filter((u) => u.role === 'residente').length || 0,
 		verified: users?.filter((u) => u.email_confirmed_at).length || 0,
 		withBranch: users?.filter((u) => u.assigned_branch).length || 0,
 		approved: users?.filter((u) => u.estado === 'aprobado').length || 0,
@@ -509,12 +509,12 @@ const MainUsers: React.FC = () => {
 			<div className="mb-4 sm:mb-6">
 				<div>
 					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-						{profile?.role === 'admin' ? 'Gestión de Médicos' : 'Gestión de Usuarios'}
+						{profile?.role === 'residente' ? 'Gestión de Médicos' : 'Gestión de Usuarios'}
 					</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 				</div>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-					{profile?.role === 'admin'
+					{profile?.role === 'residente'
 						? 'Administra los médicos del sistema y sus permisos'
 						: 'Administra los usuarios del sistema y sus permisos'}
 				</p>
@@ -523,10 +523,10 @@ const MainUsers: React.FC = () => {
 			{/* Instrucciones */}
 			<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 mb-3 sm:mb-5">
 				<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
-					{profile?.role === 'admin' ? 'Información de Médicos' : 'Instrucciones de Uso'}
+					{profile?.role === 'residente' ? 'Información de Médicos' : 'Instrucciones de Uso'}
 				</h3>
 				<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-					{profile?.role === 'admin' ? (
+					{profile?.role === 'residente' ? (
 						<>
 							<li>
 								<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
@@ -557,7 +557,7 @@ const MainUsers: React.FC = () => {
 								independientemente de la sede asignada.
 							</li>
 							<li>
-								<strong>Administradores:</strong> Los usuarios con rol de administrador tienen acceso a registros, casos
+								<strong>Residentes:</strong> Los usuarios con rol de residente tienen acceso a registros, casos
 								generados, médicos y ajustes.
 							</li>
 						</>
@@ -621,9 +621,9 @@ const MainUsers: React.FC = () => {
 						<div className="flex items-center gap-2 flex-shrink-0">
 							{/* Total Usuarios */}
 							<div
-								onClick={() => profile?.role !== 'admin' && setRoleFilter('')}
+								onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
 								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'admin'
+									profile?.role === 'residente'
 										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
 										: 'cursor-pointer'
 								} ${
@@ -641,9 +641,9 @@ const MainUsers: React.FC = () => {
 
 							{/* Propietarios */}
 							<div
-								onClick={() => profile?.role !== 'admin' && setRoleFilter('owner')}
+								onClick={() => profile?.role !== 'residente' && setRoleFilter('owner')}
 								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'admin'
+									profile?.role === 'residente'
 										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
 										: 'cursor-pointer'
 								} ${
@@ -661,9 +661,9 @@ const MainUsers: React.FC = () => {
 
 							{/* Recepcionistas */}
 							<div
-								onClick={() => profile?.role !== 'admin' && setRoleFilter('employee')}
+								onClick={() => profile?.role !== 'residente' && setRoleFilter('employee')}
 								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'admin'
+									profile?.role === 'residente'
 										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
 										: 'cursor-pointer'
 								} ${
@@ -679,18 +679,18 @@ const MainUsers: React.FC = () => {
 								</div>
 							</div>
 
-							{/* Administradores */}
+							{/* Residentes */}
 							<div
-								onClick={() => setRoleFilter('admin')}
+								onClick={() => setRoleFilter('residente')}
 								className={`flex items-center gap-2 rounded px-3 py-2 cursor-pointer w-32 ${
-									roleFilter === 'admin'
+									roleFilter === 'residente'
 										? 'bg-purple-200 dark:bg-purple-800 border-2 border-purple-400 dark:border-purple-600'
 										: 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30'
 								}`}
 							>
 								<ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
 								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Administradores</span>
+									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Residentes</span>
 									<span className="text-sm font-bold text-purple-700 dark:text-purple-300">{stats.admins}</span>
 								</div>
 							</div>
@@ -720,8 +720,8 @@ const MainUsers: React.FC = () => {
 											{getRoleIcon(user.role)}
 											{user.role === 'owner'
 												? 'Propietario'
-												: user.role === 'admin'
-												? 'Administrador'
+												: user.role === 'residente'
+												? 'Residente'
 												: 'Recepcionista'}
 										</span>
 									</div>
@@ -785,7 +785,10 @@ const MainUsers: React.FC = () => {
 									{/* Selector de aprobación */}
 									{canManage && user.id !== currentUser?.id && (
 										<div className="mt-3">
-											<label htmlFor={`approval-status-${user.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											<label
+												htmlFor={`approval-status-${user.id}`}
+												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
 												Estado de Aprobación:
 											</label>
 											<CustomDropdown
@@ -805,17 +808,20 @@ const MainUsers: React.FC = () => {
 									{/* Selector de rol */}
 									{canManage && user.id !== currentUser?.id && (
 										<div className="mt-3">
-											<label htmlFor={`user-role-${user.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											<label
+												htmlFor={`user-role-${user.id}`}
+												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
 												Cambiar Rol:
 											</label>
 											<CustomDropdown
 												id={`user-role-${user.id}`}
 												defaultValue={user.role}
-												onChange={(value) => handleRoleChange(user.id, value as 'owner' | 'employee' | 'admin')}
+												onChange={(value) => handleRoleChange(user.id, value as 'owner' | 'employee' | 'residente')}
 												options={[
 													{ value: 'owner', label: 'Propietario' },
 													{ value: 'employee', label: 'Recepcionista' },
-													{ value: 'admin', label: 'Administrador' },
+													{ value: 'residente', label: 'Residente' },
 												]}
 												placeholder="Seleccionar rol"
 												className="w-full"
@@ -825,17 +831,20 @@ const MainUsers: React.FC = () => {
 
 									{/* Selector de sede */}
 									{canManage && (
-																			<div className="mt-3">
-										<label htmlFor={`user-branch-${user.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Asignar Sede:
-										</label>
-										<CustomDropdown
-											id={`user-branch-${user.id}`}
-											defaultValue={user.assigned_branch || 'none'}
-											onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
-											options={[
-												{ value: 'none', label: 'Sin restricción de sede' },
-												{ value: 'PMG', label: 'PMG' },
+										<div className="mt-3">
+											<label
+												htmlFor={`user-branch-${user.id}`}
+												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												Asignar Sede:
+											</label>
+											<CustomDropdown
+												id={`user-branch-${user.id}`}
+												defaultValue={user.assigned_branch || 'none'}
+												onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
+												options={[
+													{ value: 'none', label: 'Sin restricción de sede' },
+													{ value: 'PMG', label: 'PMG' },
 													{ value: 'CPC', label: 'CPC' },
 													{ value: 'CNX', label: 'CNX' },
 													{ value: 'STX', label: 'STX' },
@@ -933,11 +942,11 @@ const MainUsers: React.FC = () => {
 											{canManage && user.id !== currentUser?.id ? (
 												<CustomDropdown
 													defaultValue={user.role}
-													onChange={(value) => handleRoleChange(user.id, value as 'owner' | 'employee' | 'admin')}
+													onChange={(value) => handleRoleChange(user.id, value as 'owner' | 'employee' | 'residente')}
 													options={[
 														{ value: 'owner', label: 'Propietario' },
 														{ value: 'employee', label: 'Recepcionista' },
-														{ value: 'admin', label: 'Administrador' },
+														{ value: 'residente', label: 'Residente' },
 													]}
 													placeholder="Seleccionar rol"
 													className="w-40"
@@ -951,8 +960,8 @@ const MainUsers: React.FC = () => {
 													{getRoleIcon(user.role)}
 													{user.role === 'owner'
 														? 'Propietario'
-														: user.role === 'admin'
-														? 'Administrador'
+														: user.role === 'residente'
+														? 'Residente'
 														: 'Recepcionista'}
 												</span>
 											)}
@@ -1023,7 +1032,7 @@ const MainUsers: React.FC = () => {
 						<div className="text-center py-12">
 							<div className="text-gray-500 dark:text-gray-400">
 								<p className="text-lg font-medium">
-									{profile?.role === 'admin' ? 'No se encontraron médicos' : 'No se encontraron usuarios'}
+									{profile?.role === 'residente' ? 'No se encontraron médicos' : 'No se encontraron usuarios'}
 								</p>
 								<p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
 							</div>
@@ -1038,7 +1047,7 @@ const MainUsers: React.FC = () => {
 					<DialogHeader>
 						<DialogTitle>Confirmar cambio de rol</DialogTitle>
 						<DialogDescription>
-							¿Está seguro que desea cambiar el rol del usuario {userToUpdate?.email} a Administrador? Este cambio
+							¿Está seguro que desea cambiar el rol del usuario {userToUpdate?.email} a Residente? Este cambio
 							modificará los permisos y accesos del usuario en el sistema.
 						</DialogDescription>
 					</DialogHeader>

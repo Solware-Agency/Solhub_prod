@@ -101,8 +101,8 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
 		}
 
-		// If user is an admin with assigned branch, filter cases
-		if (profile?.role === 'admin' && profile?.assigned_branch) {
+		// If user is a residente with assigned branch, filter cases
+		if (profile?.role === 'residente' && profile?.assigned_branch) {
 			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
 		}
 

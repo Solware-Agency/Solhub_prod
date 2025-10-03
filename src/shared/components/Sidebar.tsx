@@ -267,7 +267,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 	}
 
 	// Determine if user is admin role
-	const isAdmin = profile?.role === 'admin'
+	const isResidente = profile?.role === 'residente'
 	const isOwner = profile?.role === 'owner'
 	const isEmployee = profile?.role === 'employee'
 
@@ -423,7 +423,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 						</>
 					)}
 
-					{isAdmin && (
+					{isResidente && (
 						<>
 							<NavItem
 								to="/medic/form"
@@ -456,7 +456,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 						</>
 					)}
 
-					{/* {(isOwner || isAdmin) && (
+					{/* {(isOwner || isResidente) && (
 						<NavItem
 							to="/chat"
 							icon={<Brain className="stroke-2 size-5 shrink-0" />}
@@ -490,7 +490,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 					/>
 				)}
 
-				{isAdmin && (
+				{isResidente && (
 					<NavItem
 						to="/medic/settings"
 						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}

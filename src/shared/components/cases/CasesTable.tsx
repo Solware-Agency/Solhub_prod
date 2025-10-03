@@ -124,7 +124,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [currentPage, setCurrentPage] = useState(1)
 		const [itemsPerPage, setItemsPerPage] = useState(20)
 
-		const isAdmin = profile?.role === 'admin'
+		// const isResidente = profile?.role === 'residente'
 		// const isOwner = profile?.role === 'owner'
 		// const isEmployee = profile?.role === 'employee'
 
@@ -210,10 +210,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		])
 
 		// Determine if user can edit, delete, or generate cases based on role
-		// const canGenerate = profile?.role === 'owner' || profile?.role === 'admin'
-		const canRequest = profile?.role === 'owner' || profile?.role === 'admin'
+		// const canGenerate = profile?.role === 'owner' || profile?.role === 'residente'
+		const canRequest = profile?.role === 'owner' || profile?.role === 'residente'
 
-		// const isAdmin = profile?.role === 'admin'
+		// const isResidente = profile?.role === 'residente'
 		// const isOwner = profile?.role === 'owner'
 		// const isEmployee = profile?.role === 'employee'
 
@@ -996,17 +996,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{!isAdmin && (
-											<th className="px-4 py-3 text-left">
-												<button
-													onClick={() => handleSort('total_amount')}
-													className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left"
-												>
-													Monto Total
-													<SortIcon field="total_amount" />
-												</button>
-											</th>
-											)}
+											{/* {!isResidente && ( */}
+												<th className="px-4 py-3 text-left">
+													<button
+														onClick={() => handleSort('total_amount')}
+														className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left"
+													>
+														Monto Total
+														<SortIcon field="total_amount" />
+													</button>
+												</th>
+											{/* )} */}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -1063,23 +1063,23 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
-														{!isAdmin && (
-														<td className="px-4 py-4">
-															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																{formatCurrency(case_.total_amount)}
-															</div>
-															{(() => {
-																const { missingAmount } = calculateCasePaymentStatus(case_)
-																return (
-																	missingAmount > 0 && (
-																		<div className="text-xs text-red-600 dark:text-red-400">
-																			Faltante: {formatCurrency(missingAmount)}
-																		</div>
+														{/* {!isResidente && ( */}
+															<td className="px-4 py-4">
+																<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																	{formatCurrency(case_.total_amount)}
+																</div>
+																{(() => {
+																	const { missingAmount } = calculateCasePaymentStatus(case_)
+																	return (
+																		missingAmount > 0 && (
+																			<div className="text-xs text-red-600 dark:text-red-400">
+																				Faltante: {formatCurrency(missingAmount)}
+																			</div>
+																		)
 																	)
-																)
-															})()}
-														</td>
-														)}
+																})()}
+															</td>
+														{/* )} */}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover
@@ -1150,7 +1150,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					/>
 
 					{/* Generate Case Modal - Solo para admin y solo para inmunohistoquímica */}
-					{(profile?.role === 'admin' || profile?.role === 'owner') &&
+					{(profile?.role === 'residente' || profile?.role === 'owner') &&
 						selectedCaseForGenerate?.exam_type?.toLowerCase().includes('inmuno') && (
 							<RequestCaseModal
 								// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1188,22 +1188,22 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		return (
 			<>
-		<div className="px-3 sm:px-6 pb-4">
-			<ActiveFiltersDisplay
-				statusFilter={statusFilter}
-				branchFilter={branchFilter}
-				dateRange={dateRange}
-				showPdfReadyOnly={showPdfReadyOnly}
-				selectedDoctors={selectedDoctors}
-				selectedOrigins={selectedOrigins}
-				citologyPositiveFilter={citologyPositiveFilter}
-				citologyNegativeFilter={citologyNegativeFilter}
-				pendingCasesFilter={pendingCasesFilter}
-				pdfStatusFilter={pdfStatusFilter}
-				examTypeFilter={examTypeFilter}
-				documentStatusFilter={documentStatusFilter}
-			/>
-		</div>
+				<div className="px-3 sm:px-6 pb-4">
+					<ActiveFiltersDisplay
+						statusFilter={statusFilter}
+						branchFilter={branchFilter}
+						dateRange={dateRange}
+						showPdfReadyOnly={showPdfReadyOnly}
+						selectedDoctors={selectedDoctors}
+						selectedOrigins={selectedOrigins}
+						citologyPositiveFilter={citologyPositiveFilter}
+						citologyNegativeFilter={citologyNegativeFilter}
+						pendingCasesFilter={pendingCasesFilter}
+						pdfStatusFilter={pdfStatusFilter}
+						examTypeFilter={examTypeFilter}
+						documentStatusFilter={documentStatusFilter}
+					/>
+				</div>
 				<div className="bg-white dark:bg-background rounded-xl h-full overflow-hidden border border-gray-200 dark:border-gray-700">
 					{/* Search and Filter Controls */}
 					<div className="p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -1356,17 +1356,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{!isAdmin && (
-											<th className="px-4 py-3 text-left">
-												<button
-													onClick={() => handleSort('total_amount')}
-													className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left"
-												>
-													Monto Total
-													<SortIcon field="total_amount" />
-												</button>
-											</th>
-											)}
+											{/* {!isResidente && ( */}
+												<th className="px-4 py-3 text-left">
+													<button
+														onClick={() => handleSort('total_amount')}
+														className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left"
+													>
+														Monto Total
+														<SortIcon field="total_amount" />
+													</button>
+												</th>
+											{/* )} */}
 											<th className="px-4 py-3 text-center">
 												<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 													Opciones
@@ -1423,23 +1423,23 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
-														{!isAdmin && (
-														<td className="px-4 py-4">
-															<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																{formatCurrency(case_.total_amount)}
-															</div>
-															{(() => {
-																const { missingAmount } = calculateCasePaymentStatus(case_)
-																return (
-																	missingAmount > 0 && (
-																		<div className="text-xs text-red-600 dark:text-red-400">
-																			{formatCurrency(missingAmount)}
-																		</div>
+														{/* {!isResidente && ( */}
+															<td className="px-4 py-4">
+																<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																	{formatCurrency(case_.total_amount)}
+																</div>
+																{(() => {
+																	const { missingAmount } = calculateCasePaymentStatus(case_)
+																	return (
+																		missingAmount > 0 && (
+																			<div className="text-xs text-red-600 dark:text-red-400">
+																				{formatCurrency(missingAmount)}
+																			</div>
+																		)
 																	)
-																)
-															})()}
-														</td>
-														)}
+																})()}
+															</td>
+														{/* )} */}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover
@@ -1511,7 +1511,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				/>
 
 				{/* Generate Case Modal - Solo para admin y solo para inmunohistoquímica */}
-				{(profile?.role === 'admin' || profile?.role === 'owner') &&
+				{(profile?.role === 'residente' || profile?.role === 'owner') &&
 					selectedCaseForGenerate?.exam_type?.toLowerCase().includes('inmuno') && (
 						<RequestCaseModal
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any

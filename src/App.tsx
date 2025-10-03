@@ -141,12 +141,10 @@ function App() {
 								<Route path="settings" element={<SettingsPage />} />
 							</Route>
 
-
-
 							<Route
 								path="/medic"
 								element={
-									<PrivateRoute requiredRole={'admin'}>
+									<PrivateRoute requiredRole={'residente'}>
 										<AdminLayout />
 									</PrivateRoute>
 								}
@@ -164,7 +162,7 @@ function App() {
 							<Route
 								path="/chat"
 								element={
-									<PrivateRoute requiredRole={['owner', 'admin']}>
+									<PrivateRoute requiredRole={['owner', 'residente']}>
 										<StandaloneChatPage />
 									</PrivateRoute>
 								}

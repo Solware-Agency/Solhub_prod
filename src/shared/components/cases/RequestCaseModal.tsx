@@ -167,60 +167,59 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 							<div className="space-y-4 sm:space-y-6">
 								{caseType === 'inmunohistoquimica' && (
 									<div className="space-y-4">
-										{/* Sección de Inmunorreacciones - Solo para Admin */}
-										{profile?.role === 'admin' ||
-											(profile?.role === 'owner' && (
-												<div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-													<div className="flex items-center gap-2 mb-3">
-														<Heart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-														<h4 className="font-semibold text-purple-800 dark:text-purple-300">
-															Solicitar Inmunorreacciones
-														</h4>
-													</div>
-
-													<div className="space-y-3">
-														<div>
-															<label
-																htmlFor="request-inmuno-reactions"
-																className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2"
-															>
-																Agregar Inmunorreacciones
-															</label>
-															<TagInput
-																id="request-inmuno-reactions"
-																value={inmunorreacciones ?? []}
-																onChange={setInmunorreacciones}
-																placeholder="Escribir inmunorreacción y presionar Enter"
-																maxTags={20}
-																allowDuplicates={false}
-																className="bg-white dark:bg-gray-800"
-															/>
-															<p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-																Ejemplo: RE, RP, CK7, CK20, etc. Presiona Enter después de cada una.
-															</p>
-														</div>
-
-														<Button
-															type="button"
-															onClick={handleRequestImmunoreactions}
-															disabled={inmunorreacciones.length === 0 || isRequestingImmuno}
-															className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-														>
-															{isRequestingImmuno ? (
-																<>
-																	<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-																	Solicitando...
-																</>
-															) : (
-																<>
-																	<Heart className="w-4 h-4 mr-2" />
-																	Solicitar inmunorreacciones ({inmunorreacciones.length})
-																</>
-															)}
-														</Button>
-													</div>
+										{/* Sección de Inmunorreacciones - Para Residentes y Owners */}
+										{(profile?.role === 'residente' || profile?.role === 'owner') && (
+											<div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+												<div className="flex items-center gap-2 mb-3">
+													<Heart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+													<h4 className="font-semibold text-purple-800 dark:text-purple-300">
+														Solicitar Inmunorreacciones
+													</h4>
 												</div>
-											))}
+
+												<div className="space-y-3">
+													<div>
+														<label
+															htmlFor="request-inmuno-reactions"
+															className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2"
+														>
+															Agregar Inmunorreacciones
+														</label>
+														<TagInput
+															id="request-inmuno-reactions"
+															value={inmunorreacciones ?? []}
+															onChange={setInmunorreacciones}
+															placeholder="Escribir inmunorreacción y presionar Enter"
+															maxTags={20}
+															allowDuplicates={false}
+															className="bg-white dark:bg-gray-800"
+														/>
+														<p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+															Ejemplo: RE, RP, CK7, CK20, etc. Presiona Enter después de cada una.
+														</p>
+													</div>
+
+													<Button
+														type="button"
+														onClick={handleRequestImmunoreactions}
+														disabled={inmunorreacciones.length === 0 || isRequestingImmuno}
+														className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+													>
+														{isRequestingImmuno ? (
+															<>
+																<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+																Solicitando...
+															</>
+														) : (
+															<>
+																<Heart className="w-4 h-4 mr-2" />
+																Solicitar inmunorreacciones ({inmunorreacciones.length})
+															</>
+														)}
+													</Button>
+												</div>
+											</div>
+										)}
 									</div>
 								)}
 							</div>
