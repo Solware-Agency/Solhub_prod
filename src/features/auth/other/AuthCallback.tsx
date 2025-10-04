@@ -60,15 +60,29 @@ function AuthCallback() {
 							console.error('Error exchanging code for session:', error)
 
 							// Special handling for PKCE errors
-							if (error.message.includes('code verifier') || error.message.includes('PKCE')) {
-								console.log('PKCE error detected, redirecting to password reset page anyway')
-								// Even with PKCE error, redirect to password reset page
-								// The component will handle session validation
+							if (
+								error.message.includes('code verifier') ||
+								error.message.includes('PKCE') ||
+								error.message.includes('grant_type')
+							) {
+								console.log('PKCE/grant_type error detected, attempting alternative recovery flow')
+
+								// Try to get session from URL hash first
+								const { data: sessionData } = await supabase.auth.getSession()
+								if (sessionData?.session) {
+									console.log('Session found despite PKCE error, redirecting to password reset')
+									navigate('/new-password', { replace: true })
+									return
+								}
+
+								// If no session, redirect to password reset page anyway
+								// The component will handle session validation and show appropriate error
 								navigate('/new-password', {
 									replace: true,
 									state: {
 										recoveryMode: true,
 										recoveryCode: recoveryCode,
+										pkceError: true,
 									},
 								})
 								return
