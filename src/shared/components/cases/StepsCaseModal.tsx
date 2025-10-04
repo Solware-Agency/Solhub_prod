@@ -86,7 +86,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isResidente = profile?.role === 'residente'
 	const isEmployee = profile?.role === 'employee'
 
-	const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
+	// const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
 
 	const isCitology = case_?.exam_type === 'Citología'
 
@@ -113,7 +113,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		if (!isEmployee && isCitoAdmin) {
+		if (!isEmployee) {
 			stepsList.push({
 				id: 'approve',
 				title: 'Autorizar',
@@ -141,7 +141,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			return computedSteps.findIndex((step) => step.id === 'citology')
 		} else if (!isEmployee && docAprobado === 'pendiente' && !isCitology) {
 			// Si el usuario no es employee y el caso está pendiente y no es citología, ir directamente al paso de autorizar
-			return computedSteps.findIndex((step) => step.id === 'pdf')
+			return computedSteps.findIndex((step) => step.id === 'approve')
 		} else if (isEmployee && docAprobado === 'pendiente') {
 			// Si el usuario es employee y el caso está pendiente, ir directamente al paso de PDF
 			return computedSteps.findIndex((step) => step.id === 'pdf')
