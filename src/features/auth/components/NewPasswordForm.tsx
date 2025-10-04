@@ -49,7 +49,12 @@ function NewPasswordForm() {
 						
 						if (exchangeError) {
 							console.error('Error exchanging recovery code for session:', exchangeError)
-							setError('Error al procesar el código de recuperación. Por favor, solicita un nuevo enlace.')
+							// Check if it's a PKCE/grant_type error
+							if (exchangeError.message.includes('grant_type') || exchangeError.message.includes('PKCE')) {
+								setError('El enlace de recuperación ha expirado o es inválido. Por favor, solicita un nuevo enlace.')
+							} else {
+								setError('Error al procesar el código de recuperación. Por favor, solicita un nuevo enlace.')
+							}
 							setSessionStatus('invalid')
 							return
 						}
