@@ -213,7 +213,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		// const canGenerate = profile?.role === 'owner' || profile?.role === 'residente'
 		const canRequest = profile?.role === 'owner' || profile?.role === 'residente'
 
-		const isResidente = profile?.role === 'residente'
+		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno' || profile?.role === 'patologo'
 		// const isOwner = profile?.role === 'owner'
 		// const isEmployee = profile?.role === 'employee'
 
@@ -996,7 +996,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{!isResidente && (
+											{!notShow && (
 												<th className="px-4 py-3 text-left">
 													<button
 														onClick={() => handleSort('total_amount')}
@@ -1063,7 +1063,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
-														{/* {!isResidente && ( */}
+														{!notShow && (
 															<td className="px-4 py-4">
 																<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
 																	{formatCurrency(case_.total_amount)}
@@ -1079,7 +1079,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	)
 																})()}
 															</td>
-														{/* )} */}
+														)}
 														<td className="px-4 py-4">
 															<div className="flex justify-center mx-5">
 																<CaseActionsPopover
@@ -1356,7 +1356,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 											<th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">
 												Médico Tratante
 											</th>
-											{!isResidente && (
+											{!notShow && (
 												<th className="px-4 py-3 text-left">
 													<button
 														onClick={() => handleSort('total_amount')}
@@ -1423,7 +1423,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
 															{case_.treating_doctor}
 														</td>
-														{!isResidente && (
+														{!notShow && (
 															<td className="px-4 py-4">
 																<div className="text-sm font-medium text-gray-900 dark:text-gray-100">
 																	{formatCurrency(case_.total_amount)}

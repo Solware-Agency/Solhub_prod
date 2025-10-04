@@ -155,6 +155,34 @@ function App() {
 								<Route path="settings" element={<SettingsPage />} />
 							</Route>
 
+							<Route
+								path="/cito"
+								element={
+									<PrivateRoute requiredRole={'citotecno'}>
+										<AdminLayout />
+									</PrivateRoute>
+								}
+							>
+								{/* Nested routes that will render in the Outlet */}
+								<Route index element={<CasesPage />} />
+								<Route path="cases" element={<CasesPage />} />
+								<Route path="settings" element={<SettingsPage />} />
+							</Route>
+
+							<Route
+								path="/patolo"
+								element={
+									<PrivateRoute requiredRole={'patologo'}>
+										<AdminLayout />
+									</PrivateRoute>
+								}
+							>
+								{/* Nested routes that will render in the Outlet */}
+								<Route index element={<CasesPage />} />
+								<Route path="cases" element={<CasesPage />} />
+								<Route path="settings" element={<SettingsPage />} />
+							</Route>
+
 							{/* Standalone Chat Route - For Owner and Admin */}
 							<Route
 								path="/chat"

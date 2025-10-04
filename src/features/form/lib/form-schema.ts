@@ -20,7 +20,7 @@ export const formSchema = z.object({
 	}),
 	idNumber: z
 		.string()
-		.optional()
+		.default('')
 		.refine((val) => !val || /^[0-9]+$/.test(val), 'Cédula solo debe contener números'),
 	phone: z
 		.string()

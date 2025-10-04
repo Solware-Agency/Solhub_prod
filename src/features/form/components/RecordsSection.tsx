@@ -104,6 +104,14 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 			filtered = filtered.filter((c) => c.exam_type === 'Biopsia')
 		}
 
+		if (profile?.role === 'citotecno') {
+			filtered = filtered.filter((c) => c.exam_type === 'Citología')
+		}
+
+		if (profile?.role === 'patologo') {
+			filtered = filtered.filter((c) => c.exam_type === 'Biopsia' || c.exam_type === 'Inmunohistoquímica')
+		}
+
 		return filtered
 	}, [cases, profile])
 

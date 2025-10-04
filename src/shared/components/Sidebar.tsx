@@ -270,6 +270,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 	const isResidente = profile?.role === 'residente'
 	const isOwner = profile?.role === 'owner'
 	const isEmployee = profile?.role === 'employee'
+	const isCitotecno = profile?.role === 'citotecno'
+	const isPatologo = profile?.role === 'patologo'
 
 	return (
 		<aside className="bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input">
@@ -453,6 +455,30 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 								showFullContent={showFullContent}
 								onClick={onClose}
 							/> */}
+						</>
+					)}
+
+					{isCitotecno && (
+						<>
+							<NavItem
+								to="/cito/cases"
+								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
+								label="Casos"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+						</>
+					)}
+
+					{isPatologo && (
+						<>
+							<NavItem
+								to="/patolo/cases"
+								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
+								label="Casos"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
 						</>
 					)}
 

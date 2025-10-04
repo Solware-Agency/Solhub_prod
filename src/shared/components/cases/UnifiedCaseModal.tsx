@@ -1003,9 +1003,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const remainingVES = remainingUSD * exchangeRate
 		const isPaymentComplete = totalPaidUSD >= totalAmount
 
-		const isResidente = profile?.role === 'residente'
+		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno' || profile?.role === 'patologo'
+		// const isResidente = profile?.role === 'residente'
 		// const isEmployee = profile?.role === 'employee'
 		// const isOwner = profile?.role === 'owner'
+		// const isCitotecno = profile?.role === 'citotecno'
 
 		// Render modal content
 		const modalContent = (
@@ -1118,7 +1120,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														</TooltipContent>
 													</Tooltip>
 												)}
-												{!isResidente && (
+												{!notShow && (
 												<span
 													className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
 														currentCase.payment_status,
@@ -1130,7 +1132,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												{/* PDF download temporarily disabled in new structure */}
 											</div>
 											{/* Action Buttons */}
-											{!isResidente && (
+											{!notShow && (
 											<div className="flex gap-2 mt-4">
 												{isEditing ? (
 													<>
@@ -1528,7 +1530,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</InfoSection>
 
 									{/* Financial Information */}
-									{!isResidente && (
+									{!notShow && (
 									<InfoSection title="Información Financiera" icon={CreditCard}>
 										<div className="space-y-4">
 											<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
@@ -1958,7 +1960,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</InfoSection>
 
 									{/* Bottom Action Buttons */}
-									{!isResidente && (
+									{!notShow && (
 									<div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 										<button
 											onClick={handleDeleteClick}

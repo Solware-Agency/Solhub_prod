@@ -71,6 +71,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isOwner = profile?.role === 'owner'
 	const isResidente = profile?.role === 'residente'
 	const isEmployee = profile?.role === 'employee'
+	const isCitotecno = profile?.role === 'citotecno'
 
 	const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
 
@@ -92,7 +93,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		const stepsList = []
 		
 		// Paso 1: Datos del paciente - Solo para empleados (no residentes)
-		if (!isResidente) {
+		if (!isEmployee) {
 			stepsList.push({
 				id: 'patient',
 				title: 'Datos',
@@ -102,7 +103,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 		
 		// Paso 2: Marcar como completado - Solo para empleados (no residentes)
-		if (!isResidente) {
+		if (!isEmployee) {
 			stepsList.push({
 				id: 'complete',
 				title: 'Marcar',
@@ -111,8 +112,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		// Paso 3: Citología - Solo para no empleados cuando es citología
-		if (!isEmployee && isCitology && !isResidente) {
+		if (isOwner && isCitology || isCitotecno) {
 			stepsList.push({
 				id: 'citology',
 				title: 'Citología',
@@ -121,8 +121,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		// Paso 4: Aprobar - Solo para administradores de citología
-		if (!isEmployee && !isResidente) {
+		if (isCitotecno && isCitology || isOwner) {
 			stepsList.push({
 				id: 'approve',
 				title: 'Autorizar',
@@ -153,7 +152,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			return computedSteps.findIndex((step) => step.id === 'citology')
 		} else if (!isEmployee && docAprobado === 'pendiente' && !isCitology) {
 			// Si el usuario no es employee y el caso está pendiente y no es citología, ir directamente al paso de autorizar
-			return computedSteps.findIndex((step) => step.id === 'pdf')
+			return computedSteps.findIndex((step) => step.id === 'approve')
 		} else if (isEmployee && docAprobado === 'pendiente') {
 			// Si el usuario es employee y el caso está pendiente, ir directamente al paso de PDF
 			return computedSteps.findIndex((step) => step.id === 'pdf')
@@ -1116,7 +1115,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 							{/* Steps Indicator */}
 							<div className="px-6 py-4 bg-card">
-								<div className={`flex items-center ${isResidente ? 'justify-center' : 'justify-between'}`}>
+								<div className={`flex items-center ${isResidente || isEmployee ? 'justify-center' : 'justify-between'}`}>
 									{computedSteps.map((step, index) => {
 										const Icon = step.icon
 										const isActive = index === activeStep

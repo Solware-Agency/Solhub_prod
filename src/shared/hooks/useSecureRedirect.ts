@@ -10,6 +10,8 @@ interface UseSecureRedirectOptions {
 	ownerPath?: string
 	employeePath?: string
 	adminPath?: string
+	citoPath?: string
+	patoloPath?: string
 	/** Callback when redirect is about to happen */
 	onRedirect?: (role: string, path: string) => void
 }
@@ -17,7 +19,7 @@ interface UseSecureRedirectOptions {
 interface UseSecureRedirectReturn {
 	isRedirecting: boolean
 	redirectUser: () => void
-	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente') => boolean
+	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo') => boolean
 }
 
 /**
@@ -30,6 +32,8 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		ownerPath = '/dashboard/home',
 		employeePath = '/employee/home',
 		adminPath = '/medic/cases',
+		citoPath = '/cito/cases',
+		patoloPath = '/patolo/cases',
 		onRedirect,
 	} = options
 
@@ -101,6 +105,12 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'employee':
 				redirectPath = employeePath
 				break
+			case 'citotecno':
+				redirectPath = citoPath
+				break
+			case 'patologo':
+				redirectPath = patoloPath
+				break
 			default:
 				redirectPath = employeePath // fallback to employee
 		}
@@ -120,7 +130,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Checks if user can access a specific role-protected route
 	 */
-	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente'): boolean => {
+	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'): boolean => {
 		if (!user || !profile || !user.email_confirmed_at || profileError) {
 			return false
 		}

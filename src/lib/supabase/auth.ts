@@ -21,7 +21,7 @@ export interface AuthResponse {
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -446,7 +446,7 @@ export const updateUserProfile = async (
 }
 
 // Check if user has specific role
-export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente'): Promise<boolean> => {
+export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
 		return profile?.role === role || false
@@ -469,6 +469,15 @@ export const isEmployee = async (userId: string): Promise<boolean> => {
 // Check if user is admin
 export const isResidente = async (userId: string): Promise<boolean> => {
 	return hasRole(userId, 'residente')
+}
+
+// Check if user is citotecno
+export const isCitotecno = async (userId: string): Promise<boolean> => {
+	return hasRole(userId, 'citotecno')
+}
+
+export const isPatologo = async (userId: string): Promise<boolean> => {
+	return hasRole(userId, 'patologo')
 }
 
 // Admin function to completely delete a user (for development/testing)

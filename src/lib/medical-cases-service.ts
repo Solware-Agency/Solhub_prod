@@ -361,7 +361,7 @@ export const getCasesWithPatientInfo = async (
 		dateTo?: string
 		examType?: string
 		paymentStatus?: 'Incompleto' | 'Pagado'
-		userRole?: 'owner' | 'employee' | 'residente'
+		userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
 	},
 ) => {
 	try {
@@ -425,6 +425,14 @@ export const getCasesWithPatientInfo = async (
 			query = query.eq('exam_type', 'Biopsia')
 		}
 
+		if (filters?.userRole === 'citotecno') {
+			query = query.eq('exam_type', 'Citología')
+		}
+
+		if (filters?.userRole === 'patologo') {
+			query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
+		}
+
 		// Paginación
 		const from = (page - 1) * limit
 		const to = from + limit - 1
@@ -470,7 +478,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 	dateTo?: string
 	examType?: string
 	paymentStatus?: 'Incompleto' | 'Pagado'
-	userRole?: 'owner' | 'employee' | 'residente'
+	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
 }) => {
 	try {
 		// Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing
@@ -634,6 +642,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 					filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia')
 				}
 
+				if (filters?.userRole === 'citotecno') {
+					filteredData = filteredData.filter((item) => item.exam_type === 'Citología')
+				}
+
+				if (filters?.userRole === 'patologo') {
+					filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica')
+				}
+
 				console.log(`✅ Obtenidos ${filteredData.length} casos médicos con búsqueda`)
 
 				return {
@@ -692,6 +708,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 			// Si el usuario es residente, solo mostrar casos de biopsia
 			if (filters?.userRole === 'residente') {
 				query = query.eq('exam_type', 'Biopsia')
+			}
+
+			if (filters?.userRole === 'citotecno') {
+				query = query.eq('exam_type', 'Citología')
+			}
+
+			if (filters?.userRole === 'patologo') {
+				query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
 			}
 
 			// Paginación
