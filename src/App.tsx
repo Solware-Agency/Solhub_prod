@@ -13,24 +13,19 @@ import {
 	AuthCallback,
 	NotFoundPage,
 	Layout,
-	EmployeeLayout,
 	HomePage,
 	ReceptionistHomePage,
 	StatsPage,
 	ReportsPage,
 	UsersPage,
 	CasesPage,
-	// MyCasesPage,
 	SettingsPage,
 	ChangelogPage,
-	// StandaloneChangelogPage,
 	PatientsPage,
-	// FormRoute,
 	PrivateRoute,
 	DoctorsSection,
 	MedicalForm,
 	StandaloneChatPage,
-	AdminLayout,
 } from '@app/routes/lazy-routes'
 
 // Loading component for Suspense fallback
@@ -127,7 +122,7 @@ function App() {
 								path="/employee"
 								element={
 									<PrivateRoute requiredRole={'employee'}>
-										<EmployeeLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>
@@ -145,7 +140,7 @@ function App() {
 								path="/medic"
 								element={
 									<PrivateRoute requiredRole={'residente'}>
-										<AdminLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>
@@ -159,7 +154,7 @@ function App() {
 								path="/cito"
 								element={
 									<PrivateRoute requiredRole={'citotecno'}>
-										<AdminLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>
@@ -173,7 +168,7 @@ function App() {
 								path="/patolo"
 								element={
 									<PrivateRoute requiredRole={'patologo'}>
-										<AdminLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>

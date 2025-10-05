@@ -22,22 +22,18 @@ export const PendingApprovalPage = lazy(() => import('@features/auth/other/Pendi
 export const AuthCallback = lazy(() => import('@features/auth/other/AuthCallback'))
 
 // Dashboard pages - lazy loaded
-export const Layout = lazy(() => import('@features/dashboard/layouts/Layout'))
-export const EmployeeLayout = lazy(() => import('@features/employee/layouts/EmployeeLayout'))
-export const AdminLayout = lazy(() => import('@features/admin/layouts/AdminLayout'))
+export const Layout = lazy(() => import('@shared/components/layout/Layout'))
 
-export const HomePage = lazy(() => import('@features/dashboard/home/HomePage'))
-export const StatsPage = lazy(() => import('@features/dashboard/stats/StatsPage'))
-export const ReceptionistHomePage = lazy(() => import('@features/dashboard/home/ReceptionistHomePage'))
-export const ReportsPage = lazy(() => import('@features/dashboard/reports/ReportsPage'))
-export const UsersPage = lazy(() => import('@features/dashboard/users/UsersPage'))
-export const CasesPage = lazy(() => import('@features/dashboard/cases/CasesPage'))
-// export const MyCasesPage = lazy(() => import('@features/dashboard/cases/MyCasesPage'))
-export const SettingsPage = lazy(() => import('@features/dashboard/settings/SettingsPage'))
-export const ChangelogPage = lazy(() => import('@features/dashboard/changelog/ChangelogPage'))
+export const HomePage = lazy(() => import('@features/dashboard/components/HomePage'))
+export const StatsPage = lazy(() => import('@features/stats/pages/StatsPage'))
+export const ReceptionistHomePage = lazy(() => import('@features/dashboard/components/ReceptionistHomePage'))
+export const ReportsPage = lazy(() => import('@features/reports/pages/ReportsPage'))
+export const UsersPage = lazy(() => import('@features/users/pages/UsersPage'))
+export const CasesPage = lazy(() => import('@features/cases/pages/CasesPage'))
+export const SettingsPage = lazy(() => import('@features/settings/pages/SettingsPage'))
+export const ChangelogPage = lazy(() => import('@features/changelog/pages/ChangelogPage'))
 
-export const StandaloneChangelogPage = lazy(() => import('@features/dashboard/changelog/StandaloneChangelogPage'))
-export const PatientsPage = lazy(() => import('@features/dashboard/patients/PatientsPage'))
+export const PatientsPage = lazy(() => import('@features/patients/pages/PatientsPage'))
 export const MedicalForm = lazy(() => import('@features/form/components/MedicalForm'))
 export const StandaloneChatPage = lazy(() => import('@features/ChatAI/pages/StandaloneChatPage'))
 

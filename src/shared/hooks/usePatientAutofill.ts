@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 
 export const usePatientAutofill = (setValue: any) => {
 	const [isLoading, setIsLoading] = useState(false)

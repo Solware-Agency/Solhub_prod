@@ -1,10 +1,10 @@
 import React, { useMemo, useEffect } from 'react'
-import CasesTable from '@shared/components/cases/CasesTable'
+import CasesTable from '@features/cases/components/CasesTable'
 import { MapPin } from 'lucide-react'
 import { type MedicalRecord } from '@shared/types/types'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 
 interface RecordsSectionProps {
 	cases: MedicalRecord[]

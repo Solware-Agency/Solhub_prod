@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { useToast } from './use-toast'
-import type { MedicalCaseWithPatient } from '@lib/medical-cases-service'
+import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 
 type UnifiedMedicalRecord = MedicalCaseWithPatient

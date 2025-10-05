@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from 'react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
+import { Button } from '../components/button'
+import { Input } from '../components/input'
 import { Send, User, Bot, Sparkles, MessageCircle, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { LoaderOne } from '@shared/components/ui/loader'

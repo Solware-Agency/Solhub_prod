@@ -1,7 +1,7 @@
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { useState } from 'react'
-import { getDownloadUrl } from '@lib/download-utils'
+import { getDownloadUrl } from '@/services/utils/download-utils'
 
 interface MedicalRecord {
 	id?: string

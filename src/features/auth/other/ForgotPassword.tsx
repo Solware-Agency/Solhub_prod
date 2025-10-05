@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Lock, ArrowLeft, Mail, AlertCircle, CheckCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { resetPassword } from '@lib/supabase/auth'
+import { resetPassword } from '@/services/supabase/auth/auth'
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'
 

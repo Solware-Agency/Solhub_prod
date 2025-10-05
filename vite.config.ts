@@ -21,11 +21,11 @@ export default defineConfig(({ mode }) => ({
 	],
 	resolve: {
 		alias: {
-			'@lib': path.resolve(__dirname, 'src/lib'),
+			'@services': path.resolve(__dirname, 'src/services'),
 			'@app': path.resolve(__dirname, 'src/app'),
 			'@features': path.resolve(__dirname, 'src/features'),
 			'@shared': path.resolve(__dirname, 'src/shared'),
-			'@assets': path.resolve(__dirname, 'src/assets'),
+			'@': path.resolve(__dirname, 'src/'),
 		},
 	},
 	server: {

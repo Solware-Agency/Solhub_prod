@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { signOut } from '@lib/supabase/auth'
+import { signOut } from '@/services/supabase/auth/auth'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 function Header() {
