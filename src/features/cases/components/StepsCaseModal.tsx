@@ -71,6 +71,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isResidente = profile?.role === 'residente'
 	const isEmployee = profile?.role === 'employee'
 	const isCitotecno = profile?.role === 'citotecno'
+	const isPatologo = profile?.role === 'patologo'
 
 	const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
 
@@ -86,6 +87,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isPdfGenerated = case_?.informe_qr && case_.informe_qr.trim() !== ''
 
 	const isProduction = false
+
+	const isNotRechazado = docAprobado !== 'rechazado'
 
 	// Construir los pasos dinámicamente basado en roles y permisos
 	const computedSteps = useMemo(() => {
@@ -111,7 +114,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		if ((isOwner && isCitology) || isCitotecno) {
+		if ((isOwner || isCitotecno) && isCitology) {
 			stepsList.push({
 				id: 'citology',
 				title: 'Citología',
@@ -137,26 +140,31 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 	// Función para determinar el paso inicial basado en el estado del documento
 	const getInitialStep = () => {
-		if (docAprobado === 'aprobado') {
-			// Si el documento está aprobado, ir directamente al paso del PDF
+		if (docAprobado === 'aprobado' || isEmployee) {
 			return computedSteps.length - 1
-		} else if (isOwner && docAprobado === 'pendiente' && isCitology && citoStatus === 'positivo') {
-			// Si el usuario es owner y el caso está pendiente y es citología y es positivo, ir directamente al paso de autorizar
+		}
+
+		if (isOwner && docAprobado === 'pendiente' && !isCitology) {
 			return computedSteps.findIndex((step) => step.id === 'approve')
-		} else if (isResidente && docAprobado === 'pendiente' && isCitology && citoStatus === 'negativo') {
-			// Si el usuario es admin y el caso está pendiente y es citología y es negativo, ir directamente al paso de autorizar
-			return computedSteps.findIndex((step) => step.id === 'approve')
-		} else if (!isEmployee && docAprobado === 'pendiente' && isCitology) {
-			// Si el usuario no es employee y el caso está pendiente y es citología, ir directamente al paso de citología
+		}
+
+		if ((isOwner || isCitotecno) && docAprobado === 'pendiente' && isCitology) {
 			return computedSteps.findIndex((step) => step.id === 'citology')
-		} else if (!isEmployee && docAprobado === 'pendiente' && !isCitology) {
-			// Si el usuario no es employee y el caso está pendiente y no es citología, ir directamente al paso de autorizar
+		}
+
+		if (isOwner && docAprobado === 'pendiente' && isCitology && citoStatus === 'positivo') {
 			return computedSteps.findIndex((step) => step.id === 'approve')
-		} else if (isEmployee && docAprobado === 'pendiente') {
-			// Si el usuario es employee y el caso está pendiente, ir directamente al paso de PDF
+		}
+
+		if (isCitotecno && docAprobado === 'pendiente' && isCitology && citoStatus === 'negativo') {
 			return computedSteps.findIndex((step) => step.id === 'pdf')
-		} else if (isEmployee && docAprobado === 'rechazado') {
-			// Si el usuario es employee y el caso está rechazado, ir directamente al paso de Datos
+		}
+
+		if ((isPatologo || isResidente) && docAprobado === 'pendiente') {
+			return computedSteps.findIndex((step) => step.id === 'pdf')
+		}
+
+		if ((isPatologo || isResidente) && docAprobado === 'rechazado') {
 			return computedSteps.findIndex((step) => step.id === 'patient')
 		}
 
@@ -827,10 +835,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 								</div>
 							</div>
 							<div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800">
-								<p className="text-teal-400 text-sm">
-									Para completar este paso, haz clic en el botón de arriba para ir a rellenar los datos del documento en
-									Google Docs. Una vez que termines regresa a esta pestaña para continuar con el siguiente paso.
-								</p>
+								{isNotRechazado ? (
+									<p className="text-teal-400 text-sm">
+										Para completar este paso, haz clic en el botón de arriba para ir a rellenar los datos del documento
+										en Google Docs. Una vez que termines regresa a esta pestaña para continuar con el siguiente paso.
+									</p>
+								) : (
+									<p className="text-teal-400 text-sm">
+										Tu documento ha sido rechazado anteriormente. Para continuar con el siguiente paso, haz clic en el
+										botón de arriba para ir a rellenar los datos del documento de nuevo.
+									</p>
+								)}
 							</div>
 						</div>
 					</motion.div>
@@ -943,7 +958,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 											isSaving ||
 											docAprobado === 'aprobado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isResidente) ||
+											(isCitology && citoStatus === 'positivo' && isCitotecno) ||
 											(isCitology && citoStatus === 'negativo' && isOwner)
 										}
 									>
@@ -958,7 +973,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 											isSaving ||
 											docAprobado === 'rechazado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isResidente) ||
+											(isCitology && citoStatus === 'positivo' && isCitotecno) ||
 											(isCitology && citoStatus === 'negativo' && isOwner)
 										}
 									>
