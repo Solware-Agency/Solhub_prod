@@ -34,6 +34,26 @@ interface CasesTableProps {
 	setIsFullscreen: (value: boolean) => void
 	onSearch?: (term: string) => void
 	onCaseSelect?: (case_: UnifiedMedicalRecord) => void
+	onFiltersChange?: (filters: {
+		examType?: string
+		documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+		pdfStatus?: 'pendientes' | 'faltantes'
+		citoStatus?: 'positivo' | 'negativo'
+		branch?: string
+		paymentStatus?: 'Incompleto' | 'Pagado'
+		doctorFilter?: string[]
+		originFilter?: string[]
+		dateFrom?: string
+		dateTo?: string
+	}) => void
+	pagination?: {
+		currentPage: number
+		totalPages: number
+		totalItems: number
+		itemsPerPage: number
+		onPageChange: (page: number) => void
+		onItemsPerPageChange: (items: number) => void
+	}
 }
 
 type SortField = 'id' | 'created_at' | 'nombre' | 'total_amount' | 'code'
@@ -72,7 +92,18 @@ const calculateCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
 }
 
 const CasesTable: React.FC<CasesTableProps> = React.memo(
-	({ cases, isLoading, error, refetch, isFullscreen, setIsFullscreen, onSearch, onCaseSelect }) => {
+	({
+		cases,
+		isLoading,
+		error,
+		refetch,
+		isFullscreen,
+		setIsFullscreen,
+		onSearch,
+		onCaseSelect,
+		onFiltersChange,
+		pagination,
+	}) => {
 		useAuth()
 		const { profile } = useUserProfile()
 		const { toast } = useToast()
@@ -120,9 +151,15 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		const [tempExamTypeFilter, setTempExamTypeFilter] = useState<string>('all')
 		const [tempDocumentStatusFilter, setTempDocumentStatusFilter] = useState<string>('all')
 
-		// Paginación
-		const [currentPage, setCurrentPage] = useState(1)
-		const [itemsPerPage, setItemsPerPage] = useState(20)
+		// Paginación local (solo se usa si no hay paginación del servidor)
+		const [localCurrentPage, setLocalCurrentPage] = useState(1)
+		const [localItemsPerPage, setLocalItemsPerPage] = useState(20)
+
+		// Usar paginación del servidor si está disponible, si no usar local
+		const currentPage = pagination?.currentPage ?? localCurrentPage
+		const itemsPerPage = pagination?.itemsPerPage ?? localItemsPerPage
+		const setCurrentPage = pagination?.onPageChange ?? setLocalCurrentPage
+		const setItemsPerPage = pagination?.onItemsPerPageChange ?? setLocalItemsPerPage
 
 		// const isResidente = profile?.role === 'residente'
 		// const isOwner = profile?.role === 'owner'
@@ -332,7 +369,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setTempPdfStatusFilter('all')
 			setTempExamTypeFilter('all')
 			setTempDocumentStatusFilter('all')
-		}, [])
+
+			// Si tenemos paginación del servidor, limpiar filtros del servidor también
+			if (pagination && onFiltersChange) {
+				onFiltersChange({})
+			}
+		}, [pagination, onFiltersChange])
 
 		// Handle apply filters from modal
 		const handleApplyFilters = useCallback(() => {
@@ -349,6 +391,47 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setPdfStatusFilter(tempPdfStatusFilter)
 			setExamTypeFilter(tempExamTypeFilter)
 			setDocumentStatusFilter(tempDocumentStatusFilter)
+
+			// Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
+			if (pagination && onFiltersChange) {
+				const serverFilters: any = {}
+
+				// Solo enviar filtros que no sean 'all'
+				if (tempExamTypeFilter !== 'all') {
+					serverFilters.examType = tempExamTypeFilter
+				}
+				if (tempDocumentStatusFilter !== 'all') {
+					serverFilters.documentStatus = tempDocumentStatusFilter as 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+				}
+				if (tempPdfStatusFilter !== 'all') {
+					serverFilters.pdfStatus = tempPdfStatusFilter as 'pendientes' | 'faltantes'
+				}
+				if (tempBranchFilter !== 'all') {
+					serverFilters.branch = tempBranchFilter
+				}
+				if (tempStatusFilter !== 'all') {
+					serverFilters.paymentStatus = tempStatusFilter as 'Incompleto' | 'Pagado'
+				}
+				if (tempSelectedDoctors.length > 0) {
+					serverFilters.doctorFilter = tempSelectedDoctors
+				}
+				if (tempSelectedOrigins.length > 0) {
+					serverFilters.originFilter = tempSelectedOrigins
+				}
+				if (tempCitologyPositiveFilter) {
+					serverFilters.citoStatus = 'positivo'
+				} else if (tempCitologyNegativeFilter) {
+					serverFilters.citoStatus = 'negativo'
+				}
+				if (tempDateRange?.from) {
+					serverFilters.dateFrom = tempDateRange.from.toISOString()
+				}
+				if (tempDateRange?.to) {
+					serverFilters.dateTo = tempDateRange.to.toISOString()
+				}
+
+				onFiltersChange(serverFilters)
+			}
 		}, [
 			tempStatusFilter,
 			tempBranchFilter,
@@ -362,6 +445,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			tempPdfStatusFilter,
 			tempExamTypeFilter,
 			tempDocumentStatusFilter,
+			pagination,
+			onFiltersChange,
 		])
 
 		// Handle temp filter changes
@@ -492,6 +577,43 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				(searchTerm && searchTerm.trim() !== '') ||
 				(onSearch && searchTerm && searchTerm.trim() !== '')
 
+			// Si hay paginación del servidor, NO aplicar filtros localmente
+			// El servidor ya aplicó los filtros
+			if (pagination && onFiltersChange) {
+				// Solo aplicar sorting a los casos que vienen del servidor
+				const sorted = [...cases].sort((a, b) => {
+					let aValue: unknown = a[sortField]
+					let bValue: unknown = b[sortField]
+
+					// Handle null/undefined values
+					if (aValue === null || aValue === undefined) aValue = ''
+					if (bValue === null || bValue === undefined) bValue = ''
+
+					// Optimize date sorting by using string comparison when possible
+					if (sortField === 'created_at') {
+						// Use string comparison for ISO dates (they sort correctly)
+						aValue = aValue || '0000-00-00'
+						bValue = bValue || '0000-00-00'
+					} else if (typeof aValue === 'string' && typeof bValue === 'string') {
+						aValue = aValue.toLowerCase()
+						bValue = bValue.toLowerCase()
+					}
+
+					if (sortDirection === 'asc') {
+						return (aValue as string | number) > (bValue as string | number) ? 1 : -1
+					} else {
+						return (aValue as string | number) < (bValue as string | number) ? 1 : -1
+					}
+				})
+
+				return {
+					filtered: sorted,
+					hasActiveFilters,
+					totalCases: cases.length,
+				}
+			}
+
+			// Modo fallback: aplicar filtros localmente (sin paginación del servidor)
 			// Process all cases for filtering (pagination will handle the limiting)
 			const casesToProcess = cases
 
@@ -753,33 +875,39 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			pdfStatusFilter,
 			examTypeFilter,
 			documentStatusFilter,
+			pagination,
+			onFiltersChange,
 		])
 
 		// Paginación
-		const totalPages = Math.ceil(filteredAndSortedCases.filtered.length / itemsPerPage)
-		const startIndex = (currentPage - 1) * itemsPerPage
-		const endIndex = startIndex + itemsPerPage
-		const paginatedCases = filteredAndSortedCases.filtered.slice(startIndex, endIndex)
+		// Si hay paginación del servidor, usar esos valores. Si no, calcular localmente
+		const totalPages = pagination?.totalPages ?? Math.ceil(filteredAndSortedCases.filtered.length / itemsPerPage)
+
+		// Si hay paginación del servidor, no hacer slice (ya viene paginado del servidor)
+		// Si no, hacer slice local
+		const paginatedCases = pagination
+			? filteredAndSortedCases.filtered
+			: filteredAndSortedCases.filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
 		// Funciones de paginación
 		const goToPage = useCallback(
 			(page: number) => {
 				setCurrentPage(Math.max(1, Math.min(page, totalPages)))
 			},
-			[totalPages],
+			[totalPages, setCurrentPage],
 		)
 
 		const goToNextPage = useCallback(() => {
 			if (currentPage < totalPages) {
 				setCurrentPage(currentPage + 1)
 			}
-		}, [currentPage, totalPages])
+		}, [currentPage, totalPages, setCurrentPage])
 
 		const goToPreviousPage = useCallback(() => {
 			if (currentPage > 1) {
 				setCurrentPage(currentPage - 1)
 			}
-		}, [currentPage])
+		}, [currentPage, setCurrentPage])
 
 		const handleItemsPerPageChange = useCallback((newItemsPerPage: number) => {
 			setItemsPerPage(newItemsPerPage)
@@ -801,20 +929,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 		)
 
 		// Render loading state
-		if (isLoading) {
-			return (
-				<div className="bg-white dark:bg-background rounded-xl h-full">
-					<div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-						<div className="flex items-center justify-center py-12">
-							<div className="flex items-center gap-3">
-								<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-								<span className="text-lg text-gray-700 dark:text-gray-300">Cargando casos...</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			)
-		}
 
 		// Render error state
 		if (error) {
@@ -1375,6 +1489,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+										{}
+
 										{paginatedCases.length > 0 ? (
 											// Render paginated cases
 											paginatedCases.map((case_) => {
@@ -1454,6 +1570,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 													</tr>
 												)
 											})
+										) : isLoading ? (
+											<tr>
+												<td colSpan={8}>
+													<div className="flex items-center justify-center py-12">
+														<div className="flex items-center gap-3">
+															<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+															<span className="text-lg text-gray-700 dark:text-gray-300">Cargando casos...</span>
+														</div>
+													</div>
+												</td>
+											</tr>
 										) : (
 											<tr>
 												<td colSpan={8}>

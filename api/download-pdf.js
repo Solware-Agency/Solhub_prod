@@ -36,13 +36,14 @@ export default async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Obtener los datos del caso sin JOIN para evitar errores
+    // Obtener los datos del caso con el nombre del paciente
     const { data, error: fetchError } = await supabase
       .from('medical_records_clean')
       .select(`
         informepdf_url, 
         code, 
-        token
+        token,
+        patients!inner(nombre)
       `)
       .eq('id', caseId)
       .single()
@@ -78,8 +79,19 @@ export default async function handler(req, res) {
     const blob = await response.blob()
     const buffer = await blob.arrayBuffer()
 
+    // Construir el nombre del archivo: code-nombre_paciente.pdf
     const caseCode = data.code || caseId
-    const fileName = `${caseCode}.pdf`
+    const patientName = data.patients?.nombre || 'Paciente'
+
+    // Sanitizar el nombre del paciente para uso en nombres de archivo
+    const sanitizedName = patientName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .replace(/[^a-zA-Z0-9\s]/g, '') // Eliminar caracteres especiales
+      .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+      .trim()
+
+    const fileName = `${caseCode}-${sanitizedName}.pdf`
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)

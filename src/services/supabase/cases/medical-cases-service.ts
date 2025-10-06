@@ -328,6 +328,50 @@ export const getCasesByPatientId = async (patientId: string): Promise<MedicalCas
 }
 
 /**
+ * Obtener casos médicos por patient_id con información del paciente
+ */
+export const getCasesByPatientIdWithInfo = async (patientId: string): Promise<MedicalCaseWithPatient[]> => {
+	try {
+		const { data, error } = await supabase
+			.from('medical_records_clean')
+			.select(
+				`
+				*,
+				patients!inner(
+					cedula,
+					nombre,
+					edad,
+					telefono,
+					email
+				)
+			`,
+			)
+			.eq('patient_id', patientId)
+			.order('created_at', { ascending: false })
+
+		if (error) {
+			throw error
+		}
+
+		// Transformar los datos
+		const transformedData = (data || []).map((item: any) => ({
+			...item,
+			cedula: item.patients?.cedula || '',
+			nombre: item.patients?.nombre || '',
+			edad: item.patients?.edad || null,
+			telefono: item.patients?.telefono || null,
+			patient_email: item.patients?.email || null,
+			version: item.version || null,
+		})) as MedicalCaseWithPatient[]
+
+		return transformedData
+	} catch (error) {
+		console.error('Error obteniendo casos por paciente con info:', error)
+		throw error
+	}
+}
+
+/**
  * Obtener caso médico por ID
  */
 export const getCaseById = async (caseId: string): Promise<MedicalCase | null> => {
@@ -351,6 +395,9 @@ export const getCaseById = async (caseId: string): Promise<MedicalCase | null> =
 /**
  * Obtener casos médicos con información del paciente (usando JOIN directo)
  */
+/**
+ * Obtener casos médicos con información del paciente (usando búsquedas separadas para evitar errores)
+ */
 export const getCasesWithPatientInfo = async (
 	page = 1,
 	limit = 50,
@@ -362,76 +409,298 @@ export const getCasesWithPatientInfo = async (
 		examType?: string
 		paymentStatus?: 'Incompleto' | 'Pagado'
 		userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+		documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+		pdfStatus?: 'pendientes' | 'faltantes'
+		citoStatus?: 'positivo' | 'negativo'
+		doctorFilter?: string[]
+		originFilter?: string[]
 	},
 ) => {
 	try {
-		// Construir la consulta con JOIN directo
-		let query = supabase.from('medical_records_clean').select(
-			`
-				*,
-				patients!inner(
-					cedula,
-					nombre,
-					edad,
-					telefono,
-					email
-				)
-			`,
-			{ count: 'exact' },
-		)
+		const cleanSearchTerm = filters?.searchTerm?.trim()
+		
+		// Si hay término de búsqueda, usar estrategia de búsquedas múltiples
+		if (cleanSearchTerm) {
+			console.log('🔍 [DEBUG] Término de búsqueda:', cleanSearchTerm)
+			const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&')
+			
+			// Hacer búsquedas separadas por cada campo
+			const searchPromises = [
+				// Búsqueda por código
+				supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						*,
+						patients!inner(
+							cedula,
+							nombre,
+							edad,
+							telefono,
+							email
+						)
+					`,
+						{ count: 'exact' }
+					)
+					.ilike('code', `%${escapedSearchTerm}%`)
+					.order('created_at', { ascending: false }),
 
-		// Aplicar filtros
-		if (filters?.searchTerm) {
-			// Limpiar y validar el término de búsqueda
-			const cleanSearchTerm = filters.searchTerm.trim()
-			console.log('🔍 [DEBUG] Término de búsqueda original:', filters.searchTerm)
-			console.log('🔍 [DEBUG] Término de búsqueda limpio:', cleanSearchTerm)
-			if (cleanSearchTerm) {
-				// Escapar caracteres especiales que pueden causar problemas en PostgREST
-				const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&')
-				console.log('🔍 [DEBUG] Término de búsqueda escapado:', escapedSearchTerm)
+				// Búsqueda por médico tratante
+				supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						*,
+						patients!inner(
+							cedula,
+							nombre,
+							edad,
+							telefono,
+							email
+						)
+					`,
+						{ count: 'exact' }
+					)
+					.ilike('treating_doctor', `%${escapedSearchTerm}%`)
+					.order('created_at', { ascending: false }),
 
-				// Usar una aproximación más simple con ilike en lugar de OR complejo
-				// Esto evita problemas de parsing en PostgREST
-				query = query.or(
-					`patients.nombre.ilike.%${escapedSearchTerm}%,patients.cedula.ilike.%${escapedSearchTerm}%,treating_doctor.ilike.%${escapedSearchTerm}%,exam_type.ilike.%${escapedSearchTerm}%,code.ilike.%${escapedSearchTerm}%`,
+				// Búsqueda por nombre del paciente
+				supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						*,
+						patients!inner(
+							cedula,
+							nombre,
+							edad,
+							telefono,
+							email
+						)
+					`,
+						{ count: 'exact' }
+					)
+					.ilike('patients.nombre', `%${escapedSearchTerm}%`)
+					.order('created_at', { ascending: false }),
+
+				// Búsqueda por cédula del paciente
+				supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						*,
+						patients!inner(
+							cedula,
+							nombre,
+							edad,
+							telefono,
+							email
+						)
+					`,
+						{ count: 'exact' }
+					)
+					.ilike('patients.cedula', `%${escapedSearchTerm}%`)
+					.order('created_at', { ascending: false }),
+			]
+
+			// Ejecutar todas las búsquedas en paralelo
+			const results = await Promise.all(searchPromises)
+
+			// Combinar y deduplicar resultados
+			const allResults = results.flatMap((result) => result.data || [])
+			const uniqueResults = new Map()
+
+			for (const item of allResults) {
+				uniqueResults.set(item.id, item)
+			}
+
+			let combinedResults = Array.from(uniqueResults.values())
+
+			// Aplicar filtros adicionales
+			if (filters?.branch) {
+				combinedResults = combinedResults.filter((item: any) => item.branch === filters.branch)
+			}
+
+			if (filters?.dateFrom) {
+				combinedResults = combinedResults.filter((item: any) => item.date >= filters.dateFrom!)
+			}
+
+			if (filters?.dateTo) {
+				combinedResults = combinedResults.filter((item: any) => item.date <= filters.dateTo!)
+			}
+
+			if (filters?.examType) {
+				combinedResults = combinedResults.filter((item: any) => {
+					const type = item.exam_type?.toLowerCase().trim() || ''
+					const filterType = filters.examType?.toLowerCase() || ''
+					return type.includes(filterType.substring(0, 5))
+				})
+			}
+
+			if (filters?.paymentStatus) {
+				combinedResults = combinedResults.filter((item: any) => item.payment_status === filters.paymentStatus)
+			}
+
+			// Filtro por estatus de documento
+			if (filters?.documentStatus) {
+				combinedResults = combinedResults.filter((item: any) => {
+					const status = (item.doc_aprobado || 'faltante').toLowerCase().trim()
+					return status === filters.documentStatus
+				})
+			}
+
+			// Filtro por estatus de PDF
+			if (filters?.pdfStatus) {
+				combinedResults = combinedResults.filter((item: any) => {
+					const pdfReady = item.pdf_en_ready
+					if (filters.pdfStatus === 'pendientes') {
+						return pdfReady === false || pdfReady === 'FALSE'
+					} else if (filters.pdfStatus === 'faltantes') {
+						return pdfReady === true || pdfReady === 'TRUE'
+					}
+					return true
+				})
+			}
+
+			// Filtro por estatus de citología
+			if (filters?.citoStatus) {
+				combinedResults = combinedResults.filter((item: any) => item.cito_status === filters.citoStatus)
+			}
+
+			// Filtro por médico tratante
+			if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+				combinedResults = combinedResults.filter((item: any) => 
+					filters.doctorFilter!.includes(item.treating_doctor)
 				)
-				console.log('🔍 [DEBUG] Aplicando filtro de búsqueda para:', escapedSearchTerm)
+			}
+
+			// Filtro por procedencia
+			if (filters?.originFilter && filters.originFilter.length > 0) {
+				combinedResults = combinedResults.filter((item: any) => 
+					filters.originFilter!.includes(item.origin)
+				)
+			}
+
+			// Filtrar por rol de usuario
+			if (filters?.userRole === 'residente') {
+				combinedResults = combinedResults.filter((item: any) => item.exam_type === 'Biopsia')
+			}
+
+			if (filters?.userRole === 'citotecno') {
+				combinedResults = combinedResults.filter((item: any) => item.exam_type === 'Citología')
+			}
+
+			if (filters?.userRole === 'patologo') {
+				combinedResults = combinedResults.filter((item: any) => 
+					item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica'
+				)
+			}
+
+			// Paginar los resultados
+			const totalCount = combinedResults.length
+			const from = (page - 1) * limit
+			const to = from + limit
+			const paginatedResults = combinedResults.slice(from, to)
+
+			// Transformar los datos
+			const transformedData = paginatedResults.map((item: any) => ({
+				...item,
+				cedula: item.patients?.cedula || '',
+				nombre: item.patients?.nombre || '',
+				edad: item.patients?.edad || null,
+				telefono: item.patients?.telefono || null,
+				patient_email: item.patients?.email || null,
+				version: item.version || null,
+			})) as MedicalCaseWithPatient[]
+
+			console.log(`✅ Búsqueda encontró ${totalCount} resultados totales, mostrando página ${page}`)
+
+			return {
+				data: transformedData,
+				count: totalCount,
+				page,
+				limit,
+				totalPages: Math.ceil(totalCount / limit),
 			}
 		}
 
-		if (filters?.branch) {
-			query = query.eq('branch', filters.branch)
-		}
+	// Sin término de búsqueda, consulta normal
+	let query = supabase.from('medical_records_clean').select(
+		`
+			*,
+			patients!inner(
+				cedula,
+				nombre,
+				edad,
+				telefono,
+				email
+			)
+		`,
+		{ count: 'exact' },
+	)
 
-		if (filters?.dateFrom) {
-			query = query.gte('date', filters.dateFrom)
-		}
+	// Aplicar filtros
+	if (filters?.branch) {
+		query = query.eq('branch', filters.branch)
+	}
 
-		if (filters?.dateTo) {
-			query = query.lte('date', filters.dateTo)
-		}
+	if (filters?.dateFrom) {
+		query = query.gte('date', filters.dateFrom)
+	}
 
-		if (filters?.examType) {
-			query = query.eq('exam_type', filters.examType)
-		}
+	if (filters?.dateTo) {
+		query = query.lte('date', filters.dateTo)
+	}
 
-		if (filters?.paymentStatus) {
-			query = query.eq('payment_status', filters.paymentStatus)
-		}
+	if (filters?.examType) {
+		query = query.ilike('exam_type', `%${filters.examType}%`)
+	}
 
-		// Si el usuario es residente, solo mostrar casos de biopsia
-		if (filters?.userRole === 'residente') {
-			query = query.eq('exam_type', 'Biopsia')
-		}
+	if (filters?.paymentStatus) {
+		query = query.eq('payment_status', filters.paymentStatus)
+	}
 
-		if (filters?.userRole === 'citotecno') {
-			query = query.eq('exam_type', 'Citología')
-		}
+	// Filtro por estatus de documento
+	if (filters?.documentStatus) {
+		query = query.eq('doc_aprobado', filters.documentStatus)
+	}
 
-		if (filters?.userRole === 'patologo') {
-			query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
+	// Filtro por estatus de PDF
+	if (filters?.pdfStatus) {
+		if (filters.pdfStatus === 'pendientes') {
+			query = query.eq('pdf_en_ready', false)
+		} else if (filters.pdfStatus === 'faltantes') {
+			query = query.eq('pdf_en_ready', true)
 		}
+	}
+
+	// Filtro por estatus de citología
+	if (filters?.citoStatus) {
+		query = query.eq('cito_status', filters.citoStatus)
+	}
+
+	// Filtro por médico tratante
+	if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+		query = query.in('treating_doctor', filters.doctorFilter)
+	}
+
+	// Filtro por procedencia
+	if (filters?.originFilter && filters.originFilter.length > 0) {
+		query = query.in('origin', filters.originFilter)
+	}
+
+	// Filtrar por rol de usuario
+	if (filters?.userRole === 'residente') {
+		query = query.eq('exam_type', 'Biopsia')
+	}
+
+	if (filters?.userRole === 'citotecno') {
+		query = query.eq('exam_type', 'Citología')
+	}
+
+	if (filters?.userRole === 'patologo') {
+		query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
+	}
 
 		// Paginación
 		const from = (page - 1) * limit
@@ -443,7 +712,7 @@ export const getCasesWithPatientInfo = async (
 			throw error
 		}
 
-		// Transformar los datos para que coincidan con la interfaz
+		// Transformar los datos
 		const transformedData = (data || []).map((item: any) => ({
 			...item,
 			cedula: item.patients?.cedula || '',

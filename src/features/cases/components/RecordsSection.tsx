@@ -14,6 +14,18 @@ interface RecordsSectionProps {
 	isFullscreen: boolean
 	setIsFullscreen: (value: boolean) => void
 	onSearch?: (term: string) => void
+	onFiltersChange?: (filters: {
+		examType?: string
+		documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+		pdfStatus?: 'pendientes' | 'faltantes'
+		citoStatus?: 'positivo' | 'negativo'
+		branch?: string
+		paymentStatus?: 'Incompleto' | 'Pagado'
+		doctorFilter?: string[]
+		originFilter?: string[]
+		dateFrom?: string
+		dateTo?: string
+	}) => void
 	pagination?: {
 		currentPage: number
 		totalPages: number
@@ -32,6 +44,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 	isFullscreen,
 	setIsFullscreen,
 	onSearch,
+	onFiltersChange,
 	pagination,
 }) => {
 	const queryClient = useQueryClient()
@@ -76,7 +89,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 					} else if (status === 'CHANNEL_ERROR') {
 						console.error('❌ [RecordsSection] Error en canal')
 					} else if (status === 'CLOSED') {
-						console.warn('⚠️ [RecordsSection] Canal cerrado')
+						console.warn('⚠️ [] Canal cerrado')
 					}
 				})
 
@@ -93,9 +106,17 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 	const { profile } = useUserProfile()
 
 	// Filter cases by assigned branch if user has an assigned branch
+	// IMPORTANTE: Si hay paginación del servidor, NO filtrar aquí porque el servidor ya lo hizo
 	const filteredCases = useMemo(() => {
 		if (!cases || cases.length === 0) return []
 
+		// Si hay paginación del servidor, NO aplicar filtros locales
+		// El servidor ya filtró por rol y otros criterios
+		if (pagination) {
+			return cases
+		}
+
+		// Solo aplicar filtros locales si NO hay paginación del servidor (modo fallback)
 		let filtered = [...cases]
 
 		// If user is an employee with assigned branch, filter cases
@@ -122,7 +143,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 		}
 
 		return filtered
-	}, [cases, profile])
+	}, [cases, profile, pagination])
 
 	return (
 		<div>
@@ -157,6 +178,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 				isFullscreen={isFullscreen}
 				setIsFullscreen={setIsFullscreen}
 				onSearch={onSearch}
+				onFiltersChange={onFiltersChange}
 				pagination={pagination}
 			/>
 		</div>

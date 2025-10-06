@@ -27,7 +27,7 @@ export const CommentsSection = lazy(() =>
 	import('@features/form/components/CommentsSection').then((module) => ({ default: module.CommentsSection })),
 )
 export const RecordsSection = lazy(() =>
-	import('@features/form/components/RecordsSection').then((module) => ({ default: module.RecordsSection })),
+	import('@features/cases/components/RecordsSection').then((module) => ({ default: module.RecordsSection })),
 )
 export const ServiceSection = lazy(() =>
 	import('@features/form/components/ServiceSection').then((module) => ({ default: module.ServiceSection })),

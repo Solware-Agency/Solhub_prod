@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
-import { getAllCasesWithPatientInfo } from '@/services/supabase/cases/medical-cases-service'
+import { getCasesByPatientIdWithInfo } from '@/services/supabase/cases/medical-cases-service'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { Button } from '@shared/components/ui/button'
@@ -42,13 +42,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: ['patient-history', patient?.id],
 		queryFn: async () => {
-			if (!patient?.id) return { data: [] }
+			if (!patient?.id) return []
 
 			try {
-				const result = await getAllCasesWithPatientInfo({})
-				// Filtrar por patient_id después de obtener los datos
-				const filteredData = result.data.filter((case_) => case_.patient_id === patient.id)
-				return { data: filteredData }
+				// Obtener casos directamente del servidor filtrados por patient_id
+				const cases = await getCasesByPatientIdWithInfo(patient.id)
+				return cases
 			} catch (error) {
 				throw error
 			}
@@ -84,12 +83,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 
 	// Filter cases based on search term - usando nueva estructura
 	const filteredCases = React.useMemo(() => {
-		if (!data?.data) return []
+		if (!data) return []
 
-		if (!searchTerm) return data.data
+		if (!searchTerm) return data
 
 		const searchLower = searchTerm.toLowerCase()
-		return data.data.filter(
+		return data.filter(
 			(caseItem: MedicalCaseWithPatient) =>
 				(caseItem.code?.toLowerCase() || '').includes(searchLower) ||
 				(caseItem.exam_type?.toLowerCase() || '').includes(searchLower) ||
@@ -97,7 +96,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ isOpen, onClo
 				(caseItem.branch?.toLowerCase() || '').includes(searchLower) ||
 				(caseItem.payment_status?.toLowerCase() || '').includes(searchLower),
 		)
-	}, [data?.data, searchTerm])
+	}, [data, searchTerm])
 
 	// Get status color
 	const getStatusColor = (status: string) => {
