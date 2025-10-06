@@ -293,7 +293,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatNumber(exam.count)} casos
+														{formatNumber(exam.count)}
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatCurrency(exam.revenue)}
@@ -704,7 +704,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatNumber(exam.count)} casos
+														{formatNumber(exam.count)}
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatCurrency(exam.revenue)}

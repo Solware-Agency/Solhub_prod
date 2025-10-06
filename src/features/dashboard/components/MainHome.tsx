@@ -378,7 +378,7 @@ function MainHome() {
 													</div>
 												</div>
 												<span className={`text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
-													{formatNumber(exam.count)} casos
+													{formatNumber(exam.count)}
 												</span>
 											</div>
 										)

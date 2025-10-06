@@ -84,7 +84,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 							name="idType"
 							render={({ field }) => (
 								<FormItem className="space-y-2 flex flex-col col-span-1">
-									<FormLabel>Cédula *</FormLabel>
+									<FormLabel className="whitespace-nowrap">Cédula *</FormLabel>
 									<FormControl>
 										<FormDropdown
 											options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
