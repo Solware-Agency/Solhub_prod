@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { signIn } from '@lib/supabase/auth'
+import { signIn } from '@services/supabase/auth/auth'
 import { useAuth } from '@app/providers/AuthContext'
 import { useSecureRedirect } from '@shared/hooks/useSecureRedirect'
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'
 import FavIcon from '@shared/components/icons/FavIcon'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@services/supabase/config/config'
 import { toast } from '@shared/hooks/use-toast'
 
 function LoginForm() {

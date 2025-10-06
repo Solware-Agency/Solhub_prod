@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 
 interface AutocompleteOption {
 	value: string

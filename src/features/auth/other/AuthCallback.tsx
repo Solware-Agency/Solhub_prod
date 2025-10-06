@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 import { useSecureRedirect } from '@shared/hooks/useSecureRedirect'
 import { CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Aurora from '@shared/components/ui/Aurora'

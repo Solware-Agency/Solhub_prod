@@ -1,20 +1,10 @@
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { useState } from 'react'
-import { getDownloadUrl } from '@lib/download-utils'
 
 interface MedicalRecord {
 	id?: string
-	full_name?: string
-	id_number?: string
-	email?: string | null
-	phone?: string | null
-	address?: string | null
-	birth_date?: string | null
-	exam_type?: string | null
-	informacion_clinica?: string | null
-	googledocs_url?: string | null
-	informepdf_url?: string | null
+	informe_qr?: string | null
 }
 
 export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => void) => {
@@ -34,6 +24,40 @@ export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => 
 		try {
 			setIsSaving(true)
 
+			// Verificar si ya existe informe_qr
+			console.log('[1] Verificando si ya existe informe_qr para el caso', case_.id)
+			const { data: initialData, error: initialError } = await supabase
+				.from('medical_records_clean')
+				.select('informe_qr')
+				.eq('id', case_.id)
+				.single<MedicalRecord>()
+
+			if (initialError) {
+				console.error('Error al obtener URL del PDF:', initialError)
+				toast({
+					title: '❌ Error',
+					description: 'No se pudo obtener el estado del PDF.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			if (initialData?.informe_qr) {
+				console.log('[1] informe_qr ya existe, redirigiendo:', initialData.informe_qr)
+				toast({
+					title: '✅ PDF ya disponible',
+					description: 'El documento ya fue generado previamente.',
+					className: 'bg-green-100 border-green-400 text-green-800',
+				})
+				window.open(initialData.informe_qr, '_blank')
+				// Ejecutar handleNext automáticamente después de abrir el QR
+				setTimeout(() => {
+					handleNext()
+				}, 1000)
+				return
+			}
+
+			console.log('[2] informe_qr no existe, enviando POST a n8n...')
 			console.log('Sending request to n8n webhook with case ID:', case_.id)
 
 			const requestBody = {
@@ -85,7 +109,7 @@ export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => 
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
 
-			// ⏱️ Esperar 6 segundos antes de intentar descargar el PDF
+			// ⏱️ Esperar a que se genere el informe_qr
 			let attempts = 0
 			const maxAttempts = 10
 			let pdfUrl: string | null = null
@@ -93,18 +117,19 @@ export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => 
 			while (attempts < maxAttempts) {
 				const { data, error } = await supabase
 					.from('medical_records_clean')
-					.select('informepdf_url, token')
+					.select('informe_qr')
 					.eq('id', case_.id)
-					.single<MedicalRecord & { token?: string }>()
+					.single<MedicalRecord>()
 
 				if (error) {
-					console.error('Error obteniendo informepdf_url:', error)
+					console.error('Error obteniendo informe_qr:', error)
 					break
 				}
 
-				if (data?.informepdf_url) {
-					// Usar la utilidad para determinar la URL de descarga apropiada
-					pdfUrl = getDownloadUrl(case_.id, data.token || null, data.informepdf_url || null)
+				// Solo usar informe_qr
+				if (data?.informe_qr) {
+					console.log('[3] informe_qr generado exitosamente:', data.informe_qr)
+					pdfUrl = data.informe_qr
 					break
 				}
 

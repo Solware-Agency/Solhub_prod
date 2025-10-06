@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 import type { User } from '@supabase/supabase-js'
 
 export const SESSION_TIMEOUT_OPTIONS = [5, 10, 15, 20, 30] // minutes

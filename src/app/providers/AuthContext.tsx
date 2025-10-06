@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { supabase } from '@lib/supabase/config'
-import { signOut as authSignOut } from '@lib/supabase/auth' // Rename to avoid conflicts
+import { supabase } from '@services/supabase/config/config'
+import { signOut as authSignOut } from '@services/supabase/auth/auth' // Rename to avoid conflicts
 import { useSessionTimeoutSettings } from '@shared/hooks/useSessionTimeoutSettings'
 import type { ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'

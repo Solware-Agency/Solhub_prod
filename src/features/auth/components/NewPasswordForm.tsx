@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, ShieldCheck, RefreshCw } from 'lucide-react'
-import { updatePassword, supabase } from '@lib/supabase/auth'
+import { updatePassword, supabase } from '@/services/supabase/auth/auth'
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'
 

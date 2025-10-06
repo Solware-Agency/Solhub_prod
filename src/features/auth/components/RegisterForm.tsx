@@ -1,8 +1,8 @@
 import { UserRound, Eye, EyeOff, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signUp } from '@lib/supabase/auth'
-import { emailExists as getUserByEmail } from '@lib/supabase/user-management' // debe devolver { exists: boolean, error: any }
+import { signUp } from '@/services/supabase/auth/auth'
+import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management' // debe devolver { exists: boolean, error: any }
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'
 import type { User } from '@supabase/supabase-js'

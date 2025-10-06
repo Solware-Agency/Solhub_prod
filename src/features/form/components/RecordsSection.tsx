@@ -1,17 +1,10 @@
 import React, { useMemo, useEffect } from 'react'
-import CasesTable from '@shared/components/cases/CasesTable'
-import {
-	// Users,
-	MapPin,
-	// Activity,
-	// Download
-} from 'lucide-react'
-// import { Card, CardContent } from '@shared/components/ui/card'
+import CasesTable from '@features/cases/components/CasesTable'
+import { MapPin } from 'lucide-react'
 import { type MedicalRecord } from '@shared/types/types'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@lib/supabase/config'
-// import { formatNumber } from '@shared/utils/number-utils'
+import { supabase } from '@/services/supabase/config/config'
 
 interface RecordsSectionProps {
 	cases: MedicalRecord[]
@@ -21,6 +14,14 @@ interface RecordsSectionProps {
 	isFullscreen: boolean
 	setIsFullscreen: (value: boolean) => void
 	onSearch?: (term: string) => void
+	pagination?: {
+		currentPage: number
+		totalPages: number
+		totalItems: number
+		itemsPerPage: number
+		onPageChange: (page: number) => void
+		onItemsPerPageChange: (items: number) => void
+	}
 }
 
 export const RecordsSection: React.FC<RecordsSectionProps> = ({
@@ -31,6 +32,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 	isFullscreen,
 	setIsFullscreen,
 	onSearch,
+	pagination,
 }) => {
 	const queryClient = useQueryClient()
 
@@ -106,52 +108,21 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
 		}
 
+		// Si el usuario es residente, solo mostrar casos de biopsia
+		if (profile?.role === 'residente') {
+			filtered = filtered.filter((c) => c.exam_type === 'Biopsia')
+		}
+
+		if (profile?.role === 'citotecno') {
+			filtered = filtered.filter((c) => c.exam_type === 'Citología')
+		}
+
+		if (profile?.role === 'patologo') {
+			filtered = filtered.filter((c) => c.exam_type === 'Biopsia' || c.exam_type === 'Inmunohistoquímica')
+		}
+
 		return filtered
 	}, [cases, profile])
-
-	// Calculate statistics
-	// const stats = useMemo(() => {
-	// 	if (!filteredCases || filteredCases.length === 0) {
-	// 		return { total: 0, totalAmount: 0, completed: 0, examTypes: {} }
-	// 	}
-
-	// 	const total = filteredCases.length
-	// 	const totalAmount = filteredCases.reduce(
-	// 		(sum: number, record: MedicalRecord) => sum + (record.total_amount || 0),
-	// 		0,
-	// 	)
-	// 	const completed = filteredCases.filter((record: MedicalRecord) => record.payment_status === 'Pagado').length
-
-	// 	// Count cases by exam type
-	// 	const examTypes: Record<string, number> = {}
-	// 	filteredCases.forEach((record: MedicalRecord) => {
-	// 		if (!record.exam_type) return
-	// 		const type = record.exam_type.toLowerCase()
-	// 		examTypes[type] = (examTypes[type] || 0) + 1
-	// 	})
-
-	// 	return { total, totalAmount, completed, examTypes }
-	// }, [filteredCases])
-
-	// Count PDF-ready cases using pdf_en_ready column
-	// const pendingPdfCases = useMemo(() => {
-	// 	return (
-	// 		cases?.filter((c) => {
-	// 			const pdfReadyValue = c.pdf_en_ready
-
-	//
-	// 			if (typeof pdfReadyValue === 'string') {
-	// 				return pdfReadyValue === 'FALSE'
-	// 			}
-	//
-	// 			if (typeof pdfReadyValue === 'boolean') {
-	// 				return pdfReadyValue === false
-	// 			}
-
-	// 			return false
-	// 		}).length || 0
-	// 	)
-	// }, [cases])
 
 	return (
 		<div>
@@ -160,73 +131,6 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 				<h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Casos de Laboratorio</h2>
 				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 			</div>
-
-			{/* Statistics cards */}
-			{/* <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full mb-4 sm:mb-6">
-				<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 group transition-transform duration-300">
-					<CardContent className="p-4">
-						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-								<Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-							</div>
-							<div>
-								<p className="text-xs font-medium text-muted-foreground">Total de Casos</p>
-							</div>
-						</div>
-						<div className="text-right">
-							<p className="text-2xl font-bold">{formatNumber(stats.total)}</p>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 group transition-transform duration-300">
-					<CardContent className="p-4">
-						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-								<Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
-							</div>
-							<div>
-								<p className="text-xs font-medium text-muted-foreground">Casos Completados</p>
-							</div>
-						</div>
-						<div className="text-right">
-							<p className="text-2xl font-bold">{formatNumber(stats.completed)}</p>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 group transition-transform duration-300">
-					<CardContent className="p-4">
-						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-								<Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-							</div>
-							<div>
-								<p className="text-xs font-medium text-muted-foreground">Casos Pendientes</p>
-							</div>
-						</div>
-						<div className="text-right">
-							<p className="text-2xl font-bold">{formatNumber(stats.total - stats.completed)}</p>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 group transition-transform duration-300">
-					<CardContent className="p-4">
-						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-								<Download className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-							</div>
-							<div>
-								<p className="text-xs font-medium text-muted-foreground">PDF Pendientes</p>
-							</div>
-						</div>
-						<div className="text-right">
-							<p className="text-2xl font-bold">{formatNumber(pendingPdfCases)}</p>
-						</div>
-					</CardContent>
-				</Card>
-			</div> */}
 
 			{/* Branch Info */}
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
@@ -253,6 +157,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 				isFullscreen={isFullscreen}
 				setIsFullscreen={setIsFullscreen}
 				onSearch={onSearch}
+				pagination={pagination}
 			/>
 		</div>
 	)

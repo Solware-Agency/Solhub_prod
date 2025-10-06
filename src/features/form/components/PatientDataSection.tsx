@@ -6,9 +6,9 @@ import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
 import { Loader2, CheckCircle } from 'lucide-react'
-import { useFormContext } from 'react-hook-form'
+import { useFormContext, useWatch } from 'react-hook-form'
 import { usePatientAutofill } from '@shared/hooks/usePatientAutofill'
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useEffect } from 'react'
 import { useState } from 'react'
 import { User, Phone, CreditCard, Mail } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
@@ -25,9 +25,22 @@ interface PatientDataSectionProps {
 }
 
 export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSectionProps) => {
-	const { setValue } = useFormContext<FormValues>()
+	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
 	const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValue)
 	const [isRegistrationDateCalendarOpen, setIsRegistrationDateCalendarOpen] = useState(false)
+
+	// Observar el valor del tipo de cédula para deshabilitar el input cuando sea S/C
+	const idType = useWatch({ control, name: 'idType' })
+	const idNumber = useWatch({ control, name: 'idNumber' })
+	const isIdDisabled = idType === 'S/C'
+
+	// Validación condicional para el campo idNumber
+	useEffect(() => {
+		if (idType === 'S/C') {
+			// Limpiar errores cuando se selecciona S/C
+			clearErrors('idNumber')
+		}
+	}, [idType, idNumber, clearErrors, setError])
 
 	// Memoize the handler to prevent unnecessary re-renders
 	const handlePatientSelect = useCallback(
@@ -74,9 +87,15 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									<FormLabel>Cédula *</FormLabel>
 									<FormControl>
 										<FormDropdown
-											options={createDropdownOptions(['V', 'E', 'J', 'C'])}
+											options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
 											value={field.value || 'V'}
-											onChange={field.onChange}
+											onChange={(value) => {
+												field.onChange(value)
+												// Limpiar el número de cédula cuando se selecciona S/C
+												if (value === 'S/C') {
+													setValue('idNumber', '')
+												}
+											}}
 											placeholder="Tipo"
 											className={inputStyles + ' transition-none'}
 											id="patient-id-type"
@@ -94,24 +113,32 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									<FormControl>
 										<AutocompleteInput
 											fieldName="idNumber"
-											placeholder="12345678"
+											placeholder={isIdDisabled ? 'No aplica' : '12345678'}
 											iconRight={<CreditCard className="h-4 w-4 text-muted-foreground" />}
 											{...field}
+											disabled={isIdDisabled}
 											onPatientSelect={handlePatientSelect}
 											onChange={(e) => {
+												if (isIdDisabled) return
 												const { value } = e.target
 												if (/^[0-9]*$/.test(value)) {
 													field.onChange(e)
 												}
 											}}
-											className={cn(inputStyles, isLoadingPatient && 'border-blue-300 transition-none')}
+											className={cn(
+												inputStyles,
+												isLoadingPatient && 'border-blue-300 transition-none',
+												isIdDisabled && 'opacity-50 cursor-not-allowed',
+											)}
 										/>
 									</FormControl>
 								</FormItem>
 							)}
 						/>
 						<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight w-full col-span-full">
-							💡 Haz clic en una cédula para llenar automáticamente los datos del paciente
+							{isIdDisabled
+								? '👶 S/C: Sin cédula (menor de edad)'
+								: '💡 Haz clic en una cédula para llenar automáticamente los datos del paciente'}
 						</p>
 					</div>
 					<FormField

@@ -12,7 +12,7 @@ import { CommentsSection } from './CommentsSection'
 import { FilePlus2, Loader2, Trash2 } from 'lucide-react'
 import { useExchangeRate } from '@shared/hooks/useExchangeRate'
 import { useResetForm } from '@shared/hooks/useResetForm'
-import { registerMedicalCase, validateRegistrationData } from '@lib/registration-service'
+import { registerMedicalCase, validateRegistrationData } from '@services/supabase/cases/registration-service'
 import { type FormValues } from '@features/form/lib/form-schema'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 

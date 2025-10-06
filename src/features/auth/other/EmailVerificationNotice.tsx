@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Mail, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAuth } from '@app/providers/AuthContext'
-import { resendConfirmation } from '@lib/supabase/auth'
+import { resendConfirmation } from '@/services/supabase/auth/auth'
 import { useNavigate } from 'react-router-dom'
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'

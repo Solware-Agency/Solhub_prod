@@ -11,11 +11,17 @@
   "compilerOptions": {
     "baseUrl": "src",
     "paths": {
-      "@assets/*": ["assets/*"],
-      "@lib/*": ["lib/*"],
+      "@services/*": [
+        "services/*"
+      ],
       "@app/*": ["app/*"],
       "@features/*": ["features/*"],
-      "@shared/*": ["shared/*"]
+      "@shared/*": [
+        "shared/*"
+      ],
+      "@/*": [
+        "*"
+      ]
     }
   }
 }

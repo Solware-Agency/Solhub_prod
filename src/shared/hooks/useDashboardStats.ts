@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@lib/supabase/config'
+import { supabase } from '@/services/supabase/config/config'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'

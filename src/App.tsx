@@ -13,24 +13,19 @@ import {
 	AuthCallback,
 	NotFoundPage,
 	Layout,
-	EmployeeLayout,
 	HomePage,
 	ReceptionistHomePage,
 	StatsPage,
 	ReportsPage,
 	UsersPage,
 	CasesPage,
-	// MyCasesPage,
 	SettingsPage,
 	ChangelogPage,
-	// StandaloneChangelogPage,
 	PatientsPage,
-	// FormRoute,
 	PrivateRoute,
 	DoctorsSection,
 	MedicalForm,
 	StandaloneChatPage,
-	AdminLayout,
 } from '@app/routes/lazy-routes'
 
 // Loading component for Suspense fallback
@@ -127,7 +122,7 @@ function App() {
 								path="/employee"
 								element={
 									<PrivateRoute requiredRole={'employee'}>
-										<EmployeeLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>
@@ -145,16 +140,41 @@ function App() {
 								path="/medic"
 								element={
 									<PrivateRoute requiredRole={'residente'}>
-										<AdminLayout />
+										<Layout />
 									</PrivateRoute>
 								}
 							>
 								{/* Nested routes that will render in the Outlet */}
 								<Route index element={<CasesPage />} />
-								<Route path="form" element={<MedicalForm />} />
 								<Route path="cases" element={<CasesPage />} />
-								{/* <Route path="my-cases" element={<MyCasesPage />} /> */}
-								<Route path="users" element={<UsersPage />} />
+								<Route path="settings" element={<SettingsPage />} />
+							</Route>
+
+							<Route
+								path="/cito"
+								element={
+									<PrivateRoute requiredRole={'citotecno'}>
+										<Layout />
+									</PrivateRoute>
+								}
+							>
+								{/* Nested routes that will render in the Outlet */}
+								<Route index element={<CasesPage />} />
+								<Route path="cases" element={<CasesPage />} />
+								<Route path="settings" element={<SettingsPage />} />
+							</Route>
+
+							<Route
+								path="/patolo"
+								element={
+									<PrivateRoute requiredRole={'patologo'}>
+										<Layout />
+									</PrivateRoute>
+								}
+							>
+								{/* Nested routes that will render in the Outlet */}
+								<Route index element={<CasesPage />} />
+								<Route path="cases" element={<CasesPage />} />
 								<Route path="settings" element={<SettingsPage />} />
 							</Route>
 
