@@ -572,6 +572,36 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 					/>
 				)}
 
+				{isMedicowner && (
+					<NavItem
+						to="/dashboard/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
+				{isCitotecno && (
+					<NavItem
+						to="/cito/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
+				{isPatologo && (
+					<NavItem
+						to="/patolo/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
 				<div
 					onClick={toggleDarkMode}
 					title={!showFullContent ? 'Cambiar color' : undefined}
