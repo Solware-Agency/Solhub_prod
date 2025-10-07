@@ -680,11 +680,18 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 					throw new Error(`Error al descargar: ${response.status}`)
 				}
 
+				const sanitizedName = case_.full_name || 'Paciente'
+					.normalize('NFD')
+					.replace(/[\u0300-\u036f]/g, '')
+					.replace(/[^a-zA-Z0-9\s]/g, '')
+					.replace(/\s+/g, '_')
+					.trim()
+
 				const blob = await response.blob()
 				const url = window.URL.createObjectURL(blob)
 				const link = document.createElement('a')
 				link.href = url
-				link.download = `${case_.code || 'documento'}.pdf`
+				link.download = `${case_.code}-${sanitizedName}.pdf`
 				document.body.appendChild(link)
 				link.click()
 				document.body.removeChild(link)
