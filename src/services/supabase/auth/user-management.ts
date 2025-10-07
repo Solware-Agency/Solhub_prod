@@ -4,7 +4,7 @@ import type { PostgrestError } from '@supabase/supabase-js'
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -35,7 +35,7 @@ const rpc = (supabase as unknown as RpcClient).rpc.bind(supabase as unknown as R
 -------------------------------------------------------------------*/
 export const updateUserRole = async (
 	userId: string,
-	newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo',
+	newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 ): Promise<{ data: UserProfile | null; error: PostgrestError | Error | null }> => {
 	try {
 		console.log(`Updating user ${userId} role to ${newRole}`)
@@ -198,8 +198,11 @@ export const getUserStats = async (): Promise<{
 	data: {
 		total: number
 		owners: number
+		medicowners: number
 		employees: number
-		admins: number
+		residents: number
+		citotecnos: number
+		patologos: number
 		withBranch: number
 		approved: number
 		pending: number
@@ -217,8 +220,9 @@ export const getUserStats = async (): Promise<{
 		const stats = {
 			total: data?.length || 0,
 			owners: data?.filter((u) => u.role === 'owner').length || 0,
+			medicowners: data?.filter((u) => u.role === 'medicowner').length || 0,
 			employees: data?.filter((u) => u.role === 'employee').length || 0,
-			admins: data?.filter((u) => u.role === 'residente').length || 0,
+			residents: data?.filter((u) => u.role === 'residente').length || 0,
 			citotecnos: data?.filter((u) => u.role === 'citotecno').length || 0,
 			patologos: data?.filter((u) => u.role === 'patologo').length || 0,
 			withBranch: data?.filter((u) => u.assigned_branch).length || 0,

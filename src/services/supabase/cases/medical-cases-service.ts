@@ -408,7 +408,7 @@ export const getCasesWithPatientInfo = async (
 		dateTo?: string
 		examType?: string
 		paymentStatus?: 'Incompleto' | 'Pagado'
-		userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+		userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 		documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
 		pdfStatus?: 'pendientes' | 'faltantes'
 		citoStatus?: 'positivo' | 'negativo'
@@ -747,7 +747,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 	dateTo?: string
 	examType?: string
 	paymentStatus?: 'Incompleto' | 'Pagado'
-	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 }) => {
 	try {
 		// Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing

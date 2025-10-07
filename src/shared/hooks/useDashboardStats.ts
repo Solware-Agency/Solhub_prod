@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'
+import { useEffect } from 'react'
 
 // Tipo local para casos médicos con información del paciente
 export interface MedicalCaseWithPatient {
@@ -96,27 +97,58 @@ const normalizeExamType = (examType: string): string => {
 	)
 }
 
-export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) => {
-	return useQuery({
-		queryKey: ['dashboard-stats', selectedMonth?.toISOString(), selectedYear],
+export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
+	const queryClient = useQueryClient()
+
+	const query = useQuery({
+		queryKey: ['dashboard-stats', startDate?.toISOString(), endDate?.toISOString()],
 		queryFn: async (): Promise<DashboardStats> => {
 			try {
-				// Obtener casos médicos con información del paciente usando JOIN directo
-				const { data: allRecords, error: allError } = await supabase.from('medical_records_clean').select(`
-						*,
+				// Get date range for filtering - use provided dates or default to current month
+				const filterStart = startDate || startOfMonth(new Date())
+				const filterEnd = endDate || endOfMonth(new Date())
+
+				// OPTIMIZACIÓN: Filtrar en el servidor en lugar de traer todos los registros
+				// Solo traer campos necesarios para las estadísticas
+				const { data: filteredRecords, error: allError } = await supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						id,
+						total_amount,
+						payment_status,
+						remaining,
+						branch,
+						exam_type,
+						origin,
+						treating_doctor,
+						created_at,
+						patient_id,
+						payment_method_1,
+						payment_amount_1,
+						payment_method_2,
+						payment_amount_2,
+						payment_method_3,
+						payment_amount_3,
+						payment_method_4,
+						payment_amount_4,
 						patients!inner(
+							id,
 							cedula,
 							nombre,
 							edad,
 							telefono,
 							email
 						)
-					`)
+					`,
+					)
+					.gte('created_at', filterStart.toISOString())
+					.lte('created_at', filterEnd.toISOString())
 
 				if (allError) throw allError
 
 				// Transformar los datos para que coincidan con la interfaz
-				const transformedRecords = (allRecords || []).map((item: any) => ({
+				const transformedFilteredRecords = (filteredRecords || []).map((item: any) => ({
 					...item,
 					cedula: item.patients?.cedula || '',
 					nombre: item.patients?.nombre || '',
@@ -126,28 +158,19 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					version: item.version || null,
 				})) as MedicalCaseWithPatient[]
 
-				if (allError) throw allError
+				// Para el total histórico, necesitamos una consulta separada (sin filtro de fecha)
+				const { data: allRecordsForTotal } = await supabase
+					.from('medical_records_clean')
+					.select('total_amount, patient_id, created_at')
+					.not('created_at', 'is', null)
 
-				// Get current month data if selectedMonth is provided
-				const currentMonth = selectedMonth || new Date()
-				const monthStart = startOfMonth(currentMonth)
-				const monthEnd = endOfMonth(currentMonth)
+				const allRecords = allRecordsForTotal || []
 
-				// Filter records for current month from transformedRecords (more efficient)
-				const monthRecords =
-					transformedRecords?.filter((record) => {
-						if (!record.created_at) return false
-						const recordDate = new Date(record.created_at)
-						return recordDate >= monthStart && recordDate <= monthEnd
-					}) || []
+				// Calculate total revenue (all time) - usando consulta separada optimizada
+				const totalRevenue = allRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
 
-				// Calculate total revenue
-				const totalRevenue = transformedRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
-
-				// Calculate unique patients - Con nueva estructura es más eficiente
-				const uniquePatientIds = new Set(
-					transformedRecords?.filter((r) => r.patient_id).map((record) => record.patient_id),
-				)
+				// Calculate unique patients - usando consulta separada optimizada
+				const uniquePatientIds = new Set(allRecords?.filter((r) => r.patient_id).map((record) => record.patient_id))
 				const uniquePatients = uniquePatientIds.size
 
 				// Alternative: Get actual count from patients table for accuracy
@@ -158,14 +181,15 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 				// Use actual count from patients table for more accurate stats
 				const finalUniquePatients = actualPatientsCount || uniquePatients
 
-				// Calcular casos pagados e incompletos
-				const completedCases = transformedRecords?.filter((record) => record.payment_status === 'Pagado').length || 0
-				const totalCases = transformedRecords?.length || 0
+				// Calcular casos pagados e incompletos (filtered by date range)
+				const completedCases =
+					transformedFilteredRecords?.filter((record) => record.payment_status === 'Pagado').length || 0
+				const totalCases = transformedFilteredRecords?.length || 0
 				const incompleteCases = totalCases - completedCases
 
-				// Calcular pagos pendientes (montos restantes)
+				// Calcular pagos pendientes (montos restantes) - filtered by date range
 				const pendingPayments =
-					transformedRecords?.reduce((sum, record) => {
+					transformedFilteredRecords?.reduce((sum, record) => {
 						// Si el estado de pago no es pagado, sumar el total
 						if (record.payment_status !== 'Pagado') {
 							return sum + (record.total_amount || 0)
@@ -173,14 +197,15 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 						return sum
 					}, 0) || 0
 
-				// Calculate monthly revenue
-				const monthlyRevenue = monthRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
+				// Calculate revenue for the filtered period
+				const monthlyRevenue =
+					transformedFilteredRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
 
-				// Calculate monthly revenue by currency (Bs vs $)
+				// Calculate revenue by currency (Bs vs $) for filtered period
 				let monthlyRevenueBolivares = 0
 				let monthlyRevenueDollars = 0
 
-				monthRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					// Revisar todos los métodos de pago del caso
 					for (let i = 1; i <= 4; i++) {
 						const method = record[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string | null
@@ -198,20 +223,20 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					}
 				})
 
-				// Calculate new patients this month - usando patient_id de la nueva estructura
+				// Calculate new patients in the filtered period - usando patient_id de la nueva estructura
 				const existingPatientIds = new Set(
-					transformedRecords
-						?.filter((record) => record.patient_id && record.created_at && new Date(record.created_at) < monthStart)
+					allRecords
+						?.filter((record) => record.patient_id && record.created_at && new Date(record.created_at) < filterStart)
 						.map((record) => record.patient_id) || [],
 				)
-				const monthPatientIds = new Set(
-					monthRecords?.filter((record) => record.patient_id).map((record) => record.patient_id) || [],
+				const periodPatientIds = new Set(
+					transformedFilteredRecords?.filter((record) => record.patient_id).map((record) => record.patient_id) || [],
 				)
-				const newPatientsThisMonth = Array.from(monthPatientIds).filter((id) => !existingPatientIds.has(id)).length
+				const newPatientsThisMonth = Array.from(periodPatientIds).filter((id) => !existingPatientIds.has(id)).length
 
-				// Calculate revenue by branch - FIXED: Use monthRecords for filtering by selected month
+				// Calculate revenue by branch - Use transformedFilteredRecords for the selected period
 				const branchRevenue = new Map<string, number>()
-				monthRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					const current = branchRevenue.get(record.branch) || 0
 					branchRevenue.set(record.branch, current + (record.total_amount || 0))
 				})
@@ -224,9 +249,9 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					}))
 					.sort((a, b) => b.revenue - a.revenue)
 
-				// Calculate revenue by exam type (with normalization)
+				// Calculate revenue by exam type (with normalization) - Use transformedFilteredRecords
 				const examTypeRevenue = new Map<string, { revenue: number; count: number; originalName: string }>()
-				transformedRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					const normalizedType = normalizeExamType(record.exam_type)
 					const current = examTypeRevenue.get(normalizedType) || {
 						revenue: 0,
@@ -248,20 +273,22 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					}))
 					.sort((a, b) => b.revenue - a.revenue)
 
-				// Calculate sales trend by month for selected year - FIXED: Start from January (month 0)
-				const currentYear = selectedYear || new Date().getFullYear()
+				// Calculate sales trend by month for the year containing the date range
+				const currentYear = startDate ? startDate.getFullYear() : new Date().getFullYear()
 				const yearStart = startOfYear(new Date(currentYear, 0, 1))
 				const yearEnd = endOfYear(new Date(currentYear, 0, 1))
 
-				// Filter records for the selected year
-				const yearRecords =
-					transformedRecords?.filter((record) => {
-						if (!record.created_at) return false
-						const recordDate = new Date(record.created_at)
-						return recordDate >= yearStart && recordDate <= yearEnd
-					}) || []
+				// Filter records for the selected year - usar consulta separada para el año completo
+				const { data: yearRecordsData } = await supabase
+					.from('medical_records_clean')
+					.select('total_amount, created_at')
+					.gte('created_at', yearStart.toISOString())
+					.lte('created_at', yearEnd.toISOString())
+					.not('created_at', 'is', null)
 
-				// Create 12 months for the selected year - FIXED: Start from January (0) to December (11)
+				const yearRecords = yearRecordsData || []
+
+				// Create 12 months for the selected year - Start from January (0) to December (11)
 				const salesTrendByMonth = []
 				for (let month = 0; month < 12; month++) {
 					const monthDate = new Date(currentYear, month, 1)
@@ -270,17 +297,21 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 						.filter((record) => record.created_at && format(new Date(record.created_at), 'yyyy-MM') === monthKey)
 						.reduce((sum, record) => sum + (record.total_amount || 0), 0)
 
+					// Check if this month is within the selected date range
+					const isSelected =
+						startDate && endDate ? monthDate >= startOfMonth(startDate) && monthDate <= endOfMonth(endDate) : false
+
 					salesTrendByMonth.push({
 						month: monthKey,
 						revenue: monthRevenue,
 						monthIndex: month, // Add month index for proper ordering
-						isSelected: selectedMonth ? format(selectedMonth, 'yyyy-MM') === monthKey : false,
+						isSelected,
 					})
 				}
 
-				// Calculate top exam types by frequency (with normalization)
+				// Calculate top exam types by frequency (with normalization) - Use transformedFilteredRecords
 				const examTypeCounts = new Map<string, { count: number; revenue: number; originalName: string }>()
-				transformedRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					const normalizedType = normalizeExamType(record.exam_type)
 					const current = examTypeCounts.get(normalizedType) || { count: 0, revenue: 0, originalName: record.exam_type }
 					examTypeCounts.set(normalizedType, {
@@ -299,9 +330,9 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					.sort((a, b) => b.count - a.count)
 					.slice(0, 5) // Top 5
 
-				// Calculate top treating doctors
+				// Calculate top treating doctors - Use transformedFilteredRecords
 				const doctorStats = new Map<string, { cases: number; revenue: number }>()
-				transformedRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					const doctor = record.treating_doctor?.trim()
 					if (doctor) {
 						const current = doctorStats.get(doctor) || { cases: 0, revenue: 0 }
@@ -321,9 +352,9 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
 					.slice(0, 5) // Top 5 doctors
 
-				// Calculate revenue by origin (procedencia)
+				// Calculate revenue by origin (procedencia) - Use transformedFilteredRecords
 				const originStats = new Map<string, { cases: number; revenue: number }>()
-				transformedRecords?.forEach((record) => {
+				transformedFilteredRecords?.forEach((record) => {
 					const origin = record.origin?.trim()
 					if (origin) {
 						const current = originStats.get(origin) || { cases: 0, revenue: 0 }
@@ -367,38 +398,109 @@ export const useDashboardStats = (selectedMonth?: Date, selectedYear?: number) =
 				throw error
 			}
 		},
-		staleTime: 1000 * 60 * 5, // 5 minutes
+		staleTime: 1000 * 60 * 15, // 15 minutes - OPTIMIZACIÓN: Cache más largo
+		gcTime: 1000 * 60 * 30, // 30 minutes - OPTIMIZACIÓN: Mantener en cache más tiempo (antes cacheTime)
 		refetchOnWindowFocus: false,
+		refetchOnMount: false, // OPTIMIZACIÓN: No refetch automático al montar
 	})
+
+	// REALTIME: Suscripción para actualizar stats automáticamente
+	useEffect(() => {
+		console.log('🚀 [useDashboardStats] Iniciando suscripción realtime...')
+		console.log('🔍 [useDashboardStats] Estado de realtime:', supabase.realtime.isConnected())
+
+		// Verificar autenticación
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			console.log('🔐 [useDashboardStats] Usuario autenticado:', session?.user?.email)
+			console.log('🔐 [useDashboardStats] Token válido:', !!session?.access_token)
+		})
+
+		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
+		const timeoutId = setTimeout(() => {
+			console.log('⏰ [useDashboardStats] Intentando suscripción después del timeout...')
+
+			const channel = supabase
+				.channel('realtime-dashboard-stats')
+				.on(
+					'postgres_changes',
+					{
+						event: '*', // INSERT | UPDATE | DELETE
+						schema: 'public',
+						table: 'medical_records_clean',
+					},
+					(payload) => {
+						console.log('🔄 [useDashboardStats] Cambio detectado en medical_records_clean:', payload)
+						console.log('🔄 [useDashboardStats] Invalidando queries de dashboard...')
+
+						// Invalidar todas las queries de dashboard-stats para forzar refetch
+						queryClient.invalidateQueries({
+							queryKey: ['dashboard-stats'],
+							exact: false, // Invalidar todas las variaciones (con diferentes fechas)
+						})
+
+						// También invalidar queries relacionadas que podrían afectar las stats
+						queryClient.invalidateQueries({ queryKey: ['medical-cases'] })
+						queryClient.invalidateQueries({ queryKey: ['my-medical-cases'] })
+
+						console.log('✅ [useDashboardStats] Queries invalidadas, stats se actualizarán automáticamente')
+					},
+				)
+				.subscribe((status) => {
+					console.log('📡 [useDashboardStats] Estado del canal:', status)
+					if (status === 'SUBSCRIBED') {
+						console.log('✅ [useDashboardStats] Suscripción realtime exitosa')
+					} else if (status === 'CHANNEL_ERROR') {
+						console.error('❌ [useDashboardStats] Error en canal realtime')
+					} else if (status === 'CLOSED') {
+						console.warn('⚠️ [useDashboardStats] Canal realtime cerrado')
+					}
+				})
+
+			// Store channel reference for cleanup
+			return channel
+		}, 2000) // Esperar 2 segundos
+
+		return () => {
+			console.log('🧹 [useDashboardStats] Limpiando suscripción realtime')
+			clearTimeout(timeoutId)
+		}
+	}, [queryClient])
+
+	return {
+		data: query.data,
+		isLoading: query.isLoading,
+		error: query.error,
+		refetch: query.refetch,
+	}
 }
 
 export const useMonthSelector = () => {
-  const currentDate = new Date()
-  const months = []
-  
-  // Generate last 12 months
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-    months.push({
-      value: date,
-      label: format(date, 'MMMM yyyy', { locale: es })
-    })
-  }
-  
-  return months
+	const currentDate = new Date()
+	const months = []
+
+	// Generate last 12 months
+	for (let i = 11; i >= 0; i--) {
+		const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+		months.push({
+			value: date,
+			label: format(date, 'MMMM yyyy', { locale: es }),
+		})
+	}
+
+	return months
 }
 
 export const useYearSelector = () => {
-  const currentYear = new Date().getFullYear()
-  const years = []
-  
-  // Generate last 5 years and next 2 years
-  for (let i = currentYear - 5; i <= currentYear + 2; i++) {
-    years.push({
-      value: i,
-      label: i.toString()
-    })
-  }
-  
-  return years
+	const currentYear = new Date().getFullYear()
+	const years = []
+
+	// Generate last 5 years and next 2 years
+	for (let i = currentYear - 5; i <= currentYear + 2; i++) {
+		years.push({
+			value: i,
+			label: i.toString(),
+		})
+	}
+
+	return years
 }

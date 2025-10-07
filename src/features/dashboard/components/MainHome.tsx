@@ -13,12 +13,13 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { YearSelector } from '@shared/components/ui/year-selector'
+import DateRangeSelector from '@shared/components/ui/date-range-selector'
+import { useDateRange } from '@app/providers/DateRangeContext'
 import StatCard from '@shared/components/ui/stat-card'
 import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { useState, Suspense } from 'react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { startOfMonth, endOfMonth } from 'date-fns'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
@@ -35,9 +36,8 @@ const StatDetailPanelFallback = () => (
 
 function MainHome() {
 	const navigate = useNavigate()
-	const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
-	const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-	const { data: stats, isLoading, error } = useDashboardStats(selectedMonth, selectedYear)
+	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
+	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
 	const { profile } = useUserProfile()
 	const [selectedStat, setSelectedStat] = useState<any>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
@@ -49,7 +49,7 @@ function MainHome() {
 	// formatCurrency is now imported from number-utils
 
 	const handleMonthBarClick = (monthData: { monthIndex: number }) => {
-		// FIXED: Use the monthIndex to create the correct date
+		// Use the monthIndex to create the correct date and update the date range
 		const clickedDate = new Date(selectedYear, monthData.monthIndex, 1)
 
 		// Verificar si el mes clickeado es futuro al mes actual
@@ -62,13 +62,22 @@ function MainHome() {
 			return // No hacer nada si es un mes futuro
 		}
 
-		setSelectedMonth(clickedDate)
+		setDateRange({
+			start: startOfMonth(clickedDate),
+			end: endOfMonth(clickedDate),
+			mode: 'month',
+		})
 	}
 
 	const handleYearChange = (year: number) => {
 		setSelectedYear(year)
-		// Update selected month to the same month in the new year
-		setSelectedMonth(new Date(year, selectedMonth.getMonth(), 1))
+		// Update date range to the same month in the new year
+		const newDate = new Date(year, dateRange.start.getMonth(), 1)
+		setDateRange({
+			start: startOfMonth(newDate),
+			end: endOfMonth(newDate),
+			mode: 'month',
+		})
 	}
 
 	const handleStatCardClick = (statType: any) => {
@@ -83,7 +92,19 @@ function MainHome() {
 	return (
 		<div className="overflow-x-hidden">
 			<main>
-				{/* Welcome Banner - Full width on mobile */}
+				{/* Header with Date Range Selector */}
+				<div className="mb-4 sm:mb-6">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						<div>
+							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+							<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+								Vista general de tus estadísticas y métricas
+							</p>
+						</div>
+						<DateRangeSelector value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
+					</div>
+				</div>
 
 				{/* Mobile-first responsive grid */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 sm:gap-3 md:gap-4">
@@ -142,9 +163,9 @@ function MainHome() {
 
 					{/* Grid 3 - KPI Card: Monthly Revenue */}
 					<StatCard
-						title="Ingresos"
+						title="Ingresos del Período"
 						value={isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}
-						description={format(selectedMonth, 'MMMM yyyy', { locale: es }).replace(/^\w/, (c) => c.toUpperCase())}
+						description={`Total histórico: ${formatCurrency(stats?.totalRevenue || 0)}`}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
 							value: isLoading ? '...' : '+13%',
@@ -159,7 +180,7 @@ function MainHome() {
 
 					{/* Grid 4 - KPI Card: Total de Casos */}
 					<StatCard
-						title="Casos"
+						title="Casos del Período"
 						value={isLoading ? '...' : formatNumber(stats?.totalCases || 0)}
 						description="Casos registrados"
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}

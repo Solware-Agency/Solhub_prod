@@ -5,8 +5,13 @@ import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
-const RemainingAmount: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+interface RemainingAmountProps {
+	startDate?: Date
+	endDate?: Date
+}
+
+const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate }) => {
+	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const cardRef = useRef<HTMLDivElement>(null)
 	const [isVisible, setIsVisible] = useState(false)
 	const [animationTriggered, setAnimationTriggered] = useState(false)

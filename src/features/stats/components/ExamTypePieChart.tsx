@@ -5,8 +5,13 @@ import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
-const ExamTypePieChart: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+interface ExamTypePieChartProps {
+	startDate?: Date
+	endDate?: Date
+}
+
+const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate }) => {
+	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
 	// Get exam type icon based on type (tolerant to accents/variants)
@@ -163,9 +168,7 @@ const ExamTypePieChart: React.FC = () => {
 												}`}
 											>
 												{entry.examType}
-												<div className="text-xs text-gray-500 dark:text-gray-400">
-													({entry.count})
-												</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
 											</span>
 										</div>
 									</div>

@@ -5,8 +5,13 @@ import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { formatCurrency } from '@shared/utils/number-utils'
 
-const BranchRevenueReport: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+interface BranchRevenueReportProps {
+	startDate?: Date
+	endDate?: Date
+}
+
+const BranchRevenueReport: React.FC<BranchRevenueReportProps> = ({ startDate, endDate }) => {
+	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredBranchIndex, setHoveredBranchIndex] = useState<number | null>(null)
 	const isDesktop = useBreakpoint('lg')
 

@@ -46,7 +46,7 @@ const CasesPage: React.FC = () => {
 
 			// Pasar el rol del usuario para filtrar en el servidor
 			if (profile?.role) {
-				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 			}
 
 			return getCasesWithPatientInfo(currentPage, itemsPerPage, filters)
