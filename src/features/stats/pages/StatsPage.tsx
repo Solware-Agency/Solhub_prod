@@ -2,6 +2,8 @@ import React, { useState, Suspense } from 'react'
 import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { YearSelector } from '@shared/components/ui/year-selector'
+import DateRangeSelector from '@shared/components/ui/date-range-selector'
+import { useDateRange } from '@app/providers/DateRangeContext'
 import StatCard from '@shared/components/ui/stat-card'
 import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
@@ -9,6 +11,7 @@ import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import type { StatType } from '@shared/components/ui/stat-detail-panel'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
+import { startOfMonth, endOfMonth } from 'date-fns'
 
 // Lazy loaded components
 import {
@@ -27,9 +30,8 @@ const ComponentFallback = () => (
 )
 
 const StatsPage: React.FC = () => {
-	const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
-	const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-	const { data: stats, isLoading, error } = useDashboardStats(selectedMonth, selectedYear)
+	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
+	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
 	const [selectedStat, setSelectedStat] = useState<StatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 
@@ -40,15 +42,24 @@ const StatsPage: React.FC = () => {
 	// formatCurrency is now imported from number-utils
 
 	const handleMonthBarClick = (monthData: { monthIndex: number }) => {
-		// FIXED: Use the monthIndex to create the correct date
+		// Use the monthIndex to create the correct date and update the date range
 		const clickedDate = new Date(selectedYear, monthData.monthIndex, 1)
-		setSelectedMonth(clickedDate)
+		setDateRange({
+			start: startOfMonth(clickedDate),
+			end: endOfMonth(clickedDate),
+			mode: 'month',
+		})
 	}
 
 	const handleYearChange = (year: number) => {
 		setSelectedYear(year)
-		// Update selected month to the same month in the new year
-		setSelectedMonth(new Date(year, selectedMonth.getMonth(), 1))
+		// Update date range to the same month in the new year
+		const newDate = new Date(year, dateRange.start.getMonth(), 1)
+		setDateRange({
+			start: startOfMonth(newDate),
+			end: endOfMonth(newDate),
+			mode: 'month',
+		})
 	}
 
 	const handleStatCardClick = (statType: StatType) => {
@@ -67,11 +78,16 @@ const StatsPage: React.FC = () => {
 		<>
 			<div>
 				<div className="mb-4 sm:mb-6">
-					<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estadísticas</h1>
-					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-					<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-						Analiza el rendimiento y las métricas del sistema médico
-					</p>
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+						<div>
+							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estadísticas</h1>
+							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+							<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+								Analiza el rendimiento y las métricas del sistema médico
+							</p>
+						</div>
+						<DateRangeSelector value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
+					</div>
 				</div>
 				{/* <div className="text-sm text-gray-600 dark:text-gray-400">
 							Mes seleccionado:{' '}
@@ -81,11 +97,9 @@ const StatsPage: React.FC = () => {
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6">
 					{/* Total Revenue Card */}
 					<StatCard
-						title="Ingresos Este Mes"
-						// value={isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}
-						// description={`Este mes: ${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
+						title="Ingresos del Período"
 						value={`${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
-						description={`Total: ${isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}`}
+						description={`Total histórico: ${isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}`}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
 							value: isLoading ? '...' : '+13%',
@@ -99,11 +113,9 @@ const StatsPage: React.FC = () => {
 
 					{/* Active Users Card */}
 					<StatCard
-						title="Pacientes Nuevos Este Mes"
-						// value={isLoading ? '...' : stats?.uniquePatients || 0}
-						// description={`Nuevos este mes: ${isLoading ? '...' : stats?.newPatientsThisMonth || 0}`}
+						title="Pacientes Nuevos del Período"
 						value={`${isLoading ? '...' : formatNumber(stats?.newPatientsThisMonth || 0)}`}
-						description={`Total: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)}`}
+						description={`Total histórico: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)}`}
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 						trend={{
 							value: isLoading ? '...' : '+8%',
@@ -117,9 +129,9 @@ const StatsPage: React.FC = () => {
 
 					{/* Paid Cases Card */}
 					<StatCard
-						title="Casos Pagados"
+						title="Casos Pagados del Período"
 						value={isLoading ? '...' : formatNumber(stats?.completedCases || 0)}
-						description={`Total casos: ${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}`}
+						description={`Total casos del período: ${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}`}
 						icon={<CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
 							value: isLoading ? '...' : `${Math.round(completionRate)}%`,
@@ -133,7 +145,7 @@ const StatsPage: React.FC = () => {
 
 					{/* Incomplete Cases Card */}
 					<StatCard
-						title="Casos Incompletos"
+						title="Casos Incompletos del Período"
 						value={isLoading ? '...' : formatNumber(stats?.incompleteCases || 0)}
 						description={`Pagos pendientes: ${isLoading ? '...' : formatCurrency(stats?.pendingPayments || 0)}`}
 						icon={<AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />}
@@ -170,8 +182,8 @@ const StatsPage: React.FC = () => {
 										</TooltipTrigger>
 										<TooltipContent>
 											<p>
-												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
-												adaptara y te mostrara los ingresos de ese mes.
+												En esta estadística puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
+												adaptará y te mostrará los ingresos de ese mes.
 											</p>
 										</TooltipContent>
 									</Tooltip>
@@ -224,7 +236,7 @@ const StatsPage: React.FC = () => {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>Esta estadistica refleja el porcentaje de ingresos por sede en el mes seleccionado.</p>
+										<p>Esta estadística refleja el porcentaje de ingresos por sede en el período seleccionado.</p>
 									</TooltipContent>
 								</Tooltip>
 							</h3>
@@ -242,7 +254,7 @@ const StatsPage: React.FC = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 					{/* Exam Type Pie Chart */}
 					<Suspense fallback={<ComponentFallback />}>
-						<ExamTypePieChart />
+						<ExamTypePieChart startDate={dateRange.start} endDate={dateRange.end} />
 					</Suspense>
 
 					{/* Currency Distribution Chart - Same style as Branch Distribution */}
@@ -256,7 +268,7 @@ const StatsPage: React.FC = () => {
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>
-											Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el mes
+											Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el período
 											seleccionado.
 										</p>
 									</TooltipContent>
@@ -272,7 +284,7 @@ const StatsPage: React.FC = () => {
 					</Card>
 					{/* Remaining Amount */}
 					<Suspense fallback={<ComponentFallback />}>
-						<RemainingAmount />
+						<RemainingAmount startDate={dateRange.start} endDate={dateRange.end} />
 					</Suspense>
 				</div>
 
@@ -280,12 +292,12 @@ const StatsPage: React.FC = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 					{/* Origin Revenue Report */}
 					<Suspense fallback={<ComponentFallback />}>
-						<OriginRevenueReport />
+						<OriginRevenueReport startDate={dateRange.start} endDate={dateRange.end} />
 					</Suspense>
 
 					{/* Doctor Revenue Report */}
 					<Suspense fallback={<ComponentFallback />}>
-						<DoctorRevenueReport />
+						<DoctorRevenueReport startDate={dateRange.start} endDate={dateRange.end} />
 					</Suspense>
 				</div>
 			</div>

@@ -272,6 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 	const isEmployee = profile?.role === 'employee'
 	const isCitotecno = profile?.role === 'citotecno'
 	const isPatologo = profile?.role === 'patologo'
+	const isMedicowner = profile?.role === 'medicowner'
 
 	return (
 		<aside className="bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input">
@@ -378,6 +379,51 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 								to="/dashboard/users"
 								icon={<Users className="stroke-2 size-4 sm:size-5 shrink-0" />}
 								label="Usuarios"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+						</>
+					)}
+
+					{isMedicowner && (
+						<>
+							<div className="py-1">
+								<NavItem
+									to="/dashboard/home"
+									icon={<Home className="stroke-2 size-5 shrink-0" />}
+									label="Inicio"
+									showFullContent={showFullContent}
+									onClick={onClose}
+								/>
+							</div>
+							{/* Cases - For all roles */}
+							<NavItem
+								to="/dashboard/cases"
+								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
+								label="Casos"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+
+							<NavItem
+								to="/dashboard/patients"
+								icon={<User className="stroke-2 size-5 shrink-0" />}
+								label="Pacientes"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+							<NavItem
+								to="/dashboard/stats"
+								icon={<PieChart className="stroke-2 size-5 shrink-0" />}
+								label="Estadísticas"
+								showFullContent={showFullContent}
+								onClick={onClose}
+							/>
+
+							<NavItem
+								to="/dashboard/reports"
+								icon={<Clipboard className="stroke-2 size-5 shrink-0" />}
+								label="Reportes"
 								showFullContent={showFullContent}
 								onClick={onClose}
 							/>
@@ -519,6 +565,36 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 				{isResidente && (
 					<NavItem
 						to="/medic/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
+				{isMedicowner && (
+					<NavItem
+						to="/dashboard/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
+				{isCitotecno && (
+					<NavItem
+						to="/cito/settings"
+						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
+						label="Ajustes"
+						showFullContent={showFullContent}
+						onClick={onClose}
+					/>
+				)}
+
+				{isPatologo && (
+					<NavItem
+						to="/patolo/settings"
 						icon={<Settings className="stroke-2 size-4 sm:size-5 shrink-0" />}
 						label="Ajustes"
 						showFullContent={showFullContent}

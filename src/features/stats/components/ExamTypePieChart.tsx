@@ -5,8 +5,13 @@ import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
-const ExamTypePieChart: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+interface ExamTypePieChartProps {
+	startDate?: Date
+	endDate?: Date
+}
+
+const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate }) => {
+	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
 	// Get exam type icon based on type (tolerant to accents/variants)
@@ -71,7 +76,7 @@ const ExamTypePieChart: React.FC = () => {
 		<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
 			<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 				<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
-					Tipos de Exámenes Más Solicitados{' '}
+					Exámenes Más Solicitados{' '}
 					<Tooltip>
 						<TooltipTrigger>
 							<Info className="size-4" />
@@ -163,9 +168,7 @@ const ExamTypePieChart: React.FC = () => {
 												}`}
 											>
 												{entry.examType}
-												<div className="text-xs text-gray-500 dark:text-gray-400">
-													({entry.count} caso{entry.count !== 1 ? 's' : ''})
-												</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
 											</span>
 										</div>
 									</div>

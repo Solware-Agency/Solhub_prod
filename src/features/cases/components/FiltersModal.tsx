@@ -181,9 +181,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							</div>
 						</div>
 
-						{/* New Filters Row 1: Pending Cases and PDF Status */}
+						{/* New Filters Row 1: PDF Status and Date Range */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div className="space-y-3 col-span-2">
+							<div className="space-y-3">
 								<CustomDropdown
 									options={[
 										{ value: 'pendientes', label: 'PDF Pendientes' },
@@ -194,6 +194,52 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 									onChange={onPdfStatusFilterChange}
 									data-testid="pdf-status-filter"
 								/>
+							</div>
+
+							<div className="space-y-3">
+								<DatePopover open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen} modal={false}>
+									<DatePopoverTrigger asChild>
+										<Button variant="outline" className="flex items-center gap-2 w-full justify-start font-bold">
+											<CalendarIcon className="w-4 h-4" />
+											{dateRange?.from && dateRange?.to
+												? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
+														dateRange.to,
+														'dd/MM/yyyy',
+														{ locale: es },
+												  )}`
+												: dateRange?.from
+												? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
+												: 'Seleccionar rango de fechas'}
+										</Button>
+									</DatePopoverTrigger>
+									<DatePopoverContent 
+										className="w-auto p-0 z-[9999]" 
+										side="top" 
+										align="start"
+										sideOffset={5}
+										avoidCollisions={true}
+										collisionPadding={20}
+										onOpenAutoFocus={(e) => e.preventDefault()}
+										style={{ position: 'fixed' }}
+									>
+										<CalendarComponent
+											mode="range"
+											selected={dateRange}
+											onSelect={(range) => {
+												onDateRangeChange(range)
+												if (range?.from && range?.to) {
+													setIsDateRangeOpen(false)
+												}
+											}}
+											initialFocus
+											locale={es}
+											toDate={new Date()}
+											disabled={{ after: new Date() }}
+											numberOfMonths={1}
+											className="scale-90"
+										/>
+									</DatePopoverContent>
+								</DatePopover>
 							</div>
 						</div>
 
@@ -236,7 +282,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								<Button
 									onClick={() => setShowDoctorFilter(!showDoctorFilter)}
 									variant={showDoctorFilter ? 'default' : 'outline'}
-									className="w-full justify-start"
+									className="w-full justify-start font-bold"
 								>
 									<Stethoscope className="w-4 h-4 mr-2" />
 									Filtrar por Médico
@@ -250,7 +296,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								<Button
 									onClick={() => setShowOriginFilter(!showOriginFilter)}
 									variant={showOriginFilter ? 'default' : 'outline'}
-									className="w-full justify-start"
+									className="w-full justify-start font-bold"
 									disabled={!onOriginFilterChange}
 								>
 									<MapPin className="w-4 h-4 mr-2" />
@@ -263,48 +309,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 							</div>
 						</div>
 
-						{/* Date Range Filter */}
-						<div className="space-y-3">
-							<h3 className="text-lg font-medium flex items-center gap-2">
-								<CalendarIcon className="w-4 h-4" />
-								Rango de Fechas
-							</h3>
-							<div className="flex items-center gap-2">
-								<DatePopover open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen}>
-									<DatePopoverTrigger asChild>
-										<Button variant="outline" className="flex items-center gap-2">
-											<CalendarIcon className="w-4 h-4" />
-											{dateRange?.from && dateRange?.to
-												? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
-														dateRange.to,
-														'dd/MM/yyyy',
-														{ locale: es },
-												  )}`
-												: dateRange?.from
-												? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
-												: 'Seleccionar rango de fechas'}
-										</Button>
-									</DatePopoverTrigger>
-									<DatePopoverContent className="w-auto p-0">
-										<CalendarComponent
-											mode="range"
-											selected={dateRange}
-											onSelect={(range) => {
-												onDateRangeChange(range)
-												if (range?.from && range?.to) {
-													setIsDateRangeOpen(false)
-												}
-											}}
-											initialFocus
-											locale={es}
-											toDate={new Date()}
-											disabled={{ after: new Date() }}
-											numberOfMonths={1}
-										/>
-									</DatePopoverContent>
-								</DatePopover>
-							</div>
-						</div>
 
 						{/* Active Filters Summary */}
 						{hasActiveFilters && (
@@ -542,7 +546,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
 					{/* Action Buttons */}
 					<div className="flex justify-between pt-4 border-t mt-6">
-						<Button onClick={onClearAllFilters} variant="outline" disabled={!hasActiveFilters}>
+						<Button onClick={onClearAllFilters} variant="outline" disabled={!hasActiveFilters} className="font-bold">
 							<X className="w-4 h-4 mr-2" />
 							Limpiar Todos los Filtros
 						</Button>
@@ -552,7 +556,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 								onApplyFilters()
 								onOpenChange(false)
 							}}
-							className="px-6"
+							className="px-6 font-bold"
 						>
 							Aplicar Filtros
 						</Button>

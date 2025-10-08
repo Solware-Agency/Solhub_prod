@@ -6,8 +6,13 @@ import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
 
-const DoctorRevenueReport: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+interface DoctorRevenueReportProps {
+	startDate?: Date
+	endDate?: Date
+}
+
+const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, endDate }) => {
+	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
 
 	// formatCurrency is now imported from number-utils

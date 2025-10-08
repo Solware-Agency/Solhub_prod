@@ -46,13 +46,6 @@ interface StepsCaseModalProps {
 	isFullscreen?: boolean
 }
 
-const pdfStep = {
-	id: 'pdf',
-	title: 'PDF',
-	icon: Download,
-	description: 'Exportar Documento',
-}
-
 const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose, onSuccess, isFullscreen = false }) => {
 	const GENERATE_DOC = import.meta.env.VITE_GENERATE_DOC_WEBHOOK
 	const GENERATE_PDF = import.meta.env.VITE_GENERATE_PDF_WEBHOOK
@@ -72,6 +65,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isEmployee = profile?.role === 'employee'
 	const isCitotecno = profile?.role === 'citotecno'
 	const isPatologo = profile?.role === 'patologo'
+	const isMedicowner = profile?.role === 'medicowner'
 
 	const isCitoAdmin = profile?.role === 'residente' && case_?.exam_type === 'Citología'
 
@@ -95,7 +89,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		const stepsList = []
 
 		// Paso 1: Datos del paciente - Solo para empleados (no residentes)
-		if (!isEmployee) {
+		if (!isEmployee && !isMedicowner) {
 			stepsList.push({
 				id: 'patient',
 				title: 'Datos',
@@ -105,7 +99,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		// Paso 2: Marcar como completado - Solo para empleados (no residentes)
-		if (!isEmployee) {
+		if (!isEmployee && !isMedicowner) {
 			stepsList.push({
 				id: 'complete',
 				title: 'Marcar',
@@ -114,7 +108,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		if ((isOwner || isCitotecno) && isCitology) {
+		if ((isOwner || isCitotecno || isMedicowner) && isCitology) {
 			stepsList.push({
 				id: 'citology',
 				title: 'Citología',
@@ -123,7 +117,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		if ((isCitotecno && isCitology) || isOwner) {
+		if ((isCitotecno && isCitology) || isOwner || isMedicowner) {
 			stepsList.push({
 				id: 'approve',
 				title: 'Autorizar',
@@ -133,14 +127,21 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		// Paso final: PDF - Siempre disponible para todos
-		stepsList.push(pdfStep)
+		if (!isMedicowner) {
+			stepsList.push({
+				id: 'pdf',
+				title: 'PDF',
+				icon: Download,
+				description: 'Exportar Documento',
+			})
+		}
 
 		return stepsList
 	}, [isResidente, isEmployee, isCitology, isCitoAdmin])
 
 	// Función para determinar el paso inicial basado en el estado del documento
 	const getInitialStep = () => {
-		if (docAprobado === 'aprobado' || isEmployee) {
+		if (!isMedicowner && docAprobado === 'aprobado') {
 			return computedSteps.length - 1
 		}
 
@@ -680,11 +681,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 					throw new Error(`Error al descargar: ${response.status}`)
 				}
 
+				const sanitizedName =
+					case_.full_name ||
+					'Paciente'
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.replace(/[^a-zA-Z0-9\s]/g, '')
+						.replace(/\s+/g, '_')
+						.trim()
+
 				const blob = await response.blob()
 				const url = window.URL.createObjectURL(blob)
 				const link = document.createElement('a')
 				link.href = url
-				link.download = `${case_.code || 'documento'}.pdf`
+				link.download = `${case_.code}-${sanitizedName}.pdf`
 				document.body.appendChild(link)
 				link.click()
 				document.body.removeChild(link)

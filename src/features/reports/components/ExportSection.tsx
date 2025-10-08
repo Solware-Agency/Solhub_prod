@@ -7,12 +7,12 @@ import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 // import { exportTableToPdf } from '@shared/components/ui/pdf-export'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { formatCurrency } from '@shared/utils/number-utils'
 
 const ExportSection: React.FC = () => {
-	const { data: stats, isLoading } = useDashboardStats()
+	const { data: stats, isLoading } = useDashboardStats(startOfMonth(new Date()), endOfMonth(new Date()))
 	const { toast } = useToast()
 	const [isExporting, setIsExporting] = useState(false)
 

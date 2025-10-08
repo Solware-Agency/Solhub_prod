@@ -15,6 +15,7 @@ import {
 	Phone,
 	Wand,
 	Microscope,
+	Shield,
 } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -47,7 +48,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/t
 interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	created_at: string
 	updated_at: string
 	email_confirmed_at?: string
@@ -74,7 +75,7 @@ const MainUsers: React.FC = () => {
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
 		email: string
-		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo'
+		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	} | null>(null)
 
 	// Query para obtener usuarios
@@ -103,7 +104,7 @@ const MainUsers: React.FC = () => {
 						email_confirmed_at: undefined, // Placeholder
 						last_sign_in_at: undefined, // Placeholder
 						password: '********', // Contraseña simulada para demostración
-						role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo', // Asegurar que el tipo sea correcto
+						role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner', // Asegurar que el tipo sea correcto
 						created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
 						updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
 						estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
@@ -163,6 +164,8 @@ const MainUsers: React.FC = () => {
 				return <Wand className="w-4 h-4 text-pink-600 dark:text-pink-400" />
 			case 'patologo':
 				return <Microscope className="w-4 h-4 text-green-600 dark:text-green-400" />
+			case 'medicowner':
+				return <Shield className="w-4 h-4 text-red-600 dark:text-red-400" />
 			default:
 				return <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
 		}
@@ -180,6 +183,8 @@ const MainUsers: React.FC = () => {
 				return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300'
 			case 'patologo':
 				return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+			case 'medicowner':
+				return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
 			default:
 				return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
 		}
@@ -245,7 +250,7 @@ const MainUsers: React.FC = () => {
 
 	const handleRoleChange = async (
 		userId: string,
-		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo',
+		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 	) => {
 		// Verificar permisos antes de permitir edición
 		if (!canManage) {
@@ -306,6 +311,7 @@ const MainUsers: React.FC = () => {
 						employee: 'Recepcionista',
 						citotecno: 'Citotecnologo',
 						patologo: 'Patologo',
+						medicowner: 'Medico Owner',
 					}[newRole]
 				}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
@@ -342,6 +348,7 @@ const MainUsers: React.FC = () => {
 						employee: 'Recepcionista',
 						citotecno: 'Citotecnologo',
 						patologo: 'Patologo',
+						medicowner: 'Medico Owner',
 					}[userToUpdate.newRole]
 				}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
@@ -488,6 +495,7 @@ const MainUsers: React.FC = () => {
 	const stats = {
 		total: users?.length || 0,
 		owners: users?.filter((u) => u.role === 'owner').length || 0,
+		medicowners: users?.filter((u) => u.role === 'medicowner').length || 0,
 		employees: users?.filter((u) => u.role === 'employee').length || 0,
 		admins: users?.filter((u) => u.role === 'residente').length || 0,
 		citotecnos: users?.filter((u) => u.role === 'citotecno').length || 0,
@@ -847,7 +855,7 @@ const MainUsers: React.FC = () => {
 												onChange={(value) =>
 													handleRoleChange(
 														user.id,
-														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo',
+														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 													)
 												}
 												options={[
@@ -856,6 +864,7 @@ const MainUsers: React.FC = () => {
 													{ value: 'residente', label: 'Residente' },
 													{ value: 'citotecno', label: 'Citotecnologo' },
 													{ value: 'patologo', label: 'Patologo' },
+													{ value: 'medicowner', label: 'Medico Owner' },
 												]}
 												placeholder="Seleccionar rol"
 												className="w-full"
@@ -979,7 +988,7 @@ const MainUsers: React.FC = () => {
 													onChange={(value) =>
 														handleRoleChange(
 															user.id,
-															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo',
+															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 														)
 													}
 													options={[
@@ -988,6 +997,7 @@ const MainUsers: React.FC = () => {
 														{ value: 'residente', label: 'Residente' },
 														{ value: 'citotecno', label: 'Citotecnologo' },
 														{ value: 'patologo', label: 'Patologo' },
+														{ value: 'medicowner', label: 'Medico Owner' },
 													]}
 													placeholder="Seleccionar rol"
 													className="w-40"
