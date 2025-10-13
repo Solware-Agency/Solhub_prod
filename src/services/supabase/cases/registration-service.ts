@@ -210,8 +210,12 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
 	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
-	// Calcular remaining amount usando la lógica correcta de conversión de monedas
-	const { missingAmount } = calculatePaymentDetails(formData.payments || [], formData.totalAmount, exchangeRate)
+	// Calcular remaining amount y estado de pago usando la lógica correcta de conversión de monedas
+	const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
+		formData.payments || [],
+		formData.totalAmount,
+		exchangeRate,
+	)
 	const remaining = missingAmount || 0
 
 	// Datos del caso médico (tabla medical_records_clean)
@@ -229,7 +233,7 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 
 		// Información financiera
 		total_amount: formData.totalAmount,
-		payment_status: 'Incompleto',
+		payment_status: isPaymentComplete ? 'Pagado' : 'Incompleto',
 		remaining: remaining,
 		exchange_rate: exchangeRate || null,
 

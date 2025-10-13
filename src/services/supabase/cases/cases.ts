@@ -33,7 +33,7 @@ export async function rejectCaseDocument(caseId: string) {
 export async function positiveCaseDocument(caseId: string) {
 	return supabase
 		.from('medical_records_clean')
-		.update({ cito_status: 'positivo' as CitoStatus, updated_at: new Date().toISOString() })
+		.update({ cito_status: 'positivo' as CitoStatus, doc_aprobado: 'pendiente' as DocAprobadoStatus, updated_at: new Date().toISOString() })
 		.eq('id', caseId)
 		.select('id, cito_status')
 		.single()
@@ -42,7 +42,7 @@ export async function positiveCaseDocument(caseId: string) {
 export async function negativeCaseDocument(caseId: string) {
 	return supabase
 		.from('medical_records_clean')
-		.update({ cito_status: 'negativo' as CitoStatus, updated_at: new Date().toISOString() })
+		.update({ cito_status: 'negativo' as CitoStatus, doc_aprobado: 'aprobado' as DocAprobadoStatus, updated_at: new Date().toISOString() })
 		.eq('id', caseId)
 		.select('id, cito_status')
 		.single()

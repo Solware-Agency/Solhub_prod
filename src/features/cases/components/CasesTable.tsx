@@ -22,7 +22,7 @@ import FiltersModal from './FiltersModal'
 import ActiveFiltersDisplay from './ActiveFiltersDisplay'
 import { getStatusColor } from './status'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
-import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+// import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { formatCurrency } from '@shared/utils/number-utils'
 
 interface CasesTableProps {
@@ -60,34 +60,42 @@ type SortField = 'id' | 'created_at' | 'nombre' | 'total_amount' | 'code'
 type SortDirection = 'asc' | 'desc'
 
 // Helper function to calculate correct payment status for a case
-const calculateCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
-	// Convert medical record payment fields to payments array format
-	const payments = []
+// const getCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
+// 	// Convert medical record payment fields to payments array format
+// 	const payments = []
 
-	for (let i = 1; i <= 4; i++) {
-		const method = case_[`payment_method_${i}` as keyof UnifiedMedicalRecord] as string | null
-		const amount = case_[`payment_amount_${i}` as keyof UnifiedMedicalRecord] as number | null
+// 	for (let i = 1; i <= 4; i++) {
+// 		const method = case_[`payment_method_${i}` as keyof UnifiedMedicalRecord] as string | null
+// 		const amount = case_[`payment_amount_${i}` as keyof UnifiedMedicalRecord] as number | null
 
-		if (method && amount && amount > 0) {
-			payments.push({
-				method,
-				amount,
-				reference: '', // Reference not needed for calculation
-			})
-		}
-	}
+// 		if (method && amount && amount > 0) {
+// 			payments.push({
+// 				method,
+// 				amount,
+// 				reference: '', // Reference not needed for calculation
+// 			})
+// 		}
+// 	}
 
-	// Use the correct payment calculation logic
-	const { paymentStatus, isPaymentComplete, missingAmount } = calculatePaymentDetails(
-		payments,
-		case_.total_amount,
-		case_.exchange_rate || undefined,
-	)
+// 	// Use the correct payment calculation logic
+// 	const { paymentStatus, isPaymentComplete, missingAmount } = calculatePaymentDetails(
+// 		payments,
+// 		case_.total_amount,
+// 		case_.exchange_rate || undefined,
+// 	)
 
+// 	return {
+// 		paymentStatus: paymentStatus || 'Incompleto',
+// 		isPaymentComplete,
+// 		missingAmount: missingAmount || 0,
+// 	}
+// }
+
+const getCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
 	return {
-		paymentStatus: paymentStatus || 'Incompleto',
-		isPaymentComplete,
-		missingAmount: missingAmount || 0,
+		paymentStatus: case_.payment_status || 'Incompleto',
+		isPaymentComplete: case_.payment_status === 'Pagado',
+		missingAmount: case_.remaining || 0,
 	}
 }
 
@@ -635,7 +643,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				// Status filter - use calculated payment status instead of database field
 				let matchesStatus = true
 				if (statusFilter !== 'all') {
-					const { paymentStatus } = calculateCasePaymentStatus(case_)
+					const { paymentStatus } = getCasePaymentStatus(case_)
 					const paymentStatusNormalized = paymentStatus.toLowerCase()
 					if (statusFilter === 'Pagado') {
 						matchesStatus = paymentStatusNormalized === 'pagado'
@@ -752,7 +760,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				// Pending Cases Filter
 				let matchesPendingCases = true
 				if (pendingCasesFilter !== 'all') {
-					const { paymentStatus } = calculateCasePaymentStatus(case_)
+					const { paymentStatus } = getCasePaymentStatus(case_)
 					const paymentStatusNormalized = paymentStatus.toLowerCase()
 					if (pendingCasesFilter === 'pagados') {
 						matchesPendingCases = paymentStatusNormalized === 'pagado'
@@ -1142,7 +1150,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	</div>
 																)}
 																{(() => {
-																	const { paymentStatus } = calculateCasePaymentStatus(case_)
+																	const { paymentStatus } = getCasePaymentStatus(case_)
 																	return (
 																		<span
 																			className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
@@ -1183,7 +1191,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	{formatCurrency(case_.total_amount)}
 																</div>
 																{(() => {
-																	const { missingAmount } = calculateCasePaymentStatus(case_)
+																	const { missingAmount } = getCasePaymentStatus(case_)
 																	return (
 																		missingAmount > 0 && (
 																			<div className="text-xs text-red-600 dark:text-red-400">
@@ -1504,7 +1512,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	</div>
 																)}
 																{(() => {
-																	const { paymentStatus } = calculateCasePaymentStatus(case_)
+																	const { paymentStatus } = getCasePaymentStatus(case_)
 																	return (
 																		<span
 																			className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
@@ -1545,7 +1553,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																	{formatCurrency(case_.total_amount)}
 																</div>
 																{(() => {
-																	const { missingAmount } = calculateCasePaymentStatus(case_)
+																	const { missingAmount } = getCasePaymentStatus(case_)
 																	return (
 																		missingAmount > 0 && (
 																			<div className="text-xs text-red-600 dark:text-red-400">
