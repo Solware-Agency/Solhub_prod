@@ -40,7 +40,7 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
-import { calculateTotalPaidUSD } from '@features/form/lib/payment/payment-utils'
+import { calculateTotalPaidUSD, calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { createCalculatorInputHandler } from '@shared/utils/number-utils'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 
@@ -633,15 +633,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 					// Calcular monto restante usando la lógica correcta de conversión
 					const totalAmount = editedCase.total_amount || currentCase.total_amount || 0
-					const totalPaidUSD = calculateTotalPaidUSD(finalPaymentMethods, exchangeRate)
-					financialChanges.remaining = Math.max(0, totalAmount - totalPaidUSD)
+					const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
+						finalPaymentMethods,
+						totalAmount,
+						exchangeRate,
+					)
+					financialChanges.remaining = Math.max(0, missingAmount || 0)
 
-					// Actualizar estado de pago (solo Incompleto o Pagado)
-					if (totalPaidUSD >= totalAmount) {
-						financialChanges.payment_status = 'Pagado'
-					} else {
-						financialChanges.payment_status = 'Incompleto'
-					}
+					// Actualizar estado de pago usando la misma lógica que el registro
+					financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
 
 					// Función helper para formatear métodos de pago con el símbolo correcto
 					const formatPaymentMethod = (method: string, amount: number) => {
@@ -1000,10 +1000,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
 		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
 		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
-		const remainingVES = remainingUSD * exchangeRate
+		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
+		const remainingVES = remainingUSD < 0.01 ? 0 : remainingUSD * exchangeRate
 		const isPaymentComplete = totalPaidUSD >= totalAmount
 
-		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno' || profile?.role === 'patologo'
+		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno'
 		// const isResidente = profile?.role === 'residente'
 		// const isEmployee = profile?.role === 'employee'
 		// const isOwner = profile?.role === 'owner'

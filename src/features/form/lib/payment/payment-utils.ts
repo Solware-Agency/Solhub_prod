@@ -64,12 +64,12 @@ export const calculatePaymentDetails = (
 		missingAmount = parseFloat((totalAmountValue - finalTotalPaid).toFixed(2))
 
 		// Consider payment complete if difference is less than 1 cent
-		isPaymentComplete = Math.abs(finalTotalPaid - totalAmountValue) < 0.01
+		isPaymentComplete = finalTotalPaid >= totalAmountValue
 
 		if (isPaymentComplete) {
 			paymentStatus = 'Pagado'
 			missingAmount = 0
-		} else if (missingAmount > 0.009) {
+		} else if (missingAmount > 0) {
 			// If missing less than 1 cent, don't show anything
 			paymentStatus = 'Incompleto'
 		}
@@ -198,7 +198,7 @@ export const validateFormPayments = (
 	
 	// Check if total paid exceeds total amount (with tolerance for floating point precision)
 	// Allow for small differences (less than 1 cent) due to currency conversion precision
-	const tolerance = 0.01
+	const tolerance = 0
 	const difference = totalPaidUSD - totalAmount
 	
 	if (difference > tolerance) {

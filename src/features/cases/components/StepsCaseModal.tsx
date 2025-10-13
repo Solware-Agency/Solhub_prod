@@ -18,6 +18,14 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { getDownloadUrl } from '@/services/utils/download-utils'
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@shared/components/ui/dialog'
 
 interface MedicalRecord {
 	id?: string
@@ -83,6 +91,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 	const isProduction = false
 
 	const isNotRechazado = docAprobado !== 'rechazado'
+	const isRechazado = docAprobado === 'rechazado'
+
+	const isApproved = docAprobado === 'aprobado'
+
+	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 
 	// Construir los pasos dinámicamente basado en roles y permisos
 	const computedSteps = useMemo(() => {
@@ -462,6 +475,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			setIsSaving(true)
 			const { error } = await positiveCaseDocument(case_.id)
 			if (error) throw error
+			setDocAprobado('pendiente')
 			setCitoStatus('positivo')
 			toast({ title: '✅ Documento positivo' })
 		} catch (err) {
@@ -496,11 +510,16 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			toast({ title: '❌ Error', description: 'No se encontró el ID del caso.', variant: 'destructive' })
 			return
 		}
+
 		try {
 			setIsSaving(true)
 			const { error } = await negativeCaseDocument(case_.id)
 			if (error) throw error
+
+			// Establecer ambos estados después de la operación exitosa
+			setDocAprobado('aprobado')
 			setCitoStatus('negativo')
+
 			toast({ title: '✅ Documento negativo' })
 		} catch (err) {
 			console.error('Error negativando documento:', err)
@@ -510,7 +529,246 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 	}
 
-	const handleTransformToPDF = async () => {
+	// const handleTransformToPDF = async () => {
+	// 	if (!case_?.id) {
+	// 		toast({
+	// 			title: '❌ Error',
+	// 			description: 'No se encontró el ID del caso.',
+	// 			variant: 'destructive',
+	// 		})
+	// 		return
+	// 	}
+
+	// 	try {
+	// 		setIsSaving(true)
+	// 		setIsGeneratingPDF(true)
+
+	// 		// Verificar si ya existe tanto informepdf_url como informe_qr
+	// 		console.log('[1] Verificando si ya existe informepdf_url e informe_qr para el caso', case_.id)
+	// 		const { data: initialData, error: initialError } = await supabase
+	// 			.from('medical_records_clean')
+	// 			.select('informepdf_url, informe_qr, token')
+	// 			.eq('id', case_.id)
+	// 			.single<MedicalRecord & { token?: string }>()
+
+	// 		if (initialError) {
+	// 			console.error('Error al obtener URLs del PDF:', initialError)
+	// 			toast({
+	// 				title: '❌ Error',
+	// 				description: 'No se pudo obtener el estado del PDF.',
+	// 				variant: 'destructive',
+	// 			})
+	// 			return
+	// 		}
+
+	// 		if (initialData?.informepdf_url && initialData?.informe_qr) {
+	// 			console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
+	// 			window.open(initialData.informe_qr, '_blank')
+	// 			// Ejecutar handleNext automáticamente después de abrir el QR
+	// 			setTimeout(() => {
+	// 				handleNext()
+	// 			}, 1000)
+	// 			return
+	// 		}
+
+	// 		console.log('[2] No existen ambos archivos, enviando POST a n8n...')
+
+	// 		console.log('Sending request to n8n webhook with case ID:', case_.id)
+
+	// 		// Obtener el patient_id del caso
+	// 		const { data: caseData, error: caseError } = await supabase
+	// 			.from('medical_records_clean')
+	// 			.select('patient_id')
+	// 			.eq('id', case_.id)
+	// 			.single()
+
+	// 		if (caseError) {
+	// 			console.error('Error al obtener patient_id del caso:', caseError)
+	// 			toast({
+	// 				title: '❌ Error',
+	// 				description: 'No se pudo obtener la información del paciente.',
+	// 				variant: 'destructive',
+	// 			})
+	// 			return
+	// 		}
+
+	// 		if (!caseData?.patient_id) {
+	// 			toast({
+	// 				title: '❌ Error',
+	// 				description: 'No se encontró el ID del paciente para este caso.',
+	// 				variant: 'destructive',
+	// 			})
+	// 			return
+	// 		}
+
+	// 		const requestBody = {
+	// 			caseId: case_.id,
+	// 			patientId: caseData.patient_id,
+	// 		}
+
+	// 		console.log('Request body:', requestBody)
+
+	// 		// Verificar que la URL del webhook esté configurada
+	// 		if (!GENERATE_PDF) {
+	// 			throw new Error('URL del webhook PDF no configurada. Verifica las variables de entorno.')
+	// 		}
+
+	// 		console.log('Webhook URL:', GENERATE_PDF)
+	// 		console.log('Patient ID:', caseData.patient_id)
+
+	// 		const response = await fetch(GENERATE_PDF, {
+	// 			method: 'POST',
+	// 			headers: {
+	// 				'Content-Type': 'application/json',
+	// 				Accept: 'application/json',
+	// 			},
+	// 			body: JSON.stringify(requestBody),
+	// 		})
+
+	// 		console.log('Response status:', response.status)
+
+	// 		if (!response.ok) {
+	// 			let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+
+	// 			try {
+	// 				const errorData = await response.text()
+	// 				console.log('Error response body:', errorData)
+	// 				errorMessage += ` - ${errorData}`
+	// 			} catch (e) {
+	// 				console.log('Could not read error response body', e)
+	// 			}
+
+	// 			throw new Error(errorMessage)
+	// 		}
+
+	// 		let responseData
+	// 		try {
+	// 			responseData = await response.json()
+	// 			console.log('Success response:', responseData)
+	// 		} catch (e) {
+	// 			responseData = await response.text()
+	// 			console.log('Success response (text):', responseData, e)
+	// 		}
+
+	// 		// Mostrar mensaje de progreso
+	// 		toast({
+	// 			title: '⏳ Generando PDF...',
+	// 			description: 'El documento se está procesando. Por favor espera.',
+	// 		})
+
+	// 		// ⏱️ Esperar antes de intentar descargar el PDF
+	// 		let attempts = 0
+	// 		const maxAttempts = 15 // Aumentar intentos
+	// 		let pdfUrl: string | null = null
+
+	// 		while (attempts < maxAttempts) {
+	// 			const { data, error } = await supabase
+	// 				.from('medical_records_clean')
+	// 				.select('informepdf_url, token')
+	// 				.eq('id', case_.id)
+	// 				.single<MedicalRecord & { token?: string }>()
+
+	// 			if (error) {
+	// 				console.error('Error obteniendo informepdf_url:', error)
+	// 				break
+	// 			}
+
+	// 			if (data?.informepdf_url) {
+	// 				// Usar la utilidad para determinar la URL de descarga apropiada
+	// 				pdfUrl = getDownloadUrl(case_.id, data.token || null, data.informepdf_url || null)
+	// 				break
+	// 			}
+
+	// 			// Esperar 2 segundos antes del próximo intento
+	// 			await new Promise((resolve) => setTimeout(resolve, 2000))
+	// 			attempts++
+	// 		}
+
+	// 		if (!pdfUrl) {
+	// 			toast({
+	// 				title: '⏳ Documento no disponible aún',
+	// 				description: 'El PDF aún no está listo. Intenta nuevamente en unos segundos.',
+	// 				variant: 'destructive',
+	// 			})
+	// 			return
+	// 		}
+
+	// 		try {
+	// 			// Descargar el archivo usando el endpoint de descarga
+	// 			const response = await fetch(pdfUrl)
+	// 			if (!response.ok) {
+	// 				throw new Error(`Error al descargar: ${response.status}`)
+	// 			}
+
+	// 			const sanitizedName =
+	// 				case_.full_name ||
+	// 				'Paciente'
+	// 					.normalize('NFD')
+	// 					.replace(/[\u0300-\u036f]/g, '')
+	// 					.replace(/[^a-zA-Z0-9\s]/g, '')
+	// 					.replace(/\s+/g, '_')
+	// 					.trim()
+
+	// 			const blob = await response.blob()
+	// 			const url = window.URL.createObjectURL(blob)
+	// 			const link = document.createElement('a')
+	// 			link.href = url
+	// 			link.download = `${case_.code}-${sanitizedName}.pdf`
+	// 			document.body.appendChild(link)
+	// 			link.click()
+	// 			document.body.removeChild(link)
+	// 			window.URL.revokeObjectURL(url) // Limpiar memoria
+
+	// 			toast({
+	// 				title: '✅ PDF descargado',
+	// 				description: 'El documento se ha descargado correctamente.',
+	// 			})
+
+	// 			// Ejecutar handleNext automáticamente después de descargar el PDF
+	// 			setTimeout(() => {
+	// 				handleNext()
+	// 			}, 1500) // Aumentar delay para mejor UX
+	// 		} catch (err) {
+	// 			console.error('Error al abrir el PDF:', err)
+	// 			toast({
+	// 				title: '❌ Error',
+	// 				description: 'No se pudo acceder al PDF. Intenta nuevamente.',
+	// 				variant: 'destructive',
+	// 			})
+	// 		}
+	// 	} catch (error) {
+	// 		console.error('Error en handleTransformToPDF:', error)
+
+	// 		let errorMessage = 'Hubo un problema al activar el flujo.'
+
+	// 		if (error instanceof TypeError && error.message === 'Failed to fetch') {
+	// 			errorMessage =
+	// 				'No se pudo conectar con el servidor n8n. Posibles causas:\n• El servidor n8n no está funcionando\n• Firewall bloqueando la conexión\n• URL del webhook incorrecta\n• Puerto 5678 cerrado o inaccesible'
+	// 		} else if (error instanceof Error && error.message.includes('SSL')) {
+	// 			errorMessage =
+	// 				'Error de certificado SSL. El servidor n8n tiene un problema de seguridad. Contacta al administrador.'
+	// 		} else if (error instanceof Error && error.message.includes('CONNECTION_RESET')) {
+	// 			errorMessage = 'El servidor n8n rechazó la conexión. Verifica que el servicio esté funcionando.'
+	// 		} else if (error instanceof Error && error.message.includes('CORS')) {
+	// 			errorMessage = 'Error de configuración del servidor (CORS). Contacta al administrador.'
+	// 		} else if (error instanceof Error && error.message.includes('HTTP')) {
+	// 			errorMessage = `Error del servidor: ${error.message}`
+	// 		} else if (error instanceof Error && error.message.includes('URL del webhook')) {
+	// 			errorMessage = error.message
+	// 		}
+
+	// 		toast({
+	// 			title: '❌ Error al activar flujo',
+	// 			description: errorMessage,
+	// 			variant: 'destructive',
+	// 		})
+	// 	} finally {
+	// 		setIsSaving(false)
+	// 		setIsGeneratingPDF(false)
+	// 	}
+	// }
+
+	const handleResetPDFFields = async () => {
 		if (!case_?.id) {
 			toast({
 				title: '❌ Error',
@@ -524,37 +782,29 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			setIsSaving(true)
 			setIsGeneratingPDF(true)
 
-			// Verificar si ya existe tanto informepdf_url como informe_qr
-			console.log('[1] Verificando si ya existe informepdf_url e informe_qr para el caso', case_.id)
-			const { data: initialData, error: initialError } = await supabase
-				.from('medical_records_clean')
-				.select('informepdf_url, informe_qr, token')
-				.eq('id', case_.id)
-				.single<MedicalRecord & { token?: string }>()
+			console.log('[1] Vaciando campos PDF para el caso:', case_.id)
 
-			if (initialError) {
-				console.error('Error al obtener URLs del PDF:', initialError)
+			// Vaciar los tres campos en la base de datos
+			const { error: updateError } = await supabase
+				.from('medical_records_clean')
+				.update({
+					token: null,
+					informe_qr: null,
+					informepdf_url: null,
+				})
+				.eq('id', case_.id)
+
+			if (updateError) {
+				console.error('Error al vaciar campos PDF:', updateError)
 				toast({
 					title: '❌ Error',
-					description: 'No se pudo obtener el estado del PDF.',
+					description: 'No se pudieron vaciar los campos del PDF.',
 					variant: 'destructive',
 				})
 				return
 			}
 
-			if (initialData?.informepdf_url && initialData?.informe_qr) {
-				console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
-				window.open(initialData.informe_qr, '_blank')
-				// Ejecutar handleNext automáticamente después de abrir el QR
-				setTimeout(() => {
-					handleNext()
-				}, 1000)
-				return
-			}
-
-			console.log('[2] No existen ambos archivos, enviando POST a n8n...')
-
-			console.log('Sending request to n8n webhook with case ID:', case_.id)
+			console.log('[2] Campos vaciados, enviando POST a n8n...')
 
 			// Obtener el patient_id del caso
 			const { data: caseData, error: caseError } = await supabase
@@ -667,6 +917,164 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 			if (!pdfUrl) {
 				toast({
+					title: '❌ PDF no generado aún',
+					description:
+						'El PDF no se ha generado aún. Por favor, haz clic en el botón "SI" para regenerar el documento.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			try {
+				// Descargar el archivo usando el endpoint de descarga
+				const response = await fetch(pdfUrl)
+				if (!response.ok) {
+					throw new Error(`Error al descargar: ${response.status}`)
+				}
+
+				const sanitizedName =
+					case_.full_name ||
+					'Paciente'
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.replace(/[^a-zA-Z0-9\s]/g, '')
+						.replace(/\s+/g, '_')
+						.trim()
+
+				const blob = await response.blob()
+				const url = window.URL.createObjectURL(blob)
+				const link = document.createElement('a')
+				link.href = url
+				link.download = `${case_.code}-${sanitizedName}.pdf`
+				document.body.appendChild(link)
+				link.click()
+				document.body.removeChild(link)
+				window.URL.revokeObjectURL(url) // Limpiar memoria
+
+				toast({
+					title: '✅ PDF descargado',
+					description: 'El documento se ha descargado correctamente.',
+				})
+
+				// Ejecutar handleNext automáticamente después de descargar el PDF
+				setTimeout(() => {
+					handleNext()
+				}, 1500) // Aumentar delay para mejor UX
+			} catch (err) {
+				console.error('Error al abrir el PDF:', err)
+				toast({
+					title: '❌ Error',
+					description: 'No se pudo acceder al PDF. Intenta nuevamente.',
+					variant: 'destructive',
+				})
+			}
+		} catch (error) {
+			console.error('Error en handleResetPDFFields:', error)
+
+			let errorMessage = 'Hubo un problema al activar el flujo.'
+
+			if (error instanceof TypeError && error.message === 'Failed to fetch') {
+				errorMessage =
+					'No se pudo conectar con el servidor n8n. Posibles causas:\n• El servidor n8n no está funcionando\n• Firewall bloqueando la conexión\n• URL del webhook incorrecta\n• Puerto 5678 cerrado o inaccesible'
+			} else if (error instanceof Error && error.message.includes('SSL')) {
+				errorMessage =
+					'Error de certificado SSL. El servidor n8n tiene un problema de seguridad. Contacta al administrador.'
+			} else if (error instanceof Error && error.message.includes('CONNECTION_RESET')) {
+				errorMessage = 'El servidor n8n rechazó la conexión. Verifica que el servicio esté funcionando.'
+			} else if (error instanceof Error && error.message.includes('CORS')) {
+				errorMessage = 'Error de configuración del servidor (CORS). Contacta al administrador.'
+			} else if (error instanceof Error && error.message.includes('HTTP')) {
+				errorMessage = `Error del servidor: ${error.message}`
+			} else if (error instanceof Error && error.message.includes('URL del webhook')) {
+				errorMessage = error.message
+			}
+
+			toast({
+				title: '❌ Error al activar flujo',
+				description: errorMessage,
+				variant: 'destructive',
+			})
+		} finally {
+			setIsSaving(false)
+			setIsGeneratingPDF(false)
+		}
+	}
+
+	const handleCheckAndDownloadPDF = async () => {
+		if (!case_?.id) {
+			toast({
+				title: '❌ Error',
+				description: 'No se encontró el ID del caso.',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		try {
+			setIsSaving(true)
+			setIsGeneratingPDF(true)
+
+			// Verificar si ya existe tanto informepdf_url como informe_qr
+			console.log('[1] Verificando si ya existe informepdf_url e informe_qr para el caso', case_.id)
+			const { data: initialData, error: initialError } = await supabase
+				.from('medical_records_clean')
+				.select('informepdf_url, informe_qr, token')
+				.eq('id', case_.id)
+				.single<MedicalRecord & { token?: string }>()
+
+			if (initialError) {
+				console.error('Error al obtener URLs del PDF:', initialError)
+				toast({
+					title: '❌ Error',
+					description: 'No se pudo obtener el estado del PDF.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			if (initialData?.informepdf_url && initialData?.informe_qr) {
+				console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
+				window.open(initialData.informe_qr, '_blank')
+				// Ejecutar handleNext automáticamente después de abrir el QR
+				setTimeout(() => {
+					handleNext()
+				}, 1000)
+				return
+			}
+
+			// Si no existen, hacer polling para esperar el PDF
+			console.log('[2] PDF no existe aún, iniciando polling...')
+
+			// ⏱️ Esperar antes de intentar descargar el PDF
+			let attempts = 0
+			const maxAttempts = 15 // Aumentar intentos
+			let pdfUrl: string | null = null
+
+			while (attempts < maxAttempts) {
+				const { data, error } = await supabase
+					.from('medical_records_clean')
+					.select('informepdf_url, token')
+					.eq('id', case_.id)
+					.single<MedicalRecord & { token?: string }>()
+
+				if (error) {
+					console.error('Error obteniendo informepdf_url:', error)
+					break
+				}
+
+				if (data?.informepdf_url) {
+					// Usar la utilidad para determinar la URL de descarga apropiada
+					pdfUrl = getDownloadUrl(case_.id, data.token || null, data.informepdf_url || null)
+					break
+				}
+
+				// Esperar 2 segundos antes del próximo intento
+				await new Promise((resolve) => setTimeout(resolve, 2000))
+				attempts++
+			}
+
+			if (!pdfUrl) {
+				toast({
 					title: '⏳ Documento no disponible aún',
 					description: 'El PDF aún no está listo. Intenta nuevamente en unos segundos.',
 					variant: 'destructive',
@@ -718,29 +1126,10 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				})
 			}
 		} catch (error) {
-			console.error('Error en handleTransformToPDF:', error)
-
-			let errorMessage = 'Hubo un problema al activar el flujo.'
-
-			if (error instanceof TypeError && error.message === 'Failed to fetch') {
-				errorMessage =
-					'No se pudo conectar con el servidor n8n. Posibles causas:\n• El servidor n8n no está funcionando\n• Firewall bloqueando la conexión\n• URL del webhook incorrecta\n• Puerto 5678 cerrado o inaccesible'
-			} else if (error instanceof Error && error.message.includes('SSL')) {
-				errorMessage =
-					'Error de certificado SSL. El servidor n8n tiene un problema de seguridad. Contacta al administrador.'
-			} else if (error instanceof Error && error.message.includes('CONNECTION_RESET')) {
-				errorMessage = 'El servidor n8n rechazó la conexión. Verifica que el servicio esté funcionando.'
-			} else if (error instanceof Error && error.message.includes('CORS')) {
-				errorMessage = 'Error de configuración del servidor (CORS). Contacta al administrador.'
-			} else if (error instanceof Error && error.message.includes('HTTP')) {
-				errorMessage = `Error del servidor: ${error.message}`
-			} else if (error instanceof Error && error.message.includes('URL del webhook')) {
-				errorMessage = error.message
-			}
-
+			console.error('Error en handleCheckAndDownloadPDF:', error)
 			toast({
-				title: '❌ Error al activar flujo',
-				description: errorMessage,
+				title: '❌ Error',
+				description: 'Hubo un problema al verificar el PDF.',
 				variant: 'destructive',
 			})
 		} finally {
@@ -908,21 +1297,29 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 								<div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 									<Button
 										type="button"
-										className="flex-1 bg-primary hover:bg-primary/80"
+										className={`flex-1 ${
+											citoStatus === 'positivo'
+												? 'border border-green-500 bg-green-500 hover:bg-green-500/80'
+												: 'bg-primary hover:bg-primary/80'
+										}`}
 										onClick={handlePositive}
 										disabled={isSaving || citoStatus === 'positivo' || !docUrl}
 									>
 										<FileCheck className="w-4 h-4 mr-2" />
-										Positivo
+										{citoStatus === 'positivo' ? 'Citología positiva' : 'Positivo'}
 									</Button>
 									<Button
 										type="button"
-										className="flex-1 bg-primary hover:bg-primary/80"
+										className={`flex-1 ${
+											citoStatus === 'negativo'
+												? 'border border-red-500 bg-red-500 hover:bg-red-500/80'
+												: 'bg-primary hover:bg-primary/80'
+										}`}
 										onClick={handleNegative}
 										disabled={isSaving || citoStatus === 'negativo' || !docUrl}
 									>
 										<Shredder className="w-4 h-4 mr-2" />
-										Negativo
+										{citoStatus === 'negativo' ? 'Citología negativa' : 'Negativo'}
 									</Button>
 								</div>
 							</div>
@@ -962,33 +1359,39 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 									)}
 									<Button
 										type="button"
-										className="flex-1 bg-primary hover:bg-primary/80"
+										className={`flex-1 ${
+											isApproved
+												? 'border border-green-500 bg-green-500 hover:bg-green-500/80'
+												: 'bg-primary hover:bg-primary/80'
+										}`}
 										onClick={handleApprove}
 										disabled={
 											isSaving ||
 											docAprobado === 'aprobado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isCitotecno) ||
-											(isCitology && citoStatus === 'negativo' && isOwner)
+											(isCitology && citoStatus === 'positivo' && isCitotecno)
 										}
 									>
 										<FileCheck className="w-4 h-4 mr-2" />
-										Aprobar
+										{isApproved ? 'Documento aprobado' : 'Aprobar'}
 									</Button>
 									<Button
 										type="button"
-										className="flex-1 bg-primary hover:bg-primary/80"
+										className={`flex-1 ${
+											isRechazado
+												? 'border border-red-500 bg-red-500 hover:bg-red-500/80'
+												: 'bg-primary hover:bg-primary/80'
+										}`}
 										onClick={handleReject}
 										disabled={
 											isSaving ||
 											docAprobado === 'rechazado' ||
 											!docUrl ||
-											(isCitology && citoStatus === 'positivo' && isCitotecno) ||
-											(isCitology && citoStatus === 'negativo' && isOwner)
+											(isCitology && citoStatus === 'positivo' && isCitotecno)
 										}
 									>
 										<Shredder className="w-4 h-4 mr-2" />
-										Rechazar
+										{isRechazado ? 'Documento rechazado' : 'Rechazar'}
 									</Button>
 								</div>
 							</div>
@@ -1016,8 +1419,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 							<div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 								<Button
 									type="button"
+									className="flex-1 bg-primary hover:bg-primary/80"
+									onClick={() => docUrl && window.open(docUrl, '_blank')}
+									disabled={isSaving || !docUrl || !isApproved}
+								>
+									<User className="w-4 h-4 mr-2" />
+									Revisar documento
+								</Button>
+								<Button
+									type="button"
 									variant="outline"
-									onClick={handleTransformToPDF}
+									onClick={
+										// handleTransformToPDF
+										() => setConfirmDialogOpen(true)
+									}
 									className="flex-1"
 									disabled={isGeneratingPDF || !docUrl || docAprobado !== 'aprobado'}
 								>
@@ -1082,179 +1497,200 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 	// Render modal content
 	const modalContent = (
-		<AnimatePresence>
-			{isOpen && (
-				<>
-					{/* Backdrop */}
-					<motion.div
-						key="backdrop"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						onClick={handleClose}
-						className={`fixed inset-0 bg-black/50 backdrop-blur-sm modal-overlay ${
-							isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
-						}`}
-					/>
+		<>
+			<AnimatePresence>
+				{isOpen && (
+					<>
+						{/* Backdrop */}
+						<motion.div
+							key="backdrop"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							onClick={handleClose}
+							className={`fixed inset-0 bg-black/50 backdrop-blur-sm modal-overlay ${
+								isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
+							}`}
+						/>
 
-					{/* Modal */}
-					<motion.div
-						key="modal"
-						initial={{ opacity: 0, scale: 0.9, y: 20 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.9, y: 20 }}
-						onClick={handleClose}
-						className={`fixed inset-0 modal-content flex items-center justify-center p-4 ${
-							isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
-						}`}
-					>
-						<div
-							className="w-full max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] rounded-2xl shadow-2xl border border-input overflow-hidden"
-							onClick={(e) => e.stopPropagation()}
+						{/* Modal */}
+						<motion.div
+							key="modal"
+							initial={{ opacity: 0, scale: 0.9, y: 20 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.9, y: 20 }}
+							onClick={handleClose}
+							className={`fixed inset-0 modal-content flex items-center justify-center p-4 ${
+								isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
+							}`}
 						>
-							{/* Header */}
-							<div className="bg-background px-6 py-4">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<Sparkles className="w-6 h-6 text-black dark:text-white flex-shrink-0" />
-										<div className="min-w-0">
-											<div>
-												<h2 className="text-lg font-bold text-black dark:text-white">
-													Generar Caso Médico - {case_?.code}
-												</h2>
+							<div
+								className="w-full max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] rounded-2xl shadow-2xl border border-input overflow-hidden"
+								onClick={(e) => e.stopPropagation()}
+							>
+								{/* Header */}
+								<div className="bg-background px-6 py-4">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-3">
+											<Sparkles className="w-6 h-6 text-black dark:text-white flex-shrink-0" />
+											<div className="min-w-0">
+												<div>
+													<h2 className="text-lg font-bold text-black dark:text-white">
+														Generar Caso Médico - {case_?.code}
+													</h2>
+												</div>
+												<p className="text-sm text-black dark:text-indigo-100 truncate">
+													{case_ ? `Para ${case_.full_name}` : 'Nuevo caso'}
+												</p>
 											</div>
-											<p className="text-sm text-black dark:text-indigo-100 truncate">
-												{case_ ? `Para ${case_.full_name}` : 'Nuevo caso'}
-											</p>
+										</div>
+										<button
+											onClick={handleClose}
+											className="p-1 hover:bg-white/20 rounded-lg transition-none flex-shrink-0"
+										>
+											<X className="w-5 h-5 text-black dark:text-white" />
+										</button>
+									</div>
+								</div>
+
+								{/* Steps Indicator */}
+								<div className="px-6 py-4 bg-card">
+									<div
+										className={`flex items-center ${isResidente || isEmployee ? 'justify-center' : 'justify-between'}`}
+									>
+										{computedSteps.map((step, index) => {
+											const Icon = step.icon
+											const isActive = index === activeStep
+											// Si el documento está aprobado y estamos en el paso del PDF, marcar todos los pasos anteriores como completados
+											const isCompleted =
+												docAprobado === 'aprobado' && activeStep === computedSteps.length - 1
+													? index < activeStep
+													: index < activeStep
+
+											return (
+												<div key={step.id} className="flex items-center justify-center flex-1 last-of-type:flex-none">
+													<div className="flex flex-col items-center">
+														<motion.div
+															className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-transform duration-300 ${
+																isCompleted
+																	? 'border-green-500 text-gray-800 dark:text-white'
+																	: isActive
+																	? 'border-pink-500 text-gray-800 dark:text-white'
+																	: 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500'
+															}`}
+															whileHover={{ scale: 1.05 }}
+														>
+															<Icon className="w-4 h-4 text-gray-800 dark:text-white" />
+														</motion.div>
+														<div className="mt-2 text-center">
+															<p
+																className={`text-xs font-medium ${
+																	isActive ? 'text-pink-400' : 'text-gray-600 dark:text-gray-400'
+																}`}
+															>
+																{step.title}
+															</p>
+															<p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">
+																{step.description}
+															</p>
+														</div>
+													</div>
+													{index < computedSteps.length - 1 && (
+														<div
+															className={`flex-1 h-0.5 mx-2 transition-none duration-300 ${
+																isCompleted ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+															}`}
+														/>
+													)}
+												</div>
+											)
+										})}
+									</div>
+								</div>
+
+								{/* Content */}
+								<div className="px-6 py-6 flex flex-col">
+									<AnimatePresence mode="wait">
+										<div key={activeStep} className="flex-1">
+											{renderStepContent()}
+										</div>
+									</AnimatePresence>
+								</div>
+
+								{/* Footer */}
+								<div className="px-6 py-4 bg-card border-t border-gray-200 dark:border-gray-700">
+									<div className="flex items-center justify-end gap-3">
+										<div className="flex items-center gap-5">
+											<motion.button
+												onClick={handleBack}
+												disabled={isSaving}
+												className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
+													activeStep === 0 ? 'hidden' : ''
+												}`}
+												whileHover={{ scale: 1.02 }}
+												whileTap={{ scale: 0.98 }}
+											>
+												<ArrowLeft className="w-4 h-4" />
+												Anterior
+											</motion.button>
+
+											<motion.button
+												onClick={handleNext}
+												disabled={isCompleting || isSaving || isGeneratingPDF}
+												className="flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+												whileHover={{ scale: 1.02 }}
+												whileTap={{ scale: 0.98 }}
+											>
+												{isCompleting ? (
+													<>
+														<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+														<span className="hidden sm:inline">Saliendo...</span>
+													</>
+												) : isSaving || isGeneratingPDF ? (
+													<>
+														<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+														<span className="hidden sm:inline">Cargando...</span>
+													</>
+												) : activeStep === computedSteps.length - 1 ? (
+													<>
+														<Heart className="w-4 h-4" />
+														<span className="hidden sm:inline">Terminar Proceso</span>
+													</>
+												) : (
+													<>
+														<span className="hidden sm:inline">Siguiente</span>
+														<ArrowRight className="w-4 h-4" />
+													</>
+												)}
+											</motion.button>
 										</div>
 									</div>
-									<button
-										onClick={handleClose}
-										className="p-1 hover:bg-white/20 rounded-lg transition-none flex-shrink-0"
-									>
-										<X className="w-5 h-5 text-black dark:text-white" />
-									</button>
 								</div>
 							</div>
-
-							{/* Steps Indicator */}
-							<div className="px-6 py-4 bg-card">
-								<div
-									className={`flex items-center ${isResidente || isEmployee ? 'justify-center' : 'justify-between'}`}
-								>
-									{computedSteps.map((step, index) => {
-										const Icon = step.icon
-										const isActive = index === activeStep
-										// Si el documento está aprobado y estamos en el paso del PDF, marcar todos los pasos anteriores como completados
-										const isCompleted =
-											docAprobado === 'aprobado' && activeStep === computedSteps.length - 1
-												? index < activeStep
-												: index < activeStep
-
-										return (
-											<div key={step.id} className="flex items-center justify-center flex-1 last-of-type:flex-none">
-												<div className="flex flex-col items-center">
-													<motion.div
-														className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-transform duration-300 ${
-															isCompleted
-																? 'border-green-500 text-gray-800 dark:text-white'
-																: isActive
-																? 'border-pink-500 text-gray-800 dark:text-white'
-																: 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500'
-														}`}
-														whileHover={{ scale: 1.05 }}
-													>
-														<Icon className="w-4 h-4 text-gray-800 dark:text-white" />
-													</motion.div>
-													<div className="mt-2 text-center">
-														<p
-															className={`text-xs font-medium ${
-																isActive ? 'text-pink-400' : 'text-gray-600 dark:text-gray-400'
-															}`}
-														>
-															{step.title}
-														</p>
-														<p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">
-															{step.description}
-														</p>
-													</div>
-												</div>
-												{index < computedSteps.length - 1 && (
-													<div
-														className={`flex-1 h-0.5 mx-2 transition-none duration-300 ${
-															isCompleted ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-														}`}
-													/>
-												)}
-											</div>
-										)
-									})}
-								</div>
-							</div>
-
-							{/* Content */}
-							<div className="px-6 py-6 flex flex-col">
-								<AnimatePresence mode="wait">
-									<div key={activeStep} className="flex-1">
-										{renderStepContent()}
-									</div>
-								</AnimatePresence>
-							</div>
-
-							{/* Footer */}
-							<div className="px-6 py-4 bg-card border-t border-gray-200 dark:border-gray-700">
-								<div className="flex items-center justify-end gap-3">
-									<div className="flex items-center gap-5">
-										<motion.button
-											onClick={handleBack}
-											disabled={isSaving}
-											className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
-												activeStep === 0 ? 'hidden' : ''
-											}`}
-											whileHover={{ scale: 1.02 }}
-											whileTap={{ scale: 0.98 }}
-										>
-											<ArrowLeft className="w-4 h-4" />
-											Anterior
-										</motion.button>
-
-										<motion.button
-											onClick={handleNext}
-											disabled={isCompleting || isSaving || isGeneratingPDF}
-											className="flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-											whileHover={{ scale: 1.02 }}
-											whileTap={{ scale: 0.98 }}
-										>
-											{isCompleting ? (
-												<>
-													<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-													<span className="hidden sm:inline">Saliendo...</span>
-												</>
-											) : isSaving || isGeneratingPDF ? (
-												<>
-													<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-													<span className="hidden sm:inline">Cargando...</span>
-												</>
-											) : activeStep === computedSteps.length - 1 ? (
-												<>
-													<Heart className="w-4 h-4" />
-													<span className="hidden sm:inline">Terminar Proceso</span>
-												</>
-											) : (
-												<>
-													<span className="hidden sm:inline">Siguiente</span>
-													<ArrowRight className="w-4 h-4" />
-												</>
-											)}
-										</motion.button>
-									</div>
-								</div>
-							</div>
-						</div>
-					</motion.div>
-				</>
-			)}
-		</AnimatePresence>
+						</motion.div>
+					</>
+				)}
+			</AnimatePresence>
+			<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Confirmar descargar PDF</DialogTitle>
+						<DialogDescription>
+							Si editó información del documento porfavor seleccione el boton que dice "SI" de lo contrario seleccione
+							el boton que dice "NO"
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button onClick={handleResetPDFFields} disabled={isSaving}>
+							SI
+						</Button>
+						<Button onClick={handleCheckAndDownloadPDF} disabled={isSaving}>
+							NO
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
 	)
 
 	// Use portal when in fullscreen mode to ensure proper rendering
