@@ -800,16 +800,21 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					if (!case_.exam_type) {
 						matchesExamTypeNew = false
 					} else {
-						const type = case_.exam_type.toLowerCase().trim()
-						let normalizedType = type
-						if (type.includes('inmuno')) {
-							normalizedType = 'inmunohistoquimica'
-						} else if (type.includes('citolog')) {
-							normalizedType = 'citologia'
-						} else if (type.includes('biops')) {
-							normalizedType = 'biopsia'
+						// Normalizar ambos valores para comparación
+						const dbType = case_.exam_type.toLowerCase().trim()
+						const filterType = examTypeFilter.toLowerCase().trim()
+
+						// Mapear tipos de la base de datos a valores del filtro
+						let normalizedDbType = dbType
+						if (dbType.includes('inmuno')) {
+							normalizedDbType = 'inmunohistoquimica'
+						} else if (dbType.includes('citolog')) {
+							normalizedDbType = 'citologia'
+						} else if (dbType.includes('biops')) {
+							normalizedDbType = 'biopsia'
 						}
-						matchesExamTypeNew = normalizedType === examTypeFilter.toLowerCase()
+
+						matchesExamTypeNew = normalizedDbType === filterType
 					}
 				}
 

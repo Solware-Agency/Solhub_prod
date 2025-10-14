@@ -418,12 +418,12 @@ export const getCasesWithPatientInfo = async (
 ) => {
 	try {
 		const cleanSearchTerm = filters?.searchTerm?.trim()
-		
+
 		// Si hay término de búsqueda, usar estrategia de búsquedas múltiples
 		if (cleanSearchTerm) {
 			console.log('🔍 [DEBUG] Término de búsqueda:', cleanSearchTerm)
 			const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&')
-			
+
 			// Hacer búsquedas separadas por cada campo
 			const searchPromises = [
 				// Búsqueda por código
@@ -440,7 +440,7 @@ export const getCasesWithPatientInfo = async (
 							email
 						)
 					`,
-						{ count: 'exact' }
+						{ count: 'exact' },
 					)
 					.ilike('code', `%${escapedSearchTerm}%`)
 					.order('created_at', { ascending: false }),
@@ -459,7 +459,7 @@ export const getCasesWithPatientInfo = async (
 							email
 						)
 					`,
-						{ count: 'exact' }
+						{ count: 'exact' },
 					)
 					.ilike('treating_doctor', `%${escapedSearchTerm}%`)
 					.order('created_at', { ascending: false }),
@@ -478,7 +478,7 @@ export const getCasesWithPatientInfo = async (
 							email
 						)
 					`,
-						{ count: 'exact' }
+						{ count: 'exact' },
 					)
 					.ilike('patients.nombre', `%${escapedSearchTerm}%`)
 					.order('created_at', { ascending: false }),
@@ -497,7 +497,7 @@ export const getCasesWithPatientInfo = async (
 							email
 						)
 					`,
-						{ count: 'exact' }
+						{ count: 'exact' },
 					)
 					.ilike('patients.cedula', `%${escapedSearchTerm}%`)
 					.order('created_at', { ascending: false }),
@@ -530,10 +530,17 @@ export const getCasesWithPatientInfo = async (
 			}
 
 			if (filters?.examType) {
+				// Mapear el valor del filtro al valor exacto en la base de datos
+				let exactExamType = filters.examType
+				if (filters.examType === 'inmunohistoquimica') {
+					exactExamType = 'Inmunohistoquímica'
+				} else if (filters.examType === 'citologia') {
+					exactExamType = 'Citología'
+				} else if (filters.examType === 'biopsia') {
+					exactExamType = 'Biopsia'
+				}
 				combinedResults = combinedResults.filter((item: any) => {
-					const type = item.exam_type?.toLowerCase().trim() || ''
-					const filterType = filters.examType?.toLowerCase() || ''
-					return type.includes(filterType.substring(0, 5))
+					return item.exam_type === exactExamType
 				})
 			}
 
@@ -569,16 +576,12 @@ export const getCasesWithPatientInfo = async (
 
 			// Filtro por médico tratante
 			if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
-				combinedResults = combinedResults.filter((item: any) => 
-					filters.doctorFilter!.includes(item.treating_doctor)
-				)
+				combinedResults = combinedResults.filter((item: any) => filters.doctorFilter!.includes(item.treating_doctor))
 			}
 
 			// Filtro por procedencia
 			if (filters?.originFilter && filters.originFilter.length > 0) {
-				combinedResults = combinedResults.filter((item: any) => 
-					filters.originFilter!.includes(item.origin)
-				)
+				combinedResults = combinedResults.filter((item: any) => filters.originFilter!.includes(item.origin))
 			}
 
 			// Filtrar por rol de usuario
@@ -591,8 +594,8 @@ export const getCasesWithPatientInfo = async (
 			}
 
 			if (filters?.userRole === 'patologo') {
-				combinedResults = combinedResults.filter((item: any) => 
-					item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica'
+				combinedResults = combinedResults.filter(
+					(item: any) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
 				)
 			}
 
@@ -624,9 +627,9 @@ export const getCasesWithPatientInfo = async (
 			}
 		}
 
-	// Sin término de búsqueda, consulta normal
-	let query = supabase.from('medical_records_clean').select(
-		`
+		// Sin término de búsqueda, consulta normal
+		let query = supabase.from('medical_records_clean').select(
+			`
 			*,
 			patients!inner(
 				cedula,
@@ -636,71 +639,80 @@ export const getCasesWithPatientInfo = async (
 				email
 			)
 		`,
-		{ count: 'exact' },
-	)
+			{ count: 'exact' },
+		)
 
-	// Aplicar filtros
-	if (filters?.branch) {
-		query = query.eq('branch', filters.branch)
-	}
-
-	if (filters?.dateFrom) {
-		query = query.gte('date', filters.dateFrom)
-	}
-
-	if (filters?.dateTo) {
-		query = query.lte('date', filters.dateTo)
-	}
-
-	if (filters?.examType) {
-		query = query.ilike('exam_type', `%${filters.examType}%`)
-	}
-
-	if (filters?.paymentStatus) {
-		query = query.eq('payment_status', filters.paymentStatus)
-	}
-
-	// Filtro por estatus de documento
-	if (filters?.documentStatus) {
-		query = query.eq('doc_aprobado', filters.documentStatus)
-	}
-
-	// Filtro por estatus de PDF
-	if (filters?.pdfStatus) {
-		if (filters.pdfStatus === 'pendientes') {
-			query = query.eq('pdf_en_ready', false)
-		} else if (filters.pdfStatus === 'faltantes') {
-			query = query.eq('pdf_en_ready', true)
+		// Aplicar filtros
+		if (filters?.branch) {
+			query = query.eq('branch', filters.branch)
 		}
-	}
 
-	// Filtro por estatus de citología
-	if (filters?.citoStatus) {
-		query = query.eq('cito_status', filters.citoStatus)
-	}
+		if (filters?.dateFrom) {
+			query = query.gte('date', filters.dateFrom)
+		}
 
-	// Filtro por médico tratante
-	if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
-		query = query.in('treating_doctor', filters.doctorFilter)
-	}
+		if (filters?.dateTo) {
+			query = query.lte('date', filters.dateTo)
+		}
 
-	// Filtro por procedencia
-	if (filters?.originFilter && filters.originFilter.length > 0) {
-		query = query.in('origin', filters.originFilter)
-	}
+		if (filters?.examType) {
+			// Mapear el valor del filtro al valor exacto en la base de datos
+			let exactExamType = filters.examType
+			if (filters.examType === 'inmunohistoquimica') {
+				exactExamType = 'Inmunohistoquímica'
+			} else if (filters.examType === 'citologia') {
+				exactExamType = 'Citología'
+			} else if (filters.examType === 'biopsia') {
+				exactExamType = 'Biopsia'
+			}
+			query = query.eq('exam_type', exactExamType)
+		}
 
-	// Filtrar por rol de usuario
-	if (filters?.userRole === 'residente') {
-		query = query.eq('exam_type', 'Biopsia')
-	}
+		if (filters?.paymentStatus) {
+			query = query.eq('payment_status', filters.paymentStatus)
+		}
 
-	if (filters?.userRole === 'citotecno') {
-		query = query.eq('exam_type', 'Citología')
-	}
+		// Filtro por estatus de documento
+		if (filters?.documentStatus) {
+			query = query.eq('doc_aprobado', filters.documentStatus)
+		}
 
-	if (filters?.userRole === 'patologo') {
-		query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
-	}
+		// Filtro por estatus de PDF
+		if (filters?.pdfStatus) {
+			if (filters.pdfStatus === 'pendientes') {
+				query = query.eq('pdf_en_ready', false)
+			} else if (filters.pdfStatus === 'faltantes') {
+				query = query.eq('pdf_en_ready', true)
+			}
+		}
+
+		// Filtro por estatus de citología
+		if (filters?.citoStatus) {
+			query = query.eq('cito_status', filters.citoStatus)
+		}
+
+		// Filtro por médico tratante
+		if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+			query = query.in('treating_doctor', filters.doctorFilter)
+		}
+
+		// Filtro por procedencia
+		if (filters?.originFilter && filters.originFilter.length > 0) {
+			query = query.in('origin', filters.originFilter)
+		}
+
+		// Filtrar por rol de usuario
+		if (filters?.userRole === 'residente') {
+			query = query.eq('exam_type', 'Biopsia')
+		}
+
+		if (filters?.userRole === 'citotecno') {
+			query = query.eq('exam_type', 'Citología')
+		}
+
+		if (filters?.userRole === 'patologo') {
+			query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica'])
+		}
 
 		// Paginación
 		const from = (page - 1) * limit
@@ -899,7 +911,16 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 				}
 
 				if (filters?.examType) {
-					filteredData = filteredData.filter((item) => item.exam_type === filters.examType)
+					// Mapear el valor del filtro al valor exacto en la base de datos
+					let exactExamType = filters.examType
+					if (filters.examType === 'inmunohistoquimica') {
+						exactExamType = 'Inmunohistoquímica'
+					} else if (filters.examType === 'citologia') {
+						exactExamType = 'Citología'
+					} else if (filters.examType === 'biopsia') {
+						exactExamType = 'Biopsia'
+					}
+					filteredData = filteredData.filter((item) => item.exam_type === exactExamType)
 				}
 
 				if (filters?.paymentStatus) {
@@ -916,7 +937,9 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 				}
 
 				if (filters?.userRole === 'patologo') {
-					filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica')
+					filteredData = filteredData.filter(
+						(item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
+					)
 				}
 
 				console.log(`✅ Obtenidos ${filteredData.length} casos médicos con búsqueda`)
@@ -967,7 +990,16 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 			}
 
 			if (filters?.examType) {
-				query = query.eq('exam_type', filters.examType)
+				// Mapear el valor del filtro al valor exacto en la base de datos
+				let exactExamType = filters.examType
+				if (filters.examType === 'inmunohistoquimica') {
+					exactExamType = 'Inmunohistoquímica'
+				} else if (filters.examType === 'citologia') {
+					exactExamType = 'Citología'
+				} else if (filters.examType === 'biopsia') {
+					exactExamType = 'Biopsia'
+				}
+				query = query.eq('exam_type', exactExamType)
 			}
 
 			if (filters?.paymentStatus) {
