@@ -187,22 +187,24 @@ export const validateFormPayments = (
 	exchangeRate: number | undefined,
 ): { isValid: boolean; totalPaidUSD: number; errorMessage?: string } => {
 	// Filter out empty payments
-	const validPayments = payments.filter(payment => payment.method && payment.amount && payment.amount > 0)
-	
+	const validPayments = payments.filter((payment) => payment.method && payment.amount && payment.amount > 0)
+
 	if (validPayments.length === 0) {
 		return { isValid: true, totalPaidUSD: 0 }
 	}
 
 	// Calculate total paid in USD (converting VES payments)
 	const totalPaidUSD = calculateTotalPaidUSD(validPayments, exchangeRate)
-	
+
 	// Check if total paid exceeds total amount (with tolerance for floating point precision)
 	// Allow for small differences (less than 1 cent) due to currency conversion precision
-	const tolerance = 0
+	const tolerance = 0.01 // Allow up to 1 cent difference for floating point precision
 	const difference = totalPaidUSD - totalAmount
-	
+
 	if (difference > tolerance) {
-		const errorMessage = `El total de pagos (${totalPaidUSD.toFixed(2)} USD) excede el monto total del caso (${totalAmount.toFixed(2)} USD) por $${difference.toFixed(2)} USD`
+		const errorMessage = `El total de pagos (${totalPaidUSD.toFixed(
+			2,
+		)} USD) excede el monto total del caso (${totalAmount.toFixed(2)} USD) por $${difference.toFixed(2)} USD`
 		return { isValid: false, totalPaidUSD, errorMessage }
 	}
 
