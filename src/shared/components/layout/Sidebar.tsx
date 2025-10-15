@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@app/providers/MockAuthContext'
-import FavIcon from '@shared/components/icons/FavIcon'
+// import FavIcon from '@shared/components/icons/FavIcon'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { cn } from '@shared/lib/cn'
 
@@ -280,18 +280,18 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, isExpanded = false, isMobile
 			<div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4 scrollbar-hide">
 				<div className="flex justify-between items-center w-full mb-2 sm:mb-4">
 					<a
-						href="https://conspat.solware.agency/"
+						href="https://solhub.solware.agency/"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center gap-3 hover:opacity-80 transition-none"
 					>
-						<FavIcon fill="#e82084" className="size-8 shrink-0 -ml-1" />
+						{/* <FavIcon fill="#e82084" className="size-8 shrink-0 -ml-1" /> */}
 						<p
 							className={`text-2xl font-bold whitespace-nowrap transition-none ${
 								showFullContent ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
 							}`}
 						>
-							Conspat
+							SolHub
 						</p>
 					</a>
 				</div>

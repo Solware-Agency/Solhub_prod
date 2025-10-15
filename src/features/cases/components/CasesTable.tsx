@@ -1212,7 +1212,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																<CaseActionsPopover
 																	case_={case_}
 																	onView={handleCaseSelect}
-																	onGenerate={handleGenerateEmployeeCase}
+																	// onGenerate={handleGenerateEmployeeCase}
 																	onReactions={handleGenerateCase}
 																	canRequest={canRequest}
 																/>
@@ -1574,7 +1574,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																<CaseActionsPopover
 																	case_={case_}
 																	onView={handleCaseSelect}
-																	onGenerate={handleGenerateEmployeeCase}
+																	// onGenerate={handleGenerateEmployeeCase}
 																	onReactions={handleGenerateCase}
 																	canRequest={canRequest}
 																/>
