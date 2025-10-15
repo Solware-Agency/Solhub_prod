@@ -9,12 +9,12 @@ import { formatCurrency } from '@shared/utils/number-utils'
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
 	onView: (case_: MedicalCaseWithPatient) => void
-	onGenerate: (case_: MedicalCaseWithPatient) => void
+	// onGenerate: (case_: MedicalCaseWithPatient) => void
 	onReactions?: (case_: MedicalCaseWithPatient) => void
 	canRequest: boolean
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, canRequest }) => {
+const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onReactions, canRequest }) => {
 	return (
 		<div className="bg-white dark:bg-background rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
 			<div className="flex flex-wrap gap-1.5 mb-2">
@@ -64,7 +64,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 				<CaseActionsPopover
 					case_={case_}
 					onView={onView}
-					onGenerate={onGenerate}
+					// onGenerate={onGenerate}
 					onReactions={onReactions}
 					canRequest={canRequest}
 				/>
