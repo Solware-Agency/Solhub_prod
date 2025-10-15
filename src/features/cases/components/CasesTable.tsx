@@ -202,10 +202,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			],
 			[],
 		)
-		const handleGenerateEmployeeCase = useCallback((case_: UnifiedMedicalRecord) => {
-			setSelectedCaseForGenerate(case_)
-			setIsStepsModalOpen(true)
-		}, [])
+		// const handleGenerateEmployeeCase = useCallback((case_: UnifiedMedicalRecord) => {
+		// 	setSelectedCaseForGenerate(case_)
+		// 	setIsStepsModalOpen(true)
+		// }, [])
 
 		// Effect to update selected case when cases data changes and we need to update
 		useEffect(() => {
@@ -1063,7 +1063,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 												key={case_.id}
 												case_={case_}
 												onView={handleCaseSelect}
-												onGenerate={handleGenerateEmployeeCase}
+												// onGenerate={handleGenerateEmployeeCase}
 												onReactions={handleGenerateCase}
 												canRequest={canRequest}
 											/>
@@ -1421,7 +1421,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 										key={case_.id}
 										case_={case_}
 										onView={handleCaseSelect}
-										onGenerate={handleGenerateEmployeeCase}
+										// onGenerate={handleGenerateEmployeeCase}
 										onReactions={handleGenerateCase}
 										canRequest={canRequest}
 									/>
