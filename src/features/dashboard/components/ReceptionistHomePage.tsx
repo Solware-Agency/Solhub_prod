@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@shared/components/ui/card'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useAuth } from '@app/providers/AuthContext'
+import { useAuth } from '@app/providers/MockAuthContext'
 import EyeTrackingComponent from './RobotTraking'
 import { FileText, Users, History, Settings, LogOut, FolderInput } from 'lucide-react'
 

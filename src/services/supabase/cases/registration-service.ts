@@ -117,12 +117,47 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 	try {
 		console.log('🚀 Iniciando registro con nueva estructura...')
 
-		// Obtener información del usuario actual
+		// Obtener información del usuario actual (con fallback para modo mock)
 		const {
-			data: { user },
+			data: { user: authUser },
 		} = await supabase.auth.getUser()
+
+		// Si no hay usuario autenticado (modo mock), usar datos del localStorage
+		let user = authUser
 		if (!user) {
-			throw new Error('Usuario no autenticado')
+			// Modo mock: crear usuario temporal con datos del localStorage
+			const mockRole = localStorage.getItem('mockUserRole')
+			if (!mockRole) {
+				throw new Error('Usuario no autenticado')
+			}
+
+			// Mapeo de roles mock a IDs
+			const mockUserIds: Record<string, string> = {
+				owner: 'a0000000-0000-0000-0000-000000000001',
+				employee: 'a0000000-0000-0000-0000-000000000002',
+				residente: 'a0000000-0000-0000-0000-000000000003',
+				patologo: 'a0000000-0000-0000-0000-000000000004',
+				citotecno: 'a0000000-0000-0000-0000-000000000005',
+			}
+
+			const mockDisplayNames: Record<string, string> = {
+				owner: 'Usuario Owner',
+				employee: 'Usuario Recepcionista',
+				residente: 'Usuario Residente',
+				patologo: 'Usuario Patólogo',
+				citotecno: 'Usuario Citotecnólogo',
+			}
+
+			user = {
+				id: mockUserIds[mockRole] || mockUserIds.owner,
+				email: `${mockRole}@test.com`,
+				user_metadata: {
+					display_name: mockDisplayNames[mockRole] || 'Usuario Mock',
+					full_name: mockDisplayNames[mockRole] || 'Usuario Mock',
+				},
+			} as any
+
+			console.log('🔧 Modo Mock: Usando usuario temporal', user)
 		}
 
 		// Preparar datos del paciente y del caso
@@ -153,7 +188,7 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 			if (hasChanges) {
 				console.log('📝 Cambios detectados en el paciente, actualizando...')
 				// Si la cédula cambió, actualizar el registro existente
-				patient = await updatePatient(patient.id, patientData, user.id)
+				patient = await updatePatient(patient.id, patientData, user!.id)
 				patientUpdated = true
 			} else {
 				console.log('✅ No hay cambios en los datos del paciente')

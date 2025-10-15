@@ -1,25 +1,9 @@
 import { lazy } from 'react'
 
 // Auth pages - lazy loaded
-export const LoginPage = lazy(() =>
-	import('@features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })),
-)
-export const RegisterPage = lazy(() =>
-	import('@features/auth/pages/RegisterPage').then((module) => ({ default: module.RegisterPage })),
-)
-export const ForgotPasswordPage = lazy(() =>
-	import('@features/auth/pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })),
-)
-export const PasswordResetPage = lazy(() => import('@features/auth/pages/PasswordResetPage'))
-export const NewPasswordPage = lazy(() => import('@features/auth/pages/NewPasswordPage'))
 export const NotFoundPage = lazy(() =>
 	import('@features/auth/pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
 )
-
-// Auth other components - lazy loaded
-export const EmailVerificationNotice = lazy(() => import('@features/auth/other/EmailVerificationNotice'))
-export const PendingApprovalPage = lazy(() => import('@features/auth/other/PendingApprovalPage'))
-export const AuthCallback = lazy(() => import('@features/auth/other/AuthCallback'))
 
 // Dashboard pages - lazy loaded
 export const Layout = lazy(() => import('@shared/components/layout/Layout'))

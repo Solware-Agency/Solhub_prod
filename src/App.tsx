@@ -1,17 +1,9 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Suspense } from 'react'
 import { Toaster } from '@shared/components/ui/toaster'
 import { DateRangeProvider } from '@app/providers/DateRangeContext'
 import {
-	LoginPage,
-	RegisterPage,
-	ForgotPasswordPage,
-	PasswordResetPage,
-	NewPasswordPage,
-	EmailVerificationNotice,
-	PendingApprovalPage,
-	AuthCallback,
 	NotFoundPage,
 	Layout,
 	HomePage,
@@ -28,6 +20,7 @@ import {
 	MedicalForm,
 	StandaloneChatPage,
 } from '@app/routes/lazy-routes'
+import RoleSelectorPage from '@features/auth/pages/RoleSelectorPage'
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -38,35 +31,6 @@ const LoadingSpinner = () => (
 
 // Create a client instance
 const queryClient = new QueryClient()
-
-function RecoveryGate() {
-	const location = useLocation()
-	const navigate = useNavigate()
-
-	// Redirige a /auth/callback si detecta tipo recovery en query o en hash
-	if (typeof window !== 'undefined') {
-		const isOnCallback = location.pathname === '/auth/callback'
-		const isOnNewPassword = location.pathname === '/new-password'
-
-		if (!isOnCallback && !isOnNewPassword) {
-			const searchParams = new URLSearchParams(location.search)
-			const typeQuery = searchParams.get('type')
-			const tokenQuery = searchParams.get('token') || searchParams.get('code')
-
-			const rawHash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
-			const hashParams = new URLSearchParams(rawHash)
-			const typeHash = hashParams.get('type')
-			const tokenHash = hashParams.get('token') || hashParams.get('code') || hashParams.get('access_token')
-
-			if (typeQuery === 'recovery' || typeHash === 'recovery' || tokenQuery || tokenHash) {
-				const nextUrl = `/auth/callback${location.search || ''}${location.hash || ''}`
-				navigate(nextUrl, { replace: true })
-			}
-		}
-	}
-
-	return null
-}
 
 function App() {
 	return (
@@ -81,19 +45,9 @@ function App() {
 					<DateRangeProvider>
 						<Toaster />
 						<Suspense fallback={<LoadingSpinner />}>
-							<RecoveryGate />
 							<Routes>
-								{/* Public routes */}
-								<Route path="/" element={<LoginPage />} />
-								<Route path="/register" element={<RegisterPage />} />
-								<Route path="/forgot-password" element={<ForgotPasswordPage />} />
-								<Route path="/reset-password" element={<PasswordResetPage />} />
-								<Route path="/new-password" element={<NewPasswordPage />} />
-								<Route path="/email-verification-notice" element={<EmailVerificationNotice />} />
-								<Route path="/pending-approval" element={<PendingApprovalPage />} />
-
-								{/* Auth callback route for email verification and password reset */}
-								<Route path="/auth/callback" element={<AuthCallback />} />
+								{/* Role Selector - Main entry point */}
+								<Route path="/" element={<RoleSelectorPage />} />
 
 								{/* Protected owner routes */}
 								<Route

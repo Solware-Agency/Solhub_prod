@@ -20,7 +20,7 @@ import {
 	FolderSearch,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '@app/providers/AuthContext'
+import { useAuth } from '@app/providers/MockAuthContext'
 import FavIcon from '@shared/components/icons/FavIcon'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { cn } from '@shared/lib/cn'

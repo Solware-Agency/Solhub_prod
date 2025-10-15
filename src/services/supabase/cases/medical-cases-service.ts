@@ -261,7 +261,7 @@ export const createMedicalCase = async (caseData: MedicalCaseInsert): Promise<Me
 		// Registrar la creación en change_logs
 		if (data && caseData.created_by) {
 			try {
-				// Obtener información del usuario
+				// Obtener información del usuario (con fallback para modo mock)
 				const { data: user } = await supabase.auth.getUser()
 				const { data: profile } = await supabase
 					.from('profiles')
@@ -269,8 +269,13 @@ export const createMedicalCase = async (caseData: MedicalCaseInsert): Promise<Me
 					.eq('id', caseData.created_by)
 					.single()
 
-				const userEmail = profile?.email || user.user?.email || 'unknown@email.com'
-				const userDisplayName = profile?.display_name || user.user?.user_metadata?.display_name || 'Usuario'
+				// Si no hay usuario autenticado, usar datos del changelog que vienen de caseData
+				const userEmail = profile?.email || user.user?.email || caseData.created_by_display_name || 'unknown@email.com'
+				const userDisplayName =
+					profile?.display_name ||
+					user.user?.user_metadata?.display_name ||
+					caseData.created_by_display_name ||
+					'Usuario'
 
 				const changeLog = {
 					medical_record_id: data.id,

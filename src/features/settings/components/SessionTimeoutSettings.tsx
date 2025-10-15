@@ -1,6 +1,6 @@
 import { Card } from '@shared/components/ui/card'
 import { Clock, Shield, Info } from 'lucide-react'
-import { useAuth } from '@app/providers/AuthContext'
+import { useAuth } from '@app/providers/MockAuthContext'
 import { SESSION_TIMEOUT_OPTIONS } from '@shared/hooks/useSessionTimeoutSettings'
 import { RadioGroup, RadioGroupItem } from '@shared/components/ui/radio-group'
 import { Label } from '@shared/components/ui/label'

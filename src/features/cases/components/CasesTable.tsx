@@ -8,7 +8,7 @@ import { Button } from '@shared/components/ui/button'
 type UnifiedMedicalRecord = MedicalCaseWithPatient
 import { useToast } from '@shared/hooks/use-toast'
 import { Input } from '@shared/components/ui/input'
-import { useAuth } from '@app/providers/AuthContext'
+import { useAuth } from '@app/providers/MockAuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useExportToExcel } from '@shared/hooks/useExportToExcel'
 import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal'

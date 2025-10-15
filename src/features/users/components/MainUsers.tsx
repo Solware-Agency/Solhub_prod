@@ -28,7 +28,7 @@ import {
 	canManageUsers,
 	updateUserApprovalStatus,
 } from '@/services/supabase/auth/user-management'
-import { useAuth } from '@app/providers/AuthContext'
+import { useAuth } from '@app/providers/MockAuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
