@@ -230,6 +230,10 @@ export const useExportToExcel = () => {
 					const { paymentStatus, missingAmount } = calculateCasePaymentStatus(case_)
 					const ageDisplay = case_.edad || ''
 
+					// Calcular monto total en bolívares
+					const exchangeRate = case_.exchange_rate || 0
+					const totalInBs = exchangeRate > 0 ? (case_.total_amount || 0) * exchangeRate : 0
+
 					return {
 						Código: case_.code || '',
 						'Fecha de Registro': case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
@@ -239,9 +243,23 @@ export const useExportToExcel = () => {
 						Sede: case_.branch || '',
 						'Tipo de Estudio': case_.exam_type || '',
 						'Médico Tratante': case_.treating_doctor || '',
-						'Monto Total': case_.total_amount || 0,
+						'Tasa de Cambio (Bs)': exchangeRate,
+						'Monto Total (USD)': case_.total_amount || 0,
+						'Monto Total (Bs)': totalInBs,
 						'Estado de Pago': paymentStatus,
 						'Monto Faltante': missingAmount > 0 ? missingAmount : 0,
+						'Método de Pago 1': case_.payment_method_1 || '',
+						'Monto Pago 1': case_.payment_amount_1 || 0,
+						'Referencia Pago 1': case_.payment_reference_1 || '',
+						'Método de Pago 2': case_.payment_method_2 || '',
+						'Monto Pago 2': case_.payment_amount_2 || 0,
+						'Referencia Pago 2': case_.payment_reference_2 || '',
+						'Método de Pago 3': case_.payment_method_3 || '',
+						'Monto Pago 3': case_.payment_amount_3 || 0,
+						'Referencia Pago 3': case_.payment_reference_3 || '',
+						'Método de Pago 4': case_.payment_method_4 || '',
+						'Monto Pago 4': case_.payment_amount_4 || 0,
+						'Referencia Pago 4': case_.payment_reference_4 || '',
 						'PDF Listo': case_.pdf_en_ready ? 'Sí' : 'No',
 						'Estatus Citología': case_.cito_status || '',
 					}
@@ -261,9 +279,23 @@ export const useExportToExcel = () => {
 					{ wch: 10 }, // Sede
 					{ wch: 20 }, // Tipo de Estudio
 					{ wch: 25 }, // Médico Tratante
-					{ wch: 15 }, // Monto Total
+					{ wch: 18 }, // Tasa de Cambio (Bs)
+					{ wch: 18 }, // Monto Total (USD)
+					{ wch: 18 }, // Monto Total (Bs)
 					{ wch: 15 }, // Estado de Pago
 					{ wch: 15 }, // Monto Faltante
+					{ wch: 20 }, // Método de Pago 1
+					{ wch: 15 }, // Monto Pago 1
+					{ wch: 25 }, // Referencia Pago 1
+					{ wch: 20 }, // Método de Pago 2
+					{ wch: 15 }, // Monto Pago 2
+					{ wch: 25 }, // Referencia Pago 2
+					{ wch: 20 }, // Método de Pago 3
+					{ wch: 15 }, // Monto Pago 3
+					{ wch: 25 }, // Referencia Pago 3
+					{ wch: 20 }, // Método de Pago 4
+					{ wch: 15 }, // Monto Pago 4
+					{ wch: 25 }, // Referencia Pago 4
 					{ wch: 12 }, // PDF Listo
 					{ wch: 15 }, // Estatus Citología
 				]
