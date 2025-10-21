@@ -1042,89 +1042,14 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				return
 			}
 
-			// Si no existen, hacer polling para esperar el PDF
-			console.log('[2] PDF no existe aún, iniciando polling...')
+			// Si no existen, llamar a handleResetPDFFields para generar el PDF
+			console.log('[2] PDF no existe aún, llamando a handleResetPDFFields para generarlo...')
 
-			// ⏱️ Esperar antes de intentar descargar el PDF
-			let attempts = 0
-			const maxAttempts = 15 // Aumentar intentos
-			let pdfUrl: string | null = null
+			// Cerrar el modal de confirmación antes de proceder
+			setConfirmDialogOpen(false)
 
-			while (attempts < maxAttempts) {
-				const { data, error } = await supabase
-					.from('medical_records_clean')
-					.select('informepdf_url, token')
-					.eq('id', case_.id)
-					.single<MedicalRecord & { token?: string }>()
-
-				if (error) {
-					console.error('Error obteniendo informepdf_url:', error)
-					break
-				}
-
-				if (data?.informepdf_url) {
-					// Usar la utilidad para determinar la URL de descarga apropiada
-					pdfUrl = getDownloadUrl(case_.id, data.token || null, data.informepdf_url || null)
-					break
-				}
-
-				// Esperar 2 segundos antes del próximo intento
-				await new Promise((resolve) => setTimeout(resolve, 2000))
-				attempts++
-			}
-
-			if (!pdfUrl) {
-				toast({
-					title: '⏳ Documento no disponible aún',
-					description: 'El PDF aún no está listo. Intenta nuevamente en unos segundos.',
-					variant: 'destructive',
-				})
-				return
-			}
-
-			try {
-				// Descargar el archivo usando el endpoint de descarga
-				const response = await fetch(pdfUrl)
-				if (!response.ok) {
-					throw new Error(`Error al descargar: ${response.status}`)
-				}
-
-				const sanitizedName =
-					case_.full_name ||
-					'Paciente'
-						.normalize('NFD')
-						.replace(/[\u0300-\u036f]/g, '')
-						.replace(/[^a-zA-Z0-9\s]/g, '')
-						.replace(/\s+/g, '_')
-						.trim()
-
-				const blob = await response.blob()
-				const url = window.URL.createObjectURL(blob)
-				const link = document.createElement('a')
-				link.href = url
-				link.download = `${case_.code}-${sanitizedName}.pdf`
-				document.body.appendChild(link)
-				link.click()
-				document.body.removeChild(link)
-				window.URL.revokeObjectURL(url) // Limpiar memoria
-
-				toast({
-					title: '✅ PDF descargado',
-					description: 'El documento se ha descargado correctamente.',
-				})
-
-				// Ejecutar handleNext automáticamente después de descargar el PDF
-				setTimeout(() => {
-					handleNext()
-				}, 1500) // Aumentar delay para mejor UX
-			} catch (err) {
-				console.error('Error al abrir el PDF:', err)
-				toast({
-					title: '❌ Error',
-					description: 'No se pudo acceder al PDF. Intenta nuevamente.',
-					variant: 'destructive',
-				})
-			}
+			// Llamar a la función que genera el PDF
+			await handleResetPDFFields()
 		} catch (error) {
 			console.error('Error en handleCheckAndDownloadPDF:', error)
 			toast({
@@ -1681,7 +1606,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
-						<Button onClick={handleResetPDFFields} disabled={isSaving}>
+						<Button
+							onClick={() => {
+								setConfirmDialogOpen(false)
+								handleResetPDFFields()
+							}}
+							disabled={isSaving}
+						>
 							SI
 						</Button>
 						<Button onClick={handleCheckAndDownloadPDF} disabled={isSaving}>

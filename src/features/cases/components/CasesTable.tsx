@@ -45,6 +45,8 @@ interface CasesTableProps {
 		originFilter?: string[]
 		dateFrom?: string
 		dateTo?: string
+		sortField?: string
+		sortDirection?: 'asc' | 'desc'
 	}) => void
 	pagination?: {
 		currentPage: number
@@ -58,6 +60,23 @@ interface CasesTableProps {
 
 type SortField = 'id' | 'created_at' | 'nombre' | 'total_amount' | 'code'
 type SortDirection = 'asc' | 'desc'
+
+type ServerFilters = {
+	searchTerm?: string
+	examType?: string
+	documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+	pdfStatus?: 'pendientes' | 'faltantes'
+	citoStatus?: 'positivo' | 'negativo'
+	branch?: string
+	paymentStatus?: 'Incompleto' | 'Pagado'
+	doctorFilter?: string[]
+	originFilter?: string[]
+	dateFrom?: string
+	dateTo?: string
+	sortField?: string
+	sortDirection?: 'asc' | 'desc'
+	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+}
 
 // Helper function to calculate correct payment status for a case
 // const getCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
@@ -266,14 +285,73 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		const handleSort = useCallback(
 			(field: SortField) => {
-				if (sortField === field) {
-					setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-				} else {
-					setSortField(field)
-					setSortDirection('asc')
+				const newDirection = sortField === field ? (sortDirection === 'asc' ? 'desc' : 'asc') : 'asc'
+
+				setSortField(field)
+				setSortDirection(newDirection)
+
+				// Si hay paginación del servidor, enviar el sort al servidor
+				if (pagination && onFiltersChange) {
+					// Mantener los filtros actuales y agregar el nuevo sort
+					const currentFilters: ServerFilters = {}
+
+					// Agregar filtros actuales
+					if (examTypeFilter !== 'all') {
+						currentFilters.examType = examTypeFilter
+					}
+					if (documentStatusFilter !== 'all') {
+						currentFilters.documentStatus = documentStatusFilter as 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+					}
+					if (pdfStatusFilter !== 'all') {
+						currentFilters.pdfStatus = pdfStatusFilter as 'pendientes' | 'faltantes'
+					}
+					if (branchFilter !== 'all') {
+						currentFilters.branch = branchFilter
+					}
+					if (statusFilter !== 'all') {
+						currentFilters.paymentStatus = statusFilter as 'Incompleto' | 'Pagado'
+					}
+					if (selectedDoctors.length > 0) {
+						currentFilters.doctorFilter = selectedDoctors
+					}
+					if (selectedOrigins.length > 0) {
+						currentFilters.originFilter = selectedOrigins
+					}
+					if (citologyPositiveFilter) {
+						currentFilters.citoStatus = 'positivo'
+					} else if (citologyNegativeFilter) {
+						currentFilters.citoStatus = 'negativo'
+					}
+					if (dateRange?.from) {
+						currentFilters.dateFrom = dateRange.from.toISOString()
+					}
+					if (dateRange?.to) {
+						currentFilters.dateTo = dateRange.to.toISOString()
+					}
+
+					// Agregar el nuevo sort
+					currentFilters.sortField = field
+					currentFilters.sortDirection = newDirection
+
+					onFiltersChange(currentFilters)
 				}
 			},
-			[sortField, sortDirection],
+			[
+				sortField,
+				sortDirection,
+				pagination,
+				onFiltersChange,
+				examTypeFilter,
+				documentStatusFilter,
+				pdfStatusFilter,
+				branchFilter,
+				statusFilter,
+				selectedDoctors,
+				selectedOrigins,
+				citologyPositiveFilter,
+				citologyNegativeFilter,
+				dateRange,
+			],
 		)
 
 		const handleGenerateCase = useCallback(
@@ -379,10 +457,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			setTempDocumentStatusFilter('all')
 
 			// Si tenemos paginación del servidor, limpiar filtros del servidor también
+			// pero mantener el orden actual
 			if (pagination && onFiltersChange) {
-				onFiltersChange({})
+				onFiltersChange({
+					sortField: sortField,
+					sortDirection: sortDirection,
+				})
 			}
-		}, [pagination, onFiltersChange])
+		}, [pagination, onFiltersChange, sortField, sortDirection])
 
 		// Handle apply filters from modal
 		const handleApplyFilters = useCallback(() => {
@@ -402,7 +484,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 			// Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
 			if (pagination && onFiltersChange) {
-				const serverFilters: any = {}
+				const serverFilters: ServerFilters = {}
 
 				// Solo enviar filtros que no sean 'all'
 				if (tempExamTypeFilter !== 'all') {
@@ -438,6 +520,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					serverFilters.dateTo = tempDateRange.to.toISOString()
 				}
 
+				// Mantener el orden actual
+				serverFilters.sortField = sortField
+				serverFilters.sortDirection = sortDirection
+
 				onFiltersChange(serverFilters)
 			}
 		}, [
@@ -455,6 +541,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 			tempDocumentStatusFilter,
 			pagination,
 			onFiltersChange,
+			sortField,
+			sortDirection,
 		])
 
 		// Handle temp filter changes
@@ -523,43 +611,88 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
 		// Función para manejar la exportación
 		const handleExportToExcel = useCallback(() => {
-			// Validar que cases esté disponible
-			if (!cases || !Array.isArray(cases)) {
-				toast({
-					title: '❌ Error',
-					description: 'No hay datos disponibles para exportar.',
-					variant: 'destructive',
-				})
-				return
+			// Construir filtros del servidor para exportar TODOS los casos filtrados
+			const serverFilters: ServerFilters = {}
+
+			// Agregar término de búsqueda
+			const cleanSearchTerm = searchTerm?.trim()
+			if (cleanSearchTerm) {
+				serverFilters.searchTerm = cleanSearchTerm
 			}
 
-			const currentFilters = {
-				statusFilter,
-				branchFilter,
-				showPdfReadyOnly,
-				selectedDoctors,
-				citologyPositiveFilter,
-				citologyNegativeFilter,
-				searchTerm,
-				dateRange,
+			// Agregar filtros activos
+			if (examTypeFilter !== 'all') {
+				serverFilters.examType = examTypeFilter
+			}
+			if (documentStatusFilter !== 'all') {
+				serverFilters.documentStatus = documentStatusFilter as 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+			}
+			if (pdfStatusFilter !== 'all') {
+				serverFilters.pdfStatus = pdfStatusFilter as 'pendientes' | 'faltantes'
+			}
+			if (branchFilter !== 'all') {
+				serverFilters.branch = branchFilter
+			}
+			if (statusFilter !== 'all') {
+				serverFilters.paymentStatus = statusFilter as 'Incompleto' | 'Pagado'
+			}
+			if (selectedDoctors.length > 0) {
+				serverFilters.doctorFilter = selectedDoctors
+			}
+			if (selectedOrigins.length > 0) {
+				serverFilters.originFilter = selectedOrigins
+			}
+			if (citologyPositiveFilter) {
+				serverFilters.citoStatus = 'positivo'
+			} else if (citologyNegativeFilter) {
+				serverFilters.citoStatus = 'negativo'
+			}
+			if (dateRange?.from) {
+				serverFilters.dateFrom = dateRange.from.toISOString()
+			}
+			if (dateRange?.to) {
+				serverFilters.dateTo = dateRange.to.toISOString()
 			}
 
-			exportToExcel(cases, currentFilters, () => {
-				// Callback que se ejecuta después de confirmar
+			// Agregar ordenamiento actual
+			serverFilters.sortField = sortField
+			serverFilters.sortDirection = sortDirection
+
+			// Agregar rol del usuario
+			if (profile?.role) {
+				serverFilters.userRole = profile.role as
+					| 'owner'
+					| 'employee'
+					| 'residente'
+					| 'citotecno'
+					| 'patologo'
+					| 'medicowner'
+			}
+
+			// Obtener el conteo total de casos filtrados
+			const totalCases = pagination?.totalItems ?? cases.length
+
+			exportToExcel(serverFilters, totalCases, () => {
 				console.log('Exportación confirmada')
 			})
 		}, [
-			cases,
-			statusFilter,
+			searchTerm,
+			examTypeFilter,
+			documentStatusFilter,
+			pdfStatusFilter,
 			branchFilter,
-			showPdfReadyOnly,
+			statusFilter,
 			selectedDoctors,
+			selectedOrigins,
 			citologyPositiveFilter,
 			citologyNegativeFilter,
-			searchTerm,
 			dateRange,
+			sortField,
+			sortDirection,
+			profile?.role,
+			pagination?.totalItems,
+			cases.length,
 			exportToExcel,
-			toast,
 		])
 
 		// Memoize the filtered and sorted cases to improve performance - OPTIMIZED
@@ -585,37 +718,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 				(searchTerm && searchTerm.trim() !== '') ||
 				(onSearch && searchTerm && searchTerm.trim() !== '')
 
-			// Si hay paginación del servidor, NO aplicar filtros localmente
-			// El servidor ya aplicó los filtros
+			// Si hay paginación del servidor, NO aplicar filtros ni sorting localmente
+			// El servidor ya aplicó los filtros y el ordenamiento
 			if (pagination && onFiltersChange) {
-				// Solo aplicar sorting a los casos que vienen del servidor
-				const sorted = [...cases].sort((a, b) => {
-					let aValue: unknown = a[sortField]
-					let bValue: unknown = b[sortField]
-
-					// Handle null/undefined values
-					if (aValue === null || aValue === undefined) aValue = ''
-					if (bValue === null || bValue === undefined) bValue = ''
-
-					// Optimize date sorting by using string comparison when possible
-					if (sortField === 'created_at') {
-						// Use string comparison for ISO dates (they sort correctly)
-						aValue = aValue || '0000-00-00'
-						bValue = bValue || '0000-00-00'
-					} else if (typeof aValue === 'string' && typeof bValue === 'string') {
-						aValue = aValue.toLowerCase()
-						bValue = bValue.toLowerCase()
-					}
-
-					if (sortDirection === 'asc') {
-						return (aValue as string | number) > (bValue as string | number) ? 1 : -1
-					} else {
-						return (aValue as string | number) < (bValue as string | number) ? 1 : -1
-					}
-				})
-
+				// Los casos ya vienen ordenados y filtrados del servidor, solo devolverlos
 				return {
-					filtered: sorted,
+					filtered: cases,
 					hasActiveFilters,
 					totalCases: cases.length,
 				}
@@ -1247,6 +1355,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 									onGoToPage={goToPage}
 									onNext={goToNextPage}
 									onPrev={goToPreviousPage}
+									totalItems={pagination?.totalItems ?? filteredAndSortedCases.filtered.length}
 								/>
 							</div>
 						</div>
@@ -1329,6 +1438,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 						pdfStatusFilter={pdfStatusFilter}
 						examTypeFilter={examTypeFilter}
 						documentStatusFilter={documentStatusFilter}
+						totalFilteredCases={pagination?.totalItems}
 					/>
 				</div>
 				<div className="bg-white dark:bg-background rounded-xl h-full overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -1621,6 +1731,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 								onGoToPage={goToPage}
 								onNext={goToNextPage}
 								onPrev={goToPreviousPage}
+								totalItems={pagination?.totalItems ?? filteredAndSortedCases.filtered.length}
 							/>
 						</div>
 					</div>
@@ -1690,7 +1801,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 					onOpenChange={setIsModalOpen}
 					onConfirm={handleConfirmExport}
 					onCancel={handleCancelExport}
-					casesCount={pendingExport?.cases.length || 0}
+					casesCount={pendingExport?.estimatedCount || 0}
 				/>
 			</>
 		)
