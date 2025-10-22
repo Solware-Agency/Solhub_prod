@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
                 <td align="center">
-                    <img src="https://lafysstpyiejevhrlmzc.supabase.co/storage/v1/object/public/imagenes/Conspat/logo%20blanco.webp" alt="${process.env.RESEND_FROM_NAME || " Solware Agency"}" style="height: 80px; width: auto; display: block; margin: 0 auto 15px auto;" />
+                    <img src="https://lafysstpyiejevhrlmzc.supabase.co/storage/v1/object/public/imagenes/Conspat/Logo%20Conspat%20blanco%20sin%20fondo%20(1).png" alt="${process.env.RESEND_FROM_NAME || " Solware Agency"}" style="height: 80px; width: auto; display: block; margin: 0 auto 15px auto;" />
                     <p style="margin: 0; opacity: 0.9; font-size: 16px;">Su informe médico está listo</p>
                 </td>
             </tr>
