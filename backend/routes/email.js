@@ -110,7 +110,7 @@ router.post("/send-email", async (req, res) => {
         <p style="color: #999; font-size: 14px; text-align: center; margin: 0;">
             Saludos cordiales,<br>
             <strong>Equipo de
-                <a href="http://" target="_blank" rel="noopener noreferrer" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">
+                <a href="https://www.solware.agency/" target="_blank" rel="noopener noreferrer" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">
                     Solware Agency
                 </a>
             </strong>
