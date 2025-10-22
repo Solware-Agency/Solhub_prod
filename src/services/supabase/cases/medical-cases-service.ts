@@ -61,6 +61,7 @@ export interface MedicalCase {
 	generated_at: string | null
 	token: string | null
 	cito_status: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 export interface MedicalCaseInsert {
@@ -120,6 +121,7 @@ export interface MedicalCaseInsert {
 	token?: string | null
 	doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined
 	cito_status?: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent?: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 export interface MedicalCaseUpdate {
@@ -179,6 +181,7 @@ export interface MedicalCaseUpdate {
 	token?: string | null
 	doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined
 	cito_status?: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent?: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -227,6 +230,7 @@ export interface MedicalCaseWithPatient {
 	generated_by: string | null
 	version: number | null
 	cito_status: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent: boolean // Nueva columna para indicar si el email fue enviado
 	// Campos de patients
 	cedula: string
 	nombre: string
@@ -414,6 +418,8 @@ export const getCasesWithPatientInfo = async (
 		citoStatus?: 'positivo' | 'negativo'
 		doctorFilter?: string[]
 		originFilter?: string[]
+		sortField?: string
+		sortDirection?: 'asc' | 'desc'
 	},
 ) => {
 	try {
@@ -599,6 +605,29 @@ export const getCasesWithPatientInfo = async (
 				)
 			}
 
+			// Aplicar ordenamiento dinámico antes de paginar
+			const sortField = filters?.sortField || 'created_at'
+			const sortDirection = filters?.sortDirection || 'desc'
+
+			combinedResults.sort((a: any, b: any) => {
+				let aValue = a[sortField]
+				let bValue = b[sortField]
+
+				// Manejar valores null/undefined
+				if (aValue === null || aValue === undefined) aValue = ''
+				if (bValue === null || bValue === undefined) bValue = ''
+
+				// Convertir a minúsculas si son strings
+				if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+				if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+
+				if (sortDirection === 'asc') {
+					return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+				} else {
+					return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+				}
+			})
+
 			// Paginar los resultados
 			const totalCount = combinedResults.length
 			const from = (page - 1) * limit
@@ -718,7 +747,12 @@ export const getCasesWithPatientInfo = async (
 		const from = (page - 1) * limit
 		const to = from + limit - 1
 
-		const { data, error, count } = await query.range(from, to).order('created_at', { ascending: false })
+		// Aplicar ordenamiento dinámico
+		const sortField = filters?.sortField || 'created_at'
+		const sortDirection = filters?.sortDirection || 'desc'
+		const ascending = sortDirection === 'asc'
+
+		const { data, error, count } = await query.range(from, to).order(sortField, { ascending })
 
 		if (error) {
 			throw error
@@ -760,6 +794,13 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 	examType?: string
 	paymentStatus?: 'Incompleto' | 'Pagado'
 	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+	documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+	pdfStatus?: 'pendientes' | 'faltantes'
+	citoStatus?: 'positivo' | 'negativo'
+	doctorFilter?: string[]
+	originFilter?: string[]
+	sortField?: string
+	sortDirection?: 'asc' | 'desc'
 }) => {
 	try {
 		// Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing
@@ -927,6 +968,37 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 					filteredData = filteredData.filter((item) => item.payment_status === filters.paymentStatus)
 				}
 
+				// Filtro por estatus de documento
+				if (filters?.documentStatus) {
+					filteredData = filteredData.filter((item) => item.doc_aprobado === filters.documentStatus)
+				}
+
+				// Filtro por estatus de PDF
+				if (filters?.pdfStatus) {
+					if (filters.pdfStatus === 'pendientes') {
+						filteredData = filteredData.filter((item) => item.pdf_en_ready === false)
+					} else if (filters.pdfStatus === 'faltantes') {
+						filteredData = filteredData.filter((item) => item.pdf_en_ready === true)
+					}
+				}
+
+				// Filtro por estatus de citología
+				if (filters?.citoStatus) {
+					filteredData = filteredData.filter((item) => item.cito_status === filters.citoStatus)
+				}
+
+				// Filtro por médico tratante
+				if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+					filteredData = filteredData.filter(
+						(item) => item.treating_doctor && filters.doctorFilter!.includes(item.treating_doctor),
+					)
+				}
+
+				// Filtro por procedencia
+				if (filters?.originFilter && filters.originFilter.length > 0) {
+					filteredData = filteredData.filter((item) => item.origin && filters.originFilter!.includes(item.origin))
+				}
+
 				// Si el usuario es residente, solo mostrar casos de biopsia
 				if (filters?.userRole === 'residente') {
 					filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia')
@@ -941,6 +1013,27 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 						(item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
 					)
 				}
+
+				// Aplicar ordenamiento
+				const sortField = filters?.sortField || 'created_at'
+				const sortDirection = filters?.sortDirection || 'desc'
+
+				filteredData.sort((a: any, b: any) => {
+					let aValue = a[sortField]
+					let bValue = b[sortField]
+
+					if (aValue === null || aValue === undefined) aValue = ''
+					if (bValue === null || bValue === undefined) bValue = ''
+
+					if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+					if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+
+					if (sortDirection === 'asc') {
+						return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+					} else {
+						return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+					}
+				})
 
 				console.log(`✅ Obtenidos ${filteredData.length} casos médicos con búsqueda`)
 
@@ -1006,6 +1099,35 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 				query = query.eq('payment_status', filters.paymentStatus)
 			}
 
+			// Filtro por estatus de documento
+			if (filters?.documentStatus) {
+				query = query.eq('doc_aprobado', filters.documentStatus)
+			}
+
+			// Filtro por estatus de PDF
+			if (filters?.pdfStatus) {
+				if (filters.pdfStatus === 'pendientes') {
+					query = query.eq('pdf_en_ready', false)
+				} else if (filters.pdfStatus === 'faltantes') {
+					query = query.eq('pdf_en_ready', true)
+				}
+			}
+
+			// Filtro por estatus de citología
+			if (filters?.citoStatus) {
+				query = query.eq('cito_status', filters.citoStatus)
+			}
+
+			// Filtro por médico tratante
+			if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+				query = query.in('treating_doctor', filters.doctorFilter)
+			}
+
+			// Filtro por procedencia
+			if (filters?.originFilter && filters.originFilter.length > 0) {
+				query = query.in('origin', filters.originFilter)
+			}
+
 			// Si el usuario es residente, solo mostrar casos de biopsia
 			if (filters?.userRole === 'residente') {
 				query = query.eq('exam_type', 'Biopsia')
@@ -1023,7 +1145,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 			const from = (page - 1) * pageSize
 			const to = from + pageSize - 1
 
-			const { data, error, count } = await query.range(from, to).order('created_at', { ascending: false })
+			// Aplicar ordenamiento dinámico
+			const sortField = filters?.sortField || 'created_at'
+			const sortDirection = filters?.sortDirection || 'desc'
+			const ascending = sortDirection === 'asc'
+
+			const { data, error, count } = await query.range(from, to).order(sortField, { ascending })
 
 			if (error) {
 				throw error

@@ -22,6 +22,8 @@ const CasesPage: React.FC = () => {
 		originFilter?: string[]
 		dateFrom?: string
 		dateTo?: string
+		sortField?: string
+		sortDirection?: 'asc' | 'desc'
 	}>({})
 
 	// Obtener perfil del usuario para filtrar por rol

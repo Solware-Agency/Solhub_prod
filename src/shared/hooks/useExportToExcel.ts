@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { useToast } from './use-toast'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
+import { getAllCasesWithPatientInfo } from '@/services/supabase/cases/medical-cases-service'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 
 type UnifiedMedicalRecord = MedicalCaseWithPatient
@@ -38,162 +39,36 @@ const calculateCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
 	}
 }
 
-interface ExportFilters {
-	statusFilter: string
-	branchFilter: string
-	showPdfReadyOnly: boolean
-	selectedDoctors: string[]
-	citologyPositiveFilter: boolean
-	citologyNegativeFilter: boolean
-	searchTerm: string
-	dateRange?: { from?: Date; to?: Date }
+interface ServerFilters {
+	searchTerm?: string
+	branch?: string
+	dateFrom?: string
+	dateTo?: string
+	examType?: string
+	paymentStatus?: 'Incompleto' | 'Pagado'
+	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+	documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+	pdfStatus?: 'pendientes' | 'faltantes'
+	citoStatus?: 'positivo' | 'negativo'
+	doctorFilter?: string[]
+	originFilter?: string[]
+	sortField?: string
+	sortDirection?: 'asc' | 'desc'
 }
 
 export const useExportToExcel = () => {
 	const { toast } = useToast()
 	const [isModalOpen, setIsModalOpen] = useState(false)
 	const [pendingExport, setPendingExport] = useState<{
-		cases: UnifiedMedicalRecord[]
-		filters: ExportFilters
+		serverFilters: ServerFilters
+		estimatedCount: number
 		onConfirm: () => void
 	} | null>(null)
 
 	const exportToExcel = useCallback(
-		(cases: UnifiedMedicalRecord[], filters: ExportFilters, onConfirm: () => void) => {
-			// Validar que cases sea un array válido
-			if (!cases || !Array.isArray(cases)) {
-				toast({
-					title: '❌ Error en los datos',
-					description: 'No hay casos válidos para exportar.',
-					variant: 'destructive',
-				})
-				return
-			}
-			// Aplicar los mismos filtros que usa la tabla
-			const filteredCases = cases.filter((case_) => {
-				if (!case_) return false
-
-				// Doctor filter
-				const matchesDoctor =
-					filters.selectedDoctors.length === 0 ||
-					(case_.treating_doctor && filters.selectedDoctors.includes(case_.treating_doctor.trim()))
-
-				// Status filter - use calculated payment status
-				let matchesStatus = true
-				if (filters.statusFilter !== 'all') {
-					const { paymentStatus } = calculateCasePaymentStatus(case_)
-					const paymentStatusNormalized = paymentStatus.toLowerCase()
-					if (filters.statusFilter === 'Pagado') {
-						matchesStatus = paymentStatusNormalized === 'pagado'
-					} else if (filters.statusFilter === 'Incompleto') {
-						matchesStatus = paymentStatusNormalized !== 'pagado'
-					}
-				}
-
-				// Branch filter
-				const normalize = (str: string | null | undefined) => (str ? str.trim().toLowerCase() : '')
-				const matchesBranch =
-					filters.branchFilter === 'all' || normalize(case_.branch) === normalize(filters.branchFilter)
-
-				// PDF ready filter
-				let matchesPdfReady = true
-				if (filters.showPdfReadyOnly) {
-					const pdfReadyValue = case_.pdf_en_ready
-					if (pdfReadyValue === true) {
-						matchesPdfReady = true
-					} else if (typeof pdfReadyValue === 'string') {
-						matchesPdfReady = pdfReadyValue === 'true' || pdfReadyValue === 'TRUE'
-					} else {
-						matchesPdfReady = false
-					}
-				}
-
-				// Date range filter
-				let matchesDate = true
-				if (filters.dateRange?.from || filters.dateRange?.to) {
-					const formatLocalYmd = (date: Date) => {
-						const year = date.getFullYear()
-						const month = String(date.getMonth() + 1).padStart(2, '0')
-						const day = String(date.getDate()).padStart(2, '0')
-						return `${year}-${month}-${day}`
-					}
-
-					let createdDateStr: string | null = null
-					const rawCreatedAt = case_.created_at as unknown as string | null | undefined
-					if (typeof rawCreatedAt === 'string') {
-						if (/^\d{4}-\d{2}-\d{2}$/.test(rawCreatedAt.trim())) {
-							createdDateStr = rawCreatedAt.trim()
-						} else {
-							const d = new Date(rawCreatedAt)
-							if (!Number.isNaN(d.getTime())) {
-								createdDateStr = formatLocalYmd(d)
-							}
-						}
-					} else if (rawCreatedAt) {
-						const d = new Date(rawCreatedAt as unknown as string)
-						if (!Number.isNaN(d.getTime())) {
-							createdDateStr = formatLocalYmd(d)
-						}
-					}
-
-					if (createdDateStr) {
-						if (filters.dateRange.from && filters.dateRange.to) {
-							const fromStr = formatLocalYmd(filters.dateRange.from)
-							const toStr = formatLocalYmd(filters.dateRange.to)
-							matchesDate = createdDateStr >= fromStr && createdDateStr <= toStr
-						} else if (filters.dateRange.from) {
-							const fromStr = formatLocalYmd(filters.dateRange.from)
-							matchesDate = createdDateStr >= fromStr
-						} else if (filters.dateRange.to) {
-							const toStr = formatLocalYmd(filters.dateRange.to)
-							matchesDate = createdDateStr <= toStr
-						}
-					} else {
-						matchesDate = false
-					}
-				}
-
-				// Search filter
-				let matchesSearch = true
-				if (filters.searchTerm && filters.searchTerm.trim()) {
-					const searchLower = filters.searchTerm.toLowerCase()
-					matchesSearch =
-						(case_.nombre?.toLowerCase() || '').includes(searchLower) ||
-						(case_.cedula?.toLowerCase() || '').includes(searchLower) ||
-						(case_.treating_doctor?.toLowerCase() || '').includes(searchLower) ||
-						(case_.code?.toLowerCase() || '').includes(searchLower) ||
-						(case_.branch?.toLowerCase() || '').includes(searchLower) ||
-						(case_.exam_type?.toLowerCase() || '').includes(searchLower)
-				}
-
-				// Citology filters
-				let matchesCitology = true
-				if (filters.citologyPositiveFilter || filters.citologyNegativeFilter) {
-					const citoEstatus = case_.cito_status
-					if (filters.citologyPositiveFilter && filters.citologyNegativeFilter) {
-						matchesCitology = citoEstatus === 'positivo' || citoEstatus === 'negativo'
-					} else if (filters.citologyPositiveFilter) {
-						matchesCitology = citoEstatus === 'positivo'
-					} else if (filters.citologyNegativeFilter) {
-						matchesCitology = citoEstatus === 'negativo'
-					}
-				}
-
-				return (
-					matchesStatus &&
-					matchesBranch &&
-					matchesPdfReady &&
-					matchesDate &&
-					matchesSearch &&
-					matchesDoctor &&
-					matchesCitology
-				)
-			})
-
-			// Preparar datos para el modal
-			const count = filteredCases.length
-
-			if (count === 0) {
+		(serverFilters: ServerFilters, estimatedCount: number, onConfirm: () => void) => {
+			// Validar que hay casos para exportar
+			if (estimatedCount === 0) {
 				toast({
 					title: '❌ Sin datos para exportar',
 					description: 'No hay casos que coincidan con los filtros actuales.',
@@ -204,8 +79,8 @@ export const useExportToExcel = () => {
 
 			// Guardar datos pendientes y abrir modal
 			setPendingExport({
-				cases: filteredCases,
-				filters,
+				serverFilters,
+				estimatedCount,
 				onConfirm,
 			})
 			setIsModalOpen(true)
@@ -214,13 +89,23 @@ export const useExportToExcel = () => {
 	)
 
 	const generateExcel = useCallback(
-		(cases: UnifiedMedicalRecord[], filters: ExportFilters) => {
+		async (serverFilters: ServerFilters) => {
 			try {
+				// Mostrar mensaje de carga
+				toast({
+					title: '⏳ Obteniendo datos...',
+					description: 'Por favor espera mientras obtenemos todos los casos filtrados.',
+				})
+
+				// Obtener TODOS los casos filtrados del servidor
+				const response = await getAllCasesWithPatientInfo(serverFilters)
+				const cases = response.data
+
 				// Validar que cases sea un array válido
 				if (!cases || !Array.isArray(cases) || cases.length === 0) {
 					toast({
 						title: '❌ Sin datos para exportar',
-						description: 'No hay casos para exportar.',
+						description: 'No se encontraron casos para exportar.',
 						variant: 'destructive',
 					})
 					return
@@ -313,14 +198,19 @@ export const useExportToExcel = () => {
 
 				// Agregar información de filtros al nombre del archivo
 				const filterParts = []
-				if (filters.statusFilter !== 'all') filterParts.push(`estado_${filters.statusFilter}`)
-				if (filters.branchFilter !== 'all') filterParts.push(`sede_${filters.branchFilter}`)
-				if (filters.showPdfReadyOnly) filterParts.push('pdf_listo')
-				if (filters.selectedDoctors.length > 0) filterParts.push(`medicos_${filters.selectedDoctors.length}`)
-				if (filters.citologyPositiveFilter) filterParts.push('citologia_positiva')
-				if (filters.citologyNegativeFilter) filterParts.push('citologia_negativa')
-				if (filters.searchTerm) filterParts.push('busqueda')
-				if (filters.dateRange?.from || filters.dateRange?.to) filterParts.push('rango_fechas')
+				if (serverFilters.paymentStatus) filterParts.push(`estado_${serverFilters.paymentStatus}`)
+				if (serverFilters.branch) filterParts.push(`sede_${serverFilters.branch}`)
+				if (serverFilters.pdfStatus) filterParts.push(`pdf_${serverFilters.pdfStatus}`)
+				if (serverFilters.doctorFilter && serverFilters.doctorFilter.length > 0)
+					filterParts.push(`medicos_${serverFilters.doctorFilter.length}`)
+				if (serverFilters.originFilter && serverFilters.originFilter.length > 0)
+					filterParts.push(`origenes_${serverFilters.originFilter.length}`)
+				if (serverFilters.citoStatus) filterParts.push(`citologia_${serverFilters.citoStatus}`)
+				if (serverFilters.documentStatus) filterParts.push(`doc_${serverFilters.documentStatus}`)
+				if (serverFilters.examType) filterParts.push(`examen_${serverFilters.examType}`)
+				if (serverFilters.searchTerm) filterParts.push('busqueda')
+				if (serverFilters.dateFrom || serverFilters.dateTo) filterParts.push('rango_fechas')
+				if (serverFilters.sortField) filterParts.push(`orden_${serverFilters.sortField}_${serverFilters.sortDirection}`)
 
 				if (filterParts.length > 0) {
 					fileName += `_filtrado_${filterParts.join('_')}`
@@ -347,11 +237,12 @@ export const useExportToExcel = () => {
 		[toast],
 	)
 
-	const handleConfirmExport = useCallback(() => {
+	const handleConfirmExport = useCallback(async () => {
 		if (pendingExport) {
 			pendingExport.onConfirm()
-			generateExcel(pendingExport.cases, pendingExport.filters)
+			await generateExcel(pendingExport.serverFilters)
 			setPendingExport(null)
+			setIsModalOpen(false)
 		}
 	}, [pendingExport, generateExcel])
 

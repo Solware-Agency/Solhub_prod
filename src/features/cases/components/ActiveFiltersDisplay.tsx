@@ -20,6 +20,9 @@ interface ActiveFiltersDisplayProps {
 	pdfStatusFilter: string
 	examTypeFilter: string
 	documentStatusFilter: string
+
+	// Conteo de casos filtrados
+	totalFilteredCases?: number
 }
 
 const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
@@ -35,6 +38,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 	pdfStatusFilter,
 	examTypeFilter,
 	documentStatusFilter,
+	// totalFilteredCases,
 }) => {
 	// Check if there are any active filters
 	const hasActiveFilters =
@@ -55,6 +59,9 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 	if (!hasActiveFilters) {
 		return null
 	}
+
+	// Helper para formatear el conteo
+	
 
 	return (
 		<div className="mb-4">
