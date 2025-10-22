@@ -166,6 +166,7 @@ export type Database = {
 					created_by_display_name: string | null
 					date: string
 					doc_aprobado: Database['public']['Enums']['doc_aprobado_status']
+					email_sent: boolean
 					exam_type: string
 					exchange_rate: number | null
 					generated_at: string | null
@@ -212,6 +213,7 @@ export type Database = {
 					created_by_display_name?: string | null
 					date: string
 					doc_aprobado?: Database['public']['Enums']['doc_aprobado_status']
+					email_sent?: boolean
 					exam_type: string
 					exchange_rate?: number | null
 					generated_at?: string | null
@@ -258,6 +260,7 @@ export type Database = {
 					created_by_display_name?: string | null
 					date?: string
 					doc_aprobado?: Database['public']['Enums']['doc_aprobado_status']
+					email_sent?: boolean
 					exam_type?: string
 					exchange_rate?: number | null
 					generated_at?: string | null
@@ -636,6 +639,7 @@ export interface MedicalRecord {
 	generated_by: string | null
 	version: number | null
 	cito_status: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent: boolean // Nueva columna para indicar si el email fue enviado
 	// Campos de patients
 	cedula: string
 	nombre: string

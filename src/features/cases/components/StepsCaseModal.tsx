@@ -27,6 +27,8 @@ import {
 	DialogTitle,
 } from '@shared/components/ui/dialog'
 
+import type { Database } from '@shared/types/types'
+
 interface MedicalRecord {
 	id?: string
 	full_name?: string
@@ -42,8 +44,9 @@ interface MedicalRecord {
 	informe_qr?: string | null
 	code?: string | null
 	pdf_en_ready?: boolean | null
-	doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
-	cito_status?: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	doc_aprobado?: Database['public']['Enums']['doc_aprobado_status']
+	cito_status?: Database['public']['Enums']['cito_status_type']
+	email_sent?: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 interface StepsCaseModalProps {
@@ -1115,11 +1118,27 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				throw new Error(result.error || result.details || 'Error al enviar el email')
 			}
 
+			// Actualizar el campo email_sent en la base de datos
+			if (case_?.id) {
+				const { error: updateError } = await supabase
+					.from('medical_records_clean')
+					.update({ email_sent: true })
+					.eq('id', case_.id)
+
+				if (updateError) {
+					console.error('Error actualizando email_sent:', updateError)
+					// No mostramos error al usuario ya que el email se envió exitosamente
+				}
+			}
+
 			toast({
 				title: '✅ Correo enviado',
 				description: `Se ha enviado el informe al correo ${case_.email}`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
+
+			// Llamar a onSuccess para refrescar la lista de casos
+			onSuccess()
 		} catch (error) {
 			console.error('Error enviando correo:', error)
 			toast({

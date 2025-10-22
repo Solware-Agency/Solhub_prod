@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { ChevronUp, ChevronDown, Search, Maximize2, Download } from 'lucide-react'
+import { ChevronUp, ChevronDown, Search, Maximize2, Download, MailCheck } from 'lucide-react'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import type { DateRange } from 'react-day-picker'
 import { Button } from '@shared/components/ui/button'
@@ -1274,6 +1274,23 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																		</span>
 																	)
 																})()}
+																{case_.email_sent && (
+																	<span
+																		className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+																		title="Email enviado"
+																	>
+																		<MailCheck className="w-3 h-3" />
+																		Enviado
+																	</span>
+																) && !case_.email_sent && (
+																	<span
+																		className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+																		title="Email enviado"
+																	>
+																		<MailCheck className="w-3 h-3" />
+																		No enviado
+																	</span>
+																)}
 															</div>
 														</td>
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left">
@@ -1438,7 +1455,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 						pdfStatusFilter={pdfStatusFilter}
 						examTypeFilter={examTypeFilter}
 						documentStatusFilter={documentStatusFilter}
-						totalFilteredCases={pagination?.totalItems}
+						// totalFilteredCases={pagination?.totalItems}
 					/>
 				</div>
 				<div className="bg-white dark:bg-background rounded-xl h-full overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -1638,6 +1655,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 																		</span>
 																	)
 																})()}
+																{case_.email_sent && (
+																	<span
+																		className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+																		title="Email enviado"
+																	>
+																		<MailCheck className="w-3 h-3" />
+																		Enviado
+																	</span>
+																)}
+																{!case_.email_sent && (
+																	<span
+																		className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+																		title="Email enviado"
+																	>
+																		<MailCheck className="w-3 h-3" />
+																		No enviado
+																	</span>
+																)}
 															</div>
 														</td>
 														<td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left">

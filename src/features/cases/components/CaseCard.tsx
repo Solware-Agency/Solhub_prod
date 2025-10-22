@@ -1,6 +1,6 @@
 import React from 'react'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
-import { User } from 'lucide-react'
+import { User, MailCheck } from 'lucide-react'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import CaseActionsPopover from './CaseActionsPopover'
 import { getStatusColor } from './status'
@@ -30,6 +30,24 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 						</span>
 					)}
 				</div>
+				{case_.email_sent && (
+					<span
+						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+						title="Email enviado"
+					>
+						<MailCheck className="w-3 h-3" />
+						Enviado
+					</span>
+				)}
+				{!case_.email_sent && (
+					<span
+						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+						title="Email enviado"
+					>
+						<MailCheck className="w-3 h-3" />
+						No enviado
+					</span>
+				)}
 			</div>
 
 			<div className="grid grid-cols-1 gap-2 mb-2">

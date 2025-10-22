@@ -61,6 +61,7 @@ export interface MedicalCase {
 	generated_at: string | null
 	token: string | null
 	cito_status: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 export interface MedicalCaseInsert {
@@ -120,6 +121,7 @@ export interface MedicalCaseInsert {
 	token?: string | null
 	doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined
 	cito_status?: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent?: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 export interface MedicalCaseUpdate {
@@ -179,6 +181,7 @@ export interface MedicalCaseUpdate {
 	token?: string | null
 	doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined
 	cito_status?: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent?: boolean // Nueva columna para indicar si el email fue enviado
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -227,6 +230,7 @@ export interface MedicalCaseWithPatient {
 	generated_by: string | null
 	version: number | null
 	cito_status: 'positivo' | 'negativo' | null // Nueva columna para estado citológico
+	email_sent: boolean // Nueva columna para indicar si el email fue enviado
 	// Campos de patients
 	cedula: string
 	nombre: string

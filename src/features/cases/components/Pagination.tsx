@@ -45,7 +45,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	// Formatear números con separadores de miles
 	const formatNumber = (num: number) => num.toLocaleString('es-ES')
 
-	if (totalPages <= 1) return null
+	// if (totalPages <= 1) return null
 
 	return (
 		<div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-700">
