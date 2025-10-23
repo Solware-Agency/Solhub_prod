@@ -12,19 +12,20 @@ const CasesPage: React.FC = () => {
 	const [itemsPerPage, setItemsPerPage] = useState(50)
 	// Nuevos estados para filtros del servidor
 	const [serverFilters, setServerFilters] = useState<{
-		examType?: string
-		documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
-		pdfStatus?: 'pendientes' | 'faltantes'
-		citoStatus?: 'positivo' | 'negativo'
-		branch?: string
-		paymentStatus?: 'Incompleto' | 'Pagado'
-		doctorFilter?: string[]
-		originFilter?: string[]
-		dateFrom?: string
-		dateTo?: string
-		sortField?: string
-		sortDirection?: 'asc' | 'desc'
-	}>({})
+    examType?: string;
+    documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
+    pdfStatus?: 'pendientes' | 'faltantes';
+    citoStatus?: 'positivo' | 'negativo';
+    branch?: string;
+    paymentStatus?: 'Incompleto' | 'Pagado';
+    doctorFilter?: string[];
+    originFilter?: string[];
+    dateFrom?: string;
+    dateTo?: string;
+    emailSentStatus?: boolean;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
+  }>({});
 
 	// Obtener perfil del usuario para filtrar por rol
 	const { profile } = useUserProfile()
