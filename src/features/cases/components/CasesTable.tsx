@@ -1239,13 +1239,31 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       return (
         <>
           <div className='fixed inset-0 z-[999999] bg-white dark:bg-background h-screen flex flex-col overflow-hidden'>
+          <div className='px-3 sm:px-6'>
+            <ActiveFiltersDisplay
+              statusFilter={statusFilter}
+              branchFilter={branchFilter}
+              dateRange={dateRange}
+              showPdfReadyOnly={showPdfReadyOnly}
+              selectedDoctors={selectedDoctors}
+              selectedOrigins={selectedOrigins}
+              citologyPositiveFilter={citologyPositiveFilter}
+              citologyNegativeFilter={citologyNegativeFilter}
+              pendingCasesFilter={pendingCasesFilter}
+              pdfStatusFilter={pdfStatusFilter}
+              examTypeFilter={examTypeFilter}
+              documentStatusFilter={documentStatusFilter}
+              emailSentStatusFilter={emailSentStatusFilter}
+              // totalFilteredCases={pagination?.totalItems}
+            />
+          </div>
             {/* Fixed Header with Controls */}
             <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
-              <div className='flex flex-wrap items-center gap-2 sm:gap-4'>
+              <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
                 {/* Search and Filters Row */}
-                <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 flex-1'>
+                <div className='flex flex-wrap items-center gap-2 sm:gap-3 w-full'>
                   {/* Search - Acortada */}
-                  <div className='w-full sm:max-w-md relative flex-1'>
+                  <div className='flex-1 min-w-[200px] relative'>
                     <Input
                       type='text'
                       placeholder='Buscar por nombre, código, cédula, estudio o médico'
@@ -1306,30 +1324,26 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     onApplyFilters={handleApplyFilters}
                     onClearAllFilters={handleClearAllFilters}
                   />
+                  {/* Export Button */}
+                  <Button
+                    variant='outline'
+                    className='flex items-center gap-2 cursor-pointer'
+                    title='Exportar'
+                    onClick={handleExportToExcel}
+                  >
+                    <Download className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Exportar</span>
+                  </Button>
+
+                  {/* Close button */}
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsFullscreen(false)}
+                    className='text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-2 sm:px-3 py-1 rounded-md ml-auto sm:ml-0 transition-all duration-200 mr-8'
+                  >
+                    <span className='hidden sm:inline'>Cerrar</span> ✕
+                  </Button>
                 </div>
-
-                {/* Results count */}
-                <div className='text-sm text-gray-600 dark:text-gray-400 hidden sm:block'></div>
-
-                {/* Export Button */}
-                <Button
-                  variant='outline'
-                  className='flex items-center gap-2 cursor-pointer'
-                  title='Exportar'
-                  onClick={handleExportToExcel}
-                >
-                  <Download className='w-4 h-4' />
-                  <span className='hidden sm:inline'>Exportar</span>
-                </Button>
-
-                {/* Close button */}
-                <Button
-                  variant='outline'
-                  onClick={() => setIsFullscreen(false)}
-                  className='text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-2 sm:px-3 py-1 rounded-md ml-auto sm:ml-0 transition-all duration-200 mr-8'
-                >
-                  <span className='hidden sm:inline'>Cerrar</span> ✕
-                </Button>
               </div>
             </div>
 
@@ -1632,13 +1646,21 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               isFullscreen={isFullscreen}
             />
           )}
+          {/* Export Confirmation Modal */}
+          <ExportConfirmationModal
+            isOpen={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            onConfirm={handleConfirmExport}
+            onCancel={handleCancelExport}
+            casesCount={pendingExport?.estimatedCount || 0}
+          />
         </>
       );
     }
 
     return (
       <>
-        <div className='px-3 sm:px-6 pb-4'>
+        <div className='px-3 sm:px-6'>
           <ActiveFiltersDisplay
             statusFilter={statusFilter}
             branchFilter={branchFilter}

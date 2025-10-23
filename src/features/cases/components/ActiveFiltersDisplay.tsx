@@ -66,8 +66,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
   // Helper para formatear el conteo
 
   return (
-    <div className='mb-4'>
-      <div className='flex flex-wrap gap-2'>
+      <div className='flex flex-wrap gap-2 my-4'>
         {statusFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm rounded-full'>
             Estado: {statusFilter}
@@ -165,11 +164,10 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 
         {emailSentStatusFilter && emailSentStatusFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 text-sm rounded-full'>
-            Email: {emailSentStatusFilter === 'true' ? 'Enviado' : 'No Enviado'}
+            Caso: {emailSentStatusFilter === 'true' ? 'Enviado' : 'No Enviado'}
           </span>
         )}
       </div>
-    </div>
   );
 };
 
