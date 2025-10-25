@@ -1497,6 +1497,1124 @@ pnpm lint                  # ESLint
 
 ---
 
+## 🎛️ **DASHBOARD ADMINISTRATIVO (admin.solhub.app)**
+
+### **Objetivo:**
+Panel de control centralizado para gestionar todo el SaaS sin necesidad de acceder directamente a Supabase.
+
+### **Arquitectura:**
+```
+admin.solhub.app (Dashboard de Super Admin)
+├── Gestión de Laboratorios
+├── Gestión de Features
+├── Gestión de Códigos de Acceso
+├── Gestión de Usuarios Global
+├── Analytics y Reportes
+├── Configuración del Sistema
+├── Generador de Tipos TypeScript
+└── Soporte y Logs
+```
+
+---
+
+### **MÓDULOS DEL DASHBOARD:**
+
+#### **1. 🏥 GESTIÓN DE LABORATORIOS**
+
+**1.1 Lista de Laboratorios:**
+- Ver todos los laboratorios (tabla con paginación)
+- Filtrar por status (active, inactive, trial)
+- Buscar por nombre/slug
+- Ver estadísticas rápidas (usuarios, casos, ingresos)
+- Acciones rápidas (editar, duplicar, desactivar)
+
+**1.2 Crear/Editar Laboratorio:**
+```typescript
+// Formulario completo:
+{
+  // Información básica
+  slug: string              // 'labvargas' (único, URL-friendly)
+  name: string              // 'Laboratorio Vargas'
+  status: 'active' | 'inactive' | 'trial'
+  
+  // Contacto
+  contactEmail: string
+  contactPhone: string
+  address: string
+  city: string
+  country: string
+  
+  // Branding (ver sección de Branding)
+  branding: LaboratoryBranding
+  
+  // Configuración (ver sección de Config)
+  config: LaboratoryConfig
+  
+  // Features (ver sección de Features)
+  features: LaboratoryFeatures
+  
+  // Plan y límites
+  plan: {
+    name: 'free' | 'basic' | 'pro' | 'enterprise'
+    maxUsers: number
+    maxCasesPerMonth: number
+    maxStorageGB: number
+    price: number
+    billingCycle: 'monthly' | 'yearly'
+    startDate: Date
+    endDate: Date | null
+  }
+  
+  // Metadata
+  notes: string             // Notas internas
+  tags: string[]            // Tags para organización
+}
+```
+
+**1.3 Ver Detalles del Laboratorio:**
+- Dashboard específico del laboratorio
+- Usuarios activos/pendientes/inactivos
+- Casos del mes (gráfica)
+- Ingresos del mes (gráfica)
+- Uso de storage (barra de progreso)
+- Features habilitadas (lista)
+- Logs de actividad recientes
+- Botones de acción rápida
+
+---
+
+#### **2. 🚩 GESTIÓN DE FEATURES**
+
+**IMPORTANTE:** El sistema de features debe mantener **sincronización total** entre todos los laboratorios. Si se agrega una nueva feature al sistema, **TODOS los laboratorios deben tener esa key en su configuración**, aunque esté deshabilitada.
+
+**2.1 Catálogo de Features (Tabla Maestra):**
+```typescript
+// Tabla: feature_catalog
+interface FeatureCatalog {
+  id: string
+  key: string               // 'hasChatAI' (único)
+  name: string              // 'Chat con IA'
+  description: string       // Descripción detallada
+  category: 'core' | 'premium' | 'addon'
+  requiredPlan: 'free' | 'basic' | 'pro' | 'enterprise'
+  icon: string              // Nombre del ícono
+  isActive: boolean         // Si está disponible en el sistema
+  defaultValue: boolean     // Valor por defecto para nuevos labs
+  componentPath: string     // Ruta del componente (opcional)
+  order: number             // Orden de visualización
+  created_at: Date
+  updated_at: Date
+}
+
+// Features actuales del sistema:
+[
+  {
+    key: 'hasInmunoRequests',
+    name: 'Inmunorreacciones',
+    description: 'Módulo de gestión de inmunorreacciones',
+    category: 'core',
+    requiredPlan: 'basic',
+    defaultValue: true
+  },
+  {
+    key: 'hasChangelogModule',
+    name: 'Historial de Cambios',
+    description: 'Registro de cambios en casos médicos',
+    category: 'core',
+    requiredPlan: 'free',
+    defaultValue: true
+  },
+  {
+    key: 'hasChatAI',
+    name: 'Chat con IA',
+    description: 'Asistente virtual con inteligencia artificial',
+    category: 'premium',
+    requiredPlan: 'pro',
+    defaultValue: false
+  },
+  {
+    key: 'hasMultipleBranches',
+    name: 'Múltiples Sucursales',
+    description: 'Gestión de múltiples ubicaciones',
+    category: 'core',
+    requiredPlan: 'basic',
+    defaultValue: true
+  },
+  {
+    key: 'hasCitologyStatus',
+    name: 'Estados de Citología',
+    description: 'Seguimiento de estados en citología',
+    category: 'addon',
+    requiredPlan: 'basic',
+    defaultValue: false
+  },
+  {
+    key: 'hasPatientOriginFilter',
+    name: 'Filtro de Origen de Pacientes',
+    description: 'Filtrar pacientes por origen',
+    category: 'core',
+    requiredPlan: 'free',
+    defaultValue: true
+  },
+  {
+    key: 'hasRobotTracking',
+    name: 'Seguimiento de Robot',
+    description: 'Tracking de robot de laboratorio',
+    category: 'addon',
+    requiredPlan: 'pro',
+    defaultValue: false
+  }
+]
+```
+
+**2.2 Crear Nueva Feature:**
+```typescript
+// Formulario para agregar feature al sistema:
+{
+  key: string               // 'hasBillingModule' (camelCase, único)
+  name: string              // 'Módulo de Facturación'
+  description: string       // Descripción detallada
+  category: string          // Selector
+  requiredPlan: string      // Selector
+  icon: string              // Selector de ícono
+  defaultValue: boolean     // ¿Habilitada por defecto?
+  componentPath: string     // (opcional)
+}
+
+// Al crear una nueva feature:
+// 1. Se agrega a feature_catalog
+// 2. Se ejecuta un trigger que actualiza TODOS los laboratorios
+// 3. Se actualiza el tipo TypeScript automáticamente
+```
+
+**2.3 Asignar Features a Laboratorio:**
+```typescript
+// Interfaz visual tipo toggle:
+┌─────────────────────────────────────────────────────────┐
+│ Features para: Conspat                    Plan: Pro     │
+├─────────────────────────────────────────────────────────┤
+│ Feature                    | Plan     | Estado          │
+├─────────────────────────────────────────────────────────┤
+│ 🤖 Chat con IA            | Pro      | [✓] Habilitado  │
+│ 🧪 Inmunorreacciones      | Basic    | [✓] Habilitado  │
+│ 📝 Historial de Cambios   | Free     | [✓] Habilitado  │
+│ 🏢 Múltiples Sucursales   | Basic    | [✓] Habilitado  │
+│ 🔬 Estados de Citología   | Basic    | [✓] Habilitado  │
+│ 👥 Filtro de Origen       | Free     | [✓] Habilitado  │
+│ 🤖 Seguimiento de Robot   | Pro      | [ ] Deshabilitado│
+│ 💰 Módulo de Facturación  | Pro      | [ ] Deshabilitado│
+└─────────────────────────────────────────────────────────┘
+
+// Botones:
+- [Habilitar todas las del plan]
+- [Deshabilitar todas]
+- [Aplicar cambios]
+```
+
+**2.4 Sincronización de Features:**
+```sql
+-- IMPORTANTE: Todas las features nuevas se agregan con valor FALSE por defecto
+-- Esto garantiza que todos los laboratorios tengan la misma estructura
+
+CREATE OR REPLACE FUNCTION sync_new_feature()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Agregar la nueva feature a TODOS los laboratorios con valor FALSE
+  UPDATE laboratories
+  SET features = features || jsonb_build_object(NEW.key, false);
+  
+  RAISE NOTICE 'Feature "%" agregada a todos los laboratorios con valor FALSE', NEW.key;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_feature_created
+AFTER INSERT ON feature_catalog
+FOR EACH ROW
+WHEN (NEW.is_active = true)
+EXECUTE FUNCTION sync_new_feature();
+```
+
+**Comportamiento por Tipo:**
+
+| Tipo | Sincronización | Valor Inicial | Justificación |
+|------|---------------|---------------|---------------|
+| **Features** | ✅ SÍ (Todos) | `false` | Todos los labs deben tener las mismas keys para TypeScript |
+| **Branding** | ✅ SÍ (Estructura) | Valores por defecto | Todos tienen la misma estructura, personalizan según necesidad |
+| **Config** | ❌ NO | Valores por defecto | Cada lab tiene configuración única (webhooks, sucursales, etc.) |
+
+**Ejemplo de Sincronización:**
+```typescript
+// Admin agrega feature "hasBillingModule"
+// Resultado en TODOS los laboratorios:
+
+// Conspat:
+{
+  "hasChatAI": true,
+  "hasInmunoRequests": true,
+  "hasBillingModule": false  // ← NUEVO (false por defecto)
+}
+
+// Demo:
+{
+  "hasChatAI": false,
+  "hasInmunoRequests": false,
+  "hasBillingModule": false  // ← NUEVO (false por defecto)
+}
+
+// Lab Vargas:
+{
+  "hasChatAI": false,
+  "hasInmunoRequests": true,
+  "hasBillingModule": false  // ← NUEVO (false por defecto)
+}
+
+// Luego el admin habilita manualmente para los labs que lo necesiten
+```
+
+---
+
+#### **3. 📝 GENERADOR DE TIPOS TYPESCRIPT**
+
+**CRÍTICO:** Este módulo mantiene sincronizados los tipos TypeScript con la base de datos.
+
+**3.1 Página de Generador de Tipos:**
+```typescript
+// Funcionalidad:
+- Botón "Generar Tipos Actualizados"
+- Vista previa del código TypeScript
+- Botón "Copiar al Portapapeles"
+- Botón "Descargar types.ts"
+- Indicador de última actualización
+- Comparación con tipos actuales (diff)
+```
+
+**3.2 Lógica de Generación:**
+```typescript
+// Endpoint: /api/generate-types
+async function generateTypes() {
+  // 1. Obtener TODAS las features del catálogo
+  const { data: features } = await supabase
+    .from('feature_catalog')
+    .select('key')
+    .eq('isActive', true)
+    .order('order');
+  
+  // 2. Generar interface LaboratoryFeatures
+  const featuresInterface = `
+export interface LaboratoryFeatures {
+${features.map(f => `  ${f.key}: boolean`).join('\n')}
+}
+  `.trim();
+  
+  // 3. Generar interface LaboratoryBranding (ESTRUCTURA FIJA)
+  const brandingInterface = `
+export interface LaboratoryBranding {
+  logo?: string | null      // URL del logo o null
+  icon?: string             // Nombre del ícono (por defecto: "solhub")
+  primaryColor: string      // Color primario (por defecto: "#0066cc")
+  secondaryColor: string    // Color secundario (por defecto: "#00cc66")
+}
+  `.trim();
+  
+  // 4. Generar interface LaboratoryConfig (ESTRUCTURA FLEXIBLE)
+  const configInterface = `
+export interface LaboratoryConfig {
+  branches: string[]
+  paymentMethods: string[]
+  defaultExchangeRate: number
+  timezone: string
+  webhooks?: {              // OPCIONAL - No todos los labs lo tienen
+    generateDoc?: string
+    generatePdf?: string
+    sendEmail?: string
+  }
+  // Cada laboratorio puede tener configuraciones únicas
+  [key: string]: any        // Permite propiedades adicionales
+}
+  `.trim();
+  
+  // 5. Combinar todo
+  const fullTypes = `
+// =====================================================================
+// TIPOS GENERADOS AUTOMÁTICAMENTE DESDE EL DASHBOARD ADMIN
+// Última actualización: ${new Date().toISOString()}
+// NO EDITAR MANUALMENTE - Usar dashboard para agregar features
+// =====================================================================
+
+${featuresInterface}
+
+${brandingInterface}
+
+${configInterface}
+
+export interface Laboratory {
+  id: string
+  slug: string
+  name: string
+  status: 'active' | 'inactive' | 'trial'
+  features: LaboratoryFeatures
+  branding: LaboratoryBranding
+  config: LaboratoryConfig
+  created_at: string
+  updated_at: string
+}
+  `.trim();
+  
+  return fullTypes;
+}
+```
+
+**3.3 UI del Generador:**
+```tsx
+// Componente: TypesGenerator.tsx
+export function TypesGenerator() {
+  const [types, setTypes] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  
+  const handleGenerate = async () => {
+    setIsGenerating(true)
+    const response = await fetch('/api/generate-types')
+    const data = await response.json()
+    setTypes(data.types)
+    setIsGenerating(false)
+  }
+  
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-6">
+        Generador de Tipos TypeScript
+      </h1>
+      
+      <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
+        <p className="text-sm">
+          ⚠️ <strong>Importante:</strong> Cada vez que agregues una nueva feature,
+          debes generar los tipos actualizados y copiarlos a 
+          <code className="bg-yellow-100 px-1">src/shared/types/types.ts</code>
+        </p>
+      </div>
+      
+      <div className="flex gap-4 mb-6">
+        <Button onClick={handleGenerate} disabled={isGenerating}>
+          {isGenerating ? 'Generando...' : '🔄 Generar Tipos'}
+        </Button>
+        
+        {types && (
+          <>
+            <Button onClick={() => navigator.clipboard.writeText(types)}>
+              📋 Copiar al Portapapeles
+            </Button>
+            <Button onClick={() => downloadFile(types, 'types.ts')}>
+              💾 Descargar types.ts
+            </Button>
+          </>
+        )}
+      </div>
+      
+      {types && (
+        <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm overflow-auto max-h-96">
+          <pre>{types}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+**3.4 Flujo de Trabajo:**
+```
+1. Admin agrega nueva feature "hasBillingModule" en el dashboard
+   ↓
+2. Trigger SQL actualiza TODOS los laboratorios con valor FALSE
+   ↓
+3. Admin va a "Generador de Tipos"
+   ↓
+4. Click en "Generar Tipos"
+   ↓
+5. Sistema genera TypeScript actualizado con TODAS las features
+   ↓
+6. Admin copia el código
+   ↓
+7. Admin pega en src/shared/types/types.ts del proyecto principal
+   ↓
+8. Commit y push
+   ↓
+9. Deploy automático
+   ↓
+10. Admin habilita feature manualmente para labs específicos
+    ↓
+11. ✅ Todos los laboratorios tienen la nueva feature en su config
+    ✅ TypeScript está sincronizado
+    ✅ Frontend puede usar la nueva feature con FeatureGuard
+```
+
+**3.5 Triggers de Base de Datos:**
+
+```sql
+-- Tabla de catálogo de features
+CREATE TABLE IF NOT EXISTS public.feature_catalog (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  key text UNIQUE NOT NULL,
+  name text NOT NULL,
+  description text,
+  category text CHECK (category IN ('core', 'premium', 'addon')),
+  required_plan text CHECK (required_plan IN ('free', 'basic', 'pro', 'enterprise')),
+  icon text,
+  is_active boolean DEFAULT true,
+  default_value boolean DEFAULT false,  -- SIEMPRE FALSE
+  component_path text,
+  "order" integer DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Trigger: Sincronizar nueva feature a TODOS los laboratorios
+CREATE OR REPLACE FUNCTION sync_new_feature()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Agregar la nueva feature a TODOS los laboratorios con valor FALSE
+  UPDATE laboratories
+  SET features = features || jsonb_build_object(NEW.key, false);
+  
+  RAISE NOTICE 'Feature "%" agregada a todos los laboratorios con valor FALSE', NEW.key;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_feature_created
+AFTER INSERT ON feature_catalog
+FOR EACH ROW
+WHEN (NEW.is_active = true)
+EXECUTE FUNCTION sync_new_feature();
+
+-- Valores por defecto al crear laboratorio
+CREATE OR REPLACE FUNCTION set_default_laboratory_values()
+RETURNS TRIGGER AS $$
+DECLARE
+  all_features jsonb;
+BEGIN
+  -- Obtener TODAS las features activas del catálogo
+  SELECT jsonb_object_agg(key, false)
+  INTO all_features
+  FROM feature_catalog
+  WHERE is_active = true;
+  
+  -- Asignar features (todas en false)
+  IF NEW.features IS NULL THEN
+    NEW.features := all_features;
+  END IF;
+  
+  -- Asignar branding por defecto (ESTRUCTURA FIJA)
+  IF NEW.branding IS NULL THEN
+    NEW.branding := '{
+      "logo": null,
+      "icon": "solhub",
+      "primaryColor": "#0066cc",
+      "secondaryColor": "#00cc66"
+    }'::jsonb;
+  END IF;
+  
+  -- Asignar config por defecto (ÚNICO POR LAB)
+  IF NEW.config IS NULL THEN
+    NEW.config := '{
+      "branches": ["Principal"],
+      "paymentMethods": ["Efectivo", "Zelle"],
+      "defaultExchangeRate": 36.5,
+      "timezone": "America/Caracas"
+    }'::jsonb;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER before_insert_laboratory
+BEFORE INSERT ON laboratories
+FOR EACH ROW
+EXECUTE FUNCTION set_default_laboratory_values();
+```
+
+**3.6 Ejemplos de Comportamiento:**
+
+**Escenario 1: Agregar Nueva Feature**
+```
+1. Admin agrega "hasBillingModule" en dashboard
+   ↓
+2. Trigger SQL actualiza TODOS los laboratorios:
+   - Conspat: hasBillingModule = false
+   - Demo: hasBillingModule = false
+   - Lab Vargas: hasBillingModule = false
+   ↓
+3. Admin genera tipos TypeScript
+   ↓
+4. TypeScript actualizado con nueva feature
+   ↓
+5. Admin habilita feature solo para Conspat
+   - Conspat: hasBillingModule = true ✅
+   - Demo: hasBillingModule = false
+   - Lab Vargas: hasBillingModule = false
+```
+
+**Escenario 2: Configurar Webhooks (Config)**
+```
+1. Admin configura webhooks para Conspat
+   - Conspat.config.webhooks = { generateDoc: "..." }
+   ↓
+2. Demo y Lab Vargas NO se actualizan
+   - Demo.config.webhooks = undefined
+   - Lab Vargas.config.webhooks = undefined
+   ↓
+3. Cada lab tiene su propia configuración única
+```
+
+**Escenario 3: Personalizar Branding**
+```
+1. Admin sube logo para Conspat
+   - Conspat.branding.logo = "/logos/conspat.png"
+   ↓
+2. Demo y Lab Vargas mantienen valores por defecto
+   - Demo.branding.logo = null
+   - Lab Vargas.branding.logo = null
+   ↓
+3. Todos tienen la misma estructura, diferentes valores
+```
+
+---
+
+#### **4. 🔑 GESTIÓN DE CÓDIGOS DE ACCESO**
+
+**4.1 Lista de Códigos:**
+- Ver todos los códigos
+- Filtrar por laboratorio
+- Filtrar por status (activo/inactivo/expirado)
+- Ver usos actuales vs máximo
+- Buscar por código
+
+**4.2 Crear Código:**
+```typescript
+// Formulario:
+{
+  laboratory_id: string     // Selector de laboratorio
+  code: string              // Auto-generado o manual
+  max_uses: number | null   // null = ilimitado
+  expires_at: Date | null   // null = no expira
+  is_active: boolean
+  
+  // Opciones avanzadas:
+  allowedRoles: string[]    // Roles permitidos
+  autoApprove: boolean      // Aprobar automáticamente
+  welcomeMessage: string    // Mensaje personalizado
+}
+```
+
+**4.3 Generador Masivo:**
+```typescript
+// Generar múltiples códigos:
+{
+  laboratory_id: string
+  quantity: number          // Cantidad de códigos
+  prefix: string            // 'CONSPAT-'
+  max_uses: number
+  expires_at: Date
+}
+
+// Resultado: CSV descargable
+// CONSPAT-A1B2C3
+// CONSPAT-D4E5F6
+// CONSPAT-G7H8I9
+```
+
+---
+
+#### **5. 👥 GESTIÓN DE USUARIOS GLOBAL**
+
+**5.1 Ver Todos los Usuarios:**
+- Tabla global de usuarios de todos los laboratorios
+- Filtrar por laboratorio
+- Filtrar por rol
+- Filtrar por status (aprobado/pendiente/suspendido)
+- Buscar por nombre/email
+
+**5.2 Acciones:**
+- Ver detalles completos
+- Cambiar laboratorio (mover usuario)
+- Cambiar rol
+- Aprobar/rechazar
+- Suspender/reactivar
+- Eliminar (con confirmación)
+- Ver historial de actividad
+
+---
+
+#### **6. 📊 ANALYTICS Y REPORTES**
+
+**6.1 Dashboard Global:**
+- Total de laboratorios activos
+- Total de usuarios activos
+- Casos procesados este mes
+- Ingresos totales
+- Uso de storage total
+- Gráficas de crecimiento
+
+**6.2 Reportes por Laboratorio:**
+- Usuarios activos/inactivos
+- Casos del mes/año
+- Ingresos del mes/año
+- Features más usadas
+- Tiempo promedio de procesamiento
+
+**6.3 Reportes de Features:**
+- Features más usadas
+- Features menos usadas
+- Laboratorios por feature
+- Adopción de nuevas features
+
+**6.4 Reportes Financieros:**
+- Ingresos por laboratorio
+- Ingresos por plan
+- MRR (Monthly Recurring Revenue)
+- ARR (Annual Recurring Revenue)
+- Churn rate
+- LTV (Lifetime Value)
+
+---
+
+#### **7. ⚙️ CONFIGURACIÓN DEL SISTEMA**
+
+**7.1 Configuración General:**
+```typescript
+{
+  systemName: string            // 'Solhub'
+  systemEmail: string           // 'noreply@solhub.app'
+  supportEmail: string          // 'support@solhub.app'
+  defaultTimezone: string
+  defaultLanguage: string
+  maintenanceMode: boolean
+  allowNewRegistrations: boolean
+}
+```
+
+**7.2 Planes y Precios:**
+```typescript
+interface Plan {
+  id: string
+  name: string                  // 'Pro'
+  description: string
+  price: number
+  billingCycle: 'monthly' | 'yearly'
+  features: string[]            // Keys de features incluidas
+  limits: {
+    maxUsers: number
+    maxCasesPerMonth: number
+    maxStorageGB: number
+  }
+  isActive: boolean
+  order: number
+}
+```
+
+**7.3 Plantillas de Email:**
+- Email de bienvenida
+- Email de aprobación
+- Email de rechazo
+- Email de reset de password
+- Email de nuevo caso
+- Email de resultado listo
+- Editor WYSIWYG para cada plantilla
+- Variables dinámicas: {{userName}}, {{laboratoryName}}, etc.
+
+---
+
+#### **8. 🛠️ SOPORTE Y LOGS**
+
+**8.1 Logs del Sistema:**
+- Logs de autenticación
+- Logs de cambios en laboratorios
+- Logs de cambios en features
+- Logs de errores
+- Logs de webhooks
+- Filtros por fecha, tipo, laboratorio, usuario, severidad
+
+**8.2 Sistema de Tickets:**
+```typescript
+interface SupportTicket {
+  id: string
+  laboratory_id: string
+  user_id: string
+  subject: string
+  description: string
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  category: string
+  created_at: Date
+  updated_at: Date
+  assigned_to: string
+  messages: Message[]
+}
+```
+
+**8.3 Monitoreo:**
+- Status de Supabase
+- Status de Vercel
+- Status de N8N
+- Tiempo de respuesta de API
+- Uso de recursos
+- Alertas automáticas
+
+---
+
+### **STACK TECNOLÓGICO DEL DASHBOARD:**
+
+```typescript
+// Frontend
+- Next.js 14 (App Router)
+- TypeScript
+- TailwindCSS
+- shadcn/ui
+- React Hook Form + Zod
+- TanStack Query
+- Recharts (gráficas)
+
+// Backend
+- Supabase (misma DB)
+- RLS policies específicas para admins
+- Edge Functions para lógica compleja
+
+// Hosting
+- Vercel (admin.solhub.app)
+```
+
+---
+
+### **RLS POLICIES PARA EL DASHBOARD:**
+
+```sql
+-- Tabla de admins
+CREATE TABLE public.admin_users (
+  id uuid PRIMARY KEY REFERENCES auth.users(id),
+  email text UNIQUE NOT NULL,
+  role text CHECK (role IN ('superadmin', 'support', 'analyst')),
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Policy: Solo superadmins pueden ver laboratorios
+CREATE POLICY "Superadmins can view all laboratories"
+ON laboratories FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM admin_users
+    WHERE admin_users.id = auth.uid()
+    AND admin_users.role = 'superadmin'
+    AND admin_users.is_active = true
+  )
+);
+
+-- Policy: Solo superadmins pueden modificar laboratorios
+CREATE POLICY "Superadmins can modify laboratories"
+ON laboratories FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM admin_users
+    WHERE admin_users.id = auth.uid()
+    AND admin_users.role = 'superadmin'
+    AND admin_users.is_active = true
+  )
+);
+```
+
+---
+
+### **FILOSOFÍA DE DESARROLLO:**
+
+**🎯 FUNCIONALIDAD PRIMERO, DISEÑO DESPUÉS**
+
+El dashboard debe ser **funcional antes que bonito**. El objetivo inicial es:
+- ✅ Que funcione correctamente
+- ✅ Que cumpla su propósito
+- ✅ Que sea usable (no necesita ser hermoso)
+
+**NO es necesario:**
+- ❌ Animaciones elaboradas
+- ❌ Diseños complejos
+- ❌ Gráficas sofisticadas
+- ❌ UI/UX perfecta desde el inicio
+
+**Enfoque:**
+```
+1. Hacer que funcione (MVP)
+   ↓
+2. Hacer que funcione bien (Core)
+   ↓
+3. Hacer que se vea bien (Polish)
+```
+
+**Ejemplo de UI Inicial:**
+```
+┌─────────────────────────────────────────┐
+│ Solhub Admin                            │
+├─────────────────────────────────────────┤
+│ [Crear Laboratorio]                     │
+│                                         │
+│ Laboratorios:                           │
+│ - Conspat [Editar] [Ver]                │
+│ - Demo [Editar] [Ver]                   │
+│                                         │
+│ Features:                               │
+│ - hasChatAI [✓] Activo                  │
+│ - hasRobotTracking [ ] Inactivo         │
+│                                         │
+│ [Generar Tipos TypeScript]              │
+└─────────────────────────────────────────┘
+
+// ✅ Simple, funcional, cumple su propósito
+// ❌ No necesita ser bonito al inicio
+```
+
+---
+
+### **PRIORIDADES DE IMPLEMENTACIÓN:**
+
+#### **FASE 1 (MVP - 2 semanas) - FUNCIONALIDAD BÁSICA:**
+**Objetivo:** Que funcione, no que sea bonito
+
+1. ✅ Gestión de Laboratorios (CRUD básico)
+   - Formulario simple con inputs básicos
+   - Tabla HTML simple para listar
+   - Sin animaciones, sin diseño elaborado
+
+2. ✅ Gestión de Features (toggle on/off)
+   - Checkboxes simples
+   - Lista básica de features
+   - Botón para aplicar cambios
+
+3. ✅ **Generador de Tipos TypeScript** (CRÍTICO)
+   - Botón "Generar"
+   - Textarea con el código
+   - Botón "Copiar"
+   - **Esto es lo más importante**
+
+4. ✅ Gestión de Códigos (crear y listar)
+   - Formulario simple
+   - Tabla básica
+   - Sin validaciones complejas
+
+5. ✅ Ver usuarios global
+   - Tabla simple con datos
+   - Filtros básicos (dropdowns)
+
+**UI Recomendada para Fase 1:**
+- HTML + CSS básico
+- Formularios simples
+- Tablas sin estilos elaborados
+- Botones básicos
+- **Prioridad: Que funcione**
+
+---
+
+#### **FASE 2 (Core - 2 semanas) - FUNCIONALIDAD COMPLETA:**
+**Objetivo:** Que funcione bien
+
+6. ✅ Dashboard con métricas básicas
+   - Números simples (total labs, total usuarios)
+   - Sin gráficas complejas
+
+7. ✅ Editar configuración de laboratorios
+   - Formulario completo pero simple
+   - Validaciones básicas
+
+8. ✅ Crear nueva feature (con sincronización automática)
+   - Formulario simple
+   - Trigger SQL funcionando
+   - Sincronización verificada
+
+9. ✅ Logs básicos
+   - Tabla simple con logs
+   - Filtros básicos
+
+**UI Recomendada para Fase 2:**
+- Mejorar formularios (validaciones)
+- Agregar feedback visual básico (success/error)
+- Tablas con paginación simple
+- **Prioridad: Que funcione bien**
+
+---
+
+#### **FASE 3 (Polish - 2 semanas) - MEJORAS DE UX:**
+**Objetivo:** Que se vea bien y sea agradable de usar
+
+10. ✅ Mejorar diseño visual
+    - Aplicar TailwindCSS correctamente
+    - Componentes de shadcn/ui
+    - Colores y espaciados consistentes
+
+11. ✅ Agregar gráficas
+    - Recharts para analytics
+    - Gráficas simples pero útiles
+
+12. ✅ Mejorar UX
+    - Animaciones sutiles
+    - Loading states
+    - Mensajes de confirmación
+
+13. ✅ Responsive design
+    - Que funcione en mobile
+    - Sidebar colapsable
+
+**UI Recomendada para Fase 3:**
+- shadcn/ui components
+- TailwindCSS styling
+- Animaciones con Framer Motion
+- **Prioridad: Que se vea bien**
+
+---
+
+#### **FASE 4 (Advanced - 3 semanas) - FUNCIONALIDADES AVANZADAS:**
+**Objetivo:** Features adicionales
+
+14. ✅ Analytics avanzados
+15. ✅ Sistema de tickets
+16. ✅ Plantillas de email
+17. ✅ Webhooks
+18. ✅ Planes y precios
+19. ✅ Reportes financieros
+20. ✅ Monitoreo de sistema
+21. ✅ Roles de admin
+
+---
+
+### **ORDEN DE DESARROLLO RECOMENDADO:**
+
+```
+Semana 1-2: FUNCIONALIDAD BÁSICA
+├── Día 1-2: Setup proyecto + Auth
+├── Día 3-4: CRUD Laboratorios (simple)
+├── Día 5-6: Gestión Features (simple)
+├── Día 7-8: Generador de Tipos (CRÍTICO)
+└── Día 9-10: Testing básico
+
+Semana 3-4: FUNCIONALIDAD COMPLETA
+├── Día 11-12: Códigos de acceso
+├── Día 13-14: Usuarios global
+├── Día 15-16: Dashboard métricas
+└── Día 17-20: Testing + Bugs
+
+Semana 5-6: MEJORAS DE UX (OPCIONAL)
+├── Día 21-23: Aplicar diseño
+├── Día 24-26: Gráficas
+└── Día 27-30: Polish general
+
+Semana 7+: FUNCIONALIDADES AVANZADAS (FUTURO)
+└── Según necesidad
+```
+
+---
+
+### **EJEMPLO DE PROGRESIÓN:**
+
+**Fase 1 (Funcional pero feo):**
+```html
+<!-- Formulario simple -->
+<form>
+  <label>Nombre del Lab:</label>
+  <input type="text" name="name">
+  
+  <label>Slug:</label>
+  <input type="text" name="slug">
+  
+  <button>Crear</button>
+</form>
+
+<!-- ✅ Funciona, ❌ No es bonito -->
+```
+
+**Fase 2 (Funcional y validado):**
+```tsx
+// Con validaciones
+<form onSubmit={handleSubmit}>
+  <input 
+    type="text" 
+    value={name}
+    onChange={(e) => setName(e.target.value)}
+    required
+  />
+  {error && <span>{error}</span>}
+  <button disabled={isLoading}>
+    {isLoading ? 'Creando...' : 'Crear'}
+  </button>
+</form>
+
+// ✅ Funciona bien, ⚠️ Todavía no es bonito
+```
+
+**Fase 3 (Funcional y bonito):**
+```tsx
+// Con shadcn/ui y TailwindCSS
+<Form>
+  <FormField
+    control={form.control}
+    name="name"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Nombre del Laboratorio</FormLabel>
+        <FormControl>
+          <Input placeholder="Ej: Lab Vargas" {...field} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+  <Button type="submit" disabled={isLoading}>
+    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    Crear Laboratorio
+  </Button>
+</Form>
+
+// ✅ Funciona bien, ✅ Se ve bien
+```
+
+---
+
+### **FLUJO DE TRABAJO COMPLETO:**
+
+```
+1. Admin crea nuevo laboratorio "Lab Vargas"
+   ↓
+2. Sistema crea laboratorio con TODAS las features del catálogo
+   ↓
+3. Admin habilita solo las features del plan del laboratorio
+   ↓
+4. Admin genera código de acceso "VARGAS2024"
+   ↓
+5. Lab Owner de Vargas recibe el código
+   ↓
+6. Empleados se registran con el código
+   ↓
+7. Lab Owner aprueba usuarios desde su dashboard
+   ↓
+8. Usuarios empiezan a usar el sistema
+   ↓
+9. Admin monitorea uso y analytics
+   ↓
+10. Admin agrega nueva feature "hasBillingModule"
+    ↓
+11. Sistema actualiza TODOS los laboratorios con la nueva key
+    ↓
+12. Admin genera tipos TypeScript actualizados
+    ↓
+13. Admin copia tipos al proyecto principal
+    ↓
+14. Deploy automático
+    ↓
+15. Admin habilita feature solo para laboratorios con plan Pro
+    ↓
+16. ✅ Sistema funcionando con nueva feature
+```
+
+---
+
 ### 🚀 **Próximos Pasos Recomendados:**
 
 #### **Opción 1: Lanzar a Producción YA** ✅ (Recomendado)
