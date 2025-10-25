@@ -88,30 +88,56 @@ const MainUsers: React.FC = () => {
 		queryKey: ['users'],
 		queryFn: async (): Promise<UserProfile[]> => {
 			try {
-				// Obtener perfiles de usuarios
-				const { data: profiles, error: profilesError } = await supabase
-					.from('profiles')
-					.select('*')
-					.order('created_at', { ascending: false })
+        // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+        const {
+          data: { user: currentAuthUser },
+        } = await supabase.auth.getUser();
+        if (!currentAuthUser) {
+          throw new Error('Usuario no autenticado');
+        }
 
-				if (profilesError) throw profilesError
+        const { data: currentProfile, error: currentProfileError } =
+          await supabase
+            .from('profiles')
+            .select('laboratory_id')
+            .eq('id', currentAuthUser.id)
+            .single();
 
-				// Simular contraseñas para demostración (en un sistema real, nunca se deberían mostrar contraseñas)
-				// Esto es solo para fines de demostración
-				const usersWithPasswords =
-					profiles?.map((profile) => ({
-						...profile,
-						email_confirmed_at: undefined, // Placeholder
-						last_sign_in_at: undefined, // Placeholder
-						password: '********', // Contraseña simulada para demostración
-						role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner', // Asegurar que el tipo sea correcto
-						created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
-						updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
-						estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
-					})) || []
+        if (currentProfileError || !currentProfile?.laboratory_id) {
+          throw new Error('Usuario no tiene laboratorio asignado');
+        }
 
-				return usersWithPasswords
-			} catch (error) {
+        // 🔐 MULTI-TENANT: Filtrar perfiles por laboratory_id
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('laboratory_id', currentProfile.laboratory_id)
+          .order('created_at', { ascending: false });
+
+        if (profilesError) throw profilesError;
+
+        // Simular contraseñas para demostración (en un sistema real, nunca se deberían mostrar contraseñas)
+        // Esto es solo para fines de demostración
+        const usersWithPasswords =
+          profiles?.map((profile) => ({
+            ...profile,
+            email_confirmed_at: undefined, // Placeholder
+            last_sign_in_at: undefined, // Placeholder
+            password: '********', // Contraseña simulada para demostración
+            role: profile.role as
+              | 'owner'
+              | 'employee'
+              | 'residente'
+              | 'citotecno'
+              | 'patologo'
+              | 'medicowner', // Asegurar que el tipo sea correcto
+            created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
+            updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
+            estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
+          })) || [];
+
+        return usersWithPasswords;
+      } catch (error) {
 				console.error('Error fetching users:', error)
 				throw error
 			}

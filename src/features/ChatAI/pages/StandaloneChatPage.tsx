@@ -190,7 +190,7 @@ const StandaloneChatPage = () => {
 					<div className="w-px h-6 bg-border"></div>
 
 					{/* Título del chat */}
-					<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-Conspat to-Conspat/80 flex items-center justify-center shadow-lg shadow-Conspat/20">
+					<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-labPrimary to-labPrimary/80 flex items-center justify-center shadow-lg shadow-labPrimary/20">
 						<Sparkles className="w-5 h-5 text-white" />
 					</div>
 					<div>
@@ -205,8 +205,8 @@ const StandaloneChatPage = () => {
 				<div className="max-w-4xl mx-auto">
 					{messages.length === 0 && (
 						<div className="text-center text-muted-foreground mt-32">
-							<div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-Conspat/10 to-Conspat/5 flex items-center justify-center border border-Conspat/20">
-								<MessageCircle className="w-8 h-8 text-Conspat" />
+							<div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-labPrimary/10 to-labPrimary/5 flex items-center justify-center border border-labPrimary/20">
+								<MessageCircle className="w-8 h-8 text-labPrimary" />
 							</div>
 							<h3 className="text-lg font-medium text-foreground mb-2">¡Hola! Soy tu asistente IA</h3>
 							<p className="text-muted-foreground max-w-md mx-auto">
@@ -221,7 +221,7 @@ const StandaloneChatPage = () => {
 							className={`flex gap-4 mb-6 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
 						>
 							{message.role === 'assistant' && (
-								<div className="w-9 h-9 rounded-xl bg-gradient-to-br from-Conspat to-Conspat/80 flex items-center justify-center text-white shadow-lg shadow-Conspat/20 shrink-0 mt-1">
+								<div className="w-9 h-9 rounded-xl bg-gradient-to-br from-labPrimary to-labPrimary/80 flex items-center justify-center text-white shadow-lg shadow-labPrimary/20 shrink-0 mt-1">
 									<Bot className="w-4 h-4" />
 								</div>
 							)}
@@ -229,7 +229,7 @@ const StandaloneChatPage = () => {
 							<div
 								className={`max-w-[75%] rounded-2xl px-4 py-4 shadow-sm ${
 									message.role === 'user'
-										? 'bg-Conspat text-white shadow-Conspat/20'
+										? 'bg-labPrimary text-white shadow-labPrimary/20'
 										: 'bg-card border border-border/50 text-card-foreground'
 								}`}
 							>
@@ -265,14 +265,14 @@ const StandaloneChatPage = () => {
 								onKeyPress={handleKeyPress}
 								placeholder="Escribe tu mensaje..."
 								disabled={isLoading}
-								className="resize-none min-h-[44px] bg-background/80 border-border/50 focus:border-Conspat/50 focus:ring-Conspat/20 placeholder:text-muted-foreground/60"
+								className="resize-none min-h-[44px] bg-background/80 border-border/50 focus:border-labPrimary/50 focus:ring-labPrimary/20 placeholder:text-muted-foreground/60"
 							/>
 						</div>
 						<Button
 							onClick={sendMessage}
 							disabled={isLoading || !input.trim()}
 							size="default"
-							className="bg-Conspat hover:bg-Conspat/90 text-white shadow-lg shadow-Conspat/20 min-h-[44px] px-6"
+							className="bg-labPrimary hover:bg-labPrimary/90 text-white shadow-lg shadow-labPrimary/20 min-h-[44px] px-6"
 						>
 							<Send className="size-4" />
 						</Button>

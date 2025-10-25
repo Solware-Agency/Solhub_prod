@@ -187,21 +187,45 @@ const ChangelogTable: React.FC = () => {
 
 		setIsDeleting(logToDelete)
 		try {
-			const { error } = await supabase.from('change_logs').delete().eq('id', logToDelete)
+      // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
 
-			if (error) {
-				throw error
-			}
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('laboratory_id')
+        .eq('id', user.id)
+        .single();
 
-			toast({
-				title: '✅ Registro eliminado',
-				description: 'El registro del historial ha sido eliminado exitosamente.',
-				className: 'bg-green-100 border-green-400 text-green-800',
-			})
+      if (profileError || !userProfile?.laboratory_id) {
+        throw new Error('Usuario no tiene laboratorio asignado');
+      }
 
-			// Refresh data
-			refetch()
-		} catch (error) {
+      // 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
+      const { error } = await supabase
+        .from('change_logs')
+        .delete()
+        .eq('id', logToDelete)
+        .eq('laboratory_id', userProfile.laboratory_id); // 🔐 VALIDACIÓN MULTI-TENANT
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: '✅ Registro eliminado',
+        description:
+          'El registro del historial ha sido eliminado exitosamente.',
+        className: 'bg-green-100 border-green-400 text-green-800',
+      });
+
+      // Refresh data
+      refetch();
+    } catch (error) {
 			console.error('Error deleting change log:', error)
 			toast({
 				title: '❌ Error al eliminar',

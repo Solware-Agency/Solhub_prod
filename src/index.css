@@ -1,6 +1,31 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/* =====================================================================
+   CSS VARIABLES DEL LABORATORIO
+   Estas variables se inyectan dinámicamente por LaboratoryThemeProvider
+   ===================================================================== */
+:root {
+  /* Colores principales del laboratorio (valores por defecto) */
+  --labPrimaryColor: #0066cc;
+  --labSecondaryColor: #00cc66;
+
+  /* Variantes con opacidad */
+  --labPrimaryColor10: #0066cc1A;
+  /* 10% opacity */
+  --labPrimaryColor20: #0066cc33;
+  /* 20% opacity */
+  --labPrimaryColor50: #0066cc80;
+  /* 50% opacity */
+
+  --labSecondaryColor10: #00cc661A;
+  /* 10% opacity */
+  --labSecondaryColor20: #00cc6633;
+  /* 20% opacity */
+  --labSecondaryColor50: #00cc6680;
+  /* 50% opacity */
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -14,9 +39,121 @@
   .mobile-table-card {
     @apply bg-white dark:bg-background rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-transform duration-300;
   }
+
+  /* =====================================================================
+     UTILIDADES CON COLORES DEL LABORATORIO
+     ===================================================================== */
+
+  /* Colores de texto */
+  .text-labPrimary {
+    color: var(--labPrimaryColor);
+  }
+
+  .text-lab-secondary {
+    color: var(--labSecondaryColor);
+  }
+
+  /* Colores de fondo */
+  .bg-labPrimary {
+    background-color: var(--labPrimaryColor);
+  }
+
+  .bg-lab-secondary {
+    background-color: var(--labSecondaryColor);
+  }
+
+  /* Bordes */
+  .border-labPrimary {
+    border-color: var(--labPrimaryColor);
+  }
+
+  /* Hover states */
+  .hover\:text-labPrimary:hover {
+    color: var(--labPrimaryColor);
+  }
+
+  .hover\:bg-labPrimary:hover {
+    background-color: var(--labPrimaryColor);
+  }
+
+  /* Colores de fondo */
+  /* .bg-lab-primary {
+    background-color: var(--labPrimaryColor);
+  }
+
+  .bg-lab-secondary {
+    background-color: var(--labSecondaryColor);
+  }
+
+  .bg-lab-primary-light {
+    background-color: var(--labPrimaryColor10);
+  }
+
+  .bg-lab-primary-lighter {
+    background-color: var(--labPrimaryColor20);
+  } */
+
+  /* Bordes */
+  /* .border-lab-primary {
+    border-color: var(--labPrimaryColor);
+  }
+
+  .border-lab-secondary {
+    border-color: var(--labSecondaryColor);
+  } */
+
+  /* Botones con colores del laboratorio */
+  /* .btn-lab-primary {
+    background-color: var(--labPrimaryColor);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: opacity 0.2s;
+  } */
+
+  /* .btn-lab-primary:hover {
+    opacity: 0.9;
+  } */
+
+  /* .btn-lab-secondary {
+    background-color: var(--labSecondaryColor);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: opacity 0.2s;
+  } */
+
+  /* .btn-lab-secondary:hover {
+    opacity: 0.9;
+  } */
+
+  /* Badges con colores del laboratorio */
+  /* .badge-lab-primary {
+    background-color: var(--labPrimaryColor10);
+    color: var(--labPrimaryColor);
+    border: 1px solid var(--labPrimaryColor);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  } */
+
+  /* Cards con borde del laboratorio */
+  /* .card-lab-primary {
+    border-left: 4px solid var(--labPrimaryColor);
+    background-color: var(--labPrimaryColor10);
+    padding: 1rem;
+    border-radius: 0.5rem;
+  } */
+
+  /* Gradiente con colores del laboratorio */
+  /* .gradient-lab {
+    background: linear-gradient(135deg, var(--labPrimaryColor), var(--labSecondaryColor));
+  } */
 }
 
 @layer base {
+
   /* WebKit browsers (Chrome, Safari, Edge) */
   ::-webkit-scrollbar {
     width: 8px;
@@ -104,7 +241,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --Conspat: var(--pinkC);
+  --labPrimary: var(--labPrimaryColor);
 }
 
 :root {
@@ -140,7 +277,7 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
-  --pinkC: 330 81% 60%;
+  --labPrimaryColor: #0066cc;
 }
 
 .dark {
@@ -175,13 +312,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
-  --pinkC: 330 81% 60%;
+  --labPrimaryColor: #0066cc;
 }
 
 @keyframes slowPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 25px rgba(158, 17, 87, 0.4);
   }
+
   50% {
     box-shadow: 0 0 50px rgba(158, 17, 87, 0.8);
   }
