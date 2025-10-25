@@ -385,122 +385,210 @@ export const updateMedicalRecord = async (id: string, updates: Partial<MedicalRe
 */
 
 export const deleteMedicalRecord = async (id: string) => {
-	try {
-		console.log(`🗑️ Deleting medical record ${id} from ${TABLE_NAME}`)
+  try {
+    console.log(`🗑️ Deleting medical record ${id} from ${TABLE_NAME}`);
 
-		// Get record details before deleting for the log
-		const { error: fetchError } = await getMedicalRecordById(id)
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		// If record doesn't exist, treat as successful deletion
-		if (fetchError && typeof fetchError === 'object' && 'code' in fetchError && fetchError.code === 'PGRST116') {
-			console.log(`⚠️ Record ${id} not found, treating as already deleted`)
-			return { data: null, error: null }
-		}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		if (fetchError) {
-			console.error(`❌ Error fetching record before deletion:`, fetchError)
-			return { data: null, error: fetchError }
-		}
+    if (profileError || !profile?.laboratory_id) {
+      console.error(
+        'Error obteniendo laboratory_id del usuario:',
+        profileError,
+      );
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
 
-		// The trigger will automatically create the deletion log
-		// No need to manually log the deletion here
+    // Get record details before deleting for the log
+    const { error: fetchError } = await getMedicalRecordById(id);
 
-		// Perform the actual deletion
-		const { data, error } = await supabase.from(TABLE_NAME).delete().eq('id', id).select()
+    // If record doesn't exist, treat as successful deletion
+    if (
+      fetchError &&
+      typeof fetchError === 'object' &&
+      'code' in fetchError &&
+      fetchError.code === 'PGRST116'
+    ) {
+      console.log(`⚠️ Record ${id} not found, treating as already deleted`);
+      return { data: null, error: null };
+    }
 
-		if (error) {
-			console.error(`❌ Error deleting record from ${TABLE_NAME}:`, error)
-			return { data: null, error }
-		}
+    if (fetchError) {
+      console.error(`❌ Error fetching record before deletion:`, fetchError);
+      return { data: null, error: fetchError };
+    }
 
-		// Check if any records were deleted
-		if (!data || data.length === 0) {
-			console.log(`⚠️ No records were deleted for ID ${id} - record may not exist`)
-			return { data: null, error: null }
-		}
+    // The trigger will automatically create the deletion log
+    // No need to manually log the deletion here
 
-		console.log(`✅ Medical record deleted successfully from ${TABLE_NAME}:`, data[0])
-		return { data: data[0], error: null }
-	} catch (error) {
-		console.error(`❌ Error deleting record from ${TABLE_NAME}:`, error)
-		return { data: null, error }
-	}
-}
+    // 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .delete()
+      .eq('id', id)
+      .eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+      .select();
+
+    if (error) {
+      console.error(`❌ Error deleting record from ${TABLE_NAME}:`, error);
+      return { data: null, error };
+    }
+
+    // Check if any records were deleted
+    if (!data || data.length === 0) {
+      console.log(
+        `⚠️ No records were deleted for ID ${id} - record may not exist or no pertenece a este laboratorio`,
+      );
+      return { data: null, error: null };
+    }
+
+    console.log(
+      `✅ Medical record deleted successfully from ${TABLE_NAME}:`,
+      data[0],
+    );
+    return { data: data[0], error: null };
+  } catch (error) {
+    console.error(`❌ Error deleting record from ${TABLE_NAME}:`, error);
+    return { data: null, error };
+  }
+};
 
 // Function to save change logs
 export const saveChangeLog = async (
-	medicalRecordId: string,
-	userId: string,
-	userEmail: string,
-	changes: Array<{
-		field: string
-		fieldLabel: string
-		oldValue: string | number | boolean | null
-		newValue: string | number | boolean | null
-	}>,
+  medicalRecordId: string,
+  userId: string,
+  userEmail: string,
+  changes: Array<{
+    field: string;
+    fieldLabel: string;
+    oldValue: string | number | boolean | null;
+    newValue: string | number | boolean | null;
+  }>,
 ) => {
-	try {
-		console.log('💾 Saving change logs for record:', medicalRecordId)
+  try {
+    console.log('💾 Saving change logs for record:', medicalRecordId);
 
-		// Fetch display name to store alongside logs (best-effort; optional)
-		let userDisplayName: string | null = null
-		try {
-			const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', userId).single()
-			userDisplayName = profile?.display_name ?? null
-		} catch {
-			// ignore profile lookup errors
-		}
+    // 🔐 MULTI-TENANT: Obtener laboratory_id y display_name del usuario
+    let userDisplayName: string | null = null;
+    let laboratoryId: string | null = null;
 
-		const changeLogEntries = changes.map((change) => ({
-			medical_record_id: medicalRecordId,
-			user_id: userId,
-			user_email: userEmail,
-			user_display_name: userDisplayName,
-			field_name: change.field,
-			field_label: change.fieldLabel,
-			old_value: change.oldValue === null || change.oldValue === undefined ? null : String(change.oldValue),
-			new_value: change.newValue === null || change.newValue === undefined ? null : String(change.newValue),
-			changed_at: new Date().toISOString(),
-		}))
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, laboratory_id')
+        .eq('id', userId)
+        .single();
 
-		const { data, error } = await supabase.from(CHANGE_LOG_TABLE).insert(changeLogEntries).select()
+      userDisplayName = profile?.display_name ?? null;
+      laboratoryId = profile?.laboratory_id ?? null;
+    } catch (error) {
+      console.error('Error obteniendo perfil del usuario:', error);
+      // Si no podemos obtener el laboratory_id, no podemos continuar
+      throw new Error('No se pudo obtener el laboratorio del usuario');
+    }
 
-		if (error) {
-			console.error('❌ Error saving change logs:', error)
-			return { data: null, error }
-		}
+    if (!laboratoryId) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
 
-		console.log('✅ Change logs saved successfully:', data)
-		return { data, error: null }
-	} catch (error) {
-		console.error('❌ Unexpected error saving change logs:', error)
-		return { data: null, error }
-	}
-}
+    // 🔐 MULTI-TENANT: Incluir laboratory_id en los change logs
+    const changeLogEntries = changes.map((change) => ({
+      medical_record_id: medicalRecordId,
+      user_id: userId,
+      user_email: userEmail,
+      user_display_name: userDisplayName,
+      laboratory_id: laboratoryId, // 🔐 ASIGNACIÓN MULTI-TENANT
+      field_name: change.field,
+      field_label: change.fieldLabel,
+      old_value:
+        change.oldValue === null || change.oldValue === undefined
+          ? null
+          : String(change.oldValue),
+      new_value:
+        change.newValue === null || change.newValue === undefined
+          ? null
+          : String(change.newValue),
+      changed_at: new Date().toISOString(),
+    }));
+
+    const { data, error } = await supabase
+      .from(CHANGE_LOG_TABLE)
+      .insert(changeLogEntries)
+      .select();
+
+    if (error) {
+      console.error('❌ Error saving change logs:', error);
+      return { data: null, error };
+    }
+
+    console.log('✅ Change logs saved successfully:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('❌ Unexpected error saving change logs:', error);
+    return { data: null, error };
+  }
+};
 
 // Function to get change logs for a medical record
 export const getChangeLogsForRecord = async (medicalRecordId: string) => {
-	try {
-		const { data, error } = await supabase
-			.from(CHANGE_LOG_TABLE)
-			.select('*')
-			.eq('medical_record_id', medicalRecordId)
-			.order('changed_at', { ascending: false })
+  try {
+    const { data, error } = await supabase
+      .from(CHANGE_LOG_TABLE)
+      .select('*')
+      .eq('medical_record_id', medicalRecordId)
+      .order('changed_at', { ascending: false });
 
-		return { data, error }
-	} catch (error) {
-		console.error(`Error fetching change logs for record ${medicalRecordId}:`, error)
-		return { data: null, error }
-	}
-}
+    return { data, error };
+  } catch (error) {
+    console.error(
+      `Error fetching change logs for record ${medicalRecordId}:`,
+      error,
+    );
+    return { data: null, error };
+  }
+};
 
 // Function to get all change logs with pagination
 export const getAllChangeLogs = async (limit = 50, offset = 0) => {
-	try {
-		const { data, error } = await supabase
-			.from(CHANGE_LOG_TABLE)
-			.select(
-				`
+  try {
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.laboratory_id) {
+      console.error(
+        'Error obteniendo laboratory_id del usuario:',
+        profileError,
+      );
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    // 🔐 MULTI-TENANT: Filtrar change logs por laboratory_id
+    const { data, error } = await supabase
+      .from(CHANGE_LOG_TABLE)
+      .select(
+        `
 				*,
 				medical_records_clean(
 					id,
@@ -513,84 +601,94 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
 					cedula
 				)
 			`,
-			)
-			.order('changed_at', { ascending: false })
-			.range(offset, offset + limit - 1)
+      )
+      .eq('laboratory_id', profile.laboratory_id) // 🔐 FILTRO MULTI-TENANT
+      .order('changed_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-		if (error) {
-			console.error('Error fetching all change logs:', error)
-			return { data: null, error }
-		}
+    if (error) {
+      console.error('Error fetching all change logs:', error);
+      return { data: null, error };
+    }
 
-		// Transform the data to handle deleted records and return a strongly-typed array
-		const transformedData: ChangeLogJoined[] | undefined = data?.map((row: unknown) => {
-			const log = row as Record<string, unknown>
-			const result: ChangeLogJoined = {
-				id: String(log['id'] ?? ''),
-				medical_record_id: (log['medical_record_id'] as string | null) ?? null,
-				patient_id: (log['patient_id'] as string | null) ?? null,
-				entity_type: (log['entity_type'] as string | null) ?? null,
-				user_id: String(log['user_id'] ?? ''),
-				user_email: String(log['user_email'] ?? ''),
-				user_display_name: (log['user_display_name'] as string | null) ?? null,
-				field_name: String(log['field_name'] ?? ''),
-				field_label: String(log['field_label'] ?? ''),
-				old_value: (log['old_value'] as string | null) ?? null,
-				new_value: (log['new_value'] as string | null) ?? null,
-				changed_at: String(log['changed_at'] ?? ''),
-				created_at: (log['created_at'] as string | null) ?? null,
-				deleted_record_info: (log['deleted_record_info'] as string | null) ?? null,
-				medical_records_clean:
-					(log['medical_records_clean'] as
-						| {
-								id: string | null
-								code: string | null
-								patient_id: string | null
-						  }
-						| null
-						| undefined) ?? undefined,
-				patients:
-					(log['patients'] as
-						| {
-								id: string | null
-								nombre: string | null
-								cedula: string | null
-						  }
-						| null
-						| undefined) ?? undefined,
-			}
+    // Transform the data to handle deleted records and return a strongly-typed array
+    const transformedData: ChangeLogJoined[] | undefined = data?.map(
+      (row: unknown) => {
+        const log = row as Record<string, unknown>;
+        const result: ChangeLogJoined = {
+          id: String(log['id'] ?? ''),
+          medical_record_id:
+            (log['medical_record_id'] as string | null) ?? null,
+          patient_id: (log['patient_id'] as string | null) ?? null,
+          entity_type: (log['entity_type'] as string | null) ?? null,
+          user_id: String(log['user_id'] ?? ''),
+          user_email: String(log['user_email'] ?? ''),
+          user_display_name:
+            (log['user_display_name'] as string | null) ?? null,
+          field_name: String(log['field_name'] ?? ''),
+          field_label: String(log['field_label'] ?? ''),
+          old_value: (log['old_value'] as string | null) ?? null,
+          new_value: (log['new_value'] as string | null) ?? null,
+          changed_at: String(log['changed_at'] ?? ''),
+          created_at: (log['created_at'] as string | null) ?? null,
+          deleted_record_info:
+            (log['deleted_record_info'] as string | null) ?? null,
+          medical_records_clean:
+            (log['medical_records_clean'] as
+              | {
+                  id: string | null;
+                  code: string | null;
+                  patient_id: string | null;
+                }
+              | null
+              | undefined) ?? undefined,
+          patients:
+            (log['patients'] as
+              | {
+                  id: string | null;
+                  nombre: string | null;
+                  cedula: string | null;
+                }
+              | null
+              | undefined) ?? undefined,
+        };
 
-			if (!result.medical_record_id && !result.patient_id && result.deleted_record_info) {
-				// Handle deleted records - try to determine if it was a patient or medical case
-				if (result.entity_type === 'patient') {
-					return {
-						...result,
-						patients: {
-							id: null,
-							nombre: result.deleted_record_info,
-							cedula: null,
-						},
-					}
-				} else {
-					return {
-						...result,
-						medical_records_clean: {
-							id: null,
-							code: result.deleted_record_info,
-							patient_id: null,
-						},
-					}
-				}
-			}
-			return result
-		})
+        if (
+          !result.medical_record_id &&
+          !result.patient_id &&
+          result.deleted_record_info
+        ) {
+          // Handle deleted records - try to determine if it was a patient or medical case
+          if (result.entity_type === 'patient') {
+            return {
+              ...result,
+              patients: {
+                id: null,
+                nombre: result.deleted_record_info,
+                cedula: null,
+              },
+            };
+          } else {
+            return {
+              ...result,
+              medical_records_clean: {
+                id: null,
+                code: result.deleted_record_info,
+                patient_id: null,
+              },
+            };
+          }
+        }
+        return result;
+      },
+    );
 
-		return { data: transformedData, error: null }
-	} catch (error) {
-		console.error('Error fetching all change logs:', error)
-		return { data: null, error }
-	}
-}
+    return { data: transformedData, error: null };
+  } catch (error) {
+    console.error('Error fetching all change logs:', error);
+    return { data: null, error };
+  }
+};
 
 // Combined function to update medical record and save change log
 export const updateMedicalRecordWithLog = async (

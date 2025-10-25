@@ -646,245 +646,6 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
   };
 
-  // const handleTransformToPDF = async () => {
-  // 	if (!case_?.id) {
-  // 		toast({
-  // 			title: '❌ Error',
-  // 			description: 'No se encontró el ID del caso.',
-  // 			variant: 'destructive',
-  // 		})
-  // 		return
-  // 	}
-
-  // 	try {
-  // 		setIsSaving(true)
-  // 		setIsGeneratingPDF(true)
-
-  // 		// Verificar si ya existe tanto informepdf_url como informe_qr
-  // 		console.log('[1] Verificando si ya existe informepdf_url e informe_qr para el caso', case_.id)
-  // 		const { data: initialData, error: initialError } = await supabase
-  // 			.from('medical_records_clean')
-  // 			.select('informepdf_url, informe_qr, token')
-  // 			.eq('id', case_.id)
-  // 			.single<MedicalRecord & { token?: string }>()
-
-  // 		if (initialError) {
-  // 			console.error('Error al obtener URLs del PDF:', initialError)
-  // 			toast({
-  // 				title: '❌ Error',
-  // 				description: 'No se pudo obtener el estado del PDF.',
-  // 				variant: 'destructive',
-  // 			})
-  // 			return
-  // 		}
-
-  // 		if (initialData?.informepdf_url && initialData?.informe_qr) {
-  // 			console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
-  // 			window.open(initialData.informe_qr, '_blank')
-  // 			// Ejecutar handleNext automáticamente después de abrir el QR
-  // 			setTimeout(() => {
-  // 				handleNext()
-  // 			}, 1000)
-  // 			return
-  // 		}
-
-  // 		console.log('[2] No existen ambos archivos, enviando POST a n8n...')
-
-  // 		console.log('Sending request to n8n webhook with case ID:', case_.id)
-
-  // 		// Obtener el patient_id del caso
-  // 		const { data: caseData, error: caseError } = await supabase
-  // 			.from('medical_records_clean')
-  // 			.select('patient_id')
-  // 			.eq('id', case_.id)
-  // 			.single()
-
-  // 		if (caseError) {
-  // 			console.error('Error al obtener patient_id del caso:', caseError)
-  // 			toast({
-  // 				title: '❌ Error',
-  // 				description: 'No se pudo obtener la información del paciente.',
-  // 				variant: 'destructive',
-  // 			})
-  // 			return
-  // 		}
-
-  // 		if (!caseData?.patient_id) {
-  // 			toast({
-  // 				title: '❌ Error',
-  // 				description: 'No se encontró el ID del paciente para este caso.',
-  // 				variant: 'destructive',
-  // 			})
-  // 			return
-  // 		}
-
-  // 		const requestBody = {
-  // 			caseId: case_.id,
-  // 			patientId: caseData.patient_id,
-  // 		}
-
-  // 		console.log('Request body:', requestBody)
-
-  // 		// Verificar que la URL del webhook esté configurada
-  // 		if (!GENERATE_PDF) {
-  // 			throw new Error('URL del webhook PDF no configurada. Verifica las variables de entorno.')
-  // 		}
-
-  // 		console.log('Webhook URL:', GENERATE_PDF)
-  // 		console.log('Patient ID:', caseData.patient_id)
-
-  // 		const response = await fetch(GENERATE_PDF, {
-  // 			method: 'POST',
-  // 			headers: {
-  // 				'Content-Type': 'application/json',
-  // 				Accept: 'application/json',
-  // 			},
-  // 			body: JSON.stringify(requestBody),
-  // 		})
-
-  // 		console.log('Response status:', response.status)
-
-  // 		if (!response.ok) {
-  // 			let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-
-  // 			try {
-  // 				const errorData = await response.text()
-  // 				console.log('Error response body:', errorData)
-  // 				errorMessage += ` - ${errorData}`
-  // 			} catch (e) {
-  // 				console.log('Could not read error response body', e)
-  // 			}
-
-  // 			throw new Error(errorMessage)
-  // 		}
-
-  // 		let responseData
-  // 		try {
-  // 			responseData = await response.json()
-  // 			console.log('Success response:', responseData)
-  // 		} catch (e) {
-  // 			responseData = await response.text()
-  // 			console.log('Success response (text):', responseData, e)
-  // 		}
-
-  // 		// Mostrar mensaje de progreso
-  // 		toast({
-  // 			title: '⏳ Generando PDF...',
-  // 			description: 'El documento se está procesando. Por favor espera.',
-  // 		})
-
-  // 		// ⏱️ Esperar antes de intentar descargar el PDF
-  // 		let attempts = 0
-  // 		const maxAttempts = 15 // Aumentar intentos
-  // 		let pdfUrl: string | null = null
-
-  // 		while (attempts < maxAttempts) {
-  // 			const { data, error } = await supabase
-  // 				.from('medical_records_clean')
-  // 				.select('informepdf_url, token')
-  // 				.eq('id', case_.id)
-  // 				.single<MedicalRecord & { token?: string }>()
-
-  // 			if (error) {
-  // 				console.error('Error obteniendo informepdf_url:', error)
-  // 				break
-  // 			}
-
-  // 			if (data?.informepdf_url) {
-  // 				// Usar la utilidad para determinar la URL de descarga apropiada
-  // 				pdfUrl = getDownloadUrl(case_.id, data.token || null, data.informepdf_url || null)
-  // 				break
-  // 			}
-
-  // 			// Esperar 2 segundos antes del próximo intento
-  // 			await new Promise((resolve) => setTimeout(resolve, 2000))
-  // 			attempts++
-  // 		}
-
-  // 		if (!pdfUrl) {
-  // 			toast({
-  // 				title: '⏳ Documento no disponible aún',
-  // 				description: 'El PDF aún no está listo. Intenta nuevamente en unos segundos.',
-  // 				variant: 'destructive',
-  // 			})
-  // 			return
-  // 		}
-
-  // 		try {
-  // 			// Descargar el archivo usando el endpoint de descarga
-  // 			const response = await fetch(pdfUrl)
-  // 			if (!response.ok) {
-  // 				throw new Error(`Error al descargar: ${response.status}`)
-  // 			}
-
-  // 			const sanitizedName =
-  // 				case_.full_name ||
-  // 				'Paciente'
-  // 					.normalize('NFD')
-  // 					.replace(/[\u0300-\u036f]/g, '')
-  // 					.replace(/[^a-zA-Z0-9\s]/g, '')
-  // 					.replace(/\s+/g, '_')
-  // 					.trim()
-
-  // 			const blob = await response.blob()
-  // 			const url = window.URL.createObjectURL(blob)
-  // 			const link = document.createElement('a')
-  // 			link.href = url
-  // 			link.download = `${case_.code}-${sanitizedName}.pdf`
-  // 			document.body.appendChild(link)
-  // 			link.click()
-  // 			document.body.removeChild(link)
-  // 			window.URL.revokeObjectURL(url) // Limpiar memoria
-
-  // 			toast({
-  // 				title: '✅ PDF descargado',
-  // 				description: 'El documento se ha descargado correctamente.',
-  // 			})
-
-  // 			// Ejecutar handleNext automáticamente después de descargar el PDF
-  // 			setTimeout(() => {
-  // 				handleNext()
-  // 			}, 1500) // Aumentar delay para mejor UX
-  // 		} catch (err) {
-  // 			console.error('Error al abrir el PDF:', err)
-  // 			toast({
-  // 				title: '❌ Error',
-  // 				description: 'No se pudo acceder al PDF. Intenta nuevamente.',
-  // 				variant: 'destructive',
-  // 			})
-  // 		}
-  // 	} catch (error) {
-  // 		console.error('Error en handleTransformToPDF:', error)
-
-  // 		let errorMessage = 'Hubo un problema al activar el flujo.'
-
-  // 		if (error instanceof TypeError && error.message === 'Failed to fetch') {
-  // 			errorMessage =
-  // 				'No se pudo conectar con el servidor n8n. Posibles causas:\n• El servidor n8n no está funcionando\n• Firewall bloqueando la conexión\n• URL del webhook incorrecta\n• Puerto 5678 cerrado o inaccesible'
-  // 		} else if (error instanceof Error && error.message.includes('SSL')) {
-  // 			errorMessage =
-  // 				'Error de certificado SSL. El servidor n8n tiene un problema de seguridad. Contacta al administrador.'
-  // 		} else if (error instanceof Error && error.message.includes('CONNECTION_RESET')) {
-  // 			errorMessage = 'El servidor n8n rechazó la conexión. Verifica que el servicio esté funcionando.'
-  // 		} else if (error instanceof Error && error.message.includes('CORS')) {
-  // 			errorMessage = 'Error de configuración del servidor (CORS). Contacta al administrador.'
-  // 		} else if (error instanceof Error && error.message.includes('HTTP')) {
-  // 			errorMessage = `Error del servidor: ${error.message}`
-  // 		} else if (error instanceof Error && error.message.includes('URL del webhook')) {
-  // 			errorMessage = error.message
-  // 		}
-
-  // 		toast({
-  // 			title: '❌ Error al activar flujo',
-  // 			description: errorMessage,
-  // 			variant: 'destructive',
-  // 		})
-  // 	} finally {
-  // 		setIsSaving(false)
-  // 		setIsGeneratingPDF(false)
-  // 	}
-  // }
-
   const handleResetPDFFields = async () => {
     if (!case_?.id) {
       toast({
@@ -1686,7 +1447,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                                 isCompleted
                                   ? 'border-green-500 text-gray-800 dark:text-white'
                                   : isActive
-                                  ? 'border-pink-500 text-gray-800 dark:text-white'
+                                  ? 'border-Conspat text-gray-800 dark:text-white'
                                   : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500'
                               }`}
                               whileHover={{ scale: 1.05 }}
@@ -1697,7 +1458,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                               <p
                                 className={`text-xs font-medium ${
                                   isActive
-                                    ? 'text-pink-400'
+                                    ? 'text-Conspat'
                                     : 'text-gray-600 dark:text-gray-400'
                                 }`}
                               >
@@ -1739,7 +1500,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                       <motion.button
                         onClick={handleBack}
                         disabled={isSaving}
-                        className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
+                        className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-Conspat text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
                           activeStep === 0 ? 'hidden' : ''
                         }`}
                         whileHover={{ scale: 1.02 }}
@@ -1752,7 +1513,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                       <motion.button
                         onClick={handleNext}
                         disabled={isCompleting || isSaving || isGeneratingPDF}
-                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-pink-500 text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
+                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-Conspat text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >

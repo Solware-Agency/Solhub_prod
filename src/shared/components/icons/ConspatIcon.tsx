@@ -1,4 +1,4 @@
-export function FavIcon({ fill = '#fff', className = '' }: { fill?: string; className?: string }) {
+export function ConspatIcon({ fill = '#fff', className = '' }: { fill?: string; className?: string }) {
 	return (
 		<svg
 			width="246.000000pt"
@@ -17,4 +17,4 @@ export function FavIcon({ fill = '#fff', className = '' }: { fill?: string; clas
 	)
 }
 
-export default FavIcon
+export default ConspatIcon

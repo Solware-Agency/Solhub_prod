@@ -9,6 +9,7 @@ import { supabase } from '../config/config';
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
+  laboratory_id: string; // NUEVO: Multi-tenant
   patient_id: string | null;
   exam_type: string;
   origin: string;
@@ -66,6 +67,7 @@ export interface MedicalCase {
 
 export interface MedicalCaseInsert {
   id?: string;
+  laboratory_id: string; // NUEVO: Multi-tenant
   patient_id?: string | null;
   exam_type: string;
   origin: string;
@@ -131,6 +133,7 @@ export interface MedicalCaseInsert {
 
 export interface MedicalCaseUpdate {
   id?: string;
+  laboratory_id?: string; // NUEVO: Multi-tenant
   patient_id?: string | null;
   exam_type?: string;
   origin?: string;
@@ -257,9 +260,25 @@ export interface MedicalCaseWithPatient {
  * Crear nuevo caso médico
  */
 export const createMedicalCase = async (
-  caseData: MedicalCaseInsert,
+  caseData: Omit<MedicalCaseInsert, 'laboratory_id'>,
 ): Promise<MedicalCase> => {
   try {
+    // Obtener laboratory_id del usuario autenticado
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
     // Validar que patient_id esté presente
     if (!caseData.patient_id) {
       throw new Error('patient_id es requerido para crear un caso médico');
@@ -270,7 +289,10 @@ export const createMedicalCase = async (
     const { created_at, updated_at, ...insertData } = caseData;
     const { data, error } = await supabase
       .from('medical_records_clean')
-      .insert(insertData)
+      .insert({
+        ...insertData,
+        laboratory_id: profile.laboratory_id, // CRÍTICO: Multi-tenant
+      })
       .select()
       .single();
 
@@ -408,10 +430,27 @@ export const getCaseById = async (
   caseId: string,
 ): Promise<MedicalCase | null> => {
   try {
+    // Obtener laboratory_id del usuario autenticado
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
     const { data, error } = await supabase
       .from('medical_records_clean')
       .select('*')
       .eq('id', caseId)
+      .eq('laboratory_id', profile.laboratory_id) // FILTRO MULTI-TENANT
       .single();
 
     if (error) {

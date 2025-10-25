@@ -662,3 +662,123 @@ export interface MedicalRecord {
 	conclusion_diagnostica?: string | null
 	archivo_adjunto_url?: string | null
 }
+
+// ===== INTERFACES PARA SISTEMA MULTI-TENANT =====
+
+// Interfaz principal para Laboratory
+export interface Laboratory {
+	id: string
+	slug: string
+	name: string
+	status: 'active' | 'inactive' | 'trial'
+	features: LaboratoryFeatures
+	branding: LaboratoryBranding
+	config: LaboratoryConfig
+	created_at: string
+	updated_at: string
+}
+
+// Configuración de features habilitadas por laboratorio
+export interface LaboratoryFeatures {
+	hasInmunoRequests: boolean
+	hasChangelogModule: boolean
+	hasChatAI: boolean
+	hasMultipleBranches: boolean
+	hasCitologyStatus: boolean
+	hasPatientOriginFilter: boolean
+	hasRobotTracking: boolean
+}
+
+// Branding personalizado por laboratorio
+export interface LaboratoryBranding {
+	logo?: string // URL de imagen (ej: "/logos/conspat.png") o null
+	icon?: string // Nombre del ícono (ej: "conspat", "solhub") - se usa si no hay logo
+	primaryColor: string
+	secondaryColor: string
+}
+
+// Configuración específica del laboratorio
+export interface LaboratoryConfig {
+	branches: string[]
+	paymentMethods: string[]
+	defaultExchangeRate: number
+	timezone: string
+}
+
+// Extender interfaces existentes con laboratory_id
+export interface PatientWithLaboratory {
+	id: string
+	laboratory_id: string
+	cedula: string
+	nombre: string
+	edad: string | null
+	email: string | null
+	telefono: string | null
+	gender: 'Masculino' | 'Femenino' | null
+	created_at: string | null
+	updated_at: string | null
+	version: number | null
+}
+
+export interface MedicalRecordWithLaboratory {
+	id: string
+	laboratory_id: string
+	patient_id: string | null
+	exam_type: string
+	origin: string
+	treating_doctor: string
+	sample_type: string
+	number_of_samples: number
+	relationship: string | null
+	branch: string
+	date: string
+	total_amount: number
+	exchange_rate: number | null
+	payment_status: 'Incompleto' | 'Pagado'
+	remaining: number
+	payment_method_1: string | null
+	payment_amount_1: number | null
+	payment_reference_1: string | null
+	payment_method_2: string | null
+	payment_amount_2: number | null
+	payment_reference_2: string | null
+	payment_method_3: string | null
+	payment_amount_3: number | null
+	payment_reference_3: string | null
+	payment_method_4: string | null
+	payment_amount_4: number | null
+	payment_reference_4: string | null
+	comments: string | null
+	code: string | null
+	created_at: string | null
+	updated_at: string | null
+	created_by: string | null
+	created_by_display_name: string | null
+	doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
+	email_sent: boolean
+	generated_at: string | null
+	generated_by: string | null
+	generated_by_display_name: string | null
+	googledocs_url: string | null
+	ims: string | null
+	informe_qr: string | null
+	informepdf_url: string | null
+	attachment_url: string | null
+	pdf_en_ready: boolean | null
+	token: string | null
+	cito_status: 'positivo' | 'negativo' | null
+}
+
+export interface ProfileWithLaboratory {
+	id: string
+	laboratory_id: string
+	assigned_branch: string | null
+	created_at: string | null
+	display_name: string | null
+	email: string
+	email_lower: string | null
+	estado: string
+	phone: string | null
+	role: string
+	updated_at: string | null
+}

@@ -1,5 +1,6 @@
 import { supabase } from '../config/config'
 import type { PostgrestError } from '@supabase/supabase-js'
+import { extractLaboratoryId } from '../types/helpers'
 
 export interface UserProfile {
 	id: string
@@ -34,208 +35,354 @@ const rpc = (supabase as unknown as RpcClient).rpc.bind(supabase as unknown as R
    Updates sobre profiles
 -------------------------------------------------------------------*/
 export const updateUserRole = async (
-	userId: string,
-	newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
-): Promise<{ data: UserProfile | null; error: PostgrestError | Error | null }> => {
-	try {
-		console.log(`Updating user ${userId} role to ${newRole}`)
+  userId: string,
+  newRole:
+    | 'owner'
+    | 'employee'
+    | 'residente'
+    | 'citotecno'
+    | 'patologo'
+    | 'medicowner',
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | Error | null;
+}> => {
+  try {
+    console.log(`Updating user ${userId} role to ${newRole}`);
 
-		const { data, error } = await supabase
-			.from('profiles')
-			.update({
-				role: newRole,
-				updated_at: new Date().toISOString(),
-			})
-			.eq('id', userId)
-			.select()
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		if (error) {
-			console.error('Error updating user role:', error)
-			return { data: null, error }
-		}
-		if (!data || data.length === 0) {
-			const noProfileError = new Error(`No profile found for user ID: ${userId}`)
-			console.error('No profile found for update:', noProfileError)
-			return { data: null, error: noProfileError }
-		}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		console.log('User role updated successfully:', data[0])
-		return { data: data[0] as UserProfile, error: null }
-	} catch (error) {
-		console.error('Unexpected error updating user role:', error)
-		return { data: null, error: error as Error }
-	}
-}
+    const laboratoryId = extractLaboratoryId(profile);
+
+    if (profileError || !laboratoryId) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    // 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        role: newRole,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .eq('laboratory_id', laboratoryId) // 🔐 VALIDACIÓN MULTI-TENANT
+      .select();
+
+    if (error) {
+      console.error('Error updating user role:', error);
+      return { data: null, error };
+    }
+    if (!data || data.length === 0) {
+      const noProfileError = new Error(
+        `No profile found for user ID: ${userId}`,
+      );
+      console.error('No profile found for update:', noProfileError);
+      return { data: null, error: noProfileError };
+    }
+
+    console.log('User role updated successfully:', data[0]);
+    return { data: data[0] as UserProfile, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating user role:', error);
+    return { data: null, error: error as Error };
+  }
+};
 
 export const updateUserBranch = async (
-	userId: string,
-	branch: string | null,
-): Promise<{ data: UserProfile | null; error: PostgrestError | Error | null }> => {
-	try {
-		console.log(`Updating user ${userId} branch to ${branch || 'none'}`)
+  userId: string,
+  branch: string | null,
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | Error | null;
+}> => {
+  try {
+    console.log(`Updating user ${userId} branch to ${branch || 'none'}`);
 
-		const { data, error } = await supabase
-			.from('profiles')
-			.update({
-				assigned_branch: branch,
-				updated_at: new Date().toISOString(),
-			})
-			.eq('id', userId)
-			.select()
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		if (error) {
-			console.error('Error updating user branch:', error)
-			return { data: null, error }
-		}
-		if (!data || data.length === 0) {
-			const noProfileError = new Error(`No profile found for user ID: ${userId}`)
-			console.error('No profile found for update:', noProfileError)
-			return { data: null, error: noProfileError }
-		}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		console.log('User branch updated successfully:', data[0])
-		return { data: data[0] as UserProfile, error: null }
-	} catch (error) {
-		console.error('Unexpected error updating user branch:', error)
-		return { data: null, error: error as Error }
-	}
-}
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    // 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        assigned_branch: branch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+      .select();
+
+    if (error) {
+      console.error('Error updating user branch:', error);
+      return { data: null, error };
+    }
+    if (!data || data.length === 0) {
+      const noProfileError = new Error(
+        `No profile found for user ID: ${userId}`,
+      );
+      console.error('No profile found for update:', noProfileError);
+      return { data: null, error: noProfileError };
+    }
+
+    console.log('User branch updated successfully:', data[0]);
+    return { data: data[0] as UserProfile, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating user branch:', error);
+    return { data: null, error: error as Error };
+  }
+};
 
 export const updateUserApprovalStatus = async (
-	userId: string,
-	estado: 'pendiente' | 'aprobado',
-): Promise<{ data: UserProfile | null; error: PostgrestError | Error | null }> => {
-	try {
-		console.log(`Updating user ${userId} approval status to ${estado}`)
+  userId: string,
+  estado: 'pendiente' | 'aprobado',
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | Error | null;
+}> => {
+  try {
+    console.log(`Updating user ${userId} approval status to ${estado}`);
 
-		const { data, error } = await supabase
-			.from('profiles')
-			.update({
-				estado,
-				updated_at: new Date().toISOString(),
-			})
-			.eq('id', userId)
-			.select()
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		if (error) {
-			console.error('Error updating user approval status:', error)
-			return { data: null, error }
-		}
-		if (!data || data.length === 0) {
-			const noProfileError = new Error(`No profile found for user ID: ${userId}`)
-			console.error('No profile found for update:', noProfileError)
-			return { data: null, error: noProfileError }
-		}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		console.log('User approval status updated successfully:', data[0])
-		return { data: data[0] as UserProfile, error: null }
-	} catch (error) {
-		console.error('Unexpected error updating user approval status:', error)
-		return { data: null, error: error as Error }
-	}
-}
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    // 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        estado,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+      .select();
+
+    if (error) {
+      console.error('Error updating user approval status:', error);
+      return { data: null, error };
+    }
+    if (!data || data.length === 0) {
+      const noProfileError = new Error(
+        `No profile found for user ID: ${userId}`,
+      );
+      console.error('No profile found for update:', noProfileError);
+      return { data: null, error: noProfileError };
+    }
+
+    console.log('User approval status updated successfully:', data[0]);
+    return { data: data[0] as UserProfile, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating user approval status:', error);
+    return { data: null, error: error as Error };
+  }
+};
 
 /* ------------------------------------------------------------------
    Reads sobre profiles
 -------------------------------------------------------------------*/
 export const getAllUserProfiles = async (): Promise<{
-	data: UserProfile[] | null
-	error: PostgrestError | null
+  data: UserProfile[] | null;
+  error: PostgrestError | null;
 }> => {
-	try {
-		const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+  try {
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		if (error) {
-			console.error('Error fetching user profiles:', error)
-			return { data: null, error }
-		}
-		return { data: data as UserProfile[], error: null }
-	} catch (error) {
-		console.error('Unexpected error fetching user profiles:', error)
-		return { data: null, error: error as PostgrestError }
-	}
-}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.laboratory_id) {
+      console.error(
+        'Error obteniendo laboratory_id del usuario:',
+        profileError,
+      );
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    // 🔐 MULTI-TENANT: Filtrar perfiles por laboratory_id
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('laboratory_id', profile.laboratory_id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user profiles:', error);
+      return { data: null, error };
+    }
+    return { data: data as UserProfile[], error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching user profiles:', error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
 
 export const getUserProfileById = async (
-	userId: string,
+  userId: string,
 ): Promise<{ data: UserProfile | null; error: PostgrestError | null }> => {
-	try {
-		const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-		if (error) {
-			console.error('Error fetching user profile:', error)
-			return { data: null, error }
-		}
-		return { data: data as UserProfile, error: null }
-	} catch (error) {
-		console.error('Unexpected error fetching user profile:', error)
-		return { data: null, error: error as PostgrestError }
-	}
-}
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return { data: null, error };
+    }
+    return { data: data as UserProfile, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching user profile:', error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
 
 /**
  * ¿El usuario actual puede gestionar otros usuarios?
  */
-export const canManageUsers = async (currentUserId: string): Promise<boolean> => {
-	try {
-		const { data, error } = await supabase.from('profiles').select('role').eq('id', currentUserId).single()
+export const canManageUsers = async (
+  currentUserId: string,
+): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUserId)
+      .single();
 
-		if (error || !data) {
-			console.error('Error checking user permissions:', error)
-			return false
-		}
-		return data.role === 'owner'
-	} catch (error) {
-		console.error('Unexpected error checking user permissions:', error)
-		return false
-	}
-}
+    if (error || !data) {
+      console.error('Error checking user permissions:', error);
+      return false;
+    }
+    return data.role === 'owner';
+  } catch (error) {
+    console.error('Unexpected error checking user permissions:', error);
+    return false;
+  }
+};
 
 /**
  * Stats básicas de profiles
  */
 export const getUserStats = async (): Promise<{
-	data: {
-		total: number
-		owners: number
-		medicowners: number
-		employees: number
-		residents: number
-		citotecnos: number
-		patologos: number
-		withBranch: number
-		approved: number
-		pending: number
-	} | null
-	error: PostgrestError | null
+  data: {
+    total: number;
+    owners: number;
+    medicowners: number;
+    employees: number;
+    residents: number;
+    citotecnos: number;
+    patologos: number;
+    withBranch: number;
+    approved: number;
+    pending: number;
+  } | null;
+  error: PostgrestError | null;
 }> => {
-	try {
-		const { data, error } = await supabase.from('profiles').select('role, assigned_branch, estado')
+  try {
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		if (error) {
-			console.error('Error fetching user stats:', error)
-			return { data: null, error }
-		}
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		const stats = {
-			total: data?.length || 0,
-			owners: data?.filter((u) => u.role === 'owner').length || 0,
-			medicowners: data?.filter((u) => u.role === 'medicowner').length || 0,
-			employees: data?.filter((u) => u.role === 'employee').length || 0,
-			residents: data?.filter((u) => u.role === 'residente').length || 0,
-			citotecnos: data?.filter((u) => u.role === 'citotecno').length || 0,
-			patologos: data?.filter((u) => u.role === 'patologo').length || 0,
-			withBranch: data?.filter((u) => u.assigned_branch).length || 0,
-			approved: data?.filter((u) => u.estado === 'aprobado').length || 0,
-			pending: data?.filter((u) => u.estado === 'pendiente').length || 0,
-		}
+    if (profileError || !profile?.laboratory_id) {
+      console.error(
+        'Error obteniendo laboratory_id del usuario:',
+        profileError,
+      );
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
 
-		return { data: stats, error: null }
-	} catch (error) {
-		console.error('Unexpected error fetching user stats:', error)
-		return { data: null, error: error as PostgrestError }
-	}
-}
+    // 🔐 MULTI-TENANT: Filtrar stats por laboratory_id
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, assigned_branch, estado')
+      .eq('laboratory_id', profile.laboratory_id);
+
+    if (error) {
+      console.error('Error fetching user stats:', error);
+      return { data: null, error };
+    }
+
+    const stats = {
+      total: data?.length || 0,
+      owners: data?.filter((u) => u.role === 'owner').length || 0,
+      medicowners: data?.filter((u) => u.role === 'medicowner').length || 0,
+      employees: data?.filter((u) => u.role === 'employee').length || 0,
+      residents: data?.filter((u) => u.role === 'residente').length || 0,
+      citotecnos: data?.filter((u) => u.role === 'citotecno').length || 0,
+      patologos: data?.filter((u) => u.role === 'patologo').length || 0,
+      withBranch: data?.filter((u) => u.assigned_branch).length || 0,
+      approved: data?.filter((u) => u.estado === 'aprobado').length || 0,
+      pending: data?.filter((u) => u.estado === 'pendiente').length || 0,
+    };
+
+    return { data: stats, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching user stats:', error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
 
 /* ------------------------------------------------------------------
    Pre-check de email contra auth.users (RPC SECURITY DEFINER)

@@ -6,6 +6,8 @@ import { useFullscreenDetection } from '@shared/hooks/useFullscreenDetection'
 import Sidebar from '@shared/components/layout/Sidebar'
 import { Menu } from 'lucide-react'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
+import ChatButton from '@features/ChatAI/components/ChatButton'
+import { FeatureGuard } from '@shared/components/FeatureGuard'
 
 const Layout: React.FC = () => {
 	const { isDark, toggleDarkMode } = useDarkMode()
@@ -86,6 +88,9 @@ const Layout: React.FC = () => {
 					</div>
 				</div>
 			</main>
+			<FeatureGuard feature='hasChatAI'>
+				<ChatButton />
+			</FeatureGuard>
 		</div>
 	)
 }

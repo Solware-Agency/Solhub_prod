@@ -9,13 +9,18 @@
     }
   ],
   "compilerOptions": {
+    "skipLibCheck": true,
     "baseUrl": "src",
     "paths": {
       "@services/*": [
         "services/*"
       ],
-      "@app/*": ["app/*"],
-      "@features/*": ["features/*"],
+      "@app/*": [
+        "app/*"
+      ],
+      "@features/*": [
+        "features/*"
+      ],
       "@shared/*": [
         "shared/*"
       ],

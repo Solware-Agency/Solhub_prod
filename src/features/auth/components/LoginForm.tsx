@@ -6,7 +6,7 @@ import { useAuth } from '@app/providers/AuthContext'
 import { useSecureRedirect } from '@shared/hooks/useSecureRedirect'
 import Aurora from '@shared/components/ui/Aurora'
 import FadeContent from '@shared/components/ui/FadeContent'
-import FavIcon from '@shared/components/icons/FavIcon'
+import FavIcon from '@shared/components/icons/ConspatIcon';
 import { supabase } from '@services/supabase/config/config'
 import { toast } from '@shared/hooks/use-toast'
 
