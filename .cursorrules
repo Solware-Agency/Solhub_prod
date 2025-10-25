@@ -986,10 +986,10 @@ WHERE laboratory_id = 'demo-lab-id';
 
 ### 🟢 **MEJORAS OPCIONALES (No críticas)**
 
-#### **Mejora 1: Migrar `--Conspat` a `--labPrimaryColor`**
+#### **Mejora 1: Migrar `--labPrimary` a `--labPrimaryColor`**
 **Tiempo:** 10 minutos  
 **Impacto:** Solo estético  
-**Archivos:** `tailwind.config.js`, buscar `--Conspat` en todo el proyecto
+**Archivos:** `tailwind.config.js`, buscar `--labPrimary` en todo el proyecto
 
 #### **Mejora 2: Implementar más `FeatureGuard`**
 **Tiempo:** 30 minutos  
@@ -1484,9 +1484,7 @@ pnpm lint                  # ESLint
 ---
 
 #### 🟢 **MEJORAS OPCIONALES (20% - No críticas):**
-- 🟡 Migrar `--Conspat` a `--labPrimaryColor` (10 min - estético)
 - 🟡 Implementar más `FeatureGuard` en componentes (30 min - UX)
-- 🟡 Testing manual exhaustivo completo (60 min - validación)
 
 ---
 
@@ -1519,7 +1517,7 @@ pnpm lint                  # ESLint
 
 #### **Opción 3: Mejoras Opcionales + Testing** 🎨
 ```bash
-1. Migrar --Conspat a --labPrimaryColor (10 min)
+1. Migrar --labPrimary a --labPrimaryColor (10 min)
 2. Implementar más FeatureGuard (30 min)
 3. Testing exhaustivo (60 min)
 4. Deploy a producción

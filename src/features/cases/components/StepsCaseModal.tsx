@@ -39,6 +39,7 @@ import {
 } from '@shared/components/ui/dialog';
 
 import type { Database } from '@shared/types/types';
+import { useLaboratory } from '@app/providers/LaboratoryContext';
 
 interface MedicalRecord {
   id?: string;
@@ -75,8 +76,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   onSuccess,
   isFullscreen = false,
 }) => {
-  const GENERATE_DOC = import.meta.env.VITE_GENERATE_DOC_WEBHOOK;
-  const GENERATE_PDF = import.meta.env.VITE_GENERATE_PDF_WEBHOOK;
+  const { laboratory } = useLaboratory();
+  const GENERATE_DOC =
+    laboratory?.config?.webhooks?.generateDoc ||
+    import.meta.env.VITE_GENERATE_DOC_WEBHOOK;
+  const GENERATE_PDF =
+    laboratory?.config?.webhooks?.generatePdf ||
+    import.meta.env.VITE_GENERATE_PDF_WEBHOOK;
 
   const [activeStep, setActiveStep] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -1447,7 +1453,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                                 isCompleted
                                   ? 'border-green-500 text-gray-800 dark:text-white'
                                   : isActive
-                                  ? 'border-Conspat text-gray-800 dark:text-white'
+                                  ? 'border-labPrimary text-gray-800 dark:text-white'
                                   : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500'
                               }`}
                               whileHover={{ scale: 1.05 }}
@@ -1458,7 +1464,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                               <p
                                 className={`text-xs font-medium ${
                                   isActive
-                                    ? 'text-Conspat'
+                                    ? 'text-labPrimary'
                                     : 'text-gray-600 dark:text-gray-400'
                                 }`}
                               >
@@ -1500,7 +1506,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                       <motion.button
                         onClick={handleBack}
                         disabled={isSaving}
-                        className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-Conspat text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
+                        className={`flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${
                           activeStep === 0 ? 'hidden' : ''
                         }`}
                         whileHover={{ scale: 1.02 }}
@@ -1513,7 +1519,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                       <motion.button
                         onClick={handleNext}
                         disabled={isCompleting || isSaving || isGeneratingPDF}
-                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-Conspat text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
+                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >

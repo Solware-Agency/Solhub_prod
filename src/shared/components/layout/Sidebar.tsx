@@ -60,7 +60,7 @@ const NavItem: React.FC<NavItemProps> = ({
       to={to}
       className={({ isActive }) =>
         `flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none ${
-          isActive ? 'text-Conspat border-primary' : 'hover:text-Conspat'
+          isActive ? 'text-labPrimary border-primary' : 'hover:text-labPrimary'
         }`
       }
       onClick={onClick}
@@ -160,7 +160,9 @@ const NavGroup: React.FC<NavGroupProps> = ({
     >
       <div
         className={`flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none ${
-          isExpanded || isChildActive ? 'text-Conspat' : 'hover:text-Conspat'
+          isExpanded || isChildActive
+            ? 'text-labPrimary'
+            : 'hover:text-labPrimary'
         }`}
         title={!showFullContent ? label : undefined}
         onClick={handleClick}

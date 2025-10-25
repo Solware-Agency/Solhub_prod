@@ -45,13 +45,36 @@
      ===================================================================== */
 
   /* Colores de texto */
-  /* .text-lab-primary {
+  .text-labPrimary {
     color: var(--labPrimaryColor);
   }
 
   .text-lab-secondary {
     color: var(--labSecondaryColor);
-  } */
+  }
+
+  /* Colores de fondo */
+  .bg-labPrimary {
+    background-color: var(--labPrimaryColor);
+  }
+
+  .bg-lab-secondary {
+    background-color: var(--labSecondaryColor);
+  }
+
+  /* Bordes */
+  .border-labPrimary {
+    border-color: var(--labPrimaryColor);
+  }
+
+  /* Hover states */
+  .hover\:text-labPrimary:hover {
+    color: var(--labPrimaryColor);
+  }
+
+  .hover\:bg-labPrimary:hover {
+    background-color: var(--labPrimaryColor);
+  }
 
   /* Colores de fondo */
   /* .bg-lab-primary {
@@ -218,7 +241,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --Conspat: var(--labPrimaryColor);
+  --labPrimary: var(--labPrimaryColor);
 }
 
 :root {

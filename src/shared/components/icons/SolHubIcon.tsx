@@ -9,7 +9,7 @@ export function SolHubIcon({ className = '' }: { className?: string }) {
       strokeWidth='2'
       strokeLinecap='round'
       strokeLinejoin='round'
-      className={`lucide lucide-code-xml-icon lucide-code-xml text-Conspat ${className}`}
+      className={`lucide lucide-code-xml-icon lucide-code-xml text-labPrimary ${className}`}
     >
       <path d='m18 16 4-4-4-4' />
       <path d='m6 8-4 4 4 4' />
