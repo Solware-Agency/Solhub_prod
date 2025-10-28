@@ -341,77 +341,96 @@ function AuthCallback() {
 	}, [navigate, searchParams, redirectUser])
 
 	return (
-		<div className="w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black">
-			{/* Aurora Background with New Color Palette */}
-			<Aurora colorStops={['#ec4699', '#750c41', '#ec4699']} blend={0.7} amplitude={1.3} speed={0.3} />
+    <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+      {/* Aurora Background with New Color Palette */}
+      <Aurora
+        colorStops={['#3d84f5', '#06337b', '#3d84f5']}
+        blend={0.7}
+        amplitude={1.3}
+        speed={0.3}
+      />
 
-			{/* Content Container with FadeContent Animation */}
-			<div className="relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center">
-				<FadeContent
-					blur={true}
-					duration={1000}
-					easing="ease-out"
-					initialOpacity={0}
-					delay={200}
-					className="w-full h-full flex items-center justify-center"
-				>
-					<div className="flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20">
-						<div className="text-center mb-6 flex flex-col items-center justify-center">
-							<div
-								className={`p-4 rounded-full mb-4 shadow-[0_0_15px_rgba(158,17,87,0.4)] hover:shadow-[0_0_25px_rgba(158,17,87,0.7)] transition-transform duration-1000 ${
-									status === 'loading' ? 'bg-blue-500' : status === 'success' ? 'bg-green-500' : 'bg-red-500'
-								}`}
-								style={{
-									animation: 'slowPulse 3s ease-in-out infinite',
-								}}
-							>
-								{status === 'loading' && <RefreshCw className="text-white size-12 animate-spin" />}
-								{status === 'success' && <CheckCircle className="text-white size-12" />}
-								{status === 'error' && <AlertCircle className="text-white size-12" />}
-							</div>
+      {/* Content Container with FadeContent Animation */}
+      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+        <FadeContent
+          blur={true}
+          duration={1000}
+          easing='ease-out'
+          initialOpacity={0}
+          delay={200}
+          className='w-full h-full flex items-center justify-center'
+        >
+          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
+            <div className='text-center mb-6 flex flex-col items-center justify-center'>
+              <div
+                className={`p-4 rounded-full mb-4 shadow-[0_0_15px_rgba(158,17,87,0.4)] hover:shadow-[0_0_25px_rgba(158,17,87,0.7)] transition-transform duration-1000 ${
+                  status === 'loading'
+                    ? 'bg-blue-500'
+                    : status === 'success'
+                    ? 'bg-green-500'
+                    : 'bg-red-500'
+                }`}
+                style={{
+                  animation: 'slowPulse 3s ease-in-out infinite',
+                }}
+              >
+                {status === 'loading' && (
+                  <RefreshCw className='text-white size-12 animate-spin' />
+                )}
+                {status === 'success' && (
+                  <CheckCircle className='text-white size-12' />
+                )}
+                {status === 'error' && (
+                  <AlertCircle className='text-white size-12' />
+                )}
+              </div>
 
-															<h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-								{status === 'loading' && 'Verificando...'}
-								{status === 'success' && '¡Verificación Exitosa!'}
-								{status === 'error' && 'Error de Verificación'}
-							</h1>
+              <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
+                {status === 'loading' && 'Verificando...'}
+                {status === 'success' && '¡Verificación Exitosa!'}
+                {status === 'error' && 'Error de Verificación'}
+              </h1>
 
-							<p className="text-slate-300 text-center">{message || 'Procesando verificación...'}</p>
-						</div>
+              <p className='text-slate-300 text-center'>
+                {message || 'Procesando verificación...'}
+              </p>
+            </div>
 
-						{status === 'loading' && (
-							<div className="w-full">
-								<div className="bg-blue-900/50 border border-blue-700/50 text-blue-200 px-4 py-3 rounded">
-									<p className="text-sm text-center">Por favor espera mientras procesamos tu solicitud...</p>
-								</div>
-							</div>
-						)}
+            {status === 'loading' && (
+              <div className='w-full'>
+                <div className='bg-blue-900/50 border border-blue-700/50 text-blue-200 px-4 py-3 rounded'>
+                  <p className='text-sm text-center'>
+                    Por favor espera mientras procesamos tu solicitud...
+                  </p>
+                </div>
+              </div>
+            )}
 
-						{status === 'error' && (
-							<div className="w-full">
-								<button
-									onClick={() => navigate('/')}
-									className="w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 shadow-sm transform hover:scale-[1.02] active:scale-[0.98]"
-								>
-									Ir al Login
-								</button>
-							</div>
-						)}
+            {status === 'error' && (
+              <div className='w-full'>
+                <button
+                  onClick={() => navigate('/')}
+                  className='w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 shadow-sm transform hover:scale-[1.02] active:scale-[0.98]'
+                >
+                  Ir al Login
+                </button>
+              </div>
+            )}
 
-						{/* Footer */}
-						<div className="mt-6 text-center flex flex-col gap-2">
-							<p className="text-white text-sm">
-								Desarrollado por{' '}
-								<a href="https://www.solware.agency/" className="text-blue-500">
-									Solware
-								</a>
-							</p>
-						</div>
-					</div>
-				</FadeContent>
-			</div>
-		</div>
-	)
+            {/* Footer */}
+            <div className='mt-6 text-center flex flex-col gap-2'>
+              <p className='text-white text-sm'>
+                Desarrollado por{' '}
+                <a href='https://www.solware.agency/' className='text-blue-500'>
+                  Solware
+                </a>
+              </p>
+            </div>
+          </div>
+        </FadeContent>
+      </div>
+    </div>
+  );
 }
 
 export default AuthCallback

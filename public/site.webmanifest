@@ -1,11 +1,11 @@
 {
-  "name": "Conspat",
-  "short_name": "Conspat",
-  "description": "Panel de Control para la gestión de citas médicas",
+  "name": "SolHub",
+  "short_name": "SolHub",
+  "description": "Sistema de Gestión: Menos papeles, más precisión, salud conectada.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#a91dd8",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "apple-touch-icon.png",
