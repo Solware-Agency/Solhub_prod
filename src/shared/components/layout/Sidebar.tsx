@@ -352,24 +352,28 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className='flex flex-col justify-center gap-2'>
           {isOwner && (
             <>
-              <div className='py-1'>
-                <NavItem
-                  to='/dashboard/home'
-                  icon={<Home className='stroke-2 size-5 shrink-0' />}
-                  label='Inicio'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
-              <div className='py-1'>
-                <NavItem
-                  to='/dashboard/medical-form'
-                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
-                  label='Formulario'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
+              <FeatureGuard feature='hasStats'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/dashboard/home'
+                    icon={<Home className='stroke-2 size-5 shrink-0' />}
+                    label='Inicio'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
+              <FeatureGuard feature='hasForm'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/dashboard/medical-form'
+                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                    label='Formulario'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
               <NavGroup
                 icon={
                   <Microscope className='stroke-2 size-4 sm:size-5 shrink-0' />
@@ -382,21 +386,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                 isMobile={isMobile}
               >
                 {/* Cases - For all roles */}
-                <NavItem
-                  to='/dashboard/cases'
-                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
+                <FeatureGuard feature='hasCases'>
+                  <NavItem
+                    to='/dashboard/cases'
+                    icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                    label='Casos'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
 
-                <NavItem
-                  to='/dashboard/patients'
-                  icon={<User className='stroke-2 size-5 shrink-0' />}
-                  label='Pacientes'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
+                <FeatureGuard feature='hasPatients'>
+                  <NavItem
+                    to='/dashboard/patients'
+                    icon={<User className='stroke-2 size-5 shrink-0' />}
+                    label='Pacientes'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
               </NavGroup>
               <NavGroup
                 icon={
@@ -409,6 +417,82 @@ const Sidebar: React.FC<SidebarProps> = ({
                 childPaths={reportsPaths}
                 isMobile={isMobile}
               >
+                <FeatureGuard feature='hasStats'>
+                  <NavItem
+                    to='/dashboard/stats'
+                    icon={<PieChart className='stroke-2 size-5 shrink-0' />}
+                    label='Estadísticas'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasReports'>
+                  <NavItem
+                    to='/dashboard/reports'
+                    icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
+                    label='Reportes'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasChangeHistory'>
+                  <NavItem
+                    to='/dashboard/changelog'
+                    icon={<History className='stroke-2 size-5 shrink-0' />}
+                    label='Historial'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              </NavGroup>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/dashboard/users'
+                  icon={
+                    <Users className='stroke-2 size-4 sm:size-5 shrink-0' />
+                  }
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isMedicowner && (
+            <>
+              <FeatureGuard feature='hasStats'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/dashboard/home'
+                    icon={<Home className='stroke-2 size-5 shrink-0' />}
+                    label='Inicio'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
+              {/* Cases - For all roles */}
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/dashboard/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/dashboard/patients'
+                  icon={<User className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasStats'>
                 <NavItem
                   to='/dashboard/stats'
                   icon={<PieChart className='stroke-2 size-5 shrink-0' />}
@@ -416,7 +500,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
-
+              </FeatureGuard>
+              <FeatureGuard feature='hasReports'>
                 <NavItem
                   to='/dashboard/reports'
                   icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
@@ -424,66 +509,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
-                <NavItem
-                  to='/dashboard/changelog'
-                  icon={<History className='stroke-2 size-5 shrink-0' />}
-                  label='Historial'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </NavGroup>
-              <NavItem
-                to='/dashboard/users'
-                icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
-                label='Usuarios'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-            </>
-          )}
-
-          {isMedicowner && (
-            <>
-              <div className='py-1'>
-                <NavItem
-                  to='/dashboard/home'
-                  icon={<Home className='stroke-2 size-5 shrink-0' />}
-                  label='Inicio'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
-              {/* Cases - For all roles */}
-              <NavItem
-                to='/dashboard/cases'
-                icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                label='Casos'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-
-              <NavItem
-                to='/dashboard/patients'
-                icon={<User className='stroke-2 size-5 shrink-0' />}
-                label='Pacientes'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-              <NavItem
-                to='/dashboard/stats'
-                icon={<PieChart className='stroke-2 size-5 shrink-0' />}
-                label='Estadísticas'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-
-              <NavItem
-                to='/dashboard/reports'
-                icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
-                label='Reportes'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
+              </FeatureGuard>
             </>
           )}
 
@@ -497,34 +523,42 @@ const Sidebar: React.FC<SidebarProps> = ({
                 showFullContent={showFullContent}
                 onClick={onClose}
               />
-              <NavItem
-                to='/employee/form'
-                icon={<FileText className='stroke-2 size-5 shrink-0' />}
-                label='Formulario'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-              <NavItem
-                to='/employee/records'
-                icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                label='Registros'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-              <NavItem
-                to='/employee/patients'
-                icon={<Users className='stroke-2 size-5 shrink-0' />}
-                label='Pacientes'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
-              <NavItem
-                to='/employee/changelogpage'
-                icon={<History className='stroke-2 size-5 shrink-0' />}
-                label='Historial'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
+              <FeatureGuard feature='hasForm'>
+                <NavItem
+                  to='/employee/form'
+                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                  label='Formulario'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/employee/records'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Registros'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/employee/patients'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasChangeHistory'>
+                <NavItem
+                  to='/employee/changelogpage'
+                  icon={<History className='stroke-2 size-5 shrink-0' />}
+                  label='Historial'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -537,13 +571,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 								showFullContent={showFullContent}
 								onClick={onClose}
 							/> */}
-              <NavItem
-                to='/medic/cases'
-                icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                label='Casos'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/medic/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
               {/* <NavItem
 								to="/medic/my-cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
@@ -563,25 +599,29 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isCitotecno && (
             <>
-              <NavItem
-                to='/cito/cases'
-                icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                label='Casos'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/cito/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
           {isPatologo && (
             <>
-              <NavItem
-                to='/patolo/cases'
-                icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                label='Casos'
-                showFullContent={showFullContent}
-                onClick={onClose}
-              />
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/patolo/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
           <FeatureGuard feature='hasChatAI'>

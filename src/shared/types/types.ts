@@ -695,51 +695,54 @@ export interface MedicalRecord {
   archivo_adjunto_url?: string | null;
 }
 
-// ===== INTERFACES PARA SISTEMA MULTI-TENANT =====
+// =====================================================================
+// TIPOS GENERADOS AUTOMÁTICAMENTE DESDE EL DASHBOARD ADMIN
+// Última actualización: 2025-10-27T21:39:06.862Z
+// NO EDITAR MANUALMENTE - Usar dashboard para agregar features
+// =====================================================================
 
-// Interfaz principal para Laboratory
-export interface Laboratory {
-  id: string;
-  slug: string;
-  name: string;
-  status: 'active' | 'inactive' | 'trial';
-  features: LaboratoryFeatures;
-  branding: LaboratoryBranding;
-  config: LaboratoryConfig;
-  created_at: string;
-  updated_at: string;
-}
-
-// Configuración de features habilitadas por laboratorio
 export interface LaboratoryFeatures {
-  hasInmunoRequests: boolean;
-  hasChangelogModule: boolean;
-  hasChatAI: boolean;
-  hasMultipleBranches: boolean;
-  hasCitologyStatus: boolean;
-  hasPatientOriginFilter: boolean;
-  hasRobotTracking: boolean;
+  hasChatAI: boolean
+  hasStats: boolean
+  hasChangeHistory: boolean
+  hasUsers: boolean
+  hasCases: boolean
+  hasPatients: boolean
+  hasForm: boolean
+  hasPayment: boolean
+  hasReports: boolean
+  hasCaseGenerator: boolean
 }
 
-// Branding personalizado por laboratorio
 export interface LaboratoryBranding {
-  logo?: string; // URL de imagen (ej: "/logos/conspat.png") o null
-  icon?: string; // Nombre del ícono (ej: "conspat", "solhub") - se usa si no hay logo
-  primaryColor: string;
-  secondaryColor: string;
+  logo?: string | null      // URL del logo o null
+  icon?: string             // Nombre del ícono (por defecto: "solhub")
+  primaryColor: string      // Color primario (por defecto: "#0066cc")
+  secondaryColor: string    // Color secundario (por defecto: "#00cc66")
 }
 
-// Configuración específica del laboratorio
 export interface LaboratoryConfig {
-  branches: string[];
-  paymentMethods: string[];
-  defaultExchangeRate: number;
-  timezone: string;
-  webhooks?: {
-    // NUEVO
-    generateDoc?: string;
-    generatePdf?: string;
-  };
+  branches: string[]
+  paymentMethods: string[]
+  defaultExchangeRate: number
+  timezone: string
+  webhooks?: {              // OPCIONAL - No todos los labs lo tienen
+    generateDoc?: string
+    generatePdf?: string
+    sendEmail?: string
+  }
+}
+
+export interface Laboratory {
+  id: string
+  slug: string
+  name: string
+  status: 'active' | 'inactive' | 'trial'
+  features: LaboratoryFeatures
+  branding: LaboratoryBranding
+  config: LaboratoryConfig
+  created_at: string
+  updated_at: string
 }
 
 // Extender interfaces existentes con laboratory_id
