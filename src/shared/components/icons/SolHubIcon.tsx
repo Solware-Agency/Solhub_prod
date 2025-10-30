@@ -1,9 +1,11 @@
 export function SolHubIcon({
   fill = '#000',
   className = '',
+  style = {},
 }: {
   fill?: string;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <svg
@@ -12,6 +14,7 @@ export function SolHubIcon({
       xmlns='http://www.w3.org/2000/svg'
       viewBox='0 0 500 500'
       className={className}
+      style={style}
     >
       <defs>
         <style>
