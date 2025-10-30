@@ -22,9 +22,9 @@ import {
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
-import { LaboratoryIcon } from '@shared/utils/laboratory-icons';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { cn } from '@shared/lib/cn';
+import SolHubIcon from '@shared/components/icons/SolHubIcon';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 
 interface NavItemProps {
@@ -323,20 +323,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4 scrollbar-hide'>
         <div className='flex justify-between items-center w-full mb-2 sm:mb-4'>
           <div className='flex items-center gap-3 ml-1'>
-            {/* Mostrar logo si existe, si no, mostrar ícono dinámico */}
-            {laboratory?.branding.logo ? (
-              <img
-                src={laboratory.branding.logo}
-                alt={laboratory.name}
-                className='size-8 shrink-0 -ml-1 rounded object-contain'
-              />
-            ) : (
-              <LaboratoryIcon
-                iconName={laboratory?.branding.icon}
-                fill={laboratory?.branding.primaryColor}
-                className={`size-8 shrink-0 -ml-1`}
-              />
-            )}
+            <SolHubIcon
+              fill={laboratory?.branding.primaryColor}
+              className={`size-8 shrink-0 -ml-1`}
+            />
             <p
               className={`text-2xl font-bold whitespace-nowrap transition-none ${
                 showFullContent
@@ -344,7 +334,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'opacity-0 w-0 overflow-hidden'
               }`}
             >
-              {laboratory?.name}
+              Solhub
             </p>
           </div>
         </div>

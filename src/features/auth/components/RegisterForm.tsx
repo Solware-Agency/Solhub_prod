@@ -1,211 +1,252 @@
-import { UserRound, Eye, EyeOff, Clock, AlertCircle, CheckCircle } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { signUp } from '@/services/supabase/auth/auth'
-import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management' // debe devolver { exists: boolean, error: any }
-import Aurora from '@shared/components/ui/Aurora'
-import FadeContent from '@shared/components/ui/FadeContent'
-import type { User } from '@supabase/supabase-js'
+import {
+  UserRound,
+  Eye,
+  EyeOff,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { signUp } from '@/services/supabase/auth/auth';
+import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management'; // debe devolver { exists: boolean, error: any }
+import Aurora from '@shared/components/ui/Aurora';
+import FadeContent from '@shared/components/ui/FadeContent';
+import type { User } from '@supabase/supabase-js';
 
 function RegisterForm() {
-	const [email, setEmail] = useState('')
-	const [password, setPassword] = useState('')
-	const [confirmPassword, setConfirmPassword] = useState('')
-	const [displayName, setDisplayName] = useState('')
-	const [phone, setPhone] = useState('')
-	const [showPassword, setShowPassword] = useState(false)
-	const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-	const [error, setError] = useState('')
-	const [message, setMessage] = useState('')
-	const [loading, setLoading] = useState(false)
-	const [rateLimitError, setRateLimitError] = useState(false)
-	const [retryCountdown, setRetryCountdown] = useState(0)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState(0);
 
-	// UX: pre-check de email
-	const [checkingEmail, setCheckingEmail] = useState(false)
-	const [emailTaken, setEmailTaken] = useState<boolean | null>(null)
-	const lastCheckedRef = useRef<string>('')
+  // UX: pre-check de email
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [emailTaken, setEmailTaken] = useState<boolean | null>(null);
+  const lastCheckedRef = useRef<string>('');
 
-	const navigate = useNavigate()
+  const navigate = useNavigate();
 
-	const normalizePhone = (value: string) => value.replace(/\D/g, '')
-	const normalizeEmail = (v: string) => v.trim().toLowerCase()
+  const normalizePhone = (value: string) => value.replace(/\D/g, '');
+  const normalizeEmail = (v: string) => v.trim().toLowerCase();
 
-	const startRetryCountdown = (seconds: number) => {
-		setRetryCountdown(seconds)
-		const interval = setInterval(() => {
-			setRetryCountdown((prev) => {
-				if (prev <= 1) {
-					clearInterval(interval)
-					setRateLimitError(false)
-					return 0
-				}
-				return prev - 1
-			})
-		}, 1000)
-	}
+  const startRetryCountdown = (seconds: number) => {
+    setRetryCountdown(seconds);
+    const interval = setInterval(() => {
+      setRetryCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setRateLimitError(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-	// Pre-check en blur (rápido, sin spam)
-	const checkEmail = useCallback(async (value: string) => {
-		const cleaned = normalizeEmail(value)
-		if (!cleaned || cleaned === lastCheckedRef.current) return
-		setCheckingEmail(true)
-		setEmailTaken(null)
-		try {
-			const { exists, error: preErr } = await getUserByEmail(cleaned)
-			if (preErr) {
-				// No reveles nada si falla el pre-check
-				setEmailTaken(null)
-			} else {
-				setEmailTaken(!!exists)
-			}
-			lastCheckedRef.current = cleaned
-		} catch {
-			setEmailTaken(null)
-		} finally {
-			setCheckingEmail(false)
-		}
-	}, [])
+  // Pre-check en blur (rápido, sin spam)
+  const checkEmail = useCallback(async (value: string) => {
+    const cleaned = normalizeEmail(value);
+    if (!cleaned || cleaned === lastCheckedRef.current) return;
+    setCheckingEmail(true);
+    setEmailTaken(null);
+    try {
+      const { exists, error: preErr } = await getUserByEmail(cleaned);
+      if (preErr) {
+        // No reveles nada si falla el pre-check
+        setEmailTaken(null);
+      } else {
+        setEmailTaken(!!exists);
+      }
+      lastCheckedRef.current = cleaned;
+    } catch {
+      setEmailTaken(null);
+    } finally {
+      setCheckingEmail(false);
+    }
+  }, []);
 
-	const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault()
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-		// Reset
-		setError('')
-		setMessage('')
-		setRateLimitError(false)
+    // Reset
+    setError('');
+    setMessage('');
+    setRateLimitError(false);
 
-		// Validar nombre de display obligatorio
-		if (!displayName.trim()) {
-			setError('El nombre para mostrar es obligatorio.')
-			return
-		}
+    // Validar nombre de display obligatorio
+    if (!displayName.trim()) {
+      setError('El nombre para mostrar es obligatorio.');
+      return;
+    }
 
-		// Validar teléfono obligatorio
-		const normalizedPhone = normalizePhone(phone)
-		if (!normalizedPhone) {
-			setError('El número de teléfono es obligatorio.')
-			return
-		}
+    // Validar teléfono obligatorio
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      setError('El número de teléfono es obligatorio.');
+      return;
+    }
 
-		if (password !== confirmPassword) {
-			setError('Las contraseñas no coinciden.')
-			return
-		}
-		if (password.length < 6) {
-			setError('La contraseña debe tener al menos 6 caracteres.')
-			return
-		}
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
 
-		try {
-			setLoading(true)
+    try {
+      setLoading(true);
 
-			const cleanedEmail = normalizeEmail(email)
-			console.log('Attempting to register user:', cleanedEmail)
+      const cleanedEmail = normalizeEmail(email);
+      console.log('Attempting to register user:', cleanedEmail);
 
-			// Pre-check de UX (opcional, pero útil). No es seguridad, el hook es quien manda.
-			try {
-				const { exists, error: precheckErr } = await getUserByEmail(cleanedEmail)
-				if (precheckErr) {
-					setError('No se pudo validar el correo en este momento. Inténtalo de nuevo.')
-					setLoading(false)
-					return
-				}
-				if (exists) {
-					setError('Ya existe una cuenta con este correo electrónico.')
-					setLoading(false)
-					return
-				}
-			} catch (checkErr) {
-				console.error('Unexpected error on email existence check:', checkErr)
-				setError('No se pudo validar el correo en este momento. Inténtalo de nuevo.')
-				setLoading(false)
-				return
-			}
+      // Pre-check de UX (opcional, pero útil). No es seguridad, el hook es quien manda.
+      try {
+        const { exists, error: precheckErr } = await getUserByEmail(
+          cleanedEmail,
+        );
+        if (precheckErr) {
+          setError(
+            'No se pudo validar el correo en este momento. Inténtalo de nuevo.',
+          );
+          setLoading(false);
+          return;
+        }
+        if (exists) {
+          setError('Ya existe una cuenta con este correo electrónico.');
+          setLoading(false);
+          return;
+        }
+      } catch (checkErr) {
+        console.error('Unexpected error on email existence check:', checkErr);
+        setError(
+          'No se pudo validar el correo en este momento. Inténtalo de nuevo.',
+        );
+        setLoading(false);
+        return;
+      }
 
-			// Signup — aquí el HOOK bloqueará duplicados reales con un 400 "User already registered"
-			const { user, error: signUpError } = await signUp(cleanedEmail, password, displayName.trim(), normalizedPhone)
+      // Signup — aquí el HOOK bloqueará duplicados reales con un 400 "User already registered"
+      const { user, error: signUpError } = await signUp(
+        cleanedEmail,
+        password,
+        displayName.trim(),
+        normalizedPhone,
+      );
 
-			if (signUpError) {
-				console.error('Registration error:', signUpError)
+      if (signUpError) {
+        console.error('Registration error:', signUpError);
 
-				const msg = signUpError.message || ''
-				if (msg.includes('User already registered')) {
-					// Este viene DIRECTO del hook before-user-created
-					setError('Ya existe una cuenta con este correo electrónico.')
-				} else if (msg.includes('Password should be at least')) {
-					setError('La contraseña es muy débil.')
-				} else if (msg.includes('Unable to validate email address') || msg.includes('Invalid email')) {
-					setError('Correo electrónico inválido.')
-				} else if (msg.includes('Signup is disabled')) {
-					setError('El registro está temporalmente deshabilitado. Contacta al administrador.')
-				} else if (msg.includes('email rate limit exceeded') || msg.includes('over_email_send_rate_limit')) {
-					setRateLimitError(true)
-					setError(
-						'Se ha alcanzado el límite de envío de correos electrónicos. Este es un límite temporal del servicio de email.',
-					)
-					startRetryCountdown(300)
-				} else if (msg.includes('Error sending confirmation email') || msg.includes('535 5.7.8')) {
-					setError(
-						'Error temporal del servicio de email. Por favor, contacta al administrador o intenta de nuevo más tarde.',
-					)
-				} else {
-					setError('Error al crear la cuenta. Inténtalo de nuevo.')
-				}
-				return
-			}
+        const msg = signUpError.message || '';
+        if (msg.includes('User already registered')) {
+          // Este viene DIRECTO del hook before-user-created
+          setError('Ya existe una cuenta con este correo electrónico.');
+        } else if (msg.includes('Password should be at least')) {
+          setError('La contraseña es muy débil.');
+        } else if (
+          msg.includes('Unable to validate email address') ||
+          msg.includes('Invalid email')
+        ) {
+          setError('Correo electrónico inválido.');
+        } else if (msg.includes('Signup is disabled')) {
+          setError(
+            'El registro está temporalmente deshabilitado. Contacta al administrador.',
+          );
+        } else if (
+          msg.includes('email rate limit exceeded') ||
+          msg.includes('over_email_send_rate_limit')
+        ) {
+          setRateLimitError(true);
+          setError(
+            'Se ha alcanzado el límite de envío de correos electrónicos. Este es un límite temporal del servicio de email.',
+          );
+          startRetryCountdown(300);
+        } else if (
+          msg.includes('Error sending confirmation email') ||
+          msg.includes('535 5.7.8')
+        ) {
+          setError(
+            'Error temporal del servicio de email. Por favor, contacta al administrador o intenta de nuevo más tarde.',
+          );
+        } else {
+          setError('Error al crear la cuenta. Inténtalo de nuevo.');
+        }
+        return;
+      }
 
-			// Si llegamos aquí, NO hubo error => registro válido (pendiente de verificación)
-			if (user) {
-				console.log('User registered successfully:', user.email)
-				console.log('Email confirmed at registration:', (user as User).email_confirmed_at)
-				console.log('Confirmation sent at:', (user as User).confirmation_sent_at)
+      // Si llegamos aquí, NO hubo error => registro válido (pendiente de verificación)
+      if (user) {
+        console.log('User registered successfully:', user.email);
+        console.log(
+          'Email confirmed at registration:',
+          (user as User).email_confirmed_at,
+        );
+        console.log(
+          'Confirmation sent at:',
+          (user as User).confirmation_sent_at,
+        );
 
-				setMessage(
-					'¡Cuenta creada exitosamente! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam.',
-				)
+        setMessage(
+          '¡Cuenta creada exitosamente! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam.',
+        );
 
-				try {
-					localStorage.setItem('pending_verification_email', cleanedEmail)
-				} catch {
-					// ignore storage errors
-				}
+        try {
+          localStorage.setItem('pending_verification_email', cleanedEmail);
+        } catch {
+          // ignore storage errors
+        }
 
-				setTimeout(() => {
-					navigate('/email-verification-notice')
-				}, 2000)
-			} else {
-				// Ultra defensivo: si no hay user ni error, algo raro pasó
-				setError('No se pudo crear la cuenta. Inténtalo de nuevo.')
-			}
-		} catch (err: unknown) {
-			console.error('Registration error:', err)
-			const msg = err instanceof Error ? err.message : ''
-			if (msg.includes('email rate limit exceeded') || msg.includes('over_email_send_rate_limit')) {
-				setRateLimitError(true)
-				setError(
-					'Se ha alcanzado el límite de envío de correos electrónicos. Este es un límite temporal del servicio de email.',
-				)
-				startRetryCountdown(300)
-			} else if (msg.includes('Error sending confirmation email') || msg.includes('535 5.7.8')) {
-				setError(
-					'Error temporal del servicio de email. Por favor, contacta al administrador o intenta de nuevo más tarde.',
-				)
-			} else {
-				setError('Error al crear la cuenta. Inténtalo de nuevo.')
-			}
-		} finally {
-			setLoading(false)
-		}
-	}
+        setTimeout(() => {
+          navigate('/email-verification-notice');
+        }, 2000);
+      } else {
+        // Ultra defensivo: si no hay user ni error, algo raro pasó
+        setError('No se pudo crear la cuenta. Inténtalo de nuevo.');
+      }
+    } catch (err: unknown) {
+      console.error('Registration error:', err);
+      const msg = err instanceof Error ? err.message : '';
+      if (
+        msg.includes('email rate limit exceeded') ||
+        msg.includes('over_email_send_rate_limit')
+      ) {
+        setRateLimitError(true);
+        setError(
+          'Se ha alcanzado el límite de envío de correos electrónicos. Este es un límite temporal del servicio de email.',
+        );
+        startRetryCountdown(300);
+      } else if (
+        msg.includes('Error sending confirmation email') ||
+        msg.includes('535 5.7.8')
+      ) {
+        setError(
+          'Error temporal del servicio de email. Por favor, contacta al administrador o intenta de nuevo más tarde.',
+        );
+      } else {
+        setError('Error al crear la cuenta. Inténtalo de nuevo.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-	const formatTime = (seconds: number) => {
-		const minutes = Math.floor(seconds / 60)
-		const remainingSeconds = seconds % 60
-		return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-	}
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
-	return (
+  return (
     <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
       {/* Aurora Background */}
       <Aurora
@@ -226,12 +267,7 @@ function RegisterForm() {
         >
           <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-xl bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
             <div className='text-center mb-4 flex flex-col items-center justify-center'>
-              <div
-                className='p-4 bg-[#9e1157] rounded-full mb-4 shadow-[0_0_15px_rgba(158,17,87,0.4)] hover:shadow-[0_0_25px_rgba(158,17,87,0.7)] transition-transform duration-1000'
-                style={{ animation: 'slowPulse 3s ease-in-out infinite' }}
-              >
-                <UserRound className='text-white size-16' />
-              </div>
+              <UserRound className='text-white size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]' />
               <div>
                 <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
                   Bienvenido a SolHub
@@ -477,4 +513,4 @@ function RegisterForm() {
   );
 }
 
-export default RegisterForm
+export default RegisterForm;

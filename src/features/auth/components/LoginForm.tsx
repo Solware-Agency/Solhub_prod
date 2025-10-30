@@ -231,14 +231,10 @@ function LoginForm() {
         >
           <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
             <div className='text-center mb-4 flex flex-col items-center justify-center'>
-              <div
-                className='p-4 bg-[#3d84f5] rounded-full mb-4 shadow-[0_0_15px_rgba(61,132,245,0.4)] hover:shadow-[0_0_25px_rgba(61,132,245,0.7)] transition-transform duration-1000'
-                style={{
-                  animation: 'slowPulse 3s ease-in-out infinite',
-                }}
-              >
-                <SolHubIcon fill='#fff' className='size-16' />
-              </div>
+              <SolHubIcon
+                fill='#fff'
+                className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
+              />
               <div>
                 <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
                   Bienvenido a SolHub
