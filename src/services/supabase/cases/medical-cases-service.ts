@@ -245,6 +245,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   // Campos de patients
+  informepdf_url: string | null;
   cedula: string;
   nombre: string;
   edad: string | null;

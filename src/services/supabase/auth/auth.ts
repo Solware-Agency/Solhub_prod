@@ -32,17 +32,66 @@ export interface UserProfile {
 }
 
 // Sign up with email and password - ENHANCED WITH PROPER EMAIL VERIFICATION
+// 
+// ⚠️ IMPORTANTE: laboratoryId es OBLIGATORIO - No se puede registrar sin código
+// 
+// ¿Qué cambió?
+// - Agregamos parámetro OBLIGATORIO laboratoryId
+// - Lo pasamos en los metadatos del usuario
+// - El trigger SQL handle_new_user() leerá este metadata y asignará laboratory_id al perfil
 export const signUp = async (
 	email: string,
 	password: string,
+	laboratoryId: string, // ← OBLIGATORIO: ID del laboratorio (obtenido del código)
 	displayName?: string,
 	phone?: string,
 ): Promise<AuthResponse> => {
 	try {
 		console.log('Attempting to sign up user:', email)
 		console.log('Using redirect URL:', `${REDIRECT_URL}/auth/callback`)
+		
+		// Validar que laboratoryId existe y no está vacío
+		if (!laboratoryId || laboratoryId.trim() === '') {
+			console.error('Laboratory ID is required but not provided')
+			return {
+				user: null,
+				error: {
+					message: 'El código de laboratorio es obligatorio para registrarse',
+					name: 'LaboratoryIdRequired',
+				} as AuthError,
+			}
+		}
+		
+		console.log('Registering user with laboratory_id:', laboratoryId)
+		console.log('Display name provided:', displayName)
+		console.log('Phone provided:', phone)
 
+		// Normalizar display_name (solo texto, no teléfono)
 		const normalizedDisplayName = normalizeDisplayName(displayName ?? null)
+		console.log('Normalized display_name:', normalizedDisplayName)
+		
+		// Normalizar teléfono (solo números, máximo 15 dígitos para evitar números concatenados)
+		let normalizedPhone: string | null = null
+		if (phone) {
+			// Eliminar todos los caracteres no numéricos
+			const phoneDigits = phone.replace(/\D/g, '')
+			// Limitar a 15 dígitos máximo (formato internacional: +58 412 1234567 = 12 dígitos)
+			if (phoneDigits.length > 0 && phoneDigits.length <= 15) {
+				normalizedPhone = phoneDigits
+			} else if (phoneDigits.length > 15) {
+				// Si tiene más de 15 dígitos, probablemente está concatenado
+				// Tomar solo los primeros 15 dígitos
+				console.warn('Teléfono muy largo, truncando a 15 dígitos:', phoneDigits)
+				normalizedPhone = phoneDigits.substring(0, 15)
+			}
+		}
+
+		// Log para debug: verificar que los metadatos se pasarán correctamente
+		console.log('User metadata to be sent to Supabase:', {
+			display_name: normalizedDisplayName,
+			phone: normalizedPhone,
+			laboratory_id: laboratoryId,
+		})
 
 		const { data, error } = await supabase.auth.signUp({
 			email,
@@ -52,8 +101,9 @@ export const signUp = async (
 				emailRedirectTo: `${REDIRECT_URL}/auth/callback`,
 				data: {
 					email_confirm: true,
-					display_name: normalizedDisplayName,
-					phone: phone || null,
+					display_name: normalizedDisplayName, // ← NUNCA el teléfono
+					phone: normalizedPhone, // ← Teléfono normalizado (solo números, máximo 15)
+					laboratory_id: laboratoryId, // ← OBLIGATORIO, siempre presente
 				},
 			},
 		})
@@ -112,6 +162,13 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 		}
 
 		console.log('Signin successful for verified user:', email)
+		
+		// ⚠️ CRÍTICO: Limpiar el flag de logout si existe (por si quedó de un logout previo)
+		if (localStorage.getItem('is_logging_out') === 'true') {
+			localStorage.removeItem('is_logging_out')
+			console.log('🚫 Flag de logout limpiado después de login exitoso')
+		}
+		
 		return { user: data.user, error: null }
 	} catch (err) {
 		console.error('Unexpected signin error:', err)
@@ -130,9 +187,31 @@ export const signOut = async (): Promise<{ error: AuthError | null }> => {
 	try {
 		console.log('🧹 Iniciando limpieza de storage...')
 
+		// ⚠️ CRÍTICO: Marcar que estamos en proceso de logout
+		// Esto evita que useSecureRedirect redirija automáticamente
+		localStorage.setItem('is_logging_out', 'true')
+		console.log('🚫 Flag de logout establecido')
+
 		// Limpiar TODO el sessionStorage
 		sessionStorage.clear()
 		console.log('✅ sessionStorage completamente limpiado')
+
+		// ⚠️ CRÍTICO: Limpiar localStorage (Supabase guarda la sesión aquí)
+		// Limpiar todas las keys de Supabase
+		const supabaseKeys = Object.keys(localStorage).filter(key => 
+			key.startsWith('sb-') || key.startsWith('supabase.')
+		)
+		supabaseKeys.forEach(key => {
+			localStorage.removeItem(key)
+			console.log(`🗑️ Removed localStorage key: ${key}`)
+		})
+		
+		// También limpiar otras keys comunes que puedan persistir
+		localStorage.removeItem('last_activity_time')
+		localStorage.removeItem('session_expiry_time')
+		localStorage.removeItem('session_timeout_minutes')
+		localStorage.removeItem('sessionTimeout')
+		console.log('✅ localStorage limpiado (keys de Supabase eliminadas)')
 
 		// Limpiar cookies
 		document.cookie.split(';').forEach(function (c) {
@@ -148,15 +227,31 @@ export const signOut = async (): Promise<{ error: AuthError | null }> => {
 		sessionStorage.clear()
 		console.log('✅ sessionStorage limpiado nuevamente')
 
+		// Limpiar localStorage nuevamente (por si Supabase escribió algo)
+		const supabaseKeysAfter = Object.keys(localStorage).filter(key => 
+			key.startsWith('sb-') || key.startsWith('supabase.')
+		)
+		supabaseKeysAfter.forEach(key => {
+			localStorage.removeItem(key)
+			console.log(`🗑️ Removed localStorage key after signOut: ${key}`)
+		})
+
 		if (error) {
 			console.log('⚠️ Logout error (but continuing cleanup):', error)
 		}
+
+		// Mantener el flag de logout por un momento para evitar redirecciones
+		setTimeout(() => {
+			localStorage.removeItem('is_logging_out')
+			console.log('🚫 Flag de logout removido')
+		}, 3000)
 
 		return { error: null }
 	} catch (err) {
 		console.error('💥 Unexpected signout error:', err)
 		// Aún así, limpiar todo
 		sessionStorage.clear()
+		localStorage.clear()
 		return { error: null }
 	}
 }
