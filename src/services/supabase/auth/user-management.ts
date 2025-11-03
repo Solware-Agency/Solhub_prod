@@ -170,7 +170,7 @@ export const updateUserApprovalStatus = async (
   try {
     console.log(`Updating user ${userId} approval status to ${estado}`);
 
-    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+    // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual (quien aprueba)
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -178,17 +178,63 @@ export const updateUserApprovalStatus = async (
       throw new Error('Usuario no autenticado');
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: currentUserProfile, error: currentProfileError } = await supabase
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile?.laboratory_id) {
+    if (currentProfileError || !currentUserProfile?.laboratory_id) {
       throw new Error('Usuario no tiene laboratorio asignado');
     }
 
-    // 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+    // 🔐 MULTI-TENANT: Obtener el perfil del usuario a aprobar (para validar que pertenece al mismo lab)
+    const { data: targetUserProfile, error: targetProfileError } = await supabase
+      .from('profiles')
+      .select('id, laboratory_id, email, estado')
+      .eq('id', userId)
+      .single();
+
+    if (targetProfileError || !targetUserProfile) {
+      console.error('Error fetching target user profile:', targetProfileError);
+      return {
+        data: null,
+        error: new Error('No se encontró el perfil del usuario a aprobar'),
+      };
+    }
+
+    // Validar que el usuario a aprobar tiene laboratory_id
+    if (!targetUserProfile.laboratory_id) {
+      console.error('Target user has no laboratory_id:', targetUserProfile);
+      return {
+        data: null,
+        error: new Error('El usuario a aprobar no tiene laboratorio asignado. Contacta al administrador.'),
+      };
+    }
+
+    // 🔐 MULTI-TENANT: Validar que ambos usuarios pertenecen al mismo laboratorio
+    if (targetUserProfile.laboratory_id !== currentUserProfile.laboratory_id) {
+      console.error('Laboratory mismatch:', {
+        currentUser: currentUserProfile.laboratory_id,
+        targetUser: targetUserProfile.laboratory_id,
+      });
+      return {
+        data: null,
+        error: new Error('No puedes aprobar usuarios de otro laboratorio'),
+      };
+    }
+
+    // 🔐 MULTI-TENANT: Actualizar estado
+    // RLS ya garantiza que solo podemos actualizar usuarios del mismo laboratorio
+    // No necesitamos .eq('laboratory_id') porque RLS lo maneja automáticamente
+    console.log('Attempting to update user:', {
+      userId,
+      estado,
+      currentUserLab: currentUserProfile.laboratory_id,
+      targetUserLab: targetUserProfile.laboratory_id,
+      currentUserRole: 'checking...', // Se obtiene del perfil actual
+    });
+
     const { data, error } = await supabase
       .from('profiles')
       .update({
@@ -196,7 +242,8 @@ export const updateUserApprovalStatus = async (
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
-      .eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+      // ⚠️ NO usar .eq('laboratory_id') aquí - RLS ya filtra por laboratory_id
+      // Si usamos .eq('laboratory_id'), puede causar conflictos con RLS
       .select();
 
     if (error) {
@@ -205,7 +252,7 @@ export const updateUserApprovalStatus = async (
     }
     if (!data || data.length === 0) {
       const noProfileError = new Error(
-        `No profile found for user ID: ${userId}`,
+        `No se pudo actualizar el perfil del usuario. Verifica que el usuario pertenezca a tu laboratorio.`,
       );
       console.error('No profile found for update:', noProfileError);
       return { data: null, error: noProfileError };

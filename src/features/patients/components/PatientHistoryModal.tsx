@@ -11,7 +11,14 @@ import {
   Download,
   CheckSquare,
   Square,
+  Eye,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@shared/components/ui/dialog';
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -71,6 +78,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const clearSelection = () => {
     setSelectedCases(new Set());
   };
+
+  const [previewingCaseId, setPreviewingCaseId] = useState<string | null>(null);
 
   // Fetch patient's medical records - usando nueva estructura
   const { data, isLoading, error, refetch } = useQuery({
@@ -205,16 +214,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     try {
       toast({
         title: '📦 Preparando ZIP...',
-        description: `Obteniendo ${casesToDownload.length} PDF${casesToDownload.length > 1 ? 's' : ''} para el archivo ZIP.`,
+        description: `Obteniendo ${casesToDownload.length} PDF${
+          casesToDownload.length > 1 ? 's' : ''
+        } para el archivo ZIP.`,
       });
 
       // Obtener todos los PDFs en paralelo
       const pdfPromises = casesToDownload.map(async (caseItem, index) => {
         try {
-          setDownloadProgress({ current: index + 1, total: casesToDownload.length });
-          
+          setDownloadProgress({
+            current: index + 1,
+            total: casesToDownload.length,
+          });
+
           const pdfResult = await getPDFBlob(caseItem);
-          
+
           if (pdfResult) {
             // Agregar al ZIP con nombre de archivo único
             zip.file(pdfResult.filename, pdfResult.blob);
@@ -222,16 +236,28 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             return { success: true, code: pdfResult.caseCode };
           } else {
             errorCount++;
-            const errorMsg = `No se pudo obtener PDF para caso ${caseItem.code || caseItem.id}`;
+            const errorMsg = `No se pudo obtener PDF para caso ${
+              caseItem.code || caseItem.id
+            }`;
             errors.push(errorMsg);
-            return { success: false, code: caseItem.code || caseItem.id || '', error: errorMsg };
+            return {
+              success: false,
+              code: caseItem.code || caseItem.id || '',
+              error: errorMsg,
+            };
           }
         } catch (error) {
           errorCount++;
-          const errorMsg = `Error obteniendo PDF para caso ${caseItem.code || caseItem.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`;
+          const errorMsg = `Error obteniendo PDF para caso ${
+            caseItem.code || caseItem.id
+          }: ${error instanceof Error ? error.message : 'Error desconocido'}`;
           errors.push(errorMsg);
           console.error(errorMsg, error);
-          return { success: false, code: caseItem.code || caseItem.id || '', error: errorMsg };
+          return {
+            success: false,
+            code: caseItem.code || caseItem.id || '',
+            error: errorMsg,
+          };
         }
       });
 
@@ -241,7 +267,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       if (successCount === 0) {
         toast({
           title: '❌ Error en la descarga',
-          description: 'No se pudo obtener ningún PDF. Por favor intenta de nuevo.',
+          description:
+            'No se pudo obtener ningún PDF. Por favor intenta de nuevo.',
           variant: 'destructive',
         });
         return;
@@ -250,19 +277,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       // Generar el ZIP
       toast({
         title: '📦 Generando archivo ZIP...',
-        description: `Comprimiendo ${successCount} PDF${successCount > 1 ? 's' : ''}...`,
+        description: `Comprimiendo ${successCount} PDF${
+          successCount > 1 ? 's' : ''
+        }...`,
       });
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
 
       // Crear nombre del archivo ZIP con fecha
-      const patientName = patient.nombre
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9\s]/g, '')
-        .replace(/\s+/g, '_')
-        .trim();
-      
+      const patientName = patient?.nombre
+        ?.normalize('NFD')
+        ?.replace(/[\u0300-\u036f]/g, '')
+        ?.replace(/[^a-zA-Z0-9\s]/g, '')
+        ?.replace(/\s+/g, '_')
+        ?.trim();
+
       const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
       const zipFilename = `Casos_${patientName}_${dateStr}.zip`;
 
@@ -280,12 +309,16 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       if (successCount > 0 && errorCount === 0) {
         toast({
           title: '✅ ZIP descargado correctamente',
-          description: `Se descargaron ${successCount} PDF${successCount > 1 ? 's' : ''} en el archivo ZIP.`,
+          description: `Se descargaron ${successCount} PDF${
+            successCount > 1 ? 's' : ''
+          } en el archivo ZIP.`,
         });
       } else if (successCount > 0 && errorCount > 0) {
         toast({
           title: '⚠️ ZIP descargado parcialmente',
-          description: `Se descargaron ${successCount} PDF${successCount > 1 ? 's' : ''} correctamente, pero ${errorCount} fallaron. Revisa la consola para más detalles.`,
+          description: `Se descargaron ${successCount} PDF${
+            successCount > 1 ? 's' : ''
+          } correctamente, pero ${errorCount} fallaron. Revisa la consola para más detalles.`,
           variant: 'destructive',
         });
         console.warn('Errores en descarga múltiple:', errors);
@@ -571,155 +604,170 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       <div className='space-y-4'>
                         {filteredCases.map(
                           (caseItem: MedicalCaseWithPatient) => (
-                            <div
-                              key={caseItem.id}
-                              className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                                selectedCases.has(caseItem.id)
-                                  ? 'border-primary border-2'
-                                  : 'border-input'
-                              }`}
-                            >
-                              <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
-                                <div className='flex items-center gap-2'>
-                                  {caseItem.doc_aprobado === 'aprobado' && (
-                                    <Checkbox
-                                      checked={selectedCases.has(caseItem.id)}
-                                      onCheckedChange={() =>
-                                        toggleCaseSelection(caseItem.id)
-                                      }
-                                      disabled={
-                                        isDownloadingMultiple ||
-                                        isGeneratingPDF ||
-                                        isSaving
-                                      }
-                                      className='mr-1'
-                                    />
-                                  )}
-                                  {caseItem.code && (
-                                    <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
-                                      {caseItem.code}
+                            <>
+                              <div
+                                key={caseItem.id}
+                                className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                  selectedCases.has(caseItem.id)
+                                    ? 'border-primary border-2'
+                                    : 'border-input'
+                                }`}
+                              >
+                                <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
+                                  <div className='flex items-center gap-2'>
+                                    {caseItem.doc_aprobado === 'aprobado' && (
+                                      <Checkbox
+                                        checked={selectedCases.has(caseItem.id)}
+                                        onCheckedChange={() =>
+                                          toggleCaseSelection(caseItem.id)
+                                        }
+                                        disabled={
+                                          isDownloadingMultiple ||
+                                          isGeneratingPDF ||
+                                          isSaving
+                                        }
+                                        className='mr-1'
+                                      />
+                                    )}
+                                    {caseItem.code && (
+                                      <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                                        {caseItem.code}
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                        caseItem.payment_status,
+                                      )}`}
+                                    >
+                                      {caseItem.payment_status}
                                     </span>
-                                  )}
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                      caseItem.payment_status,
-                                    )}`}
-                                  >
-                                    {caseItem.payment_status}
-                                  </span>
-                                </div>
+                                  </div>
 
-                                <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
-                                  <Calendar className='h-4 w-4' />
-                                  {format(
-                                    new Date(
-                                      caseItem.created_at || caseItem.date,
-                                    ),
-                                    'dd/MM/yyyy',
-                                    { locale: es },
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Tipo de Examen
-                                  </p>
-                                  <p className='text-sm font-medium'>
-                                    {caseItem.exam_type}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Médico Tratante
-                                  </p>
-                                  <p className='text-sm font-medium'>
-                                    {caseItem.treating_doctor}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Sede
-                                  </p>
-                                  <div className='mt-1'>
-                                    <BranchBadge branch={caseItem.branch} />
+                                  <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
+                                    <Calendar className='h-4 w-4' />
+                                    {format(
+                                      new Date(
+                                        caseItem.created_at || caseItem.date,
+                                      ),
+                                      'dd/MM/yyyy',
+                                      { locale: es },
+                                    )}
                                   </div>
                                 </div>
 
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Monto Total
-                                  </p>
-                                  <p className='text-sm font-medium'>
-                                    {formatCurrency(caseItem.total_amount)}
-                                  </p>
+                                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Tipo de Examen
+                                    </p>
+                                    <p className='text-sm font-medium'>
+                                      {caseItem.exam_type}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Médico Tratante
+                                    </p>
+                                    <p className='text-sm font-medium'>
+                                      {caseItem.treating_doctor}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Sede
+                                    </p>
+                                    <div className='mt-1'>
+                                      <BranchBadge branch={caseItem.branch} />
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Monto Total
+                                    </p>
+                                    <p className='text-sm font-medium'>
+                                      {formatCurrency(caseItem.total_amount)}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Tipo de Muestra
+                                    </p>
+                                    <p className='text-sm font-medium'>
+                                      {caseItem.sample_type}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Procedencia
+                                    </p>
+                                    <p className='text-sm font-medium'>
+                                      {caseItem.origin}
+                                    </p>
+                                  </div>
+
+                                  <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
+                                    <Button
+                                      onClick={() =>
+                                        handleCheckAndDownloadPDF(caseItem)
+                                      }
+                                      disabled={
+                                        isGeneratingPDF ||
+                                        isSaving ||
+                                        caseItem.doc_aprobado !== 'aprobado' ||
+                                        selectedCases.size > 0 ||
+                                        isDownloadingMultiple
+                                      }
+                                    >
+                                      {isGeneratingPDF || isSaving ? (
+                                        <>
+                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                          Generando...
+                                        </>
+                                      ) : caseItem.doc_aprobado !==
+                                        'aprobado' ? (
+                                        <>
+                                          <Download className='h-4 w-4 mr-2' />
+                                          No tiene PDF
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download className='h-4 w-4 mr-2' />
+                                          Descargar PDF
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      onClick={() =>
+                                        setPreviewingCaseId(caseItem.id)
+                                      }
+                                      disabled={
+                                        isSaving ||
+                                        !caseItem.informepdf_url ||
+                                        caseItem.doc_aprobado !== 'aprobado'
+                                      }
+                                    >
+                                      <Eye className='w-4 h-4' />
+                                    </Button>
+                                  </div>
                                 </div>
 
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Tipo de Muestra
-                                  </p>
-                                  <p className='text-sm font-medium'>
-                                    {caseItem.sample_type}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Procedencia
-                                  </p>
-                                  <p className='text-sm font-medium'>
-                                    {caseItem.origin}
-                                  </p>
-                                </div>
-
-                                <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex items-center justify-center'>
-                                  <Button
-                                    onClick={() =>
-                                      handleCheckAndDownloadPDF(caseItem)
-                                    }
-                                    disabled={
-                                      isGeneratingPDF ||
-                                      isSaving ||
-                                      caseItem.doc_aprobado !== 'aprobado' ||
-                                      selectedCases.size > 0 ||
-                                      isDownloadingMultiple
-                                    }
-                                  >
-                                    {isGeneratingPDF || isSaving ? (
-                                      <>
-                                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                        Generando...
-                                      </>
-                                    ) : caseItem.doc_aprobado !== 'aprobado' ? (
-                                      <>
-                                        <Download className='h-4 w-4 mr-2' />
-                                        No tiene PDF
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Download className='h-4 w-4 mr-2' />
-                                        Descargar PDF
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
+                                {caseItem.diagnostico && (
+                                  <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                      Diagnóstico
+                                    </p>
+                                    <p className='text-sm mt-1'>
+                                      {caseItem.diagnostico}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-
-                              {caseItem.diagnostico && (
-                                <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-                                  <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                    Diagnóstico
-                                  </p>
-                                  <p className='text-sm mt-1'>
-                                    {caseItem.diagnostico}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
+                            </>
                           ),
                         )}
                       </div>
@@ -738,6 +786,61 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               patient={patient}
             />
           )}
+
+          {/* Modal de Preview del PDF - Fuera del map para que sea único */}
+          <Dialog
+            open={previewingCaseId !== null}
+            onOpenChange={(open) => {
+              if (!open) setPreviewingCaseId(null);
+            }}
+          >
+            <DialogContent className='max-w-5xl w-full h-[90vh] p-0'>
+              <DialogHeader className='p-4 border-b'>
+                <div className='flex items-center justify-between'>
+                  <DialogTitle className='flex items-center gap-2'>
+                    <FileText className='w-5 h-5' />
+                    Vista previa del documento -{' '}
+                    {filteredCases?.find((c) => c.id === previewingCaseId)
+                      ?.code || 'Sin código'}
+                  </DialogTitle>
+                  <div className='flex gap-2'>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => setPreviewingCaseId(null)}
+                    >
+                      <X className='w-4 h-4' />
+                    </Button>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className='flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900'>
+                {filteredCases?.find((c) => c.id === previewingCaseId)
+                  ?.informepdf_url ? (
+                  <iframe
+                    src={
+                      filteredCases.find((c) => c.id === previewingCaseId)
+                        ?.informepdf_url || ''
+                    }
+                    className='w-full h-full border-0'
+                    title='Vista previa del PDF'
+                    style={{
+                      minHeight: 'calc(90vh - 80px)',
+                    }}
+                  />
+                ) : (
+                  <div className='flex items-center justify-center h-full'>
+                    <div className='text-center'>
+                      <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                      <p className='text-gray-500 dark:text-gray-400'>
+                        No hay PDF disponible para previsualizar
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </AnimatePresence>

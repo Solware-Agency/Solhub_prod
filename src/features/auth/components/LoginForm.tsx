@@ -177,6 +177,12 @@ function LoginForm() {
       console.log('User signed in successfully:', user.email);
       console.log('Email confirmed at:', user.email_confirmed_at);
 
+      // ⚠️ CRÍTICO: Limpiar el flag de logout si existe
+      if (localStorage.getItem('is_logging_out') === 'true') {
+        localStorage.removeItem('is_logging_out');
+        console.log('🚫 Flag de logout limpiado después de login exitoso');
+      }
+
       // CRITICAL: Check if email is verified
       if (!user.email_confirmed_at) {
         console.log('Email not confirmed, will be handled by secure redirect');

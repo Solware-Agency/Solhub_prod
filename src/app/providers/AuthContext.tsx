@@ -122,6 +122,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				const {
 					data: { session: initialSession },
 				} = await supabase.auth.getSession()
+				
+				// ⚠️ CRÍTICO: Si hay una sesión válida al iniciar, limpiar el flag de logout
+				// Esto evita que el flag quede activo después de un refresh o reinicio
+				if (initialSession && initialSession.user) {
+					const isLoggingOutFlag = localStorage.getItem('is_logging_out') === 'true'
+					if (isLoggingOutFlag) {
+						console.log('🚫 Limpiando flag de logout - sesión válida encontrada al iniciar')
+						localStorage.removeItem('is_logging_out')
+						isLoggingOut.current = false
+					}
+				} else {
+					// Si no hay sesión, también limpiar el flag (por si quedó de un logout previo)
+					const isLoggingOutFlag = localStorage.getItem('is_logging_out') === 'true'
+					if (isLoggingOutFlag) {
+						console.log('🚫 Limpiando flag de logout - no hay sesión activa')
+						localStorage.removeItem('is_logging_out')
+						isLoggingOut.current = false
+					}
+				}
+				
 				setSession(initialSession)
 				setUser(initialSession?.user ?? null)
 			} catch (error) {
@@ -146,6 +166,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			if (isLoggingOut.current) {
 				console.log('🚫 Ignoring auth state change during logout process')
 				return
+			}
+
+			// También verificar el flag en localStorage
+			const isLoggingOutFlag = localStorage.getItem('is_logging_out') === 'true'
+			
+			// Si hay un evento SIGNED_IN y el flag está activo, puede ser un login legítimo después de un logout
+			// En ese caso, limpiar el flag y permitir el login
+			if (isLoggingOutFlag && event === 'SIGNED_IN' && currentSession) {
+				console.log('🚫 Flag de logout detectado durante SIGNED_IN - limpiando flag y permitiendo login')
+				localStorage.removeItem('is_logging_out')
+				isLoggingOut.current = false
+				// Continuar con el proceso normal de login
+			} else if (isLoggingOutFlag && (event === 'TOKEN_REFRESHED')) {
+				// TOKEN_REFRESHED durante logout puede ser un problema, pero no bloqueamos completamente
+				console.log('⚠️ TOKEN_REFRESHED durante logout - permitiendo pero con precaución')
 			}
 
 			console.log('🔄 Auth state change:', event, currentSession?.user?.email)
@@ -173,8 +208,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					try {
 						console.log('🚪 Iniciando proceso de logout...')
 
-						// Marcar que estamos en proceso de logout
+						// ⚠️ CRÍTICO: Marcar que estamos en proceso de logout (ANTES de cualquier otra cosa)
 						isLoggingOut.current = true
+						localStorage.setItem('is_logging_out', 'true')
+						console.log('🚫 Flag de logout establecido')
 
 						// Desuscribirse del listener de auth para evitar re-autenticación
 						if (authSubscription.current) {
@@ -187,8 +224,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						setSession(null)
 						console.log('🧹 Estado limpiado')
 
-						// Limpiar TODO el storage
+						// Limpiar TODO el storage (sessionStorage + localStorage)
 						clearAllStorage()
+						
+						// Limpiar específicamente las keys de Supabase en localStorage
+						const supabaseKeys = Object.keys(localStorage).filter(key => 
+							key.startsWith('sb-') || key.startsWith('supabase.')
+						)
+						supabaseKeys.forEach(key => {
+							if (key !== 'is_logging_out') { // Mantener el flag de logout
+								localStorage.removeItem(key)
+							}
+						})
+						console.log('✅ localStorage limpiado (keys de Supabase eliminadas)')
 
 						// Intentar logout con Supabase
 						console.log('🔐 Intentando logout con Supabase...')
@@ -201,8 +249,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						await supabase.auth.signOut()
 						console.log('✅ Logout adicional completado')
 
-						// Limpiar storage nuevamente
+						// Limpiar storage nuevamente (pero mantener el flag de logout)
 						clearAllStorage()
+						
+						// Limpiar keys de Supabase nuevamente
+						const supabaseKeysAfter = Object.keys(localStorage).filter(key => 
+							(key.startsWith('sb-') || key.startsWith('supabase.')) && key !== 'is_logging_out'
+						)
+						supabaseKeysAfter.forEach(key => {
+							localStorage.removeItem(key)
+						})
 
 						// Pausa más larga para asegurar limpieza
 						await new Promise((resolve) => setTimeout(resolve, 500))
@@ -216,14 +272,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						// Aún así, limpiar y redirigir
 						setUser(null)
 						setSession(null)
+						localStorage.setItem('is_logging_out', 'true') // Establecer flag incluso en error
 						clearAllStorage()
 						window.location.replace('/')
 					} finally {
 						// Resetear el flag después de un tiempo más largo
 						setTimeout(() => {
 							isLoggingOut.current = false
-							console.log(' Flag de logout reseteado')
-						}, 2000)
+							localStorage.removeItem('is_logging_out')
+							console.log('🚫 Flag de logout reseteado')
+						}, 3000)
 					}
 				},
 				refreshUser,

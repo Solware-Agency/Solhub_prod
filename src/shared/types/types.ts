@@ -745,6 +745,34 @@ export interface Laboratory {
   updated_at: string
 }
 
+// =====================================================================
+// CÓDIGOS DE LABORATORIO
+// =====================================================================
+
+/**
+ * Interfaz para un código de acceso a laboratorio
+ * Usado en el sistema de registro con códigos
+ */
+export interface LaboratoryCode {
+  id: string
+  laboratory_id: string
+  code: string
+  is_active: boolean
+  max_uses: number | null // null = ilimitado
+  current_uses: number
+  expires_at: string | null // null = no expira
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Resultado de la validación de un código de laboratorio
+ */
+export interface LaboratoryCodeValidation {
+  code: LaboratoryCode
+  laboratory: Laboratory
+}
+
 // Extender interfaces existentes con laboratory_id
 export interface PatientWithLaboratory {
   id: string;

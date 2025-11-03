@@ -48,6 +48,13 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	 * Performs the actual redirect based on user role
 	 */
 	const redirectUser = () => {
+		// ⚠️ CRÍTICO: No redirigir si estamos en proceso de logout
+		const isLoggingOut = localStorage.getItem('is_logging_out') === 'true'
+		if (isLoggingOut) {
+			console.log('🚫 Redirect bloqueado - en proceso de logout')
+			return
+		}
+
 		// Don't redirect if still loading
 		if (authLoading || profileLoading || isRedirecting) {
 			console.log('Redirect skipped - still loading or already redirecting')
@@ -154,6 +161,13 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 
 	// Auto-redirect on mount if enabled and all data is ready
 	useEffect(() => {
+		// ⚠️ CRÍTICO: No redirigir si estamos en proceso de logout
+		const isLoggingOut = localStorage.getItem('is_logging_out') === 'true'
+		if (isLoggingOut) {
+			console.log('🚫 Redirect bloqueado - en proceso de logout')
+			return
+		}
+
 		console.log('useSecureRedirect effect:', {
 			redirectOnMount,
 			authLoading,
@@ -165,9 +179,10 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			userEmail: user?.email,
 			profileRole: profile?.role,
 			profileEstado: profile?.estado,
+			isLoggingOut,
 		})
 
-		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError) {
+		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut) {
 			console.log('Calling redirectUser from useEffect')
 			redirectUser()
 		}

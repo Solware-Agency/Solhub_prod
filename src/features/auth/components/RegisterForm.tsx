@@ -10,6 +10,11 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signUp } from '@/services/supabase/auth/auth';
 import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management'; // debe devolver { exists: boolean, error: any }
+import {
+  validateLaboratoryCode,
+  incrementCodeUsage,
+  LaboratoryCodeError,
+} from '@/services/supabase/laboratory-codes/laboratory-codes-service';
 import Aurora from '@shared/components/ui/Aurora';
 import FadeContent from '@shared/components/ui/FadeContent';
 import type { User } from '@supabase/supabase-js';
@@ -20,6 +25,7 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
+  const [laboratoryCode, setLaboratoryCode] = useState(''); // ← NUEVO: Código de laboratorio
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -33,9 +39,23 @@ function RegisterForm() {
   const [emailTaken, setEmailTaken] = useState<boolean | null>(null);
   const lastCheckedRef = useRef<string>('');
 
+  // UX: validación de código de laboratorio
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [codeValidation, setCodeValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    laboratoryName?: string;
+  }>({ isValid: false, message: '' });
+
   const navigate = useNavigate();
 
-  const normalizePhone = (value: string) => value.replace(/\D/g, '');
+  // Normalizar teléfono: solo números, máximo 15 dígitos
+  // Esto evita números concatenados o mal formateados
+  const normalizePhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    // Limitar a 15 dígitos máximo (formato internacional)
+    return digits.length > 15 ? digits.substring(0, 15) : digits;
+  };
   const normalizeEmail = (v: string) => v.trim().toLowerCase();
 
   const startRetryCountdown = (seconds: number) => {
@@ -95,6 +115,13 @@ function RegisterForm() {
       return;
     }
 
+    // NUEVO: Validar código de laboratorio obligatorio
+    const normalizedCode = laboratoryCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      setError('El código de laboratorio es obligatorio.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
       return;
@@ -109,6 +136,37 @@ function RegisterForm() {
 
       const cleanedEmail = normalizeEmail(email);
       console.log('Attempting to register user:', cleanedEmail);
+
+      // NUEVO: Validar código de laboratorio ANTES de registrar
+      let codeValidationResult;
+      try {
+        setValidatingCode(true);
+        codeValidationResult = await validateLaboratoryCode(normalizedCode);
+        console.log(
+          'Código válido para laboratorio:',
+          codeValidationResult.laboratory.name,
+        );
+        setCodeValidation({
+          isValid: true,
+          message: `Código válido - Laboratorio: ${codeValidationResult.laboratory.name}`,
+          laboratoryName: codeValidationResult.laboratory.name,
+        });
+      } catch (codeError) {
+        setValidatingCode(false);
+        if (codeError instanceof LaboratoryCodeError) {
+          // Error específico del código (no existe, expirado, etc.)
+          setError(codeError.message);
+        } else {
+          // Error genérico (red, servidor, etc.)
+          setError(
+            'Error al validar el código de laboratorio. Por favor, intenta de nuevo.',
+          );
+        }
+        setLoading(false);
+        return;
+      } finally {
+        setValidatingCode(false);
+      }
 
       // Pre-check de UX (opcional, pero útil). No es seguridad, el hook es quien manda.
       try {
@@ -136,12 +194,22 @@ function RegisterForm() {
         return;
       }
 
+      // ⚠️ VALIDACIÓN CRÍTICA: El código DEBE estar validado antes de registrar
+      if (!codeValidationResult || !codeValidationResult.laboratory?.id) {
+        setError('El código de laboratorio es obligatorio y debe ser válido.');
+        setLoading(false);
+        return;
+      }
+
       // Signup — aquí el HOOK bloqueará duplicados reales con un 400 "User already registered"
+      // ⚠️ ORDEN CORRECTO DE PARÁMETROS:
+      // signUp(email, password, laboratoryId, displayName, phone)
       const { user, error: signUpError } = await signUp(
         cleanedEmail,
         password,
-        displayName.trim(),
-        normalizedPhone,
+        codeValidationResult.laboratory.id, // ← CORREGIDO: laboratoryId como 3er parámetro (obligatorio)
+        displayName.trim(), // ← CORREGIDO: displayName como 4to parámetro
+        normalizedPhone, // ← CORREGIDO: phone como 5to parámetro
       );
 
       if (signUpError) {
@@ -196,8 +264,22 @@ function RegisterForm() {
           (user as User).confirmation_sent_at,
         );
 
+        // NUEVO: Incrementar uso del código después de registro exitoso
+        try {
+          await incrementCodeUsage(codeValidationResult.code.id);
+          console.log(
+            'Código usage incrementado:',
+            codeValidationResult.code.id,
+          );
+        } catch (incrementError) {
+          // Si falla incrementar el uso, no es crítico (el usuario ya está registrado)
+          // Pero lo logueamos para debugging
+          console.error('Error al incrementar uso del código:', incrementError);
+          // No mostramos error al usuario porque el registro fue exitoso
+        }
+
         setMessage(
-          '¡Cuenta creada exitosamente! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam.',
+          `¡Cuenta creada exitosamente para ${codeValidationResult.laboratory.name}! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam. Tu cuenta está pendiente de aprobación por el administrador del laboratorio.`,
         );
 
         try {
@@ -298,7 +380,7 @@ function RegisterForm() {
                   aria-invalid={emailTaken === true}
                   aria-describedby='email-help'
                 />
-                <div id='email-help' aria-live='polite' className='text-xs h-5'>
+                <div id='email-help' aria-live='polite' className='text-xs'>
                   {checkingEmail && (
                     <span className='text-slate-300'>Verificando…</span>
                   )}
@@ -347,6 +429,44 @@ function RegisterForm() {
                       autoComplete='tel'
                     />
                   </div>
+                </div>
+
+                {/* NUEVO: Campo de código de laboratorio */}
+                <p className='text-sm text-slate-300'>
+                  Código de laboratorio: <span className='text-red-400'>*</span>
+                </p>
+                <input
+                  type='text'
+                  name='laboratoryCode'
+                  placeholder='Ej: VARGAS2024'
+                  value={laboratoryCode}
+                  onChange={(e) => {
+                    // Convertir a mayúsculas automáticamente
+                    setLaboratoryCode(e.target.value.toUpperCase());
+                    // Limpiar validación cuando el usuario escribe
+                    setCodeValidation({ isValid: false, message: '' });
+                  }}
+                  required
+                  disabled={loading || rateLimitError || validatingCode}
+                  className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200 uppercase'
+                  autoComplete='off'
+                />
+                <div className='text-xs h-5'>
+                  {validatingCode && (
+                    <span className='text-slate-300'>Validando código…</span>
+                  )}
+                  {codeValidation.isValid && !validatingCode && (
+                    <span className='text-green-300'>
+                      ✓ {codeValidation.message}
+                    </span>
+                  )}
+                  {codeValidation.message &&
+                    !codeValidation.isValid &&
+                    !validatingCode && (
+                      <span className='text-red-300'>
+                        {codeValidation.message}
+                      </span>
+                    )}
                 </div>
 
                 <p className='text-sm text-slate-300'>
@@ -461,7 +581,9 @@ function RegisterForm() {
 
               <button
                 type='submit'
-                disabled={loading || rateLimitError || checkingEmail}
+                disabled={
+                  loading || rateLimitError || checkingEmail || validatingCode
+                }
                 className='w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm transform hover:scale-[1.02] active:scale-[0.98]'
               >
                 {loading ? (
@@ -476,8 +598,8 @@ function RegisterForm() {
                       ? `Espera ${formatTime(retryCountdown)}`
                       : 'Límite de email alcanzado'}
                   </>
-                ) : checkingEmail ? (
-                  'Verificando correo…'
+                ) : checkingEmail || validatingCode ? (
+                  'Validando...'
                 ) : (
                   'Registrarse'
                 )}
