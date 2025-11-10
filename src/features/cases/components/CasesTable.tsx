@@ -408,7 +408,35 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             currentFilters.dateFrom = dateRange.from.toISOString();
           }
           if (dateRange?.to) {
-            currentFilters.dateTo = dateRange.to.toISOString();
+            // Si dateFrom y dateTo son el mismo día, ajustar dateTo al final del día
+            // para incluir todos los registros de ese día
+            if (dateRange.from) {
+              const fromDate = dateRange.from;
+              const toDate = dateRange.to;
+              
+              // Helper para formatear fecha a YYYY-MM-DD
+              const formatDate = (date: Date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              };
+              
+              // Comparar solo las fechas (sin hora)
+              const fromDateStr = formatDate(fromDate);
+              const toDateStr = formatDate(toDate);
+              
+              if (fromDateStr === toDateStr) {
+                // Mismo día: establecer dateTo al final del día (23:59:59.999)
+                const endOfDay = new Date(toDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                currentFilters.dateTo = endOfDay.toISOString();
+              } else {
+                currentFilters.dateTo = dateRange.to.toISOString();
+              }
+            } else {
+              currentFilters.dateTo = dateRange.to.toISOString();
+            }
           }
 
           // Agregar el nuevo sort
@@ -612,7 +640,35 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           serverFilters.dateFrom = tempDateRange.from.toISOString();
         }
         if (tempDateRange?.to) {
-          serverFilters.dateTo = tempDateRange.to.toISOString();
+          // Si dateFrom y dateTo son el mismo día, ajustar dateTo al final del día
+          // para incluir todos los registros de ese día
+          if (tempDateRange.from) {
+            const fromDate = tempDateRange.from;
+            const toDate = tempDateRange.to;
+            
+            // Helper para formatear fecha a YYYY-MM-DD
+            const formatDate = (date: Date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+            
+            // Comparar solo las fechas (sin hora)
+            const fromDateStr = formatDate(fromDate);
+            const toDateStr = formatDate(toDate);
+            
+            if (fromDateStr === toDateStr) {
+              // Mismo día: establecer dateTo al final del día (23:59:59.999)
+              const endOfDay = new Date(toDate);
+              endOfDay.setHours(23, 59, 59, 999);
+              serverFilters.dateTo = endOfDay.toISOString();
+            } else {
+              serverFilters.dateTo = tempDateRange.to.toISOString();
+            }
+          } else {
+            serverFilters.dateTo = tempDateRange.to.toISOString();
+          }
         }
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
@@ -765,7 +821,35 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         serverFilters.dateFrom = dateRange.from.toISOString();
       }
       if (dateRange?.to) {
-        serverFilters.dateTo = dateRange.to.toISOString();
+        // Si dateFrom y dateTo son el mismo día, ajustar dateTo al final del día
+        // para incluir todos los registros de ese día
+        if (dateRange.from) {
+          const fromDate = dateRange.from;
+          const toDate = dateRange.to;
+          
+          // Helper para formatear fecha a YYYY-MM-DD
+          const formatDate = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+          
+          // Comparar solo las fechas (sin hora)
+          const fromDateStr = formatDate(fromDate);
+          const toDateStr = formatDate(toDate);
+          
+          if (fromDateStr === toDateStr) {
+            // Mismo día: establecer dateTo al final del día (23:59:59.999)
+            const endOfDay = new Date(toDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            serverFilters.dateTo = endOfDay.toISOString();
+          } else {
+            serverFilters.dateTo = dateRange.to.toISOString();
+          }
+        } else {
+          serverFilters.dateTo = dateRange.to.toISOString();
+        }
       }
       if (emailSentStatusFilter !== 'all') {
         serverFilters.emailSentStatus = emailSentStatusFilter === 'true';
