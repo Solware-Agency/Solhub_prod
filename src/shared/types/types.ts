@@ -704,14 +704,15 @@ export interface MedicalRecord {
 export interface LaboratoryFeatures {
   hasChatAI: boolean
   hasStats: boolean
-  hasChangeHistory: boolean
-  hasUsers: boolean
+  hasForm: boolean
+  hasCaseGenerator: boolean
   hasCases: boolean
   hasPatients: boolean
-  hasForm: boolean
   hasPayment: boolean
+  hasUsers: boolean
+  hasChangeHistory: boolean
+  hasTriaje: boolean
   hasReports: boolean
-  hasCaseGenerator: boolean
 }
 
 export interface LaboratoryBranding {
