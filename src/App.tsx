@@ -33,6 +33,7 @@ import {
   DoctorsSection,
   MedicalForm,
   StandaloneChatPage,
+  TriajePage,
 } from '@app/routes/lazy-routes';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 
@@ -199,6 +200,7 @@ function App() {
                   />
                   <Route path='doctors' element={<DoctorsSection />} />
                   <Route path='medical-form' element={<MedicalForm />} />
+                  <Route path='triaje' element={<TriajePage />} />
                   <Route path='settings' element={<SettingsPage />} />
                 </Route>
 
@@ -246,6 +248,7 @@ function App() {
                       </FeatureGuard>
                     }
                   />
+                  <Route path='triaje' element={<TriajePage />} />
                   <Route path='settings' element={<SettingsPage />} />
                 </Route>
 
@@ -267,6 +270,7 @@ function App() {
                       </FeatureGuard>
                     }
                   />
+                  <Route path='triaje' element={<TriajePage />} />
                   <Route path='settings' element={<SettingsPage />} />
                 </Route>
 
@@ -288,6 +292,7 @@ function App() {
                       </FeatureGuard>
                     }
                   />
+                  <Route path='triaje' element={<TriajePage />} />
                   <Route path='settings' element={<SettingsPage />} />
                 </Route>
 
@@ -309,6 +314,7 @@ function App() {
                       </FeatureGuard>
                     }
                   />
+                  <Route path='triaje' element={<TriajePage />} />
                   <Route path='settings' element={<SettingsPage />} />
                 </Route>
 

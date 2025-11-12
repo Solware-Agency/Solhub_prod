@@ -18,6 +18,7 @@ import {
   Microscope,
   Brain,
   FolderSearch,
+  Activity,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -364,6 +365,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   />
                 </div>
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/dashboard/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <NavGroup
                 icon={
                   <Microscope className='stroke-2 size-4 sm:size-5 shrink-0' />
@@ -500,6 +510,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/dashboard/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -549,6 +568,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/employee/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -570,6 +598,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/medic/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               {/* <NavItem
 								to="/medic/my-cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
@@ -598,6 +635,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/cito/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -612,6 +658,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/patolo/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
           <FeatureGuard feature='hasChatAI'>
