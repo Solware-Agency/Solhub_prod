@@ -2,9 +2,12 @@
 
 ## 📋 **DECISIÓN FINAL**
 
-**Implementación:** Tabla separada `triage_records` para almacenar el historial completo de triajes.
+**Implementación:** Tabla separada `triage_records` para almacenar el historial
+completo de triajes.
 
-**Razón:** El triaje se realiza en **cada visita** del paciente a la clínica, lo que genera muchos registros. Una tabla separada es más escalable, permite queries complejas y análisis estadísticos.
+**Razón:** El triaje se realiza en **cada visita** del paciente a la clínica, lo
+que genera muchos registros. Una tabla separada es más escalable, permite
+queries complejas y análisis estadísticos.
 
 ---
 
@@ -17,35 +20,41 @@ CREATE TABLE public.triage_records (
   id uuid PRIMARY KEY,
   patient_id uuid REFERENCES patients(id),
   laboratory_id uuid REFERENCES laboratories(id), -- Multi-tenant
-  
+
   measurement_date timestamptz NOT NULL, -- Fecha/hora de la medición
-  
-  -- Campos de triaje (todos opcionales)
+
+  reason text, -- Motivo de consulta
+  personal_background text, -- Antecedentes personales
+  family_history text, -- Antecedentes familiares
+  psychobiological_habits text, -- Habitos psicobiologicos
+
+  heart_rate integer,              -- Frecuencia cardíaca (FC)
+  respiratory_rate integer,        -- Frecuencia respiratoria (FR)
+  oxygen_saturation integer,       -- Saturación de oxígeno (SpO2 %)
+  temperature_celsius numeric(4,2), -- Temperatura (°C)
+  blood_pressure integer,  -- Presión arterial (mmHg)
   height_cm numeric(5,2),          -- Altura en centímetros
   weight_kg numeric(5,2),          -- Peso en kilogramos
   bmi numeric(4,2),                -- IMC (calculado automáticamente)
-  
-  blood_pressure_systolic integer,  -- Presión sistólica (mmHg)
-  blood_pressure_diastolic integer, -- Presión diastólica (mmHg)
-  
-  heart_rate integer,              -- Frecuencia cardíaca (lpm)
-  respiratory_rate integer,        -- Frecuencia respiratoria (rpm)
-  oxygen_saturation integer,       -- Saturación de oxígeno (SpO2 %)
-  temperature_celsius numeric(4,2), -- Temperatura (°C)
-  
+
+  examen_fisico text, -- Examen físico
+  comment text, -- Comentario
+
   created_by uuid REFERENCES auth.users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  notes text
 );
 ```
 
 **Características:**
+
 - ✅ **Multi-tenant**: Aislado por `laboratory_id`
 - ✅ **BMI automático**: Se calcula cuando hay altura y peso
 - ✅ **Validaciones**: Constraints para valores razonables
 - ✅ **Índices**: Para queries rápidas por paciente y fecha
 - ✅ **RLS activo**: Solo usuarios del mismo laboratorio pueden ver/modificar
+- ✅ **Campos clínicos completos**: Incluye motivo de consulta, antecedentes personales/familiares, hábitos psicobiológicos, examen físico y comentarios
+- ✅ **Historial completo**: Cada registro incluye toda la información clínica relevante del triaje
 
 ---
 
@@ -61,14 +70,19 @@ Sistema muestra información del paciente
 Recepcionista abre formulario de triaje
     ↓
 Ingresa datos de triaje:
+  - Motivo de consulta
+  - Antecedentes personales
+  - Antecedentes familiares
+  - Hábitos psicobiológicos
   - Altura (cm)
   - Peso (kg)
-  - Presión arterial (sistólica/diastólica)
+  - Presión arterial (mmHg)
   - Frecuencia cardíaca (lpm)
   - Frecuencia respiratoria (rpm)
   - Saturación de oxígeno (SpO2 %)
   - Temperatura (°C)
-  - Notas (opcional)
+  - Examen físico
+  - Comentarios (opcional)
     ↓
 Sistema guarda en triage_records
   - BMI se calcula automáticamente
@@ -90,7 +104,7 @@ Abre perfil del paciente
 Ve sección "Historial de Triaje"
     ↓
 Sistema muestra tabla ordenada por fecha (más reciente primero):
-  
+
   Fecha       | Hora  | Altura | Peso | IMC  | Presión  | FC  | FR  | SpO2 | Temp
   2025-01-26  | 14:30 | 168 cm | 70 kg | 24.8 | 120/80   | 72  | 16  | 98%  | 36.5°C
   2025-01-15  | 09:15 | 168 cm | 72 kg | 25.5 | 125/82   | 75  | 18  | 97%  | 36.8°C
@@ -101,10 +115,10 @@ Sistema muestra tabla ordenada por fecha (más reciente primero):
 
 ```
 En la tarjeta del paciente se muestra:
-  
+
   📋 Último Triaje
   Fecha: 26/01/2025
-  
+
   Altura: 168 cm  |  Peso: 70 kg  |  IMC: 24.8
   Presión: 120/80  |  FC: 72 lpm  |  Temp: 36.5°C
 ```
@@ -116,47 +130,51 @@ En la tarjeta del paciente se muestra:
 ### **1. Crear registro de triaje**
 
 ```typescript
-import { createTriageRecord } from '@/services/supabase/triage/triage-service'
+import { createTriageRecord } from '@/services/supabase/triage/triage-service';
 
 await createTriageRecord({
   patient_id: 'paciente-123',
+  reason: 'Control de rutina',
+  personal_background: 'Hipertensión controlada',
+  family_history: 'Diabetes tipo 2 en madre',
+  psychobiological_habits: 'No fuma, consumo moderado de alcohol',
   height_cm: 168,
   weight_kg: 70,
-  blood_pressure_systolic: 120,
-  blood_pressure_diastolic: 80,
+  blood_pressure: 120,  // Presión arterial (mmHg)
   heart_rate: 72,
   respiratory_rate: 16,
   oxygen_saturation: 98,
   temperature_celsius: 36.5,
-  notes: 'Paciente en buen estado general'
-})
+  examen_fisico: 'Paciente en buen estado general, sin signos de alarma',
+  comment: 'Paciente estable, continuar con seguimiento',
+});
 // BMI se calcula automáticamente: 24.8
 ```
 
 ### **2. Obtener historial completo**
 
 ```typescript
-import { getTriageHistoryByPatient } from '@/services/supabase/triage/triage-service'
+import { getTriageHistoryByPatient } from '@/services/supabase/triage/triage-service';
 
-const historial = await getTriageHistoryByPatient('paciente-123')
+const historial = await getTriageHistoryByPatient('paciente-123');
 // Retorna array ordenado por fecha (más reciente primero)
 ```
 
 ### **3. Obtener último triaje**
 
 ```typescript
-import { getLatestTriageRecord } from '@/services/supabase/triage/triage-service'
+import { getLatestTriageRecord } from '@/services/supabase/triage/triage-service';
 
-const ultimoTriaje = await getLatestTriageRecord('paciente-123')
+const ultimoTriaje = await getLatestTriageRecord('paciente-123');
 // Retorna el registro más reciente o null
 ```
 
 ### **4. Obtener estadísticas**
 
 ```typescript
-import { getTriageStatistics } from '@/services/supabase/triage/triage-service'
+import { getTriageStatistics } from '@/services/supabase/triage/triage-service';
 
-const stats = await getTriageStatistics('paciente-123')
+const stats = await getTriageStatistics('paciente-123');
 // Retorna:
 // {
 //   total_measurements: 3,
@@ -173,7 +191,10 @@ const stats = await getTriageStatistics('paciente-123')
 ### **1. Formulario de Triaje**
 
 - **Ubicación:** Modal o sección en el registro de caso médico
-- **Campos:** Todos los campos de triaje (altura, peso, presión, etc.)
+- **Campos:** 
+  - Información clínica: Motivo de consulta, Antecedentes personales, Antecedentes familiares, Hábitos psicobiológicos
+  - Signos vitales: Altura, Peso, Presión arterial, Frecuencia cardíaca, Frecuencia respiratoria, Saturación de oxígeno, Temperatura
+  - Evaluación: Examen físico, Comentarios
 - **Validación:** Valores razonables (presión no puede ser 500, etc.)
 - **Acción:** Guarda en `triage_records` y muestra confirmación
 
@@ -181,7 +202,8 @@ const stats = await getTriageStatistics('paciente-123')
 
 - **Ubicación:** Sección en el perfil del paciente
 - **Vista:** Tabla ordenada por fecha (más reciente primero)
-- **Funcionalidad:** Ver todos los triajes del paciente, editar/eliminar si es necesario
+- **Funcionalidad:** Ver todos los triajes del paciente, editar/eliminar si es
+  necesario
 
 ### **3. Tarjeta de Último Triaje**
 
@@ -219,7 +241,8 @@ patients (tabla de pacientes)
 5. Sistema completo: paciente + triaje + caso médico
 ```
 
-**Nota:** El triaje es **opcional** - no es obligatorio para crear un caso médico, pero se recomienda hacerlo en cada visita.
+**Nota:** El triaje es **opcional** - no es obligatorio para crear un caso
+médico, pero se recomienda hacerlo en cada visita.
 
 ---
 
@@ -228,10 +251,10 @@ patients (tabla de pacientes)
 ### **1. Buscar pacientes con presión alta este mes**
 
 ```sql
-SELECT DISTINCT p.nombre, tr.blood_pressure_systolic, tr.measurement_date
+SELECT DISTINCT p.nombre, tr.blood_pressure, tr.measurement_date
 FROM triage_records tr
 JOIN patients p ON tr.patient_id = p.id
-WHERE tr.blood_pressure_systolic > 140
+WHERE tr.blood_pressure > 140
   AND tr.measurement_date >= '2025-01-01'
   AND tr.laboratory_id = 'lab-id'
 ORDER BY tr.measurement_date DESC;
@@ -249,8 +272,8 @@ ORDER BY measurement_date DESC;
 ### **3. Estadísticas del mes (promedios)**
 
 ```sql
-SELECT 
-  AVG(blood_pressure_systolic) as avg_systolic,
+SELECT
+  AVG(blood_pressure) as avg_blood_pressure,
   AVG(heart_rate) as avg_heart_rate,
   AVG(weight_kg) as avg_weight,
   COUNT(*) as total_triages
@@ -292,9 +315,10 @@ WHERE measurement_date >= '2025-01-01'
 - **BMI se calcula automáticamente**: No es necesario ingresarlo manualmente
 - **Multi-tenant**: Todo está aislado por `laboratory_id`
 - **RLS activo**: Solo usuarios del mismo laboratorio pueden ver/modificar
+- **Campos clínicos completos**: Incluye motivo de consulta, antecedentes, hábitos, examen físico y comentarios
+- **Presión arterial**: Se almacena como un valor único (integer) en mmHg
 
 ---
 
 **Última actualización:** 2025-01-26  
-**Estado:** ✅ Acordado y listo para implementación
-
+**Estado:** ✅ Estructura actualizada con campos clínicos completos

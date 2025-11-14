@@ -1,5 +1,4 @@
 import {
-  ClipboardList,
   AlertCircle,
   CheckCircle,
   Activity,
@@ -7,9 +6,10 @@ import {
   CreditCard,
   Info,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findPatientByCedula } from '@/services/supabase/patients/patients-service';
+import { createTriageRecord } from '@/services/supabase/triage/triage-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
@@ -70,6 +70,11 @@ function TriajeForm() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [cedulaValue, setCedulaValue] = useState('');
+  
+  // Ref para evitar llamadas duplicadas al autofill
+  const lastProcessedCedula = useRef<string>('');
+  const autofillTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fillPatientDataRef = useRef<((idNumber: string, silent?: boolean) => Promise<void>) | null>(null);
 
   // Función adaptadora para el autofill del formulario de triaje
   // SOLO llena el nombre, ignora todos los demás campos
@@ -85,6 +90,11 @@ function TriajeForm() {
   }, []);
 
   const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValueAdapter);
+  
+  // Guardar fillPatientData en un ref para usar en el useEffect sin dependencias
+  useEffect(() => {
+    fillPatientDataRef.current = fillPatientData;
+  }, [fillPatientData]);
 
   // Handler para cuando se selecciona un paciente del autocomplete
   const handlePatientSelect = useCallback(
@@ -116,19 +126,51 @@ function TriajeForm() {
 
   // Autofill automático cuando se escribe una cédula manualmente (6+ dígitos)
   useEffect(() => {
+    // Limpiar timeout anterior si existe
+    if (autofillTimeoutRef.current) {
+      clearTimeout(autofillTimeoutRef.current);
+      autofillTimeoutRef.current = null;
+    }
+
     if (!cedulaValue || cedulaValue.length < 6) {
       return;
     }
 
+    // Capturar el valor actual de la cédula para usar en el timeout
+    const currentCedulaValue = cedulaValue;
+    
+    // Construir la cédula completa con prefijo V- por defecto
+    const fullCedula = currentCedulaValue.includes('-') ? currentCedulaValue : `V-${currentCedulaValue}`;
+    
+    // Evitar procesar la misma cédula múltiples veces
+    if (lastProcessedCedula.current === fullCedula) {
+      return;
+    }
+
     // Debounce para evitar múltiples llamadas
-    const timeoutId = setTimeout(() => {
-      // Construir la cédula completa con prefijo V- por defecto
-      const fullCedula = cedulaValue.includes('-') ? cedulaValue : `V-${cedulaValue}`;
-      fillPatientData(fullCedula, true); // Silencioso
+    autofillTimeoutRef.current = setTimeout(() => {
+      // Verificar que la cédula no ha cambiado durante el debounce
+      const finalCedula = currentCedulaValue.includes('-') ? currentCedulaValue : `V-${currentCedulaValue}`;
+      
+      // Solo procesar si la cédula no ha cambiado durante el debounce y no se procesó antes
+      if (finalCedula === fullCedula && lastProcessedCedula.current !== fullCedula && fillPatientDataRef.current) {
+        lastProcessedCedula.current = fullCedula;
+        fillPatientDataRef.current(fullCedula, true).catch((err) => {
+          console.error('Error en autofill:', err);
+          // Resetear el ref si hay error para permitir reintentar
+          lastProcessedCedula.current = '';
+        });
+      }
+      autofillTimeoutRef.current = null;
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [cedulaValue, fillPatientData]);
+    return () => {
+      if (autofillTimeoutRef.current) {
+        clearTimeout(autofillTimeoutRef.current);
+        autofillTimeoutRef.current = null;
+      }
+    };
+  }, [cedulaValue]); // Solo depende de cedulaValue, fillPatientData está en un ref
 
 
   // Calcular IMC automáticamente cuando cambian peso o talla
@@ -202,9 +244,71 @@ function TriajeForm() {
     try {
       setLoading(true);
 
-      // TODO: Integrar con backend aquí
-      // Por ahora solo simulamos el envío
-      console.log('Datos del triaje:', formData);
+      // 1. Buscar o obtener el paciente por cédula
+      const fullCedula = formData.cedula.includes('-') 
+        ? formData.cedula 
+        : `V-${formData.cedula}`;
+      
+      let patient = await findPatientByCedula(fullCedula);
+      
+      if (!patient) {
+        setError('Paciente no encontrado. Por favor, verifique la cédula o registre al paciente primero.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Construir hábitos psicobiológicos desde los campos individuales
+      const habitosArray: string[] = [];
+      if (formData.fuma) habitosArray.push(`Tabaco: ${formData.fuma}`);
+      if (formData.cafe) habitosArray.push(`Café: ${formData.cafe}`);
+      if (formData.alcohol) habitosArray.push(`Alcohol: ${formData.alcohol}`);
+      
+      // Si hay hábitos psicobiológicos adicionales en el campo de texto, agregarlos
+      const psychobiological_habits = formData.habitosPsicobiologicos.trim()
+        ? `${formData.habitosPsicobiologicos}${habitosArray.length > 0 ? ` | ${habitosArray.join(', ')}` : ''}`
+        : habitosArray.length > 0 
+          ? habitosArray.join(', ')
+          : null;
+
+      // 3. Convertir valores numéricos
+      const parseNumeric = (value: string): number | null => {
+        if (!value || value.trim() === '') return null;
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? null : parsed;
+      };
+
+      // 4. Parsear presión arterial (puede venir como "120/80" o solo "120")
+      const parseBloodPressure = (value: string): number | null => {
+        if (!value || value.trim() === '') return null;
+        // Intentar extraer el primer número (sistólica)
+        const match = value.match(/^(\d+)(?:\/\d+)?/);
+        if (match) {
+          return parseInt(match[1], 10);
+        }
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? null : Math.round(parsed);
+      };
+
+      // 5. Preparar datos para el servicio
+      const triageData = {
+        patient_id: patient.id,
+        reason: formData.motivoConsulta.trim() || null,
+        personal_background: formData.antecedentesPersonales.trim() || null,
+        family_history: formData.antecedentesFamiliares.trim() || null,
+        psychobiological_habits: psychobiological_habits,
+        height_cm: parseNumeric(formData.talla),
+        weight_kg: parseNumeric(formData.peso),
+        blood_pressure: parseBloodPressure(formData.presionArterial),
+        heart_rate: parseNumeric(formData.frecuenciaCardiaca) ? Math.round(parseNumeric(formData.frecuenciaCardiaca)!) : null,
+        respiratory_rate: parseNumeric(formData.frecuenciaRespiratoria) ? Math.round(parseNumeric(formData.frecuenciaRespiratoria)!) : null,
+        oxygen_saturation: parseNumeric(formData.saturacionOxigeno) ? Math.round(parseNumeric(formData.saturacionOxigeno)!) : null,
+        temperature_celsius: parseNumeric(formData.temperatura),
+        examen_fisico: formData.examenFisico.trim() || null,
+        comment: formData.comentario.trim() || null,
+      };
+
+      // 6. Crear el registro de triaje
+      await createTriageRecord(triageData);
 
       setMessage('Triaje registrado exitosamente.');
       
@@ -236,8 +340,10 @@ function TriajeForm() {
       }, 2000);
     } catch (err: unknown) {
       console.error('Error al registrar triaje:', err);
-      const msg = err instanceof Error ? err.message : '';
-      setError('Error al registrar el triaje. Inténtalo de nuevo.');
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'Error al registrar el triaje. Inténtalo de nuevo.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -435,7 +541,7 @@ function TriajeForm() {
           </CardHeader>
           <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2 sm:gap-3">
             <div>
-              <label className="text-base font-medium mb-2 block flex items-center gap-1">
+              <label className="text-base font-medium mb-2 flex items-center gap-1">
                 FC
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -456,7 +562,7 @@ function TriajeForm() {
               />
             </div>
             <div>
-              <label className="text-base font-medium mb-2 block flex items-center gap-1">
+              <label className="text-base font-medium mb-2 flex items-center gap-1">
                 FR
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -477,7 +583,7 @@ function TriajeForm() {
               />
             </div>
             <div>
-              <label className="text-base font-medium mb-2 block flex items-center gap-1">
+              <label className="text-base font-medium mb-2 flex items-center gap-1">
                 SpO₂
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -542,7 +648,7 @@ function TriajeForm() {
               />
             </div>
             <div>
-              <label className="text-base font-medium mb-2 block flex items-center gap-1">
+              <label className="text-base font-medium mb-2 flex items-center gap-1">
                 IMC
                 <Tooltip>
                   <TooltipTrigger asChild>
