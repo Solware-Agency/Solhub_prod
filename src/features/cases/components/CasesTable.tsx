@@ -24,6 +24,7 @@ import UnifiedCaseModal from './UnifiedCaseModal';
 import HorizontalLinearStepper from './StepsCaseModal';
 import CaseActionsPopover from './CaseActionsPopover';
 import CaseCard from './CaseCard';
+import TriajeModal from './TriajeModal';
 import Pagination from './Pagination';
 import FiltersModal from './FiltersModal';
 import ActiveFiltersDisplay from './ActiveFiltersDisplay';
@@ -179,6 +180,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [selectedCaseForView, setSelectedCaseForView] =
       useState<UnifiedMedicalRecord | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedCaseForTriaje, setSelectedCaseForTriaje] =
+      useState<UnifiedMedicalRecord | null>(null);
+    const [isTriajeModalOpen, setIsTriajeModalOpen] = useState(false);
     const [showPdfReadyOnly, setShowPdfReadyOnly] = useState(false);
     const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
     const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
@@ -725,6 +729,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         }
       },
       [onCaseSelect],
+    );
+
+    const handleTriaje = useCallback(
+      (case_: UnifiedMedicalRecord) => {
+        setSelectedCaseForTriaje(case_);
+        setIsTriajeModalOpen(true);
+      },
+      [],
     );
 
     // Función para manejar la exportación
@@ -1372,6 +1384,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                         onView={handleCaseSelect}
                         onGenerate={handleGenerateEmployeeCase}
                         onReactions={handleGenerateCase}
+                        onTriaje={handleTriaje}
                         canRequest={canRequest}
                       />
                     ))
@@ -1553,6 +1566,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                   onView={handleCaseSelect}
                                   onGenerate={handleGenerateEmployeeCase}
                                   onReactions={handleGenerateCase}
+                                  onTriaje={handleTriaje}
                                   canRequest={canRequest}
                                 />
                               </div>
@@ -1620,6 +1634,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               refetch();
             }}
             onCaseSelect={handleCaseSelect}
+            isFullscreen={isFullscreen}
+          />
+
+          {/* Triaje Modal for fullscreen mode */}
+          <TriajeModal
+            case_={selectedCaseForTriaje}
+            isOpen={isTriajeModalOpen}
+            onClose={() => {
+              setIsTriajeModalOpen(false);
+              setSelectedCaseForTriaje(null);
+            }}
+            onSave={() => {
+              // Refetch the data to update the cases list
+              refetch();
+
+              // Mark that we should update the selected case when data changes
+              setShouldUpdateSelectedCase(true);
+            }}
             isFullscreen={isFullscreen}
           />
 
@@ -1978,6 +2010,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                   onView={handleCaseSelect}
                                   onGenerate={handleGenerateEmployeeCase}
                                   onReactions={handleGenerateCase}
+                                  onTriaje={handleTriaje}
                                   canRequest={canRequest}
                                 />
                               </div>
@@ -2059,6 +2092,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             refetch();
           }}
           onCaseSelect={handleCaseSelect}
+          isFullscreen={isFullscreen}
+        />
+
+        {/* Triaje Modal */}
+        <TriajeModal
+          case_={selectedCaseForTriaje}
+          isOpen={isTriajeModalOpen}
+          onClose={() => {
+            setIsTriajeModalOpen(false);
+            setSelectedCaseForTriaje(null);
+          }}
+          onSave={() => {
+            // Refetch the data to update the cases list
+            refetch();
+
+            // Mark that we should update the selected case when data changes
+            setShouldUpdateSelectedCase(true);
+          }}
           isFullscreen={isFullscreen}
         />
 

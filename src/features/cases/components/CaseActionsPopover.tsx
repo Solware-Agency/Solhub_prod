@@ -1,6 +1,6 @@
 import React from 'react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
-import { Eye, FileText, FlaskConical } from 'lucide-react';
+import { Eye, FileText, FlaskConical, ClipboardList } from 'lucide-react';
 import {
   PopoverBody,
   PopoverButton,
@@ -15,6 +15,7 @@ interface CaseActionsPopoverProps {
   onView: (case_: MedicalCaseWithPatient) => void;
   onGenerate: (case_: MedicalCaseWithPatient) => void;
   onReactions?: (case_: MedicalCaseWithPatient) => void;
+  onTriaje?: (case_: MedicalCaseWithPatient) => void;
   canRequest: boolean;
 }
 
@@ -23,6 +24,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   onView,
   onGenerate,
   onReactions,
+  onTriaje,
   canRequest,
 }) => {
   const examType = case_.exam_type?.toLowerCase().trim() || '';
@@ -49,6 +51,13 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
             <PopoverButton onClick={() => onReactions(case_)}>
               <FlaskConical className='w-4 h-4' />
               <span>Reacciones</span>
+            </PopoverButton>
+          )}
+
+          {onTriaje && (
+            <PopoverButton onClick={() => onTriaje(case_)}>
+              <ClipboardList className='w-4 h-4' />
+              <span>Triaje</span>
             </PopoverButton>
           )}
         </PopoverBody>

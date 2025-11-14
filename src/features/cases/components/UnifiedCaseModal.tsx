@@ -90,6 +90,7 @@ interface CaseDetailPanelProps {
 	onDelete?: () => void
 	onCaseSelect: (case_: MedicalCaseWithPatient) => void
 	isFullscreen?: boolean
+	modalTitle?: string
 }
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
@@ -146,7 +147,7 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
 )
 
 const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
-	({ case_, isOpen, onClose, onSave, onDelete, isFullscreen = false }) => {
+	({ case_, isOpen, onClose, onSave, onDelete, isFullscreen = false, modalTitle = 'Detalles Del Caso' }) => {
 		useBodyScrollLock(isOpen)
 		useGlobalOverlayOpen(isOpen)
 		const { profile } = useUserProfile()
@@ -1044,7 +1045,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 										<div>
 											<div>
 												<h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-													Detalles Del Caso
+													{modalTitle}
 												</h2>
 											</div>
 											<div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2">
