@@ -22,20 +22,18 @@ import {
   Layout,
   HomePage,
   ReceptionistHomePage,
-  StatsPage,
-  ReportsPage,
-  UsersPage,
   CasesPage,
-  SettingsPage,
-  ChangelogPage,
-  PatientsPage,
   PrivateRoute,
-  DoctorsSection,
-  MedicalForm,
   StandaloneChatPage,
-  TriajePage,
 } from '@app/routes/lazy-routes';
-import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { FeatureRoute } from '@shared/components/FeatureRoute';
+import {
+  dashboardRoutes,
+  employeeRoutes,
+  medicRoutes,
+  citotecnoRoutes,
+  patologoRoutes,
+} from '@app/routes/route-config';
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -137,71 +135,31 @@ function App() {
                   <Route
                     index
                     element={
-                      <FeatureGuard feature='hasStats'>
+                      <FeatureRoute
+                        feature='hasStats'
+                        fallbackPath='/dashboard/home'
+                      >
                         <HomePage />
-                      </FeatureGuard>
+                      </FeatureRoute>
                     }
                   />
-                  <Route
-                    path='home'
-                    element={
-                      <FeatureGuard feature='hasStats'>
-                        <HomePage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='stats'
-                    element={
-                      <FeatureGuard feature='hasStats'>
-                        <StatsPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='reports'
-                    element={
-                      <FeatureGuard feature='hasReports'>
-                        <ReportsPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='users'
-                    element={
-                      <FeatureGuard feature='hasUsers'>
-                        <UsersPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='cases'
-                    element={
-                      <FeatureGuard feature='hasCases'>
-                        <CasesPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='patients'
-                    element={
-                      <FeatureGuard feature='hasPatients'>
-                        <PatientsPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='changelog'
-                    element={
-                      <FeatureGuard feature='hasChangeHistory'>
-                        <ChangelogPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route path='doctors' element={<DoctorsSection />} />
-                  <Route path='medical-form' element={<MedicalForm />} />
-                  <Route path='triaje' element={<TriajePage />} />
-                  <Route path='settings' element={<SettingsPage />} />
+                  {dashboardRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/dashboard/home'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
                 </Route>
 
                 {/* Protected employee routes */}
@@ -215,41 +173,23 @@ function App() {
                 >
                   {/* Nested routes that will render in the Outlet */}
                   <Route index element={<ReceptionistHomePage />} />
-                  <Route path='home' element={<ReceptionistHomePage />} />
-                  <Route
-                    path='form'
-                    element={
-                      <FeatureGuard feature='hasForm'>
-                        <MedicalForm />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='records'
-                    element={
-                      <FeatureGuard feature='hasCases'>
-                        <CasesPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='patients'
-                    element={
-                      <FeatureGuard feature='hasPatients'>
-                        <PatientsPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route
-                    path='changelogpage'
-                    element={
-                      <FeatureGuard feature='hasChangeHistory'>
-                        <ChangelogPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route path='triaje' element={<TriajePage />} />
-                  <Route path='settings' element={<SettingsPage />} />
+                  {employeeRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/employee/home'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
                 </Route>
 
                 <Route
@@ -262,16 +202,23 @@ function App() {
                 >
                   {/* Nested routes that will render in the Outlet */}
                   <Route index element={<CasesPage />} />
-                  <Route
-                    path='cases'
-                    element={
-                      <FeatureGuard feature='hasCases'>
-                        <CasesPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route path='triaje' element={<TriajePage />} />
-                  <Route path='settings' element={<SettingsPage />} />
+                  {medicRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/medic/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
                 </Route>
 
                 <Route
@@ -284,16 +231,23 @@ function App() {
                 >
                   {/* Nested routes that will render in the Outlet */}
                   <Route index element={<CasesPage />} />
-                  <Route
-                    path='cases'
-                    element={
-                      <FeatureGuard feature='hasCases'>
-                        <CasesPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route path='triaje' element={<TriajePage />} />
-                  <Route path='settings' element={<SettingsPage />} />
+                  {citotecnoRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/cito/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
                 </Route>
 
                 <Route
@@ -306,16 +260,23 @@ function App() {
                 >
                   {/* Nested routes that will render in the Outlet */}
                   <Route index element={<CasesPage />} />
-                  <Route
-                    path='cases'
-                    element={
-                      <FeatureGuard feature='hasCases'>
-                        <CasesPage />
-                      </FeatureGuard>
-                    }
-                  />
-                  <Route path='triaje' element={<TriajePage />} />
-                  <Route path='settings' element={<SettingsPage />} />
+                  {patologoRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/patolo/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
                 </Route>
 
                 {/* Standalone Chat Route - For Owner and Admin */}
@@ -323,9 +284,12 @@ function App() {
                   path='/chat'
                   element={
                     <PrivateRoute requiredRole={['owner', 'residente']}>
-                      <FeatureGuard feature='hasChatAI'>
+                      <FeatureRoute
+                        feature='hasChatAI'
+                        fallbackPath='/dashboard/home'
+                      >
                         <StandaloneChatPage />
-                      </FeatureGuard>
+                      </FeatureRoute>
                     </PrivateRoute>
                   }
                 />
