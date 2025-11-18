@@ -725,6 +725,7 @@ export interface LaboratoryBranding {
 export interface LaboratoryConfig {
   branches: string[]
   paymentMethods: string[]
+  examTypes: string[]        // Tipos de examen configurados por laboratorio
   defaultExchangeRate: number
   timezone: string
   webhooks?: {              // OPCIONAL - No todos los labs lo tienen

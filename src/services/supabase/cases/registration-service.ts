@@ -58,7 +58,7 @@ export interface PatientInsert {
 export interface MedicalCaseInsert {
 	id?: string
 	patient_id?: string | null
-	exam_type: string
+	exam_type: string | null  // NULL permitido si no está configurado
 	origin: string
 	treating_doctor: string
 	sample_type: string
@@ -67,9 +67,9 @@ export interface MedicalCaseInsert {
 	branch: string
 	date: string
 	code?: string
-	total_amount: number
+	total_amount: number | null  // NULL permitido para labs sin módulo de pagos
 	payment_status: 'Incompleto' | 'Pagado'
-	remaining?: number
+	remaining?: number | null
 	payment_method_1?: string | null
 	payment_amount_1?: number | null
 	payment_reference_1?: string | null
@@ -210,18 +210,30 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
 	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
-	// Calcular remaining amount y estado de pago usando la lógica correcta de conversión de monedas
-	const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
-		formData.payments || [],
-		formData.totalAmount,
-		exchangeRate,
-	)
-	const remaining = missingAmount || 0
+	// Verificar si hay pagos
+	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
+	const hasTotalAmount = formData.totalAmount > 0
+
+	// Calcular remaining amount y estado de pago solo si hay pagos
+	let missingAmount = 0
+	let isPaymentComplete = false
+	let remaining = 0
+
+	if (hasPayments && hasTotalAmount) {
+		const paymentDetails = calculatePaymentDetails(
+			formData.payments || [],
+			formData.totalAmount,
+			exchangeRate,
+		)
+		missingAmount = paymentDetails.missingAmount || 0
+		isPaymentComplete = paymentDetails.isPaymentComplete
+		remaining = missingAmount
+	}
 
 	// Datos del caso médico (tabla medical_records_clean)
 	const caseData: MedicalCaseInsert = {
 		// Información del examen
-		exam_type: formData.examType,
+		exam_type: formData.examType || null, // NULL permitido si no está configurado
 		origin: formData.origin,
 		treating_doctor: formData.treatingDoctor || formData.doctorName,
 		sample_type: formData.sampleType || '',
@@ -232,9 +244,10 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 		code: '', // Se generará automáticamente
 
 		// Información financiera
-		total_amount: formData.totalAmount,
-		payment_status: isPaymentComplete ? 'Pagado' : 'Incompleto',
-		remaining: remaining,
+		// NULL si no hay pagos o totalAmount es 0 (para labs sin módulo de pagos)
+		total_amount: hasTotalAmount && hasPayments ? formData.totalAmount : null,
+		payment_status: hasPayments ? (isPaymentComplete ? 'Pagado' : 'Incompleto') : 'Incompleto',
+		remaining: hasPayments ? remaining : null,
 		exchange_rate: exchangeRate || null,
 
 		// Información de pagos
@@ -374,13 +387,13 @@ export const validateRegistrationData = (formData: FormValues, exchangeRate?: nu
 		errors.push('El doctor tratante es obligatorio')
 	}
 
-	if (formData.totalAmount <= 0) {
-		errors.push('El monto total debe ser mayor a 0')
+	// Solo validar totalAmount si hay pagos (labs con módulo de pagos)
+	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
+	if (hasPayments && formData.totalAmount <= 0) {
+		errors.push('El monto total debe ser mayor a 0 cuando hay pagos')
 	}
 
 	// Validar pagos usando la función que convierte correctamente las monedas
-	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
-
 	if (hasPayments) {
 		// Validar que los pagos no excedan el monto total (con conversión de monedas)
 		const paymentValidation = validateFormPayments(formData.payments || [], formData.totalAmount, exchangeRate)

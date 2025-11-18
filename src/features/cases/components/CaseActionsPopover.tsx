@@ -55,10 +55,12 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
           )}
 
           {onTriaje && (
-            <PopoverButton onClick={() => onTriaje(case_)}>
-              <ClipboardList className='w-4 h-4' />
-              <span>Triaje</span>
-            </PopoverButton>
+            <FeatureGuard feature='hasTriaje'>
+              <PopoverButton onClick={() => onTriaje(case_)}>
+                <ClipboardList className='w-4 h-4' />
+                <span>Triaje</span>
+              </PopoverButton>
+            </FeatureGuard>
           )}
         </PopoverBody>
       </PopoverContent>

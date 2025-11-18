@@ -396,17 +396,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={onClose}
                   />
                 </FeatureGuard>
-                <FeatureGuard feature='hasTriaje'>
-                  <div className='py-1'>
-                    <NavItem
-                      to='/dashboard/triaje'
-                      icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                      label='Triaje'
-                      showFullContent={showFullContent}
-                      onClick={onClose}
-                    />
-                  </div>
-                </FeatureGuard>
               </NavGroup>
               <NavGroup
                 icon={

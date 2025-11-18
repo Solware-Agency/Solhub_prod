@@ -8,7 +8,6 @@ import {
   CasesPage,
   PatientsPage,
   ChangelogPage,
-  TriajePage,
   DoctorsSection,
   MedicalForm,
   SettingsPage,
@@ -58,11 +57,6 @@ export const dashboardRoutes: RouteConfig[] = [
     path: 'changelog',
     feature: 'hasChangeHistory',
     component: ChangelogPage,
-  },
-  {
-    path: 'triaje',
-    feature: 'hasTriaje',
-    component: TriajePage,
   },
   {
     path: 'doctors',

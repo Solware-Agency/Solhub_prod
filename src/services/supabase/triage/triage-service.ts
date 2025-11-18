@@ -5,16 +5,23 @@
 
 import { supabase } from '@services/supabase/config/config';
 
+// Tipo para niveles de hábitos
+export type HabitLevel = 'muy alta' | 'alta' | 'media' | 'baja' | 'muy baja' | 'No' | '';
+
 // Tipos específicos para triaje
 export interface TriageRecord {
   id: string;
   patient_id: string;
+  case_id: string | null; // Referencia al caso médico (opcional para compatibilidad)
   laboratory_id: string; // Multi-tenant
   measurement_date: string;
   reason: string | null;
   personal_background: string | null;
   family_history: string | null;
-  psychobiological_habits: string | null;
+  psychobiological_habits: string | null; // Mantener para compatibilidad
+  tabaco: HabitLevel | null;
+  cafe: HabitLevel | null;
+  alcohol: HabitLevel | null;
   heart_rate: number | null;
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
@@ -32,17 +39,21 @@ export interface TriageRecord {
 
 export interface TriageRecordInsert {
   patient_id: string;
+  case_id?: string | null; // Referencia al caso médico
   laboratory_id: string;
   measurement_date?: string;
   reason?: string | null;
   personal_background?: string | null;
   family_history?: string | null;
-  psychobiological_habits?: string | null;
+  psychobiological_habits?: string | null; // Mantener para compatibilidad
+  tabaco?: HabitLevel | null;
+  cafe?: HabitLevel | null;
+  alcohol?: HabitLevel | null;
   heart_rate?: number | null;
   respiratory_rate?: number | null;
   oxygen_saturation?: number | null;
   temperature_celsius?: number | null;
-  blood_pressure?: number | null;
+  blood_pressure?: number | string | null; // Acepta string porque se parsea internamente
   height_cm?: number | null;
   weight_kg?: number | null;
   bmi?: number | null; // Se calcula automáticamente si hay altura y peso
@@ -212,6 +223,39 @@ export const createTriageRecord = async (
     return record as TriageRecord;
   } catch (error) {
     console.error('Error en createTriageRecord:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtener triaje de un caso médico específico
+ * Retorna el registro de triaje asociado al caso o null si no existe
+ */
+export const getTriageByCase = async (
+  case_id: string
+): Promise<TriageRecord | null> => {
+  try {
+    const laboratoryId = await getUserLaboratoryId();
+
+    const { data: record, error } = await supabase
+      .from('triaje_records')
+      .select('*')
+      .eq('case_id', case_id)
+      .eq('laboratory_id', laboratoryId)
+      .single();
+
+    if (error) {
+      // Si no hay registros, retornar null (no es un error)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error obteniendo triaje del caso:', error);
+      throw new Error(`Error al obtener triaje del caso: ${error.message}`);
+    }
+
+    return record as TriageRecord;
+  } catch (error) {
+    console.error('Error en getTriageByCase:', error);
     throw error;
   }
 };

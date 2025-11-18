@@ -6,7 +6,8 @@ import { AutocompleteInput } from '@shared/components/ui/autocomplete-input'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useEffect, memo } from 'react'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import { useEffect, memo, useMemo } from 'react'
 import { Stethoscope, MapPin, Microscope } from 'lucide-react'
 
 interface ServiceSectionProps {
@@ -16,7 +17,25 @@ interface ServiceSectionProps {
 
 export const ServiceSection = memo(({ control, inputStyles }: ServiceSectionProps) => {
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 	const branch = useWatch({ control, name: 'branch' })
+
+	// Obtener tipos de examen desde la configuración del laboratorio
+	const examTypesOptions = useMemo(() => {
+		const examTypes = laboratory?.config?.examTypes || []
+		// Si hay tipos configurados, usarlos; si no, usar valores por defecto
+		if (examTypes.length > 0) {
+			return createDropdownOptions(
+				examTypes.map(type => ({ value: type, label: type }))
+			)
+		}
+		// Fallback a valores por defecto si no hay configuración
+		return createDropdownOptions([
+			{ value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
+			{ value: 'Biopsia', label: 'Biopsia' },
+			{ value: 'Citología', label: 'Citología' },
+		])
+	}, [laboratory?.config?.examTypes])
 
 	// Auto-set branch if user has an assigned branch - memoized with useCallback
 	useEffect(() => {
@@ -37,7 +56,7 @@ export const ServiceSection = memo(({ control, inputStyles }: ServiceSectionProp
 				<CardTitle className="text-base sm:text-lg">Servicio</CardTitle>
 			</CardHeader>
 			<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-				{/* Tipo de Examen - SIN AUTOCOMPLETADO (es un select) */}
+				{/* Tipo de Examen - Usa config.examTypes del laboratorio */}
 				<FormField
 					control={control}
 					name="examType"
@@ -46,11 +65,7 @@ export const ServiceSection = memo(({ control, inputStyles }: ServiceSectionProp
 							<FormLabel>Tipo de Examen *</FormLabel>
 							<FormControl>
 								<FormDropdown
-									options={createDropdownOptions([
-										{ value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
-										{ value: 'Biopsia', label: 'Biopsia' },
-										{ value: 'Citología', label: 'Citología' },
-									])}
+									options={examTypesOptions}
 									value={field.value}
 									onChange={field.onChange}
 									placeholder="Seleccione una opción"
