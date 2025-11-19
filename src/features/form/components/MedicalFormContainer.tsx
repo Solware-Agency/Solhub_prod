@@ -19,6 +19,7 @@ import {
 import { type FormValues } from '@features/form/lib/form-schema';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { useModuleField } from '@shared/hooks/useModuleField';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -55,6 +56,9 @@ export function MedicalFormContainer() {
   const [usdFromVes, setUsdFromVes] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Verificar configuración del módulo para médico tratante
+  const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -116,7 +120,9 @@ export function MedicalFormContainer() {
         console.log('Tasa de cambio:', exchangeRate);
 
         // Validar datos antes del envío
-        const validationErrors = validateRegistrationData(data, exchangeRate);
+        // Pasar configuración del módulo para validación condicional
+        const medicoTratanteRequired = medicoTratanteConfig?.enabled && medicoTratanteConfig?.required;
+        const validationErrors = validateRegistrationData(data, exchangeRate, medicoTratanteRequired);
         if (validationErrors.length > 0) {
           toast({
             title: '❌ Error de validación',

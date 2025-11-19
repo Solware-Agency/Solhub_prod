@@ -163,6 +163,7 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 		// PASO 2: Crear caso médico enlazado al paciente
 		console.log('📋 Creando caso médico...')
 		// Remove auto-generated fields before passing to createMedicalCase
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { created_at, updated_at, ...cleanCaseData } = caseData
 		const medicalCase = await createMedicalCase({
 			...cleanCaseData,
@@ -359,49 +360,68 @@ export const searchPatientForForm = async (cedula: string) => {
 
 /**
  * Validar datos antes del registro
+ * @param formData - Datos del formulario
+ * @param exchangeRate - Tasa de cambio (opcional)
+ * @param medicoTratanteRequired - Si el campo médico tratante es requerido según la configuración del módulo
  */
-export const validateRegistrationData = (formData: FormValues, exchangeRate?: number): string[] => {
-	const errors: string[] = []
+export const validateRegistrationData = (
+  formData: FormValues,
+  exchangeRate?: number,
+  medicoTratanteRequired?: boolean,
+): string[] => {
+  const errors: string[] = [];
 
-	// Validaciones obligatorias
-	if (!formData.idType) {
-		errors.push('El tipo de cédula es obligatorio')
-	}
-	if (!formData.idNumber && formData.idType !== 'S/C') {
-		errors.push('El número de cédula es obligatorio')
-	}
+  // Validaciones obligatorias
+  if (!formData.idType) {
+    errors.push('El tipo de cédula es obligatorio');
+  }
+  if (!formData.idNumber && formData.idType !== 'S/C') {
+    errors.push('El número de cédula es obligatorio');
+  }
 
-	if (!formData.fullName) {
-		errors.push('El nombre completo es obligatorio')
-	}
+  if (!formData.fullName) {
+    errors.push('El nombre completo es obligatorio');
+  }
 
-	if (!formData.phone) {
-		errors.push('El teléfono es obligatorio')
-	}
+  if (!formData.phone) {
+    errors.push('El teléfono es obligatorio');
+  }
 
-	if (!formData.examType) {
-		errors.push('El tipo de examen es obligatorio')
-	}
+  if (!formData.examType) {
+    errors.push('El tipo de examen es obligatorio');
+  }
 
-	if (!formData.treatingDoctor && !formData.doctorName) {
-		errors.push('El doctor tratante es obligatorio')
-	}
+  // Validar médico tratante solo si está habilitado y es requerido en la configuración
+  if (
+    medicoTratanteRequired &&
+    !formData.treatingDoctor &&
+    !formData.doctorName
+  ) {
+    errors.push('El doctor tratante es obligatorio');
+  }
 
-	// Solo validar totalAmount si hay pagos (labs con módulo de pagos)
-	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
-	if (hasPayments && formData.totalAmount <= 0) {
-		errors.push('El monto total debe ser mayor a 0 cuando hay pagos')
-	}
+  // Solo validar totalAmount si hay pagos (labs con módulo de pagos)
+  const hasPayments =
+    formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
+  if (hasPayments && formData.totalAmount <= 0) {
+    errors.push('El monto total debe ser mayor a 0 cuando hay pagos');
+  }
 
-	// Validar pagos usando la función que convierte correctamente las monedas
-	if (hasPayments) {
-		// Validar que los pagos no excedan el monto total (con conversión de monedas)
-		const paymentValidation = validateFormPayments(formData.payments || [], formData.totalAmount, exchangeRate)
+  // Validar pagos usando la función que convierte correctamente las monedas
+  if (hasPayments) {
+    // Validar que los pagos no excedan el monto total (con conversión de monedas)
+    const paymentValidation = validateFormPayments(
+      formData.payments || [],
+      formData.totalAmount,
+      exchangeRate,
+    );
 
-		if (!paymentValidation.isValid) {
-			errors.push(paymentValidation.errorMessage || 'Error en la validación de pagos')
-		}
-	}
+    if (!paymentValidation.isValid) {
+      errors.push(
+        paymentValidation.errorMessage || 'Error en la validación de pagos',
+      );
+    }
+  }
 
-	return errors
-}
+  return errors;
+};

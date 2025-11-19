@@ -722,6 +722,24 @@ export interface LaboratoryBranding {
   secondaryColor: string    // Color secundario (por defecto: "#00cc66")
 }
 
+// Configuración de módulos (configuración granular)
+export interface ModuleFieldConfig {
+  enabled: boolean
+  required: boolean
+}
+
+export interface ModuleConfig {
+  fields?: {
+    [fieldName: string]: ModuleFieldConfig
+  }
+  actions?: {
+    [actionName: string]: boolean
+  }
+  settings?: {
+    [settingName: string]: any
+  }
+}
+
 export interface LaboratoryConfig {
   branches: string[]
   paymentMethods: string[]
@@ -732,6 +750,9 @@ export interface LaboratoryConfig {
     generateDoc?: string
     generatePdf?: string
     sendEmail?: string
+  }
+  modules?: {                // Configuración granular de módulos por laboratorio
+    [moduleName: string]: ModuleConfig
   }
 }
 
