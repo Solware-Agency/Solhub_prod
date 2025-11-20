@@ -1560,7 +1560,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         )}
       </AnimatePresence>
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          className={isFullscreen ? 'z-[999999999999999999]' : ''}
+        >
           <DialogHeader>
             <DialogTitle>Confirmar descargar PDF</DialogTitle>
             <DialogDescription>
