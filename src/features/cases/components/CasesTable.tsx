@@ -1374,8 +1374,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             {/* Scrollable Content Area */}
             <div className='flex-1 overflow-hidden'>
               {/* Mobile View - Cards */}
-              <div className='block lg:hidden h-full overflow-y-auto px-3 py-4'>
-                <div className='p-2 sm:p-4 space-y-3 max-h-[45vh] overflow-y-auto'>
+              <div className='block lg:hidden h-full overflow-y-auto px-3 py-4 custom-scrollbar'>
+                <div className='p-2 sm:p-4 space-y-3 max-h-[45vh] overflow-y-auto custom-scrollbar'>
                   {paginatedCases.length > 0 ? (
                     paginatedCases.map((case_) => (
                       <CaseCard
@@ -1405,7 +1405,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               </div>
 
               {/* Desktop View - Table with virtualization */}
-              <div className='hidden lg:block h-full overflow-y-auto'>
+              <div className='hidden lg:block h-full overflow-y-auto custom-scrollbar'>
                 <table className='w-full responsive-table'>
                   <thead className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]'>
                     <tr>
@@ -1817,7 +1817,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
           {/* Mobile View - Cards */}
           <div className='block lg:hidden overflow-hidden'>
-            <div className='p-4 space-y-4 max-h-[45vh] overflow-y-auto'>
+            <div className='p-4 space-y-4 max-h-[45vh] overflow-y-auto custom-scrollbar'>
               {paginatedCases.length > 0 ? (
                 paginatedCases.map((case_) => (
                   <CaseCard
@@ -1848,7 +1848,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           {/* Desktop View - Table */}
           <div className='hidden lg:block'>
             <div className='overflow-x-auto responsive-table'>
-              <div className='max-h-[55vh] overflow-y-auto'>
+              <div className='max-h-[55vh] overflow-y-auto custom-scrollbar'>
                 <table className='w-full min-w-[800px]'>
                   <thead className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]'>
                     <tr>
