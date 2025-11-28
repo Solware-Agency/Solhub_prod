@@ -1,4 +1,4 @@
-import { type Control, useWatch } from 'react-hook-form';
+import { type Control, useWatch, useFormContext } from 'react-hook-form';
 import { type FormValues } from '@features/form/lib/form-schema';
 import {
   FormField,
@@ -35,6 +35,27 @@ export const ServiceSection = memo(
     const { laboratory } = useLaboratory();
     const branch = useWatch({ control, name: 'branch' });
 
+    // Obtener setValue del contexto del formulario (si está disponible)
+    let setValue: ((name: string, value: any) => void) | undefined;
+    try {
+      const formContext = useFormContext<FormValues>();
+      setValue = formContext.setValue;
+    } catch {
+      // Si no hay FormContext, usar el control directamente
+      setValue = (name: string, value: any) => {
+        if (control._formValues) {
+          control._formValues[name as keyof typeof control._formValues] = value;
+        }
+        // Notificar el cambio
+        if (control._subjects?.values) {
+          control._subjects.values.next({
+            ...control._formValues,
+            [name]: value,
+          });
+        }
+      };
+    }
+
     // Verificar si el campo "médico tratante" está habilitado en la configuración del módulo
     const medicoTratanteConfig = useModuleField(
       'registrationForm',
@@ -51,6 +72,49 @@ export const ServiceSection = memo(
       'registrationForm',
       'relationship',
     );
+
+    // Verificar configuración del módulo para el campo consulta
+    const consultaConfig = useModuleField('registrationForm', 'consulta');
+
+    // Obtener el valor actual del campo consulta
+    const consultaValue = useWatch({ control, name: 'consulta' });
+
+    // Resetear el valor a string vacío cuando el campo se deshabilita
+    useEffect(() => {
+      if (!consultaConfig?.enabled && consultaValue) {
+        setValue('consulta', '');
+      }
+    }, [consultaConfig?.enabled, consultaValue, setValue]);
+
+    // Opciones de especialidades médicas para el dropdown de consulta
+    const consultaOptions = useMemo(() => {
+      return createDropdownOptions([
+        { value: 'Cardiología', label: 'Cardiología' },
+        { value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
+        { value: 'Dermatología', label: 'Dermatología' },
+        { value: 'Endocrinología', label: 'Endocrinología' },
+        { value: 'Gastroenterología', label: 'Gastroenterología' },
+        { value: 'Ginecología', label: 'Ginecología' },
+        { value: 'Medicina Interna', label: 'Medicina Interna' },
+        { value: 'Nefrología', label: 'Nefrología' },
+        { value: 'Neumonología', label: 'Neumonología' },
+        { value: 'Neurología', label: 'Neurología' },
+        { value: 'Neurocirugía', label: 'Neurocirugía' },
+        { value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
+        { value: 'Pediatría', label: 'Pediatría' },
+        { value: 'Psicología', label: 'Psicología' },
+        { value: 'Traumatología', label: 'Traumatología' },
+        { value: 'Urología', label: 'Urología' },
+        { value: 'Oftalmología', label: 'Oftalmología' },
+        { value: 'Medicina General', label: 'Medicina General' },
+        { value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+        { value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+        { value: 'Fisioterapia', label: 'Fisioterapia' },
+        { value: 'Psiquiatría', label: 'Psiquiatría' },
+        { value: 'Optometría', label: 'Optometría' },
+        { value: 'Odontología', label: 'Odontología' },
+      ]);
+    }, []);
     // Obtener tipos de examen desde la configuración del laboratorio
     const examTypesOptions = useMemo(() => {
       const examTypes = laboratory?.config?.examTypes || [];
@@ -234,6 +298,31 @@ export const ServiceSection = memo(
                       placeholder='Relación con el Caso'
                       {...field}
                       className={inputStyles}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
+
+          {/* Consulta (Especialidad Médica) - Solo visible si está habilitado en la configuración del módulo */}
+          {consultaConfig?.enabled && (
+            <FormField
+              control={control}
+              name='consulta'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Consulta {consultaConfig.required && '*'}
+                  </FormLabel>
+                  <FormControl>
+                    <FormDropdown
+                      options={consultaOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder='Seleccione una especialidad'
+                      className={inputStyles}
+                      id='service-consulta'
                     />
                   </FormControl>
                 </FormItem>

@@ -8,6 +8,9 @@ import { findPatientByCedula, createPatient, updatePatient } from '@services/sup
 import { createMedicalCase } from '@services/supabase/cases/medical-cases-service'
 import { supabase } from '@services/supabase/config/config'
 import { validateFormPayments, calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+import { prepareDefaultValues, preparePaymentValues } from './registration-helpers'
+import type { ModuleConfig } from '@/shared/types/types'
+import type { FormValues } from '@features/form/lib/form-schema'
 
 // Tipo de formulario (evita importación circular)
 export interface FormValues {
@@ -64,7 +67,8 @@ export interface MedicalCaseInsert {
 	sample_type: string
 	number_of_samples: number
 	relationship?: string | null
-	branch: string
+	branch: string | null  // Nullable en BD
+	consulta?: string | null  // Especialidad médica (solo para lab SPT)
 	date: string
 	code?: string
 	total_amount: number | null  // NULL permitido para labs sin módulo de pagos
@@ -112,8 +116,16 @@ export interface RegistrationResult {
  * 2. Si no existe, crea nuevo paciente
  * 3. Si existe, verifica si hay cambios en datos del paciente
  * 4. Crea el caso médico enlazado al paciente
+ * 
+ * @param formData - Datos del formulario
+ * @param exchangeRate - Tasa de cambio (opcional)
+ * @param moduleConfig - Configuración del módulo registrationForm (opcional)
  */
-export const registerMedicalCase = async (formData: FormValues, exchangeRate?: number): Promise<RegistrationResult> => {
+export const registerMedicalCase = async (
+	formData: FormValues,
+	exchangeRate?: number,
+	moduleConfig?: ModuleConfig | null
+): Promise<RegistrationResult> => {
 	try {
 		console.log('🚀 Iniciando registro con nueva estructura...')
 
@@ -126,7 +138,7 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 		}
 
 		// Preparar datos del paciente y del caso
-		const { patientData, caseData } = prepareRegistrationData(formData, user, exchangeRate)
+		const { patientData, caseData } = prepareRegistrationData(formData, user, exchangeRate, moduleConfig)
 
 		console.log('📊 Datos preparados para inserción:')
 		console.log('Patient Data:', patientData)
@@ -196,8 +208,18 @@ export const registerMedicalCase = async (formData: FormValues, exchangeRate?: n
 
 /**
  * Preparar datos separados para paciente y caso médico
+ * 
+ * @param formData - Datos del formulario
+ * @param user - Usuario actual
+ * @param exchangeRate - Tasa de cambio (opcional)
+ * @param moduleConfig - Configuración del módulo registrationForm (opcional)
  */
-const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?: number) => {
+const prepareRegistrationData = (
+	formData: FormValues,
+	user: any,
+	exchangeRate?: number,
+	moduleConfig?: ModuleConfig | null
+) => {
 	// Datos del paciente (tabla patients)
 	const patientData: PatientInsert = {
 		cedula: formData.idType === 'S/C' ? 'S/C' : `${formData.idType}-${formData.idNumber}`,
@@ -231,39 +253,43 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 		remaining = missingAmount
 	}
 
+	// Obtener valores por defecto basados en configuración del módulo
+	// Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
+	const defaultValues = prepareDefaultValues(formData, moduleConfig)
+	
+	// Preparar valores de pago (maneja labs sin módulo de pagos)
+	const paymentValues = preparePaymentValues(
+		formData,
+		hasPayments,
+		hasTotalAmount,
+		isPaymentComplete,
+		remaining
+	)
+
 	// Datos del caso médico (tabla medical_records_clean)
 	const caseData: MedicalCaseInsert = {
-		// Información del examen
-		exam_type: formData.examType || null, // NULL permitido si no está configurado
-		origin: formData.origin,
-		treating_doctor: formData.treatingDoctor || formData.doctorName,
-		sample_type: formData.sampleType || '',
-		number_of_samples: formData.numberOfSamples || 1,
+		// Aplicar valores por defecto primero (para campos NOT NULL)
+		// Estos valores ya tienen en cuenta si el campo está habilitado o deshabilitado
+		// Asegurar que campos NOT NULL nunca sean null/undefined
+		origin: (defaultValues.origin || '') as string,
+		treating_doctor: (defaultValues.treating_doctor || '') as string,
+		sample_type: (defaultValues.sample_type || '') as string,
+		number_of_samples: defaultValues.number_of_samples || 1,
+		branch: defaultValues.branch,
+		date: defaultValues.date || new Date().toISOString(),
+		payment_status: defaultValues.payment_status || 'Incompleto',
+
+		// Información del examen (puede ser NULL)
+		exam_type: formData.examType || null,
+
+		// Campos opcionales
 		relationship: formData.relationship || null,
-		branch: formData.branch || formData.patientBranch,
-		date: formData.registrationDate.toISOString(),
+		consulta: formData.consulta || null, // Especialidad médica (solo para lab SPT)
 		code: '', // Se generará automáticamente
 
-		// Información financiera
-		// NULL si no hay pagos o totalAmount es 0 (para labs sin módulo de pagos)
-		total_amount: hasTotalAmount && hasPayments ? formData.totalAmount : null,
-		payment_status: hasPayments ? (isPaymentComplete ? 'Pagado' : 'Incompleto') : 'Incompleto',
-		remaining: hasPayments ? remaining : null,
+		// Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
+		...paymentValues,
 		exchange_rate: exchangeRate || null,
-
-		// Información de pagos
-		payment_method_1: formData.payments?.[0]?.method || null,
-		payment_amount_1: formData.payments?.[0]?.amount || null,
-		payment_reference_1: formData.payments?.[0]?.reference || null,
-		payment_method_2: formData.payments?.[1]?.method || null,
-		payment_amount_2: formData.payments?.[1]?.amount || null,
-		payment_reference_2: formData.payments?.[1]?.reference || null,
-		payment_method_3: formData.payments?.[2]?.method || null,
-		payment_amount_3: formData.payments?.[2]?.amount || null,
-		payment_reference_3: formData.payments?.[2]?.reference || null,
-		payment_method_4: formData.payments?.[3]?.method || null,
-		payment_amount_4: formData.payments?.[3]?.amount || null,
-		payment_reference_4: formData.payments?.[3]?.reference || null,
 
 		// Información adicional
 		comments: formData.comments || null,
@@ -273,6 +299,18 @@ const prepareRegistrationData = (formData: FormValues, user: any, exchangeRate?:
 		// Campos adicionales para tracking de creación
 		created_by: user.id || null,
 		created_by_display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email || null,
+	}
+
+	// Debug: Verificar que treating_doctor nunca sea null/undefined
+	if (caseData.treating_doctor === null || caseData.treating_doctor === undefined) {
+		console.error('❌ ERROR: treating_doctor es null/undefined!', {
+			defaultValue: defaultValues.treating_doctor,
+			formValue: formData.treatingDoctor,
+			doctorName: formData.doctorName,
+			moduleConfig: moduleConfig?.fields?.medicoTratante,
+		})
+		// Forzar string vacío si es null/undefined
+		caseData.treating_doctor = ''
 	}
 
 	return { patientData, caseData }
@@ -362,16 +400,18 @@ export const searchPatientForForm = async (cedula: string) => {
  * Validar datos antes del registro
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
- * @param medicoTratanteRequired - Si el campo médico tratante es requerido según la configuración del módulo
+ * @param moduleConfig - Configuración del módulo registrationForm (opcional)
+ * @param laboratorySlug - Slug del laboratorio (opcional, para validaciones específicas por lab)
  */
 export const validateRegistrationData = (
   formData: FormValues,
   exchangeRate?: number,
-  medicoTratanteRequired?: boolean,
+  moduleConfig?: ModuleConfig | null,
+  laboratorySlug?: string | null,
 ): string[] => {
   const errors: string[] = [];
 
-  // Validaciones obligatorias
+  // Validaciones obligatorias (siempre requeridas)
   if (!formData.idType) {
     errors.push('El tipo de cédula es obligatorio');
   }
@@ -387,17 +427,55 @@ export const validateRegistrationData = (
     errors.push('El teléfono es obligatorio');
   }
 
-  if (!formData.examType) {
+  // Validar examType solo si está habilitado y es requerido
+  const examTypeConfig = moduleConfig?.fields?.examType;
+  if (examTypeConfig?.enabled && examTypeConfig?.required && !formData.examType) {
     errors.push('El tipo de examen es obligatorio');
   }
 
-  // Validar médico tratante solo si está habilitado y es requerido en la configuración
+  // Validar origin solo si está habilitado y es requerido
+  const originConfig = moduleConfig?.fields?.procedencia;
+  if (originConfig?.enabled && originConfig?.required && !formData.origin) {
+    errors.push('El origen es obligatorio');
+  }
+
+  // Validar médico tratante solo si está habilitado y es requerido
+  const doctorConfig = moduleConfig?.fields?.medicoTratante;
   if (
-    medicoTratanteRequired &&
+    doctorConfig?.enabled &&
+    doctorConfig?.required &&
     !formData.treatingDoctor &&
     !formData.doctorName
   ) {
     errors.push('El doctor tratante es obligatorio');
+  }
+
+  // Validar sampleType solo si está habilitado y es requerido
+  const sampleTypeConfig = moduleConfig?.fields?.sampleType;
+  if (sampleTypeConfig?.enabled && sampleTypeConfig?.required && !formData.sampleType) {
+    errors.push('El tipo de muestra es obligatorio');
+  }
+
+  // Validar numberOfSamples solo si está habilitado y es requerido
+  const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples;
+  if (
+    numberOfSamplesConfig?.enabled &&
+    numberOfSamplesConfig?.required &&
+    (!formData.numberOfSamples || formData.numberOfSamples < 1)
+  ) {
+    errors.push('El número de muestras es obligatorio');
+  }
+
+  // Validar branch solo si está habilitado y es requerido
+  const branchConfig = moduleConfig?.fields?.branch;
+  if (branchConfig?.enabled && branchConfig?.required && !formData.branch && !formData.patientBranch) {
+    errors.push('La sede es obligatoria');
+  }
+
+  // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
+  const consultaConfig = moduleConfig?.fields?.consulta;
+  if (consultaConfig?.enabled && consultaConfig?.required && !formData.consulta) {
+    errors.push('La consulta (especialidad médica) es obligatoria');
   }
 
   // Solo validar totalAmount si hay pagos (labs con módulo de pagos)

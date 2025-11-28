@@ -32,6 +32,7 @@ import { getStatusColor } from './status';
 import { BranchBadge } from '@shared/components/ui/branch-badge';
 // import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { formatCurrency } from '@shared/utils/number-utils';
+import { FeatureGuard } from '@shared/components/FeatureGuard';
 
 interface CasesTableProps {
   cases: UnifiedMedicalRecord[];
@@ -731,13 +732,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       [onCaseSelect],
     );
 
-    const handleTriaje = useCallback(
-      (case_: UnifiedMedicalRecord) => {
-        setSelectedCaseForTriaje(case_);
-        setIsTriajeModalOpen(true);
-      },
-      [],
-    );
+    const handleTriaje = useCallback((case_: UnifiedMedicalRecord) => {
+      setSelectedCaseForTriaje(case_);
+      setIsTriajeModalOpen(true);
+    }, []);
 
     // Función para manejar la exportación
     const handleExportToExcel = useCallback(() => {
@@ -1263,24 +1261,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       return (
         <>
           <div className='fixed inset-0 z-[999999] bg-white dark:bg-background h-screen flex flex-col overflow-hidden'>
-          <div className='px-3 sm:px-6'>
-            <ActiveFiltersDisplay
-              statusFilter={statusFilter}
-              branchFilter={branchFilter}
-              dateRange={dateRange}
-              showPdfReadyOnly={showPdfReadyOnly}
-              selectedDoctors={selectedDoctors}
-              selectedOrigins={selectedOrigins}
-              citologyPositiveFilter={citologyPositiveFilter}
-              citologyNegativeFilter={citologyNegativeFilter}
-              pendingCasesFilter={pendingCasesFilter}
-              pdfStatusFilter={pdfStatusFilter}
-              examTypeFilter={examTypeFilter}
-              documentStatusFilter={documentStatusFilter}
-              emailSentStatusFilter={emailSentStatusFilter}
-              // totalFilteredCases={pagination?.totalItems}
-            />
-          </div>
+            <div className='px-3 sm:px-6'>
+              <ActiveFiltersDisplay
+                statusFilter={statusFilter}
+                branchFilter={branchFilter}
+                dateRange={dateRange}
+                showPdfReadyOnly={showPdfReadyOnly}
+                selectedDoctors={selectedDoctors}
+                selectedOrigins={selectedOrigins}
+                citologyPositiveFilter={citologyPositiveFilter}
+                citologyNegativeFilter={citologyNegativeFilter}
+                pendingCasesFilter={pendingCasesFilter}
+                pdfStatusFilter={pdfStatusFilter}
+                examTypeFilter={examTypeFilter}
+                documentStatusFilter={documentStatusFilter}
+                emailSentStatusFilter={emailSentStatusFilter}
+                // totalFilteredCases={pagination?.totalItems}
+              />
+            </div>
             {/* Fixed Header with Controls */}
             <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
               <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
@@ -1447,17 +1445,19 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left'>
                         Médico Tratante
                       </th>
-                      {!notShow && (
-                        <th className='px-4 py-3 text-left'>
-                          <button
-                            onClick={() => handleSort('total_amount')}
-                            className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                          >
-                            Monto Total
-                            <SortIcon field='total_amount' />
-                          </button>
-                        </th>
-                      )}
+                      <FeatureGuard feature='hasPayment'>
+                        {!notShow && (
+                          <th className='px-4 py-3 text-left'>
+                            <button
+                              onClick={() => handleSort('total_amount')}
+                              className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
+                            >
+                              Monto Total
+                              <SortIcon field='total_amount' />
+                            </button>
+                          </th>
+                        )}
+                      </FeatureGuard>
                       <th className='px-4 py-3 text-center'>
                         <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                           Opciones
@@ -1540,25 +1540,27 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                             <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100'>
                               {case_.treating_doctor}
                             </td>
-                            {!notShow && (
-                              <td className='px-4 py-4'>
-                                <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                  {formatCurrency(case_.total_amount)}
-                                </div>
-                                {(() => {
-                                  const { missingAmount } =
-                                    getCasePaymentStatus(case_);
-                                  return (
-                                    missingAmount > 0 && (
-                                      <div className='text-xs text-red-600 dark:text-red-400'>
-                                        Faltante:{' '}
-                                        {formatCurrency(missingAmount)}
-                                      </div>
-                                    )
-                                  );
-                                })()}
-                              </td>
-                            )}
+                            <FeatureGuard feature='hasPayment'>
+                              {!notShow && (
+                                <td className='px-4 py-4'>
+                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                                    {formatCurrency(case_.total_amount)}
+                                  </div>
+                                  {(() => {
+                                    const { missingAmount } =
+                                      getCasePaymentStatus(case_);
+                                    return (
+                                      missingAmount > 0 && (
+                                        <div className='text-xs text-red-600 dark:text-red-400'>
+                                          Faltante:{' '}
+                                          {formatCurrency(missingAmount)}
+                                        </div>
+                                      )
+                                    );
+                                  })()}
+                                </td>
+                              )}
+                            </FeatureGuard>
                             <td className='px-4 py-4'>
                               <div className='flex justify-center mx-5'>
                                 <CaseActionsPopover
@@ -1890,17 +1892,20 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left'>
                         Médico Tratante
                       </th>
+                      <FeatureGuard feature='hasPayment'>
+
                       {!notShow && (
                         <th className='px-4 py-3 text-left'>
                           <button
                             onClick={() => handleSort('total_amount')}
                             className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                          >
+                            >
                             Monto Total
                             <SortIcon field='total_amount' />
                           </button>
                         </th>
                       )}
+                      </FeatureGuard>
                       <th className='px-4 py-3 text-center'>
                         <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                           Opciones
@@ -1985,6 +1990,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                             <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100'>
                               {case_.treating_doctor}
                             </td>
+                            <FeatureGuard feature='hasPayment'>
+
                             {!notShow && (
                               <td className='px-4 py-4'>
                                 <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -1992,7 +1999,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                 </div>
                                 {(() => {
                                   const { missingAmount } =
-                                    getCasePaymentStatus(case_);
+                                  getCasePaymentStatus(case_);
                                   return (
                                     missingAmount > 0 && (
                                       <div className='text-xs text-red-600 dark:text-red-400'>
@@ -2003,6 +2010,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                 })()}
                               </td>
                             )}
+                            </FeatureGuard>
                             <td className='px-4 py-4'>
                               <div className='flex justify-center mx-5'>
                                 <CaseActionsPopover

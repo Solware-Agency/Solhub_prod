@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Form } from '@shared/components/ui/form';
 import { useToast } from '@shared/hooks/use-toast';
-import { formSchema } from '@features/form/lib/form-schema';
+import { createFormSchema, type FormValues } from '@features/form/lib/form-schema';
 import { PatientDataSection } from './PatientDataSection';
 import { ServiceSection } from './ServiceSection';
 import { PaymentSection } from './PaymentSection';
@@ -16,10 +16,11 @@ import {
   registerMedicalCase,
   validateRegistrationData,
 } from '@services/supabase/cases/registration-service';
-import { type FormValues } from '@features/form/lib/form-schema';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleField } from '@shared/hooks/useModuleField';
+import { useModuleConfig } from '@shared/hooks/useModuleConfig';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -41,8 +42,9 @@ const getInitialFormValues = (): FormValues => ({
   sampleType: '',
   numberOfSamples: 1,
   relationship: '',
+  consulta: '', // Especialidad médica (solo para lab SPT)
   registrationDate: new Date(),
-  totalAmount: 0.0, // Changed from 0 to 0.01 to comply with database constraint
+  totalAmount: 0, // Puede ser 0 si el módulo de pagos está deshabilitado
   payments: [{ method: '', amount: 0, reference: '' }],
   comments: '',
 });
@@ -59,12 +61,38 @@ export function MedicalFormContainer() {
   
   // Verificar configuración del módulo para médico tratante
   const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante');
+  
+  // Obtener configuración completa del módulo para pasar a registerMedicalCase
+  const moduleConfig = useModuleConfig('registrationForm');
+  
+  // Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
+  const { laboratory } = useLaboratory();
+
+  // Crear schema dinámico basado en la configuración del módulo
+  const dynamicFormSchema = useMemo(() => {
+    return createFormSchema(moduleConfig);
+  }, [moduleConfig]);
+
+  // Crear resolver dinámico que se actualiza cuando cambia el schema
+  const dynamicResolver = useMemo(() => {
+    return zodResolver(dynamicFormSchema);
+  }, [dynamicFormSchema]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: dynamicResolver,
     defaultValues: getInitialFormValues(),
     mode: 'onChange', // Validate on change instead of on blur
   });
+
+  // Actualizar el resolver cuando cambie el schema dinámico
+  // Esto es necesario porque react-hook-form no actualiza el resolver automáticamente
+  useEffect(() => {
+    // Limpiar errores previos cuando cambia el schema
+    form.clearErrors();
+    // Revalidar el formulario con el nuevo schema
+    // Esto fuerza a usar el nuevo resolver
+    form.trigger();
+  }, [dynamicFormSchema, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -120,9 +148,13 @@ export function MedicalFormContainer() {
         console.log('Tasa de cambio:', exchangeRate);
 
         // Validar datos antes del envío
-        // Pasar configuración del módulo para validación condicional
-        const medicoTratanteRequired = medicoTratanteConfig?.enabled && medicoTratanteConfig?.required;
-        const validationErrors = validateRegistrationData(data, exchangeRate, medicoTratanteRequired);
+        // Pasar configuración completa del módulo y slug del laboratorio para validación condicional
+        const validationErrors = validateRegistrationData(
+          data,
+          exchangeRate,
+          moduleConfig,
+          laboratory?.slug
+        );
         if (validationErrors.length > 0) {
           toast({
             title: '❌ Error de validación',
@@ -133,7 +165,8 @@ export function MedicalFormContainer() {
         }
 
         // Registrar caso médico con nueva estructura
-        const result = await registerMedicalCase(data, exchangeRate);
+        // Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
+        const result = await registerMedicalCase(data, exchangeRate, moduleConfig);
 
         if (result.error) {
           console.error('Error al guardar con nueva estructura:', result.error);
