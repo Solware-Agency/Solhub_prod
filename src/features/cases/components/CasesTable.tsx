@@ -33,6 +33,7 @@ import { BranchBadge } from '@shared/components/ui/branch-badge';
 // import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { formatCurrency } from '@shared/utils/number-utils';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 interface CasesTableProps {
   cases: UnifiedMedicalRecord[];
@@ -150,6 +151,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
   }) => {
     useAuth();
     const { profile } = useUserProfile();
+    const { laboratory } = useLaboratory();
     const { toast } = useToast();
     const {
       exportToExcel,
@@ -249,16 +251,21 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       [],
     );
 
-    const branchOptions = useMemo(
-      () => [
+    const branchOptions = useMemo(() => {
+      const branches = laboratory?.config?.branches || [];
+      // Si hay branches configurados, usarlos; si no, usar valores por defecto
+      if (branches.length > 0) {
+        return branches.map((branch) => ({ value: branch, label: branch }));
+      }
+      // Fallback a valores por defecto si no hay configuración
+      return [
         { value: 'PMG', label: 'PMG' },
         { value: 'CPC', label: 'CPC' },
         { value: 'CNX', label: 'CNX' },
         { value: 'STX', label: 'STX' },
         { value: 'MCY', label: 'MCY' },
-      ],
-      [],
-    );
+      ];
+    }, [laboratory?.config?.branches]);
 
     const pageSizeOptions = useMemo(
       () => [

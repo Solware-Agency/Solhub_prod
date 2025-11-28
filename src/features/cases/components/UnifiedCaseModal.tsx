@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -61,6 +61,7 @@ import {
 import { createCalculatorInputHandler } from '@shared/utils/number-utils';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 interface ChangeLogEntry {
   id: string;
@@ -193,6 +194,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const { profile } = useUserProfile();
     const { toast } = useToast();
     const { user } = useAuth();
+    const { laboratory } = useLaboratory();
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -216,6 +218,59 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Converter states
     const [converterUsdValue, setConverterUsdValue] = useState('');
+
+    // Obtener opciones de dropdowns desde la configuración del laboratorio
+    const examTypesOptions = useMemo(() => {
+      const examTypes = laboratory?.config?.examTypes || [];
+      // Si hay tipos configurados, usarlos; si no, usar valores por defecto
+      if (examTypes.length > 0) {
+        return createDropdownOptions(
+          examTypes.map((type) => ({ value: type, label: type })),
+        );
+      }
+      // Fallback a valores por defecto si no hay configuración
+      return createDropdownOptions([
+        { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
+        { value: 'Biopsia', label: 'Biopsia' },
+        { value: 'Citología', label: 'Citología' },
+      ]);
+    }, [laboratory?.config?.examTypes]);
+
+    const branchOptions = useMemo(() => {
+      const branches = laboratory?.config?.branches || [];
+      // Si hay branches configurados, usarlos; si no, usar valores por defecto
+      if (branches.length > 0) {
+        return createDropdownOptions(
+          branches.map((branch) => ({ value: branch, label: branch })),
+        );
+      }
+      // Fallback a valores por defecto si no hay configuración
+      return createDropdownOptions([
+        { value: 'PMG', label: 'PMG' },
+        { value: 'CPC', label: 'CPC' },
+        { value: 'CNX', label: 'CNX' },
+        { value: 'STX', label: 'STX' },
+        { value: 'MCY', label: 'MCY' },
+      ]);
+    }, [laboratory?.config?.branches]);
+
+    const paymentMethodsOptions = useMemo(() => {
+      const paymentMethods = laboratory?.config?.paymentMethods || [];
+      // Si hay métodos configurados, usarlos; si no, usar valores por defecto
+      if (paymentMethods.length > 0) {
+        return createDropdownOptions(
+          paymentMethods.map((method) => ({ value: method, label: method })),
+        );
+      }
+      // Fallback a valores por defecto si no hay configuración
+      return createDropdownOptions([
+        { value: 'Punto de venta', label: 'Punto de venta' },
+        { value: 'Dólares en efectivo', label: 'Dólares en efectivo' },
+        { value: 'Zelle', label: 'Zelle' },
+        { value: 'Pago móvil', label: 'Pago móvil' },
+        { value: 'Bs en efectivo', label: 'Bs en efectivo' },
+      ]);
+    }, [laboratory?.config?.paymentMethods]);
 
     // Query to get the user who created the record
     const { data: creatorData } = useQuery({
@@ -1585,14 +1640,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         {isEditing ? (
                           <div className='sm:w-1/2'>
                             <CustomDropdown
-                              options={createDropdownOptions([
-                                {
-                                  value: 'Inmunohistoquímica',
-                                  label: 'Inmunohistoquímica',
-                                },
-                                { value: 'Biopsia', label: 'Biopsia' },
-                                { value: 'Citología', label: 'Citología' },
-                              ])}
+                              options={examTypesOptions}
                               value={
                                 editedCase.exam_type ||
                                 currentCase.exam_type ||
@@ -1687,13 +1735,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         {isEditing ? (
                           <div className='sm:w-1/2'>
                             <CustomDropdown
-                              options={createDropdownOptions([
-                                'PMG',
-                                'CPC',
-                                'CNX',
-                                'STX',
-                                'MCY',
-                              ])}
+                              options={branchOptions}
                               value={
                                 editedCase.branch || currentCase.branch || ''
                               }
@@ -2047,13 +2089,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                           {isEditing ? (
                                             <>
                                               <FormDropdown
-                                                options={createDropdownOptions([
-                                                  'Punto de venta',
-                                                  'Dólares en efectivo',
-                                                  'Zelle',
-                                                  'Pago móvil',
-                                                  'Bs en efectivo',
-                                                ])}
+                                                options={paymentMethodsOptions}
                                                 value={payment.method}
                                                 onChange={(value) =>
                                                   handlePaymentMethodChange(
@@ -2199,13 +2235,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                   </div>
                                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2'>
                                     <FormDropdown
-                                      options={createDropdownOptions([
-                                        'Punto de venta',
-                                        'Dólares en efectivo',
-                                        'Zelle',
-                                        'Pago móvil',
-                                        'Bs en efectivo',
-                                      ])}
+                                      options={paymentMethodsOptions}
                                       value={newPaymentMethod.method}
                                       onChange={(value) =>
                                         setNewPaymentMethod({

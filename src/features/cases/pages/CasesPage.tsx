@@ -36,7 +36,7 @@ const CasesPage: React.FC = () => {
 		error: casesError,
 		refetch: refetchCases,
 	} = useQuery({
-		queryKey: ['medical-cases', searchTerm, currentPage, itemsPerPage, profile?.role, serverFilters],
+		queryKey: ['medical-cases', searchTerm, currentPage, itemsPerPage, profile?.role, profile?.assigned_branch, serverFilters],
 		queryFn: async () => {
 			// Construir filtros
 			const filters: any = { ...serverFilters }
@@ -50,6 +50,13 @@ const CasesPage: React.FC = () => {
 			// Pasar el rol del usuario para filtrar en el servidor
 			if (profile?.role) {
 				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+			}
+
+			// Si el usuario tiene una sede asignada, filtrar por esa sede
+			// IMPORTANTE: Este filtro tiene prioridad sobre cualquier filtro manual de branch
+			// Aplica para todos los roles que tengan sede asignada (owner, employee, residente, etc.)
+			if (profile?.assigned_branch) {
+				filters.branch = profile.assigned_branch
 			}
 
 			return getCasesWithPatientInfo(currentPage, itemsPerPage, filters)
