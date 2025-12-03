@@ -82,7 +82,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 					</button>
 				</div>
 
-				<div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto">
+				<div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto scrollbar-hide">
 					{years.map((year) => (
 						<button
 							key={year}

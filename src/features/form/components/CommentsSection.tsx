@@ -11,7 +11,7 @@ interface CommentsSectionProps {
 }
 
 export const CommentsSection = memo(({ control, inputStyles }: CommentsSectionProps) => (
-	<Card className="transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20 colspa">
+	<Card className="transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 		<CardHeader className="p-3 sm:p-4">
 			<CardTitle className="text-base sm:text-lg">Comentarios</CardTitle>
 		</CardHeader>

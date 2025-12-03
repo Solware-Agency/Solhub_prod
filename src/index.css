@@ -36,62 +36,6 @@
     display: none;
   }
 
-  /* Clase personalizada para scrollbars consistentes */
-  .custom-scrollbar {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted)) !important;
-  }
-
-  .dark .custom-scrollbar {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted)) !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-button {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: hsl(var(--muted)) !important;
-    border-radius: 5px !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.4) !important;
-    border-radius: 5px !important;
-    border: 2px solid hsl(var(--muted)) !important;
-    transition: background-color 0.2s ease !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.6) !important;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:active {
-    background: hsl(var(--muted-foreground) / 0.8) !important;
-  }
-
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.5) !important;
-    border: 2px solid hsl(var(--muted)) !important;
-  }
-
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.7) !important;
-  }
-
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:active {
-    background: hsl(var(--muted-foreground) / 0.9) !important;
-  }
-
   .mobile-table-card {
     @apply bg-white dark:bg-background rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-transform duration-300;
   }
@@ -209,216 +153,54 @@
 }
 
 @layer base {
-  /* =====================================================================
-     ESTILOS GLOBALES DE SCROLLBAR - HOMOLOGADOS PARA TODA LA APLICACIÓN
-     Se adaptan automáticamente al tema claro/oscuro
-     ===================================================================== */
 
-  /* WebKit browsers (Chrome, Safari, Edge) - Modo Claro */
-  *::-webkit-scrollbar,
+  /* WebKit browsers (Chrome, Safari, Edge) */
   ::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
+    width: 8px;
+    height: 8px;
   }
 
-  /* Ocultar botones de flecha del scrollbar (si existen) */
-  *::-webkit-scrollbar-button,
-  ::-webkit-scrollbar-button {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-  }
-
-  *::-webkit-scrollbar-track,
   ::-webkit-scrollbar-track {
-    background: hsl(var(--muted)) !important;
-    border-radius: 5px !important;
+    background: hsl(var(--muted));
+    border-radius: 4px;
   }
 
-  *::-webkit-scrollbar-thumb,
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.4) !important;
-    border-radius: 5px !important;
-    border: 2px solid hsl(var(--muted)) !important;
-    transition: background-color 0.2s ease !important;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
   }
 
-  *::-webkit-scrollbar-thumb:hover,
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.6) !important;
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 
-  *::-webkit-scrollbar-thumb:active,
-  ::-webkit-scrollbar-thumb:active {
-    background: hsl(var(--muted-foreground) / 0.8) !important;
-  }
-
-  *::-webkit-scrollbar-corner,
   ::-webkit-scrollbar-corner {
-    background: hsl(var(--muted)) !important;
+    background: hsl(var(--muted));
   }
 
-  /* Firefox - Modo Claro (aplicado a todos los elementos) */
+  /* Firefox */
   * {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted)) !important;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
   }
 
-  /* Modo Oscuro - WebKit */
-  .dark *::-webkit-scrollbar-track,
+  /* Dark mode adjustments */
   .dark ::-webkit-scrollbar-track {
-    background: hsl(var(--muted)) !important;
+    background: hsl(var(--muted));
   }
 
-  .dark *::-webkit-scrollbar-thumb,
   .dark ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.5) !important;
-    border: 2px solid hsl(var(--muted)) !important;
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 
-  .dark *::-webkit-scrollbar-thumb:hover,
   .dark ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.7) !important;
+    background: hsl(var(--muted-foreground) / 0.6);
   }
 
-  .dark *::-webkit-scrollbar-thumb:active,
-  .dark ::-webkit-scrollbar-thumb:active {
-    background: hsl(var(--muted-foreground) / 0.9) !important;
-  }
-
-  .dark *::-webkit-scrollbar-corner,
-  .dark ::-webkit-scrollbar-corner {
-    background: hsl(var(--muted)) !important;
-  }
-
-  /* Modo Oscuro - Firefox (aplicado a todos los elementos) */
   .dark * {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted)) !important;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted));
   }
-
-  /* Selectores específicos para contenedores scrollables comunes */
-  div[class*="overflow-y-auto"],
-  div[class*="overflow-x-auto"],
-  div[class*="overflow-auto"],
-  table[class*="overflow"],
-  .responsive-table,
-  [class*="overflow-y-auto"],
-  [class*="overflow-x-auto"] {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted)) !important;
-  }
-
-  .dark div[class*="overflow-y-auto"],
-  .dark div[class*="overflow-x-auto"],
-  .dark div[class*="overflow-auto"],
-  .dark table[class*="overflow"],
-  .dark .responsive-table,
-  .dark [class*="overflow-y-auto"],
-  .dark [class*="overflow-x-auto"] {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted)) !important;
-  }
-
-  /* Estilos específicos para contenedores con h-full (altura completa) */
-  div.h-full[class*="overflow-y-auto"],
-  div.h-full[class*="overflow-x-auto"] {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted)) !important;
-  }
-
-  .dark div.h-full[class*="overflow-y-auto"],
-  .dark div.h-full[class*="overflow-x-auto"] {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted)) !important;
-  }
-
-  /* Estilos específicos para contenedores con max-h (altura máxima) */
-  div[class*="max-h"][class*="overflow-y-auto"],
-  div[class*="max-h"][class*="overflow-x-auto"] {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted)) !important;
-  }
-
-  .dark div[class*="max-h"][class*="overflow-y-auto"],
-  .dark div[class*="max-h"][class*="overflow-x-auto"] {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted)) !important;
-  }
-}
-
-/* Estilos adicionales fuera de @layer para máxima especificidad */
-/* Asegurar que los scrollbars se apliquen incluso en contenedores anidados */
-div.h-full.overflow-y-auto::-webkit-scrollbar,
-div.h-full.overflow-x-auto::-webkit-scrollbar,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar {
-  width: 10px !important;
-  height: 10px !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-}
-
-div.h-full.overflow-y-auto::-webkit-scrollbar-button,
-div.h-full.overflow-x-auto::-webkit-scrollbar-button,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-button,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-div.h-full.overflow-y-auto::-webkit-scrollbar-track,
-div.h-full.overflow-x-auto::-webkit-scrollbar-track,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-track,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-track {
-  background: hsl(var(--muted)) !important;
-  border-radius: 5px !important;
-}
-
-div.h-full.overflow-y-auto::-webkit-scrollbar-thumb,
-div.h-full.overflow-x-auto::-webkit-scrollbar-thumb,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.4) !important;
-  border-radius: 5px !important;
-  border: 2px solid hsl(var(--muted)) !important;
-  transition: background-color 0.2s ease !important;
-}
-
-div.h-full.overflow-y-auto::-webkit-scrollbar-thumb:hover,
-div.h-full.overflow-x-auto::-webkit-scrollbar-thumb:hover,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb:hover,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.6) !important;
-}
-
-div.h-full.overflow-y-auto::-webkit-scrollbar-thumb:active,
-div.h-full.overflow-x-auto::-webkit-scrollbar-thumb:active,
-div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb:active,
-div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb:active {
-  background: hsl(var(--muted-foreground) / 0.8) !important;
-}
-
-/* Modo oscuro para contenedores específicos */
-.dark div.h-full.overflow-y-auto::-webkit-scrollbar-thumb,
-.dark div.h-full.overflow-x-auto::-webkit-scrollbar-thumb,
-.dark div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb,
-.dark div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.5) !important;
-  border: 2px solid hsl(var(--muted)) !important;
-}
-
-.dark div.h-full.overflow-y-auto::-webkit-scrollbar-thumb:hover,
-.dark div.h-full.overflow-x-auto::-webkit-scrollbar-thumb:hover,
-.dark div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb:hover,
-.dark div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.7) !important;
-}
-
-.dark div.h-full.overflow-y-auto::-webkit-scrollbar-thumb:active,
-.dark div.h-full.overflow-x-auto::-webkit-scrollbar-thumb:active,
-.dark div[class*="max-h"].overflow-y-auto::-webkit-scrollbar-thumb:active,
-.dark div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb:active {
-  background: hsl(var(--muted-foreground) / 0.9) !important;
 }
 
 

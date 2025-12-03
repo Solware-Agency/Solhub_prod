@@ -11,11 +11,10 @@ interface CaseCardProps {
 	onView: (case_: MedicalCaseWithPatient) => void
 	onGenerate: (case_: MedicalCaseWithPatient) => void
 	onReactions?: (case_: MedicalCaseWithPatient) => void
-	onTriaje?: (case_: MedicalCaseWithPatient) => void
 	canRequest: boolean
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest }) => {
+const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, canRequest }) => {
 	return (
 		<div className="bg-white dark:bg-background rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
 			<div className="flex flex-wrap gap-1.5 mb-2">
@@ -85,7 +84,6 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 					onView={onView}
 					onGenerate={onGenerate}
 					onReactions={onReactions}
-					onTriaje={onTriaje}
 					canRequest={canRequest}
 				/>
 			</div>

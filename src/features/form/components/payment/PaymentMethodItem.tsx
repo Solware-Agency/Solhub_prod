@@ -7,7 +7,6 @@ import { Button } from '@shared/components/ui/button'
 import { Trash2, FileText } from 'lucide-react'
 import { isBolivaresMethod } from '@features/form/lib/payment/payment-utils'
 import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { memo, useMemo, useCallback } from 'react'
 
 interface PaymentMethodItemProps {
@@ -24,26 +23,6 @@ interface PaymentMethodItemProps {
 export const PaymentMethodItem = memo(
 	({ control, index, remove, inputStyles, fieldsLength, className, exchangeRate }: PaymentMethodItemProps) => {
 		const paymentMethod = useWatch({ control, name: `payments.${index}.method` })
-		const { laboratory } = useLaboratory()
-
-		// Obtener métodos de pago desde la configuración del laboratorio
-		const paymentMethodsOptions = useMemo(() => {
-			const paymentMethods = laboratory?.config?.paymentMethods || []
-			// Si hay métodos configurados, usarlos; si no, usar valores por defecto
-			if (paymentMethods.length > 0) {
-				return createDropdownOptions(
-					paymentMethods.map((method) => ({ value: method, label: method })),
-				)
-			}
-			// Fallback a valores por defecto si no hay configuración
-			return createDropdownOptions([
-				{ value: 'Punto de venta', label: 'Punto de venta' },
-				{ value: 'Dólares en efectivo', label: 'Dólares en efectivo' },
-				{ value: 'Zelle', label: 'Zelle' },
-				{ value: 'Pago móvil', label: 'Pago móvil' },
-				{ value: 'Bs en efectivo', label: 'Bs en efectivo' },
-			])
-		}, [laboratory?.config?.paymentMethods])
 
 		// Use useMemo to prevent unnecessary recalculations
 		const { currencyLabel } = useMemo(() => {
@@ -74,7 +53,13 @@ export const PaymentMethodItem = memo(
 								<FormLabel>Forma de Pago {index + 1}</FormLabel>
 								<FormControl>
 									<FormDropdown
-										options={paymentMethodsOptions}
+										options={createDropdownOptions([
+											'Punto de venta',
+											'Dólares en efectivo',
+											'Zelle',
+											'Pago móvil',
+											'Bs en efectivo',
+										])}
 										value={field.value}
 										onChange={field.onChange}
 										placeholder="Método"

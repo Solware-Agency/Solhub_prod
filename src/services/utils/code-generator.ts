@@ -8,17 +8,15 @@ import { format, getYear, getMonth } from 'date-fns'
  * @param examType - The type of exam (Citología, Biopsia, Inmunohistoquímica)
  * @param caseDate - The date of the case
  * @param currentRecordId - Optional ID of current record (for updates)
- * @param laboratoryId - Optional laboratory ID. If not provided, will be obtained from authenticated user
  * @returns Promise<string> - The generated unique code
  */
 export async function generateMedicalRecordCode(
 	examType: string,
 	caseDate: Date | string,
 	currentRecordId?: string,
-	laboratoryId?: string,  // NUEVO PARÁMETRO
 ): Promise<string> {
 	try {
-		console.log('🔢 Generating code for:', { examType, caseDate, currentRecordId, laboratoryId })
+		console.log('🔢 Generating code for:', { examType, caseDate, currentRecordId })
 
 		// Convert string date to Date object if needed
 		const date = typeof caseDate === 'string' ? new Date(caseDate) : caseDate
@@ -47,44 +45,21 @@ export async function generateMedicalRecordCode(
 		const monthLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 		const monthLetter = monthLetters[month - 1]
 
-		// 4. Obtener laboratory_id si no se proporcionó
-		let finalLaboratoryId = laboratoryId
-		if (!finalLaboratoryId) {
-			const { data: { user } } = await supabase.auth.getUser()
-			if (!user) {
-				throw new Error('Usuario no autenticado y laboratory_id no proporcionado')
-			}
-
-			const { data: profile, error: profileError } = await supabase
-				.from('profiles')
-				.select('laboratory_id')
-				.eq('id', user.id)
-				.single()
-
-			if (profileError || !profile?.laboratory_id) {
-				throw new Error('Usuario no tiene laboratory_id asignado')
-			}
-
-			finalLaboratoryId = profile.laboratory_id
-		}
-
-		// 5. Count existing cases for the same type, year, month, AND laboratory_id
+		// 4. Count existing cases for the same type, year, and month
 		const startOfMonth = new Date(year, month - 1, 1)
 		const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
 
 		console.log('📊 Counting existing cases:', {
 			examType,
-			laboratoryId: finalLaboratoryId,  // NUEVO
 			startOfMonth: format(startOfMonth, 'yyyy-MM-dd'),
 			endOfMonth: format(endOfMonth, 'yyyy-MM-dd'),
 		})
 
-		// Build query to count existing cases FILTRANDO POR laboratory_id
+		// Build query to count existing cases
 		let query = supabase
 			.from('medical_records_clean')
 			.select('id', { count: 'exact', head: true })
 			.eq('exam_type', examType)
-			.eq('laboratory_id', finalLaboratoryId)  // FILTRO CRÍTICO
 			.gte('date', startOfMonth.toISOString())
 			.lte('date', endOfMonth.toISOString())
 
@@ -100,10 +75,10 @@ export async function generateMedicalRecordCode(
 			throw error
 		}
 
-		// 6. Calculate monthly counter (including current case)
+		// 5. Calculate monthly counter (including current case)
 		const monthlyCounter = String((count || 0) + 1).padStart(3, '0')
 
-		// 7. Generate final code
+		// 6. Generate final code
 		const generatedCode = `${caseTypeNumber}${yearSince2000}${monthlyCounter}${monthLetter}`
 
 		console.log('✅ Generated code:', {
@@ -111,16 +86,14 @@ export async function generateMedicalRecordCode(
 			year: yearSince2000,
 			counter: monthlyCounter,
 			month: monthLetter,
-			laboratoryId: finalLaboratoryId,  // NUEVO
 			finalCode: generatedCode,
 		})
 
-		// 8. Verify code uniqueness (con laboratory_id)
+		// 7. Verify code uniqueness
 		const { data: existingCode } = await supabase
 			.from('medical_records_clean')
 			.select('id')
 			.eq('code', generatedCode)
-			.eq('laboratory_id', finalLaboratoryId)  // FILTRO CRÍTICO
 			.maybeSingle()
 
 		if (existingCode && existingCode.id !== currentRecordId) {
@@ -142,16 +115,15 @@ export async function generateMedicalRecordCode(
 /**
  * Batch update all existing records without codes
  * This function should be run once to generate codes for existing records
- * Genera códigos únicos por laboratorio
  */
 export async function generateCodesForExistingRecords(): Promise<{ success: number; errors: number }> {
 	try {
 		console.log('🔄 Starting batch code generation for existing records...')
 
-		// Get all records without codes (incluyendo laboratory_id)
+		// Get all records without codes
 		const { data: records, error } = await supabase
 			.from('medical_records_clean')
-			.select('id, exam_type, date, laboratory_id')
+			.select('id, exam_type, date')
 			.is('code', null)
 			.order('date', { ascending: true })
 
@@ -177,17 +149,7 @@ export async function generateCodesForExistingRecords(): Promise<{ success: numb
 			await Promise.all(
 				batch.map(async (record) => {
 					try {
-						// Pasar laboratory_id al generador para que filtre correctamente
-						if (!record.laboratory_id) {
-							throw new Error(`Record ${record.id} no tiene laboratory_id asignado`)
-						}
-
-						const code = await generateMedicalRecordCode(
-							record.exam_type, 
-							record.date, 
-							record.id,
-							record.laboratory_id  // Pasar laboratory_id
-						)
+						const code = await generateMedicalRecordCode(record.exam_type, record.date, record.id)
 
 						const { error: updateError } = await supabase
 							.from('medical_records_clean')
@@ -199,7 +161,7 @@ export async function generateCodesForExistingRecords(): Promise<{ success: numb
 						}
 
 						successCount++
-						console.log(`✅ Generated code ${code} for record ${record.id} (lab: ${record.laboratory_id})`)
+						console.log(`✅ Generated code ${code} for record ${record.id}`)
 					} catch (error) {
 						errorCount++
 						console.error(`❌ Failed to generate code for record ${record.id}:`, error)

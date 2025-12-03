@@ -49,40 +49,28 @@ const isPathPatients = window.location.pathname.includes('/patients');
 
 const DialogContent = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-		overlayClassName?: string;
-	}
->(({ className, children, overlayClassName, ...props }, ref) => {
-	// Detectar si se necesita un z-index alto (para modales en pantalla completa)
-	// Buscar el patrón z-[número] con muchos dígitos (z-index alto)
-	const hasHighZIndex = className?.includes('z-[999999999999999999]') || 
-	                     className?.includes('z-[99999999999999999]');
-	
-	// Si se necesita z-index alto, aplicar al overlay también (1 menos que el content)
-	const overlayZIndex = hasHighZIndex ? 'z-[999999999999999998]' : '';
-	
-	return (
-		<DialogPortal>
-			<DialogOverlay className={cn(overlayZIndex, overlayClassName)} />
-			<DialogPrimitive.Content
-				ref={ref}
-				className={cn(
-					'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background p-6 shadow-lg duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4 sm:rounded-lg',
-					className,
-				)}
-				{...props}
-			>
-				{children}
-				{!isPathPatients && (
-					<DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer">
-						<X className="h-4 w-4" />
-						<span className="sr-only">Close</span>
-					</DialogPrimitive.Close>
-				)}
-			</DialogPrimitive.Content>
-		</DialogPortal>
-	);
-})
+	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+	<DialogPortal>
+		<DialogOverlay />
+		<DialogPrimitive.Content
+			ref={ref}
+			className={cn(
+				'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background p-6 shadow-lg duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4 sm:rounded-lg',
+				className,
+			)}
+			{...props}
+		>
+			{children}
+      {!isPathPatients && (
+			<DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer">
+				<X className="h-4 w-4" />
+				<span className="sr-only">Close</span>
+			</DialogPrimitive.Close>
+      )}
+		</DialogPrimitive.Content>
+	</DialogPortal>
+))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({

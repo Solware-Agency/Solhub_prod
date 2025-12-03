@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
 	Users,
 	Mail,
@@ -44,17 +44,16 @@ import {
 } from '@shared/components/ui/dialog'
 import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	created_at: string
 	updated_at: string
 	email_confirmed_at?: string
 	last_sign_in_at?: string
-	password?: string // Campo para almacenar la contraseÃ±a (solo para visualizaciÃ³n)
+	password?: string // Campo para almacenar la contraseña (solo para visualización)
 	assigned_branch?: string | null
 	display_name?: string | null
 	estado?: 'pendiente' | 'aprobado'
@@ -65,7 +64,6 @@ const MainUsers: React.FC = () => {
 	const { user: currentUser } = useAuth()
 	const { profile } = useUserProfile()
 	const { toast } = useToast()
-	const { laboratory } = useLaboratory()
 	const queryClient = useQueryClient()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [roleFilter, setRoleFilter] = useState<string>('')
@@ -77,25 +75,8 @@ const MainUsers: React.FC = () => {
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
 		email: string
-		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
+		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	} | null>(null)
-
-	// Obtener opciones de branches desde la configuraciÃ³n del laboratorio
-	const branchOptions = useMemo(() => {
-		const branches = laboratory?.config?.branches || []
-		// Si hay branches configurados, usarlos; si no, usar valores por defecto
-		if (branches.length > 0) {
-			return branches.map((branch) => ({ value: branch, label: branch }))
-		}
-		// Fallback a valores por defecto si no hay configuraciÃ³n
-		return [
-			{ value: 'PMG', label: 'PMG' },
-			{ value: 'CPC', label: 'CPC' },
-			{ value: 'CNX', label: 'CNX' },
-			{ value: 'STX', label: 'STX' },
-			{ value: 'MCY', label: 'MCY' },
-		]
-	}, [laboratory?.config?.branches])
 
 	// Query para obtener usuarios
 	const {
@@ -107,7 +88,7 @@ const MainUsers: React.FC = () => {
 		queryKey: ['users'],
 		queryFn: async (): Promise<UserProfile[]> => {
 			try {
-        // ðŸ” MULTI-TENANT: Obtener laboratory_id del usuario actual
+        // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
         const {
           data: { user: currentAuthUser },
         } = await supabase.auth.getUser();
@@ -120,13 +101,13 @@ const MainUsers: React.FC = () => {
             .from('profiles')
             .select('laboratory_id')
             .eq('id', currentAuthUser.id)
-            .single() as { data: { laboratory_id?: string } | null; error: any | null };
+            .single();
 
         if (currentProfileError || !currentProfile?.laboratory_id) {
           throw new Error('Usuario no tiene laboratorio asignado');
         }
 
-        // ðŸ” MULTI-TENANT: Filtrar perfiles por laboratory_id
+        // 🔐 MULTI-TENANT: Filtrar perfiles por laboratory_id
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('*')
@@ -135,14 +116,14 @@ const MainUsers: React.FC = () => {
 
         if (profilesError) throw profilesError;
 
-        // Simular contraseÃ±as para demostraciÃ³n (en un sistema real, nunca se deberÃ­an mostrar contraseÃ±as)
-        // Esto es solo para fines de demostraciÃ³n
+        // Simular contraseñas para demostración (en un sistema real, nunca se deberían mostrar contraseñas)
+        // Esto es solo para fines de demostración
         const usersWithPasswords =
           profiles?.map((profile) => ({
             ...profile,
             email_confirmed_at: undefined, // Placeholder
             last_sign_in_at: undefined, // Placeholder
-            password: '********', // ContraseÃ±a simulada para demostraciÃ³n
+            password: '********', // Contraseña simulada para demostración
             role: profile.role as
               | 'owner'
               | 'employee'
@@ -280,13 +261,13 @@ const MainUsers: React.FC = () => {
 		try {
 			await navigator.clipboard.writeText(value)
 			toast({
-				title: 'ðŸ“‹ Copiado',
+				title: '📋 Copiado',
 				description: `${label} copiado al portapapeles`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
 		} catch {
 			toast({
-				title: 'âŒ No se pudo copiar',
+				title: '❌ No se pudo copiar',
 				description: 'Intenta nuevamente.',
 				variant: 'destructive',
 			})
@@ -295,22 +276,22 @@ const MainUsers: React.FC = () => {
 
 	const handleRoleChange = async (
 		userId: string,
-		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 	) => {
-		// Verificar permisos antes de permitir ediciÃ³n
+		// Verificar permisos antes de permitir edición
 		if (!canManage) {
 			toast({
-				title: 'âŒ Sin permisos',
+				title: '❌ Sin permisos',
 				description: 'No tienes permisos para editar usuarios.',
 				variant: 'destructive',
 			})
 			return
 		}
 
-		// No permitir que un usuario se edite a sÃ­ mismo
+		// No permitir que un usuario se edite a sí mismo
 		if (userId === currentUser?.id) {
 			toast({
-				title: 'âŒ AcciÃ³n no permitida',
+				title: '❌ Acción no permitida',
 				description: 'No puedes cambiar tu propio rol.',
 				variant: 'destructive',
 			})
@@ -321,14 +302,14 @@ const MainUsers: React.FC = () => {
 		const userToEdit = users?.find((u) => u.id === userId)
 		if (!userToEdit) {
 			toast({
-				title: 'âŒ Usuario no encontrado',
+				title: '❌ Usuario no encontrado',
 				description: 'No se pudo encontrar el usuario para editar.',
 				variant: 'destructive',
 			})
 			return
 		}
 
-		// Si el nuevo rol es admin, mostrar diÃ¡logo de confirmaciÃ³n
+		// Si el nuevo rol es admin, mostrar diálogo de confirmación
 		if (newRole === 'residente') {
 			setUserToUpdate({
 				id: userId,
@@ -347,28 +328,28 @@ const MainUsers: React.FC = () => {
 				throw error
 			}
 
-		toast({
-			title: 'âœ… Rol actualizado',
-			description: `El rol del usuario ha sido cambiado a ${
-				{
-					owner: 'Propietario',
-					residente: 'Residente',
-					employee: 'Recepcionista',
-					citotecno: 'Citotecnologo',
-					patologo: 'Patologo',
-					medicowner: 'Medico Owner',
-					medico_tratante: 'MÃ©dico Tratante',
-					enfermero: 'Enfermero',
-				}[newRole]
-			}.`,
-			className: 'bg-green-100 border-green-400 text-green-800',
-		})			// Refrescar la lista de usuarios
+			toast({
+				title: '✅ Rol actualizado',
+				description: `El rol del usuario ha sido cambiado a ${
+					{
+						owner: 'Propietario',
+						residente: 'Residente',
+						employee: 'Recepcionista',
+						citotecno: 'Citotecnologo',
+						patologo: 'Patologo',
+						medicowner: 'Medico Owner',
+					}[newRole]
+				}.`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
+
+			// Refrescar la lista de usuarios
 			refetch()
 		} catch (error) {
 			console.error('Error updating user role:', error)
 			toast({
-				title: 'âŒ Error al actualizar',
-				description: 'Hubo un problema al cambiar el rol del usuario. IntÃ©ntalo de nuevo.',
+				title: '❌ Error al actualizar',
+				description: 'Hubo un problema al cambiar el rol del usuario. Inténtalo de nuevo.',
 				variant: 'destructive',
 			})
 		}
@@ -384,28 +365,28 @@ const MainUsers: React.FC = () => {
 				throw error
 			}
 
-		toast({
-			title: 'âœ… Rol actualizado',
-			description: `El rol del usuario ha sido cambiado a ${
-				{
-					owner: 'Propietario',
-					residente: 'Residente',
-					employee: 'Recepcionista',
-					citotecno: 'Citotecnologo',
-					patologo: 'Patologo',
-					medicowner: 'Medico Owner',
-					medico_tratante: 'MÃ©dico Tratante',
-					enfermero: 'Enfermero',
-				}[userToUpdate.newRole]
-			}.`,
-			className: 'bg-green-100 border-green-400 text-green-800',
-		})			// Refrescar la lista de usuarios
+			toast({
+				title: '✅ Rol actualizado',
+				description: `El rol del usuario ha sido cambiado a ${
+					{
+						owner: 'Propietario',
+						residente: 'Residente',
+						employee: 'Recepcionista',
+						citotecno: 'Citotecnologo',
+						patologo: 'Patologo',
+						medicowner: 'Medico Owner',
+					}[userToUpdate.newRole]
+				}.`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
+
+			// Refrescar la lista de usuarios
 			refetch()
 		} catch (error) {
 			console.error('Error updating user role:', error)
 			toast({
-				title: 'âŒ Error al actualizar',
-				description: 'Hubo un problema al cambiar el rol del usuario. IntÃ©ntalo de nuevo.',
+				title: '❌ Error al actualizar',
+				description: 'Hubo un problema al cambiar el rol del usuario. Inténtalo de nuevo.',
 				variant: 'destructive',
 			})
 		} finally {
@@ -415,10 +396,10 @@ const MainUsers: React.FC = () => {
 	}
 
 	const handleBranchChange = async (userId: string, branch: string | null) => {
-		// Verificar permisos antes de permitir ediciÃ³n
+		// Verificar permisos antes de permitir edición
 		if (!canManage) {
 			toast({
-				title: 'âŒ Sin permisos',
+				title: '❌ Sin permisos',
 				description: 'No tienes permisos para editar usuarios.',
 				variant: 'destructive',
 			})
@@ -433,10 +414,10 @@ const MainUsers: React.FC = () => {
 			}
 
 			toast({
-				title: 'âœ… Sede actualizada',
+				title: '✅ Sede actualizada',
 				description:
 					branch === 'none'
-						? 'Se ha eliminado la restricciÃ³n de sede para este usuario.'
+						? 'Se ha eliminado la restricción de sede para este usuario.'
 						: `La sede del usuario ha sido cambiada a ${branch}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
@@ -446,29 +427,29 @@ const MainUsers: React.FC = () => {
 		} catch (error) {
 			console.error('Error updating user branch:', error)
 			toast({
-				title: 'âŒ Error al actualizar',
-				description: 'Hubo un problema al cambiar la sede del usuario. IntÃ©ntalo de nuevo.',
+				title: '❌ Error al actualizar',
+				description: 'Hubo un problema al cambiar la sede del usuario. Inténtalo de nuevo.',
 				variant: 'destructive',
 			})
 		}
 	}
 
 	const handleApprovalChange = async (userId: string, newStatus: 'pendiente' | 'aprobado') => {
-		// Verificar permisos antes de permitir ediciÃ³n
+		// Verificar permisos antes de permitir edición
 		if (!canManage) {
 			toast({
-				title: 'âŒ Sin permisos',
+				title: '❌ Sin permisos',
 				description: 'No tienes permisos para aprobar usuarios.',
 				variant: 'destructive',
 			})
 			return
 		}
 
-		// No permitir que un usuario se edite a sÃ­ mismo
+		// No permitir que un usuario se edite a sí mismo
 		if (userId === currentUser?.id) {
 			toast({
-				title: 'âŒ AcciÃ³n no permitida',
-				description: 'No puedes cambiar tu propio estado de aprobaciÃ³n.',
+				title: '❌ Acción no permitida',
+				description: 'No puedes cambiar tu propio estado de aprobación.',
 				variant: 'destructive',
 			})
 			return
@@ -482,11 +463,11 @@ const MainUsers: React.FC = () => {
 			}
 
 			toast({
-				title: newStatus === 'aprobado' ? 'âœ… Usuario aprobado' : 'â±ï¸ Usuario pendiente',
+				title: newStatus === 'aprobado' ? '✅ Usuario aprobado' : '⏱️ Usuario pendiente',
 				description:
 					newStatus === 'aprobado'
 						? 'El usuario ha sido aprobado y ahora puede acceder al sistema.'
-						: 'El usuario ha sido marcado como pendiente y no podrÃ¡ acceder al sistema.',
+						: 'El usuario ha sido marcado como pendiente y no podrá acceder al sistema.',
 				className:
 					newStatus === 'aprobado'
 						? 'bg-green-100 border-green-400 text-green-800'
@@ -498,8 +479,8 @@ const MainUsers: React.FC = () => {
 		} catch (error) {
 			console.error('Error updating user approval status:', error)
 			toast({
-				title: 'âŒ Error al actualizar',
-				description: 'Hubo un problema al cambiar el estado de aprobaciÃ³n. IntÃ©ntalo de nuevo.',
+				title: '❌ Error al actualizar',
+				description: 'Hubo un problema al cambiar el estado de aprobación. Inténtalo de nuevo.',
 				variant: 'destructive',
 			})
 		}
@@ -536,7 +517,7 @@ const MainUsers: React.FC = () => {
 			return matchesSearch && matchesRole && matchesStatus && matchesBranch && matchesApproval
 		}) || []
 
-	// EstadÃ­sticas
+	// Estadísticas
 	const stats = {
 		total: users?.length || 0,
 		owners: users?.filter((u) => u.role === 'owner').length || 0,
@@ -570,7 +551,7 @@ const MainUsers: React.FC = () => {
 				<div className="text-center py-12">
 					<div className="text-red-500 dark:text-red-400">
 						<p className="text-lg font-medium">Error al cargar los usuarios</p>
-						<p className="text-sm mt-2">Verifica tu conexiÃ³n a internet o contacta al administrador</p>
+						<p className="text-sm mt-2">Verifica tu conexión a internet o contacta al administrador</p>
 						<button
 							onClick={() => refetch()}
 							className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-none"
@@ -589,13 +570,13 @@ const MainUsers: React.FC = () => {
 			<div className="mb-4 sm:mb-6">
 				<div>
 					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-						{profile?.role === 'residente' ? 'GestiÃ³n de MÃ©dicos' : 'GestiÃ³n de Usuarios'}
+						{profile?.role === 'residente' ? 'Gestión de Médicos' : 'Gestión de Usuarios'}
 					</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 				</div>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
 					{profile?.role === 'residente'
-						? 'Administra los mÃ©dicos del sistema y sus permisos'
+						? 'Administra los médicos del sistema y sus permisos'
 						: 'Administra los usuarios del sistema y sus permisos'}
 				</p>
 			</div>
@@ -603,34 +584,34 @@ const MainUsers: React.FC = () => {
 			{/* Instrucciones */}
 			<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 mb-3 sm:mb-5">
 				<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
-					{profile?.role === 'residente' ? 'InformaciÃ³n de MÃ©dicos' : 'Instrucciones de Uso'}
+					{profile?.role === 'residente' ? 'Información de Médicos' : 'Instrucciones de Uso'}
 				</h3>
 				<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
 					{profile?.role === 'residente' ? (
 						<>
 							<li>
-								<strong>MÃ©dicos:</strong> En esta secciÃ³n puedes ver y gestionar los usuarios con rol de mÃ©dico.
+								<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
 							</li>
 							<li>
-								<strong>AsignaciÃ³n de Sede:</strong> Los mÃ©dicos con una sede asignada solo podrÃ¡n ver los casos mÃ©dicos
+								<strong>Asignación de Sede:</strong> Los médicos con una sede asignada solo podrán ver los casos médicos
 								de esa sede.
 							</li>
 							<li>
-								<strong>GeneraciÃ³n de Casos:</strong> Los mÃ©dicos pueden generar diagnÃ³sticos para casos de biopsia.
+								<strong>Generación de Casos:</strong> Los médicos pueden generar diagnósticos para casos de biopsia.
 							</li>
 						</>
 					) : (
 						<>
 							<li>
-								<strong>AprobaciÃ³n de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
+								<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
 								aprobados por un propietario antes de poder acceder al sistema.
 							</li>
 							<li>
-								<strong>AsignaciÃ³n de Sede:</strong> Los Recepcionistas con una sede asignada solo podrÃ¡n ver los casos
-								mÃ©dicos de esa sede.
+								<strong>Asignación de Sede:</strong> Los Recepcionistas con una sede asignada solo podrán ver los casos
+								médicos de esa sede.
 							</li>
 							<li>
-								<strong>Sin RestricciÃ³n:</strong> Los Recepcionistas sin sede asignada pueden ver todos los casos.
+								<strong>Sin Restricción:</strong> Los Recepcionistas sin sede asignada pueden ver todos los casos.
 							</li>
 							<li>
 								<strong>Propietarios:</strong> Los usuarios con rol de propietario siempre pueden ver todos los casos,
@@ -638,21 +619,21 @@ const MainUsers: React.FC = () => {
 							</li>
 							<li>
 								<strong>Residentes:</strong> Los usuarios con rol de residente tienen acceso a registros, casos
-								generados, mÃ©dicos y ajustes.
+								generados, médicos y ajustes.
 							</li>
 						</>
 					)}
 				</ul>
 			</div>
 
-			{/* Filtros, bÃºsqueda y estadÃ­sticas */}
+			{/* Filtros, búsqueda y estadísticas */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg mb-3 sm:mb-5">
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-6">
-					{/* Todo en una sola lÃ­nea horizontal */}
+					{/* Todo en una sola línea horizontal */}
 					<div className="flex items-center justify-between gap-2 overflow-x-auto" style={{ overflowY: 'visible' }}>
-						{/* Lado izquierdo: BÃºsqueda y filtros */}
+						{/* Lado izquierdo: Búsqueda y filtros */}
 						<div className="flex items-center gap-3 flex-shrink-0">
-							{/* BÃºsqueda */}
+							{/* Búsqueda */}
 							<div className="relative w-56">
 								<Input
 									type="text"
@@ -664,7 +645,7 @@ const MainUsers: React.FC = () => {
 
 							{/* Filtros */}
 							<div className="flex items-center gap-2">
-								{/* Filtro por aprobaciÃ³n */}
+								{/* Filtro por aprobación */}
 								<CustomDropdown
 									value={approvalFilter}
 									onChange={setApprovalFilter}
@@ -685,7 +666,11 @@ const MainUsers: React.FC = () => {
 										{ value: 'all', label: 'Todas' },
 										{ value: 'assigned', label: 'Asignada' },
 										{ value: 'unassigned', label: 'Sin sede' },
-										...branchOptions,
+										{ value: 'PMG', label: 'PMG' },
+										{ value: 'CPC', label: 'CPC' },
+										{ value: 'CNX', label: 'CNX' },
+										{ value: 'STX', label: 'STX' },
+										{ value: 'MCY', label: 'MCY' },
 									]}
 									placeholder="Sede"
 									className="w-32 text-sm"
@@ -693,7 +678,7 @@ const MainUsers: React.FC = () => {
 							</div>
 						</div>
 
-						{/* Lado derecho: EstadÃ­sticas compactas como filtros */}
+						{/* Lado derecho: Estadísticas compactas como filtros */}
 						<div className="flex items-center gap-2 flex-shrink-0">
 							{/* Total Usuarios */}
 							<div
@@ -778,7 +763,7 @@ const MainUsers: React.FC = () => {
 			{/* Tabla de usuarios */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
 				<div className="bg-white dark:bg-background rounded-xl">
-					{/* Vista mÃ³vil - Cards */}
+					{/* Vista móvil - Cards */}
 					<div className="block lg:hidden p-3 sm:p-4">
 						<div className="space-y-3 sm:space-y-4">
 							{filteredUsers.map((user) => (
@@ -820,7 +805,7 @@ const MainUsers: React.FC = () => {
 										</div>
 									)}
 
-									{/* Estado de aprobaciÃ³n */}
+									{/* Estado de aprobación */}
 									<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
 										{getApprovalIcon(user.estado)}
 										<span
@@ -828,7 +813,7 @@ const MainUsers: React.FC = () => {
 												user.estado,
 											)}`}
 										>
-											{user.estado === 'aprobado' ? 'Aprobado' : 'Pendiente de aprobaciÃ³n'}
+											{user.estado === 'aprobado' ? 'Aprobado' : 'Pendiente de aprobación'}
 										</span>
 									</div>
 
@@ -858,14 +843,14 @@ const MainUsers: React.FC = () => {
 										</p>
 									</div>
 
-									{/* Selector de aprobaciÃ³n */}
+									{/* Selector de aprobación */}
 									{canManage && user.id !== currentUser?.id && (
 										<div className="mt-3">
 											<label
 												htmlFor={`approval-status-${user.id}`}
 												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 											>
-												Estado de AprobaciÃ³n:
+												Estado de Aprobación:
 											</label>
 											<CustomDropdown
 												id={`approval-status-${user.id}`}
@@ -896,7 +881,7 @@ const MainUsers: React.FC = () => {
 												onChange={(value) =>
 													handleRoleChange(
 														user.id,
-														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 													)
 												}
 												options={[
@@ -906,9 +891,7 @@ const MainUsers: React.FC = () => {
 													{ value: 'citotecno', label: 'Citotecnologo' },
 													{ value: 'patologo', label: 'Patologo' },
 													{ value: 'medicowner', label: 'Medico Owner' },
-													{ value: 'medico_tratante', label: 'MÃ©dico Tratante' },
-										{ value: 'enfermero', label: 'Enfermero' },
-									]}
+												]}
 												placeholder="Seleccionar rol"
 												className="w-full"
 											/>
@@ -929,8 +912,12 @@ const MainUsers: React.FC = () => {
 												defaultValue={user.assigned_branch || 'none'}
 												onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
 												options={[
-													{ value: 'none', label: 'Sin restricciÃ³n de sede' },
-													...branchOptions,
+													{ value: 'none', label: 'Sin restricción de sede' },
+													{ value: 'PMG', label: 'PMG' },
+													{ value: 'CPC', label: 'CPC' },
+													{ value: 'CNX', label: 'CNX' },
+													{ value: 'STX', label: 'STX' },
+													{ value: 'MCY', label: 'MCY' },
 												]}
 												placeholder="Seleccionar sede"
 												className="w-full"
@@ -1007,9 +994,9 @@ const MainUsers: React.FC = () => {
 																		className="h-6 w-6 flex-shrink-0"
 																		onClick={(e) => {
 																			e.stopPropagation()
-																			handleCopyToClipboard(formatPhoneForDisplay(user.phone), 'TelÃ©fono')
+																			handleCopyToClipboard(formatPhoneForDisplay(user.phone), 'Teléfono')
 																		}}
-																		aria-label="Copiar telÃ©fono"
+																		aria-label="Copiar teléfono"
 																	>
 																		<Copy className="w-3 h-3" />
 																	</Button>
@@ -1027,7 +1014,7 @@ const MainUsers: React.FC = () => {
 													onChange={(value) =>
 														handleRoleChange(
 															user.id,
-															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
 														)
 													}
 													options={[
@@ -1037,9 +1024,7 @@ const MainUsers: React.FC = () => {
 														{ value: 'citotecno', label: 'Citotecnologo' },
 														{ value: 'patologo', label: 'Patologo' },
 														{ value: 'medicowner', label: 'Medico Owner' },
-														{ value: 'medico_tratante', label: 'MÃ©dico Tratante' },
-										{ value: 'enfermero', label: 'Enfermero' },
-									]}
+													]}
 													placeholder="Seleccionar rol"
 													className="w-40"
 												/>
@@ -1064,8 +1049,12 @@ const MainUsers: React.FC = () => {
 													defaultValue={user.assigned_branch || 'none'}
 													onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
 													options={[
-														{ value: 'none', label: 'Sin restricciÃ³n' },
-														...branchOptions,
+														{ value: 'none', label: 'Sin restricción' },
+														{ value: 'PMG', label: 'PMG' },
+														{ value: 'CPC', label: 'CPC' },
+														{ value: 'CNX', label: 'CNX' },
+														{ value: 'STX', label: 'STX' },
+														{ value: 'MCY', label: 'MCY' },
 													]}
 													placeholder="Seleccionar sede"
 													className="w-40"
@@ -1080,7 +1069,7 @@ const MainUsers: React.FC = () => {
 													{user.assigned_branch}
 												</span>
 											) : (
-												<span className="text-sm text-gray-500 dark:text-gray-400">Sin restricciÃ³n</span>
+												<span className="text-sm text-gray-500 dark:text-gray-400">Sin restricción</span>
 											)}
 										</td>
 										<td className="px-6 py-4">
@@ -1115,28 +1104,28 @@ const MainUsers: React.FC = () => {
 						</table>
 					</div>
 
-					{/* Estado vacÃ­o */}
+					{/* Estado vacío */}
 					{filteredUsers.length === 0 && (
 						<div className="text-center py-12">
 							<div className="text-gray-500 dark:text-gray-400">
 								<p className="text-lg font-medium">
-									{profile?.role === 'residente' ? 'No se encontraron mÃ©dicos' : 'No se encontraron usuarios'}
+									{profile?.role === 'residente' ? 'No se encontraron médicos' : 'No se encontraron usuarios'}
 								</p>
-								<p className="text-sm">Intenta ajustar los filtros de bÃºsqueda</p>
+								<p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
 							</div>
 						</div>
 					)}
 				</div>
 			</Card>
 
-			{/* DiÃ¡logo de confirmaciÃ³n para cambio a admin */}
+			{/* Diálogo de confirmación para cambio a admin */}
 			<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Confirmar cambio de rol</DialogTitle>
 						<DialogDescription>
-							Â¿EstÃ¡ seguro que desea cambiar el rol del usuario {userToUpdate?.email} a Residente? Este cambio
-							modificarÃ¡ los permisos y accesos del usuario en el sistema.
+							¿Está seguro que desea cambiar el rol del usuario {userToUpdate?.email} a Residente? Este cambio
+							modificará los permisos y accesos del usuario en el sistema.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
@@ -1152,4 +1141,3 @@ const MainUsers: React.FC = () => {
 }
 
 export default MainUsers
-

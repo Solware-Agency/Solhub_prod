@@ -69,7 +69,7 @@ export interface MedicalCaseInsert {
   id?: string;
   laboratory_id: string; // NUEVO: Multi-tenant
   patient_id?: string | null;
-  exam_type: string | null;  // NULL permitido si no está configurado
+  exam_type: string;
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -78,9 +78,9 @@ export interface MedicalCaseInsert {
   branch: string;
   date: string;
   code?: string | null;
-  total_amount: number | null;  // NULL permitido para labs sin módulo de pagos
+  total_amount: number;
   payment_status: 'Incompleto' | 'Pagado';
-  remaining?: number | null;
+  remaining?: number;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
   payment_reference_1?: string | null;
