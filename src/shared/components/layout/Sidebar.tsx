@@ -18,6 +18,7 @@ import {
   Microscope,
   Brain,
   FolderSearch,
+  Activity,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -316,11 +317,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isCitotecno = profile?.role === 'citotecno';
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';
+  const isMedicoTratante = profile?.role === 'medico_tratante';
+  const isEnfermero = profile?.role === 'enfermero';
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
       {/* Zona scrollable: navegación y grupos */}
-      <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4 scrollbar-hide'>
+      <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4'>
         <div className='flex justify-between items-center w-full mb-2 sm:mb-4'>
           <div className='flex items-center gap-3 ml-1'>
             <SolHubIcon
@@ -500,6 +503,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/dashboard/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -549,6 +561,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/employee/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -570,6 +591,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/medic/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               {/* <NavItem
 								to="/medic/my-cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
@@ -598,6 +628,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/cito/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
 
@@ -612,8 +651,46 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <div className='py-1'>
+                <NavItem
+                  to='/patolo/triaje'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Triaje'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
             </>
           )}
+
+          {isMedicoTratante && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/medico-tratante/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isEnfermero && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/enfermero/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
           <FeatureGuard feature='hasChatAI'>
             {(isOwner || isPatologo || isCitotecno) && (
               <NavItem
@@ -683,6 +760,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isPatologo && (
           <NavItem
             to='/patolo/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isMedicoTratante && (
+          <NavItem
+            to='/medico-tratante/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isEnfermero && (
+          <NavItem
+            to='/enfermero/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
             label='Ajustes'
             showFullContent={showFullContent}

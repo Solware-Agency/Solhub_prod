@@ -5,13 +5,14 @@ import { extractLaboratoryId } from '../types/helpers'
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
 	display_name?: string | null
 	estado?: 'pendiente' | 'aprobado'
 	phone?: string | number | null
+	laboratory_id?: string | null
 }
 
 /* ------------------------------------------------------------------
@@ -42,7 +43,9 @@ export const updateUserRole = async (
     | 'residente'
     | 'citotecno'
     | 'patologo'
-    | 'medicowner',
+    | 'medicowner'
+    | 'medico_tratante'
+    | 'enfermero',
 ): Promise<{
   data: UserProfile | null;
   error: PostgrestError | Error | null;
@@ -62,7 +65,7 @@ export const updateUserRole = async (
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null };
 
     const laboratoryId = extractLaboratoryId(profile);
 
@@ -123,7 +126,7 @@ export const updateUserBranch = async (
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null };
 
     if (profileError || !profile?.laboratory_id) {
       throw new Error('Usuario no tiene laboratorio asignado');
@@ -182,7 +185,7 @@ export const updateUserApprovalStatus = async (
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null };
 
     if (currentProfileError || !currentUserProfile?.laboratory_id) {
       throw new Error('Usuario no tiene laboratorio asignado');
@@ -193,7 +196,7 @@ export const updateUserApprovalStatus = async (
       .from('profiles')
       .select('id, laboratory_id, email, estado')
       .eq('id', userId)
-      .single();
+      .single() as { data: { id: string; laboratory_id?: string; email: string; estado?: string } | null; error: PostgrestError | null };
 
     if (targetProfileError || !targetUserProfile) {
       console.error('Error fetching target user profile:', targetProfileError);
@@ -286,7 +289,7 @@ export const getAllUserProfiles = async (): Promise<{
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null };
 
     if (profileError || !profile?.laboratory_id) {
       console.error(
@@ -390,7 +393,7 @@ export const getUserStats = async (): Promise<{
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null };
 
     if (profileError || !profile?.laboratory_id) {
       console.error(
@@ -419,6 +422,8 @@ export const getUserStats = async (): Promise<{
       residents: data?.filter((u) => u.role === 'residente').length || 0,
       citotecnos: data?.filter((u) => u.role === 'citotecno').length || 0,
       patologos: data?.filter((u) => u.role === 'patologo').length || 0,
+      medicosTratantes: data?.filter((u) => u.role === 'medico_tratante').length || 0,
+      enfermeros: data?.filter((u) => u.role === 'enfermero').length || 0,
       withBranch: data?.filter((u) => u.assigned_branch).length || 0,
       approved: data?.filter((u) => u.estado === 'aprobado').length || 0,
       pending: data?.filter((u) => u.estado === 'pendiente').length || 0,

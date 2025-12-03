@@ -704,14 +704,15 @@ export interface MedicalRecord {
 export interface LaboratoryFeatures {
   hasChatAI: boolean
   hasStats: boolean
-  hasChangeHistory: boolean
-  hasUsers: boolean
+  hasForm: boolean
+  hasCaseGenerator: boolean
   hasCases: boolean
   hasPatients: boolean
-  hasForm: boolean
   hasPayment: boolean
+  hasUsers: boolean
+  hasChangeHistory: boolean
+  hasTriaje: boolean
   hasReports: boolean
-  hasCaseGenerator: boolean
 }
 
 export interface LaboratoryBranding {
@@ -721,15 +722,37 @@ export interface LaboratoryBranding {
   secondaryColor: string    // Color secundario (por defecto: "#00cc66")
 }
 
+// Configuración de módulos (configuración granular)
+export interface ModuleFieldConfig {
+  enabled: boolean
+  required: boolean
+}
+
+export interface ModuleConfig {
+  fields?: {
+    [fieldName: string]: ModuleFieldConfig
+  }
+  actions?: {
+    [actionName: string]: boolean
+  }
+  settings?: {
+    [settingName: string]: any
+  }
+}
+
 export interface LaboratoryConfig {
   branches: string[]
   paymentMethods: string[]
+  examTypes: string[]        // Tipos de examen configurados por laboratorio
   defaultExchangeRate: number
   timezone: string
   webhooks?: {              // OPCIONAL - No todos los labs lo tienen
     generateDoc?: string
     generatePdf?: string
     sendEmail?: string
+  }
+  modules?: {                // Configuración granular de módulos por laboratorio
+    [moduleName: string]: ModuleConfig
   }
 }
 
