@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
 	Users,
 	Mail,
@@ -44,7 +44,6 @@ import {
 } from '@shared/components/ui/dialog'
 import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 interface UserProfile {
 	id: string
@@ -65,7 +64,6 @@ const MainUsers: React.FC = () => {
 	const { user: currentUser } = useAuth()
 	const { profile } = useUserProfile()
 	const { toast } = useToast()
-	const { laboratory } = useLaboratory()
 	const queryClient = useQueryClient()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [roleFilter, setRoleFilter] = useState<string>('')
@@ -79,23 +77,6 @@ const MainUsers: React.FC = () => {
 		email: string
 		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
 	} | null>(null)
-
-	// Obtener opciones de branches desde la configuraciÃ³n del laboratorio
-	const branchOptions = useMemo(() => {
-		const branches = laboratory?.config?.branches || []
-		// Si hay branches configurados, usarlos; si no, usar valores por defecto
-		if (branches.length > 0) {
-			return branches.map((branch) => ({ value: branch, label: branch }))
-		}
-		// Fallback a valores por defecto si no hay configuraciÃ³n
-		return [
-			{ value: 'PMG', label: 'PMG' },
-			{ value: 'CPC', label: 'CPC' },
-			{ value: 'CNX', label: 'CNX' },
-			{ value: 'STX', label: 'STX' },
-			{ value: 'MCY', label: 'MCY' },
-		]
-	}, [laboratory?.config?.branches])
 
 	// Query para obtener usuarios
 	const {
@@ -685,7 +666,11 @@ const MainUsers: React.FC = () => {
 										{ value: 'all', label: 'Todas' },
 										{ value: 'assigned', label: 'Asignada' },
 										{ value: 'unassigned', label: 'Sin sede' },
-										...branchOptions,
+										{ value: 'PMG', label: 'PMG' },
+										{ value: 'CPC', label: 'CPC' },
+										{ value: 'CNX', label: 'CNX' },
+										{ value: 'STX', label: 'STX' },
+										{ value: 'MCY', label: 'MCY' },
 									]}
 									placeholder="Sede"
 									className="w-32 text-sm"
@@ -929,8 +914,12 @@ const MainUsers: React.FC = () => {
 												defaultValue={user.assigned_branch || 'none'}
 												onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
 												options={[
-													{ value: 'none', label: 'Sin restricciÃ³n de sede' },
-													...branchOptions,
+													{ value: 'none', label: 'Sin restricción de sede' },
+													{ value: 'PMG', label: 'PMG' },
+													{ value: 'CPC', label: 'CPC' },
+													{ value: 'CNX', label: 'CNX' },
+													{ value: 'STX', label: 'STX' },
+													{ value: 'MCY', label: 'MCY' },
 												]}
 												placeholder="Seleccionar sede"
 												className="w-full"
@@ -1064,8 +1053,12 @@ const MainUsers: React.FC = () => {
 													defaultValue={user.assigned_branch || 'none'}
 													onChange={(value) => handleBranchChange(user.id, value === 'none' ? null : value)}
 													options={[
-														{ value: 'none', label: 'Sin restricciÃ³n' },
-														...branchOptions,
+														{ value: 'none', label: 'Sin restricción' },
+														{ value: 'PMG', label: 'PMG' },
+														{ value: 'CPC', label: 'CPC' },
+														{ value: 'CNX', label: 'CNX' },
+														{ value: 'STX', label: 'STX' },
+														{ value: 'MCY', label: 'MCY' },
 													]}
 													placeholder="Seleccionar sede"
 													className="w-40"

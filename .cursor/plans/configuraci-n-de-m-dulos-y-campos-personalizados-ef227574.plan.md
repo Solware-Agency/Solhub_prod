@@ -19,39 +19,19 @@
 - ✅ Campos NOT NULL nunca fallan (string vacío `""` para text, `1` para number_of_samples)
 - ✅ Sistema completamente funcional para manejar campos deshabilitados
 
-### ✅ FASE 2: COMPLETADA (Dashboard Admin)
-
-**Archivos implementados:**
-
-- ✅ `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx` - UI completa para gestionar dropdowns
-  - ✅ Sección de Tipos de Examen (`examTypes`) con edición, reordenamiento y validaciones
-  - ✅ Sección de Sedes (`branches`) mejorada con edición, reordenamiento y validaciones
-  - ✅ Sección de Métodos de Pago (`paymentMethods`) mejorada con edición, reordenamiento y validaciones
-  - ✅ Validaciones completas en `handleSubmit()` (arrays no vacíos, sin duplicados)
-  - ✅ Funciones helper: `addArrayItem()`, `removeArrayItem()`, `moveItemUp()`, `moveItemDown()`
-  - ✅ UI mejorada con diseño oscuro consistente y inputs editables
-
-**Funcionalidad:**
-
-- ✅ Admin puede agregar, editar, eliminar y reordenar opciones de dropdowns
-- ✅ Validación de duplicados en tiempo real
-- ✅ Validación de mínimo requerido (al menos 1 item por array)
-- ✅ Cambios se guardan correctamente en `config.examTypes`, `config.branches`, `config.paymentMethods`
-- ✅ Los cambios se reflejan automáticamente en el SaaS principal
-
-### ✅ Dropdowns Completamente Implementados (Solhub)
+### ✅ Dropdowns Parcialmente Implementados (Solhub)
 
 **Estado actual:**
 
 - ✅ `examTypes`: Ya usa `laboratory?.config?.examTypes` en `ServiceSection.tsx` (líneas 119-133)
 - ✅ `branches`: Ya usa `laboratory?.config?.branches` en `PaymentHeader.tsx` (líneas 33-41)
-- ✅ `paymentMethods`: Ya usa `laboratory?.config?.paymentMethods` en `PaymentMethodItem.tsx` (líneas 30-46)
+- ❌ `paymentMethods`: **HARDCODEADO** en `PaymentMethodItem.tsx` (líneas 56-62) - **FALTA ACTUALIZAR**
 
 **Archivos que usan configuración:**
 
 - ✅ `src/features/form/components/ServiceSection.tsx` - Usa `laboratory?.config?.examTypes`
 - ✅ `src/features/form/components/payment/PaymentHeader.tsx` - Usa `laboratory?.config?.branches`
-- ✅ `src/features/form/components/payment/PaymentMethodItem.tsx` - Usa `laboratory?.config?.paymentMethods`
+- ❌ `src/features/form/components/payment/PaymentMethodItem.tsx` - **USA VALORES HARDCODEADOS**
 
 ---
 
@@ -116,7 +96,7 @@
 
 ---
 
-## FASE 2: Mejorar Administración de Dropdowns en Dashboard Admin ✅ COMPLETADA
+## FASE 2: Mejorar Administración de Dropdowns en Dashboard Admin ⚠️ PENDIENTE
 
 **Objetivo:** El ADMIN configura las opciones de dropdowns para cada laboratorio desde el dashboard admin.
 
@@ -129,22 +109,21 @@
 - Solo falta actualizar `paymentMethods` en Solhub después de implementar esta fase
 - Los cambios se guardan en `config.examTypes`, `config.branches`, `config.paymentMethods`
 
-### ✅ 2.1 Mejorar UI para gestionar `examTypes` (Tipos de Examen) - COMPLETADA
+### 2.1 Mejorar UI para gestionar `examTypes` (Tipos de Examen)
 
 **Ubicación:** Pestaña "Configuración" en `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx`
 
 **Funcionalidad requerida:**
 
-- ✅ Agregar sección dedicada para `examTypes` en la pestaña de "Configuración"
-- ✅ Mostrar lista actual de tipos de examen desde `laboratory.config.examTypes`
-- ✅ Permitir al ADMIN agregar nuevo tipo (input + botón "Agregar")
-- ✅ Permitir al ADMIN eliminar tipo (botón eliminar por cada item)
-- ✅ Permitir al ADMIN reordenar tipos (botones ↑ ↓)
-- ✅ Validar que no haya duplicados (mostrar error si intenta agregar duplicado)
-- ✅ Validar que el array no esté vacío (al menos 1 tipo, deshabilitar eliminar si solo queda 1)
-- ✅ Mostrar preview de opciones que verá el cliente (descripción informativa)
-- ✅ Guardar cambios en `config.examTypes` al hacer submit del formulario
-- ✅ Inputs editables para modificar tipos existentes directamente
+- [ ] Agregar sección dedicada para `examTypes` en la pestaña de "Configuración"
+- [ ] Mostrar lista actual de tipos de examen desde `laboratory.config.examTypes`
+- [ ] Permitir al ADMIN agregar nuevo tipo (input + botón "Agregar")
+- [ ] Permitir al ADMIN eliminar tipo (botón eliminar por cada item)
+- [ ] Permitir al ADMIN reordenar tipos (botones ↑ ↓ o drag & drop)
+- [ ] Validar que no haya duplicados (mostrar error si intenta agregar duplicado)
+- [ ] Validar que el array no esté vacío (al menos 1 tipo, deshabilitar eliminar si solo queda 1)
+- [ ] Mostrar preview de opciones que verá el cliente
+- [ ] Guardar cambios en `config.examTypes` al hacer submit del formulario
 
 **Estructura de datos:**
 
@@ -230,23 +209,22 @@ const handleSave = async () => {
 }
 ```
 
-### ✅ 2.2 Mejorar gestión de `branches` (Sedes) - COMPLETADA
+### 2.2 Mejorar gestión de `branches` (Sedes)
 
 **Ubicación:** Pestaña "Configuración" en `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx`
 
 **Funcionalidad requerida:**
 
-- ✅ Verificar si ya existe UI para `branches` (ya existía, ahora mejorada)
-- ✅ Sección dedicada similar a `examTypes` con mejoras
-- ✅ Mostrar lista actual de sedes desde `laboratory.config.branches`
-- ✅ Permitir al ADMIN agregar nueva sede (input + botón "Agregar")
-- ✅ Permitir al ADMIN eliminar sede (botón eliminar por cada item)
-- ✅ Permitir al ADMIN reordenar sedes (botones ↑ ↓)
-- ✅ Validar que no haya duplicados
-- ✅ Validar que el array no esté vacío (al menos 1 sede)
-- ✅ Mostrar preview de opciones que verá el cliente (descripción informativa)
-- ✅ Guardar cambios en `config.branches` al hacer submit del formulario
-- ✅ Inputs editables para modificar sedes existentes directamente
+- [ ] Verificar si ya existe UI para `branches` (puede estar en otra sección)
+- [ ] Si no existe, crear sección dedicada similar a `examTypes`
+- [ ] Mostrar lista actual de sedes desde `laboratory.config.branches`
+- [ ] Permitir al ADMIN agregar nueva sede (input + botón "Agregar")
+- [ ] Permitir al ADMIN eliminar sede (botón eliminar por cada item)
+- [ ] Permitir al ADMIN reordenar sedes (botones ↑ ↓ o drag & drop)
+- [ ] Validar que no haya duplicados
+- [ ] Validar que el array no esté vacío (al menos 1 sede)
+- [ ] Mostrar preview de opciones que verá el cliente
+- [ ] Guardar cambios en `config.branches` al hacer submit del formulario
 
 **Estructura de datos:**
 
@@ -280,23 +258,22 @@ const handleSave = async () => {
 
 **Nota:** Si ya existe UI para `branches`, mejorarla con las mismas funcionalidades (agregar/eliminar/reordenar).
 
-### ✅ 2.3 Mejorar gestión de `paymentMethods` (Métodos de Pago) - COMPLETADA
+### 2.3 Mejorar gestión de `paymentMethods` (Métodos de Pago)
 
 **Ubicación:** Pestaña "Configuración" en `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx`
 
 **Funcionalidad requerida:**
 
-- ✅ Verificar si ya existe UI para `paymentMethods` (ya existía, ahora mejorada)
-- ✅ Sección dedicada similar a `examTypes` y `branches` con mejoras
-- ✅ Mostrar lista actual de métodos desde `laboratory.config.paymentMethods`
-- ✅ Permitir al ADMIN agregar nuevo método (input + botón "Agregar")
-- ✅ Permitir al ADMIN eliminar método (botón eliminar por cada item)
-- ✅ Permitir al ADMIN reordenar métodos (botones ↑ ↓)
-- ✅ Validar que no haya duplicados
-- ✅ Validar que el array no esté vacío (al menos 1 método)
-- ✅ Mostrar preview de opciones que verá el cliente (descripción informativa)
-- ✅ Guardar cambios en `config.paymentMethods` al hacer submit del formulario
-- ✅ Inputs editables para modificar métodos existentes directamente
+- [ ] Verificar si ya existe UI para `paymentMethods` (puede estar en otra sección)
+- [ ] Si no existe, crear sección dedicada similar a `examTypes` y `branches`
+- [ ] Mostrar lista actual de métodos desde `laboratory.config.paymentMethods`
+- [ ] Permitir al ADMIN agregar nuevo método (input + botón "Agregar")
+- [ ] Permitir al ADMIN eliminar método (botón eliminar por cada item)
+- [ ] Permitir al ADMIN reordenar métodos (botones ↑ ↓ o drag & drop)
+- [ ] Validar que no haya duplicados
+- [ ] Validar que el array no esté vacío (al menos 1 método)
+- [ ] Mostrar preview de opciones que verá el cliente
+- [ ] Guardar cambios en `config.paymentMethods` al hacer submit del formulario
 
 **Estructura de datos:**
 
@@ -343,20 +320,18 @@ const defaultPaymentMethods = [
 ]
 ```
 
-### ✅ 2.4 Validar sincronización y guardado - COMPLETADA
+### 2.4 Validar sincronización y guardado
 
 **Archivo:** `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx`
 
 **Funcionalidad requerida:**
 
-- ✅ Asegurar que cambios se guarden correctamente en `config.examTypes`, `config.branches`, `config.paymentMethods`
-- ✅ Validar que los arrays no estén vacíos antes de guardar (mostrar error si están vacíos)
-- ✅ Validar que no haya duplicados antes de guardar
-- ✅ Mostrar mensaje de confirmación al guardar exitosamente (alert con ✅)
-- ✅ Mostrar mensaje de error si falla el guardado (alert con ❌)
-- ✅ Los cambios se reflejan automáticamente en el SaaS principal (el cliente ve las nuevas opciones sin necesidad de recargar)
-- ✅ Funciones helper implementadas: `addArrayItem()`, `removeArrayItem()`, `moveItemUp()`, `moveItemDown()`
-- ✅ Validación completa en `handleSubmit()` antes de guardar
+- [ ] Asegurar que cambios se guarden correctamente en `config.examTypes`, `config.branches`, `config.paymentMethods`
+- [ ] Validar que los arrays no estén vacíos antes de guardar (mostrar error si están vacíos)
+- [ ] Validar que no haya duplicados antes de guardar
+- [ ] Mostrar mensaje de confirmación al guardar exitosamente
+- [ ] Mostrar mensaje de error si falla el guardado
+- [ ] Los cambios se reflejan automáticamente en el SaaS principal (el cliente ve las nuevas opciones sin necesidad de recargar)
 
 **Estructura de datos completa al guardar:**
 
@@ -411,7 +386,7 @@ const validateBeforeSave = () => {
 
 ---
 
-## FASE 3: Actualizar PaymentMethodItem en Solhub ✅ COMPLETADA
+## FASE 3: Actualizar PaymentMethodItem en Solhub ⚠️ PENDIENTE
 
 **Objetivo:** Actualizar `PaymentMethodItem.tsx` para usar `config.paymentMethods` en lugar de valores hardcodeados.
 
@@ -419,18 +394,25 @@ const validateBeforeSave = () => {
 
 **Estado actual:**
 
-- ✅ Ya usa `laboratory?.config?.paymentMethods` (líneas 30-46)
-- ✅ Implementado con `useMemo` para optimización
-- ✅ Fallback a valores por defecto si no hay configuración
-- ✅ Compatible con laboratorios que no tengan `paymentMethods` configurados
+- ❌ Líneas 56-62: Usa valores hardcodeados:
+  ```typescript
+  options={createDropdownOptions([
+    'Punto de venta',
+    'Dólares en efectivo',
+    'Zelle',
+    'Pago móvil',
+    'Bs en efectivo',
+  ])}
+  ```
 
-**Cambios implementados:**
 
-- ✅ Importado `useLaboratory` hook
-- ✅ Obtenido `laboratory` del contexto
-- ✅ Obtenido `paymentMethods` desde `laboratory?.config?.paymentMethods`
-- ✅ Usa `paymentMethods` configurados si existen, sino usa valores por defecto
-- ✅ Mantiene compatibilidad con laboratorios que no tengan `paymentMethods` configurados
+**Cambios requeridos:**
+
+- [ ] Importar `useLaboratory` hook
+- [ ] Obtener `laboratory` del contexto
+- [ ] Obtener `paymentMethods` desde `laboratory?.config?.paymentMethods`
+- [ ] Usar `paymentMethods` configurados si existen, sino usar valores por defecto
+- [ ] Mantener compatibilidad con laboratorios que no tengan `paymentMethods` configurados
 
 **Código a implementar:**
 
@@ -506,22 +488,16 @@ const paymentMethodsOptions = useMemo(() => {
 5. ✅ `src/shared/hooks/useModuleField.ts` - Creado e implementado
 6. ✅ `src/features/form/components/ServiceSection.tsx` - Ya usa `config.examTypes`
 7. ✅ `src/features/form/components/payment/PaymentHeader.tsx` - Ya usa `config.branches`
-8. ✅ `src/features/form/components/payment/PaymentMethodItem.tsx` - Ya usa `config.paymentMethods`
 
-### ✅ COMPLETADOS (Dashboard Admin - FASE 2)
+### ⚠️ PENDIENTES
 
-1. ✅ `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx `- UI completa para gestionar `examTypes`, `branches`, `paymentMethods`
+**Dashboard Admin (FASE 2):**
 
-   - ✅ Sección de Tipos de Examen con edición, reordenamiento y validaciones
-   - ✅ Sección de Sedes mejorada con edición, reordenamiento y validaciones
-   - ✅ Sección de Métodos de Pago mejorada con edición, reordenamiento y validaciones
-   - ✅ Validaciones completas en `handleSubmit()`
-   - ✅ Funciones helper para agregar, eliminar y reordenar items
-   - ✅ UI mejorada con diseño oscuro consistente
+1. ⚠️ `dashboard-solhub/app/(dashboard)/laboratories/[id]/edit/page.tsx `- Agregar UI para gestionar `examTypes`, `branches`, `paymentMethods`
 
-### ✅ COMPLETADOS (Solhub - FASE 3)
+**Solhub (FASE 3):**
 
-1. ✅ `src/features/form/components/payment/PaymentMethodItem.tsx` - Actualizado para usar `config.paymentMethods`
+2. ⚠️ `src/features/form/components/payment/PaymentMethodItem.tsx` - Actualizar para usar `config.paymentMethods`
 
 ---
 
@@ -546,7 +522,7 @@ const paymentMethodsOptions = useMemo(() => {
 - ✅ Si `moduleConfig` es null, usar valores por defecto seguros
 - ✅ No romper funcionalidad existente
 
-### 4. Dropdowns personalizados ✅ IMPLEMENTADO EN FASE 2
+### 4. Dropdowns personalizados ⚠️ IMPORTANTE PARA FASE 2
 
 **Estructura de datos en Supabase:**
 
@@ -579,7 +555,7 @@ const paymentMethodsOptions = useMemo(() => {
 
 - `examTypes`: Ver `src/features/form/components/ServiceSection.tsx` líneas 119-133
 - `branches`: Ver `src/features/form/components/payment/PaymentHeader.tsx` líneas 33-41
-- `paymentMethods`: Ver `src/features/form/components/payment/PaymentMethodItem.tsx` líneas 30-46 (implementado con configuración del laboratorio)
+- `paymentMethods`: Ver `src/features/form/components/payment/PaymentMethodItem.tsx` líneas 56-62 (hardcodeado, necesita actualización)
 
 **Patrón a seguir:**
 

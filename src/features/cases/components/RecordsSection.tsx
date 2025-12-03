@@ -119,9 +119,13 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 		// Solo aplicar filtros locales si NO hay paginación del servidor (modo fallback)
 		let filtered = [...cases]
 
-		// Si el usuario tiene una sede asignada, filtrar casos por esa sede
-		// Aplica para todos los roles que tengan sede asignada (owner, employee, residente, etc.)
-		if (profile?.assigned_branch) {
+		// If user is an employee with assigned branch, filter cases
+		if (profile?.role === 'employee' && profile?.assigned_branch) {
+			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
+		}
+
+		// If user is a residente with assigned branch, filter cases
+		if (profile?.role === 'residente' && profile?.assigned_branch) {
 			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
 		}
 
