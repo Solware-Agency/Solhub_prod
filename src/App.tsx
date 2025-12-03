@@ -33,6 +33,8 @@ import {
   medicRoutes,
   citotecnoRoutes,
   patologoRoutes,
+  medicoTratanteRoutes,
+  enfermeroRoutes,
 } from '@app/routes/route-config';
 
 // Loading component for Suspense fallback
@@ -270,6 +272,64 @@ function App() {
                           <FeatureRoute
                             feature={routeConfig.feature}
                             fallbackPath='/patolo/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                <Route
+                  path='/medico-tratante'
+                  element={
+                    <PrivateRoute requiredRole={'medico_tratante'}>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  {/* Nested routes that will render in the Outlet */}
+                  <Route index element={<CasesPage />} />
+                  {medicoTratanteRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/medico-tratante/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                <Route
+                  path='/enfermero'
+                  element={
+                    <PrivateRoute requiredRole={'enfermero'}>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  {/* Nested routes that will render in the Outlet */}
+                  <Route index element={<CasesPage />} />
+                  {enfermeroRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/enfermero/cases'
                           >
                             <Component />
                           </FeatureRoute>

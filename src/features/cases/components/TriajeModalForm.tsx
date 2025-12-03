@@ -66,6 +66,7 @@ interface TriajeModalFormProps {
   case_: MedicalCaseWithPatient | null;
   onClose: () => void;
   onSave?: () => void;
+  showOnlyVitalSigns?: boolean;
 }
 
 // Componente para mostrar información del triaje existente
@@ -287,6 +288,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   case_,
   onClose,
   onSave,
+  showOnlyVitalSigns = false,
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState<TriajeFormData>({
@@ -503,6 +505,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       <div className='p-4 sm:p-6'>
         <form onSubmit={handleSubmit} className='space-y-3 sm:space-y-4'>
           {/* Sección: Motivo de Consulta y Hábitos en la misma fila */}
+          {!showOnlyVitalSigns && (
           <div className='grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-3 sm:gap-4'>
             {/* Motivo de consulta - Izquierda */}
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
@@ -599,8 +602,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Sección: Antecedentes - Ocupa todo el ancho */}
+          {!showOnlyVitalSigns && (
           <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
             <CardHeader className='p-4 sm:p-6'>
               <CardTitle className='text-base sm:text-lg'>
@@ -655,6 +660,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Sección: Signos Vitales */}
           <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
@@ -828,6 +834,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           </Card>
 
           {/* Sección: Examen Físico y Observaciones */}
+          {!showOnlyVitalSigns && (
           <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
             <CardContent className='p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
               <div>
@@ -862,6 +869,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Mensajes de error y éxito */}
           {error && (

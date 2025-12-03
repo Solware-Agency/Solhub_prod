@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
+import { useUserProfile } from '@shared/hooks/useUserProfile';
 import TriajeModalForm from './TriajeModalForm';
 
 interface TriajeModalProps {
@@ -24,6 +25,21 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
 }) => {
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
+  
+  const { profile } = useUserProfile();
+  const isEnfermero = profile?.role === 'enfermero';
+  
+  // Validar que el usuario tenga permisos para editar triaje
+  const canEditTriaje = profile?.role && [
+    'owner',
+    'employee',
+    'residente',
+    'citotecno',
+    'patologo',
+    'medicowner',
+    'medico_tratante',
+    'enfermero'
+  ].includes(profile.role);
 
   if (!isOpen || !case_) {
     return null;
@@ -88,7 +104,24 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
 
               {/* Content - Scrollable */}
               <div className="flex-1 overflow-y-auto">
-                <TriajeModalForm case_={case_} onClose={onClose} onSave={onSave} />
+                {canEditTriaje ? (
+                  <TriajeModalForm 
+                    case_={case_} 
+                    onClose={onClose} 
+                    onSave={onSave} 
+                    showOnlyVitalSigns={isEnfermero}
+                  />
+                ) : (
+                  <div className="p-6 text-center">
+                    <div className="text-red-500 mb-4">
+                      <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Sin permisos</h3>
+                    <p className="text-gray-600 dark:text-gray-400">No tienes permisos para editar el triaje.</p>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

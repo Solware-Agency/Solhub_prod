@@ -317,6 +317,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isCitotecno = profile?.role === 'citotecno';
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';
+  const isMedicoTratante = profile?.role === 'medico_tratante';
+  const isEnfermero = profile?.role === 'enfermero';
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -660,6 +662,35 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </>
           )}
+
+          {isMedicoTratante && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/medico-tratante/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isEnfermero && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/enfermero/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
           <FeatureGuard feature='hasChatAI'>
             {(isOwner || isPatologo || isCitotecno) && (
               <NavItem
@@ -729,6 +760,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isPatologo && (
           <NavItem
             to='/patolo/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isMedicoTratante && (
+          <NavItem
+            to='/medico-tratante/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isEnfermero && (
+          <NavItem
+            to='/enfermero/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
             label='Ajustes'
             showFullContent={showFullContent}

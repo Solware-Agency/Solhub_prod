@@ -49,7 +49,7 @@ const CasesPage: React.FC = () => {
 
 			// Pasar el rol del usuario para filtrar en el servidor
 			if (profile?.role) {
-				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
+				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
 			}
 
 			// Si el usuario tiene una sede asignada, filtrar por esa sede

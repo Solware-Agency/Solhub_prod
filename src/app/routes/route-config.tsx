@@ -142,3 +142,29 @@ export const patologoRoutes: RouteConfig[] = [
     component: SettingsPage,
   },
 ];
+
+// Configuración de rutas para medico_tratante
+export const medicoTratanteRoutes: RouteConfig[] = [
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
+];
+
+// Configuración de rutas para enfermero
+export const enfermeroRoutes: RouteConfig[] = [
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
+];
