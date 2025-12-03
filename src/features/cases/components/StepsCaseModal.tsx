@@ -100,6 +100,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const isCitotecno = profile?.role === 'citotecno';
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';
+  const isMedicoTratante = profile?.role === 'medico_tratante';
 
   const isCitoAdmin =
     profile?.role === 'residente' && case_?.exam_type === 'Citología';
@@ -133,7 +134,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     const stepsList = [];
 
     // Paso 1: Datos del paciente - Solo para empleados (no residentes)
-    if (!isEmployee && !isMedicowner) {
+    if (!isEmployee && !isMedicowner && !isMedicoTratante) {
       stepsList.push({
         id: 'patient',
         title: 'Datos',
@@ -143,7 +144,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     // Paso 2: Marcar como completado - Solo para empleados (no residentes)
-    if (!isEmployee && !isMedicowner) {
+    if (!isEmployee && !isMedicowner && !isMedicoTratante) {
       stepsList.push({
         id: 'complete',
         title: 'Marcar',
@@ -1560,7 +1561,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         )}
       </AnimatePresence>
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          className={isFullscreen ? 'z-[999999999999999999]' : ''}
+        >
           <DialogHeader>
             <DialogTitle>Confirmar descargar PDF</DialogTitle>
             <DialogDescription>

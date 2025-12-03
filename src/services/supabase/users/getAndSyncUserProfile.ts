@@ -53,11 +53,11 @@ export const getAndSyncUserProfile = async (userId: string, userMeta: any): Prom
 		console.log('[🔄] Display name synced')
 	}
 
-	return {
-		...profile,
-		role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner',
-		created_at: profile.created_at || new Date().toISOString(),
-		updated_at: profile.updated_at || new Date().toISOString(),
+		return {
+			...profile,
+			role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+			created_at: profile.created_at || new Date().toISOString(),
+			updated_at: profile.updated_at || new Date().toISOString(),
 		estado: (profile.estado as 'pendiente' | 'aprobado') || undefined,
 	}
 }

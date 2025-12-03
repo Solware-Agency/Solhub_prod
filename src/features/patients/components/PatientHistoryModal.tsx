@@ -12,6 +12,7 @@ import {
   CheckSquare,
   Square,
   Eye,
+  Activity,
 } from 'lucide-react';
 import {
   Dialog,
@@ -19,6 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@shared/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@shared/components/ui/tabs';
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -37,8 +44,10 @@ import { formatCurrency } from '@shared/utils/number-utils';
 import { usePDFDownload } from '@shared/hooks/usePDFDownload';
 import { useToast } from '@shared/hooks/use-toast';
 import JSZip from 'jszip';
+import TriageHistoryTab from '@features/triaje/components/TriageHistoryTab';
 
 import type { Patient } from '@/services/supabase/patients/patients-service';
+import { FeatureGuard } from '@shared/components/FeatureGuard';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -59,6 +68,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     current: 0,
     total: 0,
   });
+  const [activeTab, setActiveTab] = useState('cases');
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -387,11 +397,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               onClick={onClose}
             >
               <div
-                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-input'
+                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-input'
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className='sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10'>
+                <div className='sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10 rounded-lg'>
                   <div className='flex items-center justify-between'>
                     <div>
                       <div>
@@ -415,7 +425,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 {/* Content */}
                 <div className='flex-1 overflow-hidden flex flex-col'>
                   {/* Patient Info */}
-                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-black'>
+                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-black flex-shrink-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
                       <div className='flex items-center gap-3'>
                         <div className='p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full'>
@@ -477,301 +487,362 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Search and Filters */}
-                  <div className='p-4 border-b border-gray-200 dark:border-gray-700'>
-                    <div className='flex flex-col sm:flex-row gap-3'>
-                      <div className='relative flex-1'>
-                        <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
-                        <Input
-                          type='text'
-                          placeholder='Buscar por código, tipo, médico...'
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className='pl-10'
-                        />
-                      </div>
-                      {filteredCases && filteredCases.length > 0 && (
-                        <div className='flex gap-2'>
-                          <Button
-                            variant='outline'
-                            onClick={toggleSelectAll}
-                            disabled={
-                              isDownloadingMultiple ||
-                              isGeneratingPDF ||
-                              isSaving
-                            }
-                          >
-                            {selectedCases.size ===
-                            filteredCases.filter(
-                              (c) => c.doc_aprobado === 'aprobado',
-                            ).length ? (
-                              <>
-                                <Square className='h-4 w-4 mr-2' />
-                                Deseleccionar todos
-                              </>
-                            ) : (
-                              <>
-                                <CheckSquare className='h-4 w-4 mr-2' />
-                                Seleccionar todos
-                              </>
-                            )}
-                          </Button>
-                          {selectedCases.size > 0 && (
-                            <Button
-                              variant='default'
-                              onClick={handleDownloadMultiplePDFs}
-                              disabled={
-                                isDownloadingMultiple ||
-                                isGeneratingPDF ||
-                                isSaving
-                              }
+                  {/* Tabs */}
+                  <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
+                    <Tabs
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                      className='w-full h-full flex flex-col overflow-hidden'
+                    >
+                      <FeatureGuard feature='hasTriaje'>
+                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                          <TabsList className='grid w-full grid-cols-2 gap-5'>
+                            <TabsTrigger
+                              value='cases'
+                              className='flex items-center gap-2'
                             >
-                              {isDownloadingMultiple ? (
-                                <>
-                                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                  Descargando ({downloadProgress.current}/
-                                  {downloadProgress.total})...
-                                </>
-                              ) : (
-                                <>
-                                  <Download className='h-4 w-4 mr-2' />
-                                  Descargar ({selectedCases.size})
-                                </>
-                              )}
-                            </Button>
-                          )}
+                              <FileText className='h-4 w-4' />
+                              Historial de Casos
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value='triage'
+                              className='flex items-center gap-2'
+                            >
+                              <Activity className='h-4 w-4' />
+                              Datos de Triaje
+                            </TabsTrigger>
+                          </TabsList>
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      </FeatureGuard>
 
-                  {/* Cases List */}
-                  <div className='flex-1 overflow-y-auto p-4'>
-                    {isLoading ? (
-                      <div className='flex items-center justify-center py-12'>
-                        <div className='flex items-center gap-3'>
-                          <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
-                          <span className='text-lg text-gray-700 dark:text-gray-300'>
-                            Cargando casos...
-                          </span>
-                        </div>
-                      </div>
-                    ) : error ? (
-                      <div className='text-center py-12'>
-                        <div className='text-red-500 dark:text-red-400'>
-                          <p className='text-lg font-medium'>
-                            Error al cargar los casos
-                          </p>
-                          <p className='text-sm mt-2'>
-                            Verifica tu conexión a internet o contacta al
-                            administrador
-                          </p>
-                        </div>
-                        {searchTerm && (
-                          <Button
-                            onClick={() => setSearchTerm('')}
-                            variant='outline'
-                            className='mt-4'
-                          >
-                            Limpiar búsqueda
-                          </Button>
-                        )}
-                      </div>
-                    ) : filteredCases.length === 0 ? (
-                      <div className='text-center py-12'>
-                        <div className='text-gray-500 dark:text-gray-400'>
-                          <FileText className='h-12 w-12 mx-auto mb-4 opacity-50' />
-                          <p className='text-lg font-medium'>
-                            No se encontraron casos
-                          </p>
-                          <p className='text-sm mt-2'>
-                            {searchTerm
-                              ? 'No hay casos que coincidan con tu búsqueda'
-                              : 'Este paciente no tiene casos registrados'}
-                          </p>
-                        </div>
-                        {searchTerm && (
-                          <Button
-                            onClick={() => setSearchTerm('')}
-                            variant='outline'
-                            className='mt-4'
-                          >
-                            Limpiar búsqueda
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className='space-y-4'>
-                        {filteredCases.map(
-                          (caseItem: MedicalCaseWithPatient) => (
-                            <>
-                              <div
-                                key={caseItem.id}
-                                className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                                  selectedCases.has(caseItem.id)
-                                    ? 'border-primary border-2'
-                                    : 'border-input'
-                                }`}
-                              >
-                                <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
-                                  <div className='flex items-center gap-2'>
-                                    {caseItem.doc_aprobado === 'aprobado' && (
-                                      <Checkbox
-                                        checked={selectedCases.has(caseItem.id)}
-                                        onCheckedChange={() =>
-                                          toggleCaseSelection(caseItem.id)
-                                        }
-                                        disabled={
-                                          isDownloadingMultiple ||
-                                          isGeneratingPDF ||
-                                          isSaving
-                                        }
-                                        className='mr-1'
-                                      />
+                      {/* Tab: Historial de Casos */}
+                      <TabsContent
+                        value='cases'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                      >
+                        {/* Search and Filters */}
+                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                          <div className='flex flex-col sm:flex-row gap-3'>
+                            <div className='relative flex-1'>
+                              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+                              <Input
+                                type='text'
+                                placeholder='Buscar por código, tipo, médico...'
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className='pl-10'
+                              />
+                            </div>
+                            {filteredCases && filteredCases.length > 0 && (
+                              <div className='flex gap-2'>
+                                <Button
+                                  variant='outline'
+                                  onClick={toggleSelectAll}
+                                  disabled={
+                                    isDownloadingMultiple ||
+                                    isGeneratingPDF ||
+                                    isSaving
+                                  }
+                                >
+                                  {selectedCases.size ===
+                                  filteredCases.filter(
+                                    (c) => c.doc_aprobado === 'aprobado',
+                                  ).length ? (
+                                    <>
+                                      <Square className='h-4 w-4 mr-2' />
+                                      Deseleccionar todos
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckSquare className='h-4 w-4 mr-2' />
+                                      Seleccionar todos
+                                    </>
+                                  )}
+                                </Button>
+                                {selectedCases.size > 0 && (
+                                  <Button
+                                    variant='default'
+                                    onClick={handleDownloadMultiplePDFs}
+                                    disabled={
+                                      isDownloadingMultiple ||
+                                      isGeneratingPDF ||
+                                      isSaving
+                                    }
+                                  >
+                                    {isDownloadingMultiple ? (
+                                      <>
+                                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                        Descargando ({downloadProgress.current}/
+                                        {downloadProgress.total})...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Download className='h-4 w-4 mr-2' />
+                                        Descargar ({selectedCases.size})
+                                      </>
                                     )}
-                                    {caseItem.code && (
-                                      <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
-                                        {caseItem.code}
-                                      </span>
-                                    )}
-                                    <span
-                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                        caseItem.payment_status,
-                                      )}`}
-                                    >
-                                      {caseItem.payment_status}
-                                    </span>
-                                  </div>
-
-                                  <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
-                                    <Calendar className='h-4 w-4' />
-                                    {format(
-                                      new Date(
-                                        caseItem.created_at || caseItem.date,
-                                      ),
-                                      'dd/MM/yyyy',
-                                      { locale: es },
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Tipo de Examen
-                                    </p>
-                                    <p className='text-sm font-medium'>
-                                      {caseItem.exam_type}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Médico Tratante
-                                    </p>
-                                    <p className='text-sm font-medium'>
-                                      {caseItem.treating_doctor}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Sede
-                                    </p>
-                                    <div className='mt-1'>
-                                      <BranchBadge branch={caseItem.branch} />
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Monto Total
-                                    </p>
-                                    <p className='text-sm font-medium'>
-                                      {formatCurrency(caseItem.total_amount)}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Tipo de Muestra
-                                    </p>
-                                    <p className='text-sm font-medium'>
-                                      {caseItem.sample_type}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Procedencia
-                                    </p>
-                                    <p className='text-sm font-medium'>
-                                      {caseItem.origin}
-                                    </p>
-                                  </div>
-
-                                  <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
-                                    <Button
-                                      onClick={() =>
-                                        handleCheckAndDownloadPDF(caseItem)
-                                      }
-                                      disabled={
-                                        isGeneratingPDF ||
-                                        isSaving ||
-                                        caseItem.doc_aprobado !== 'aprobado' ||
-                                        selectedCases.size > 0 ||
-                                        isDownloadingMultiple
-                                      }
-                                    >
-                                      {isGeneratingPDF || isSaving ? (
-                                        <>
-                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                          Generando...
-                                        </>
-                                      ) : caseItem.doc_aprobado !==
-                                        'aprobado' ? (
-                                        <>
-                                          <Download className='h-4 w-4 mr-2' />
-                                          No tiene PDF
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Download className='h-4 w-4 mr-2' />
-                                          Descargar PDF
-                                        </>
-                                      )}
-                                    </Button>
-                                    <Button
-                                      onClick={() =>
-                                        setPreviewingCaseId(caseItem.id)
-                                      }
-                                      disabled={
-                                        isSaving ||
-                                        !caseItem.informepdf_url ||
-                                        caseItem.doc_aprobado !== 'aprobado'
-                                      }
-                                    >
-                                      <Eye className='w-4 h-4' />
-                                    </Button>
-                                  </div>
-                                </div>
-
-                                {caseItem.diagnostico && (
-                                  <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-                                    <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                      Diagnóstico
-                                    </p>
-                                    <p className='text-sm mt-1'>
-                                      {caseItem.diagnostico}
-                                    </p>
-                                  </div>
+                                  </Button>
                                 )}
                               </div>
-                            </>
-                          ),
-                        )}
-                      </div>
-                    )}
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Cases List */}
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0'>
+                          {isLoading ? (
+                            <div className='flex items-center justify-center py-12'>
+                              <div className='flex items-center gap-3'>
+                                <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
+                                <span className='text-lg text-gray-700 dark:text-gray-300'>
+                                  Cargando casos...
+                                </span>
+                              </div>
+                            </div>
+                          ) : error ? (
+                            <div className='text-center py-12'>
+                              <div className='text-red-500 dark:text-red-400'>
+                                <p className='text-lg font-medium'>
+                                  Error al cargar los casos
+                                </p>
+                                <p className='text-sm mt-2'>
+                                  Verifica tu conexión a internet o contacta al
+                                  administrador
+                                </p>
+                              </div>
+                              {searchTerm && (
+                                <Button
+                                  onClick={() => setSearchTerm('')}
+                                  variant='outline'
+                                  className='mt-4'
+                                >
+                                  Limpiar búsqueda
+                                </Button>
+                              )}
+                            </div>
+                          ) : filteredCases.length === 0 ? (
+                            <div className='text-center py-12'>
+                              <div className='text-gray-500 dark:text-gray-400'>
+                                <FileText className='h-12 w-12 mx-auto mb-4 opacity-50' />
+                                <p className='text-lg font-medium'>
+                                  No se encontraron casos
+                                </p>
+                                <p className='text-sm mt-2'>
+                                  {searchTerm
+                                    ? 'No hay casos que coincidan con tu búsqueda'
+                                    : 'Este paciente no tiene casos registrados'}
+                                </p>
+                              </div>
+                              {searchTerm && (
+                                <Button
+                                  onClick={() => setSearchTerm('')}
+                                  variant='outline'
+                                  className='mt-4'
+                                >
+                                  Limpiar búsqueda
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className='space-y-4'>
+                              {filteredCases.map(
+                                (caseItem: MedicalCaseWithPatient) => (
+                                  <>
+                                    <div
+                                      key={caseItem.id}
+                                      className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                        selectedCases.has(caseItem.id)
+                                          ? 'border-primary border-2'
+                                          : 'border-input'
+                                      }`}
+                                    >
+                                      <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
+                                        <div className='flex items-center gap-2'>
+                                          {caseItem.doc_aprobado ===
+                                            'aprobado' && (
+                                            <Checkbox
+                                              checked={selectedCases.has(
+                                                caseItem.id,
+                                              )}
+                                              onCheckedChange={() =>
+                                                toggleCaseSelection(caseItem.id)
+                                              }
+                                              disabled={
+                                                isDownloadingMultiple ||
+                                                isGeneratingPDF ||
+                                                isSaving
+                                              }
+                                              className='mr-1'
+                                            />
+                                          )}
+                                          {caseItem.code && (
+                                            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                                              {caseItem.code}
+                                            </span>
+                                          )}
+                                          <span
+                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                              caseItem.payment_status,
+                                            )}`}
+                                          >
+                                            {caseItem.payment_status}
+                                          </span>
+                                        </div>
+
+                                        <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
+                                          <Calendar className='h-4 w-4' />
+                                          {format(
+                                            new Date(
+                                              caseItem.created_at ||
+                                                caseItem.date,
+                                            ),
+                                            'dd/MM/yyyy',
+                                            { locale: es },
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Tipo de Examen
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {caseItem.exam_type}
+                                          </p>
+                                        </div>
+
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Médico Tratante
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {caseItem.treating_doctor}
+                                          </p>
+                                        </div>
+
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Sede
+                                          </p>
+                                          <div className='mt-1'>
+                                            <BranchBadge
+                                              branch={caseItem.branch}
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Monto Total
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {formatCurrency(
+                                              caseItem.total_amount,
+                                            )}
+                                          </p>
+                                        </div>
+
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Tipo de Muestra
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {caseItem.sample_type}
+                                          </p>
+                                        </div>
+
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Procedencia
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {caseItem.origin}
+                                          </p>
+                                        </div>
+
+                                        <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
+                                          <Button
+                                            onClick={() =>
+                                              handleCheckAndDownloadPDF(
+                                                caseItem,
+                                              )
+                                            }
+                                            disabled={
+                                              isGeneratingPDF ||
+                                              isSaving ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado' ||
+                                              selectedCases.size > 0 ||
+                                              isDownloadingMultiple
+                                            }
+                                          >
+                                            {isGeneratingPDF || isSaving ? (
+                                              <>
+                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                                Generando...
+                                              </>
+                                            ) : caseItem.doc_aprobado !==
+                                              'aprobado' ? (
+                                              <>
+                                                <Download className='h-4 w-4 mr-2' />
+                                                No tiene PDF
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Download className='h-4 w-4 mr-2' />
+                                                Descargar PDF
+                                              </>
+                                            )}
+                                          </Button>
+                                          <Button
+                                            onClick={() =>
+                                              setPreviewingCaseId(caseItem.id)
+                                            }
+                                            disabled={
+                                              isSaving ||
+                                              !caseItem.informepdf_url ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado'
+                                            }
+                                          >
+                                            <Eye className='w-4 h-4' />
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {caseItem.diagnostico && (
+                                        <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Diagnóstico
+                                          </p>
+                                          <p className='text-sm mt-1'>
+                                            {caseItem.diagnostico}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                ),
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+
+                      {/* Tab: Datos de Triaje */}
+                      <TabsContent
+                        value='triage'
+                        className='mt-0 flex-1 overflow-y-auto flex flex-col'
+                      >
+                        <div className='p-4'>
+                          <TriageHistoryTab
+                            patientId={patient?.id || ''}
+                            isOpen={isOpen}
+                          />
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
                 </div>
               </div>
