@@ -26,6 +26,9 @@ export const PaymentMethodItem = memo(
 		const paymentMethod = useWatch({ control, name: `payments.${index}.method` })
 		const { laboratory } = useLaboratory()
 
+		// Debug: Log cuando cambia el método
+		console.log(`PaymentMethodItem ${index} - Method:`, paymentMethod)
+
 		// Obtener métodos de pago desde la configuración del laboratorio
 		const paymentMethodsOptions = useMemo(() => {
 			const paymentMethods = laboratory?.config?.paymentMethods || []
@@ -48,6 +51,7 @@ export const PaymentMethodItem = memo(
 		// Use useMemo to prevent unnecessary recalculations
 		const { currencyLabel } = useMemo(() => {
 			const isBolivares = isBolivaresMethod(paymentMethod)
+			console.log(`PaymentMethodItem ${index} - isBolivares:`, isBolivares, 'currencyLabel:', isBolivares ? 'Bs' : '$')
 			return {
 				isBolivares,
 				currencyLabel: isBolivares ? 'Bs' : '$',
