@@ -4,14 +4,15 @@ import { parseDecimalNumber } from '@shared/utils/number-utils'
 type Payment = FormValues['payments'][0]
 
 // List of payment methods that are in bolívares (VES)
-const BOLIVARES_METHODS = ['Punto de venta', 'Pago móvil', 'Bs en efectivo']
+const BOLIVARES_METHODS = ['punto de venta', 'pago móvil', 'pago movil', 'bs en efectivo', 'transferencia']
 
 /**
  * Checks if a payment method is in bolívares (VES)
  */
 export const isBolivaresMethod = (method: string | undefined): boolean => {
 	if (!method) return false
-	return BOLIVARES_METHODS.includes(method)
+	const normalized = method.toLowerCase().trim()
+	return BOLIVARES_METHODS.includes(normalized)
 }
 
 /**

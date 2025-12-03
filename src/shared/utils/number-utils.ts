@@ -184,14 +184,15 @@ export const createNumberInputHandler = (onChange: (value: number) => void) => {
 }
 
 /**
- * Detects if a payment method is in Bolívares (VES)
+ * Checks if a payment method uses VES (bolívares)
  * @param method Payment method string
  * @returns True if payment is in VES
  */
 export const isVESPaymentMethod = (method: string | null | undefined): boolean => {
 	if (!method) return false
-	const vesMethods = ['Punto de venta', 'Pago móvil', 'Bs en efectivo']
-	return vesMethods.includes(method)
+	const vesMethods = ['punto de venta', 'pago móvil', 'pago movil', 'bs en efectivo', 'transferencia']
+	const normalized = method.toLowerCase().trim()
+	return vesMethods.includes(normalized)
 }
 
 /**

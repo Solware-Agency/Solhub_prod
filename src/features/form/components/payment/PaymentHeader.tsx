@@ -8,6 +8,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useEffect } from 'react'
 import { createCalculatorInputHandler } from '@shared/utils/number-utils'
+import { isBolivaresMethod } from '@features/form/lib/payment/payment-utils'
 
 interface PaymentHeaderProps {
 	control: Control<FormValues>
@@ -27,6 +28,10 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 	const branch = useWatch({
 		control,
 		name: 'branch',
+	})
+	const payments = useWatch({
+		control,
+		name: 'payments',
 	})
 
 	// Obtener branches desde la configuración del laboratorio
@@ -57,6 +62,18 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 		}
 		return null
 	}, [totalAmount, exchangeRate])
+
+	// Determinar si todos los métodos de pago son en Bs
+	const currencyLabel = useMemo(() => {
+		if (!payments || payments.length === 0) return '$'
+		
+		// Verificar si todos los métodos son en Bs
+		const allBolivares = payments.every(payment => 
+			payment.method && isBolivaresMethod(payment.method)
+		)
+		
+		return allBolivares ? 'Bs' : '$'
+	}, [payments])
 
 	// Memoize the amount change handler to prevent re-renders
 
@@ -94,7 +111,7 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 				name="totalAmount"
 				render={({ field }) => (
 					<FormItem className="w-full">
-						<FormLabel className="text-sm sm:text-base">Monto Total $</FormLabel>
+						<FormLabel className="text-sm sm:text-base">Monto Total {currencyLabel}</FormLabel>
 						<FormControl>
 							{(() => {
 								const calculatorHandler = createCalculatorInputHandler(field.value || 0, field.onChange)
