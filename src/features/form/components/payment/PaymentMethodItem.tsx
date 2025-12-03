@@ -21,15 +21,12 @@ interface PaymentMethodItemProps {
 	exchangeRate?: number
 }
 
-export const PaymentMethodItem = memo(
-	({ control, index, remove, inputStyles, fieldsLength, className, exchangeRate }: PaymentMethodItemProps) => {
-		const paymentMethod = useWatch({ control, name: `payments.${index}.method` })
-		const { laboratory } = useLaboratory()
+	export const PaymentMethodItem = memo(
+		({ control, index, remove, inputStyles, fieldsLength, className, exchangeRate }: PaymentMethodItemProps) => {
+			const paymentMethod = useWatch({ control, name: `payments.${index}.method` })
+			const { laboratory } = useLaboratory()
 
-		// Debug: Log cuando cambia el método
-		console.log(`PaymentMethodItem ${index} - Method:`, paymentMethod)
-
-		// Obtener métodos de pago desde la configuración del laboratorio
+			// Obtener métodos de pago desde la configuración del laboratorio
 		const paymentMethodsOptions = useMemo(() => {
 			const paymentMethods = laboratory?.config?.paymentMethods || []
 			// Si hay métodos configurados, usarlos; si no, usar valores por defecto
