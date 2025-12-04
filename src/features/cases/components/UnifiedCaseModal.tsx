@@ -994,15 +994,18 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		if (method && amount) {
 			currentPaymentMethods.push({ method, amount: Number(amount || 0), reference: reference || '' })
 		}
-	}		// Use current payment methods if not editing, otherwise use edited ones
-		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
-		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
-		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
-		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-		const remainingVES = remainingUSD < 0.01 ? 0 : remainingUSD * exchangeRate
-		const isPaymentComplete = totalPaidUSD >= totalAmount
+	}
 
-		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno'
+	// Use current payment methods if not editing, otherwise use edited ones
+	const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
+	const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
+	const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
+	// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
+	const hasValidExchangeRate = exchangeRate > 0
+	const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * exchangeRate : 0
+	const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount
+
+	const notShow = profile?.role === 'residente' || profile?.role === 'citotecno'
 		// const isResidente = profile?.role === 'residente'
 		// const isEmployee = profile?.role === 'employee'
 		// const isOwner = profile?.role === 'owner'
@@ -1531,6 +1534,23 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									{/* Financial Information */}
 									{!notShow && (
 										<InfoSection title="Información Financiera" icon={CreditCard}>
+											{/* Warning de tasa de cambio no disponible */}
+											{!hasValidExchangeRate && (
+												<div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+													<div className="flex items-start gap-2">
+														<AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+														<div>
+															<p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+																Tasa de cambio no disponible
+															</p>
+															<p className="text-xs text-yellow-700 dark:text-yellow-300">
+																Este caso fue creado sin tasa de cambio. Los cálculos en bolívares no están disponibles.
+															</p>
+														</div>
+													</div>
+												</div>
+											)}
+
 											<div className="space-y-4">
 												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto total:</span>
