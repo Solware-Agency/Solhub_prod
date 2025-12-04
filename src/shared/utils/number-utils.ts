@@ -202,8 +202,10 @@ export const isVESPaymentMethod = (method: string | null | undefined): boolean =
  * @returns Amount in USD
  */
 export const convertVEStoUSD = (vesAmount: number, exchangeRate: number): number => {
+	if (!vesAmount || vesAmount === null || vesAmount === undefined) return 0
 	if (!exchangeRate || exchangeRate <= 0) return 0
-	return vesAmount / exchangeRate
+	const result = vesAmount / exchangeRate
+	return isNaN(result) ? 0 : result
 }
 
 /**
@@ -213,8 +215,10 @@ export const convertVEStoUSD = (vesAmount: number, exchangeRate: number): number
  * @returns Amount in VES
  */
 export const convertUSDtoVES = (usdAmount: number, exchangeRate: number): number => {
+	if (!usdAmount || usdAmount === null || usdAmount === undefined) return 0
 	if (!exchangeRate || exchangeRate <= 0) return 0
-	return usdAmount * exchangeRate
+	const result = usdAmount * exchangeRate
+	return isNaN(result) ? 0 : result
 }
 
 /**
@@ -307,6 +311,9 @@ export const parseAndCorrectDecimalNumber = (
  * @returns New amount value
  */
 export const addDigitToAmount = (currentAmount: number, digit: string): number => {
+	if (currentAmount === null || currentAmount === undefined || isNaN(currentAmount)) {
+		currentAmount = 0
+	}
 	// Convert current amount to cents (multiply by 100)
 	const currentCents = Math.round(currentAmount * 100)
 
@@ -329,6 +336,9 @@ export const addDigitToAmount = (currentAmount: number, digit: string): number =
  * @returns New amount value
  */
 export const removeLastDigitFromAmount = (currentAmount: number): number => {
+	if (currentAmount === null || currentAmount === undefined || isNaN(currentAmount)) {
+		return 0
+	}
 	// Convert to cents
 	const currentCents = Math.round(currentAmount * 100)
 
@@ -347,7 +357,9 @@ export const removeLastDigitFromAmount = (currentAmount: number): number => {
  */
 export const formatCalculatorAmount = (amount: number): string => {
 	if (amount === null || amount === undefined || isNaN(amount)) return '0,00'
-	return amount.toFixed(2).replace('.', ',')
+	const safeAmount = Number(amount)
+	if (isNaN(safeAmount)) return '0,00'
+	return safeAmount.toFixed(2).replace('.', ',')
 }
 
 /**
