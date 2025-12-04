@@ -67,6 +67,7 @@ export const parseDecimalNumber = (value: string | number): number => {
  * @returns Formatted string
  */
 export const formatNumberForInput = (value: number | string, decimals: number = 2): string => {
+	if (value === null || value === undefined) return ''
 	const num = parseDecimalNumber(value)
 	if (num === 0) return ''
 	// Return without decimals if it's a whole number, otherwise with decimals
@@ -265,9 +266,9 @@ export const autoCorrectDecimalAmount = (
 				return {
 					correctedAmount,
 					wasCorreted: true,
-					reason: `Monto ${amount} Bs (${usdEquivalent.toFixed(
+					reason: `Monto ${amount} Bs (${usdEquivalent?.toFixed(
 						2,
-					)} USD) parecía muy alto, corregido a ${correctedAmount} Bs (${correctedUSD.toFixed(2)} USD)`,
+					) || 'N/A'} USD) parecía muy alto, corregido a ${correctedAmount} Bs (${correctedUSD?.toFixed(2) || 'N/A'} USD)`,
 				}
 			}
 		}
@@ -345,6 +346,7 @@ export const removeLastDigitFromAmount = (currentAmount: number): number => {
  * @returns Formatted string (e.g., "10,50")
  */
 export const formatCalculatorAmount = (amount: number): string => {
+	if (amount === null || amount === undefined || isNaN(amount)) return '0,00'
 	return amount.toFixed(2).replace('.', ',')
 }
 
@@ -465,13 +467,17 @@ export const createCalculatorInputHandlerWithCurrency = (
 
 	// Calculate conversion text (both directions) when we have exchange rate
 	let conversionText = ''
-	if (exchangeRate && currentValue > 0) {
+	if (exchangeRate && exchangeRate > 0 && currentValue > 0) {
 		if (isVES) {
 			const usdAmount = convertVEStoUSD(currentValue, exchangeRate)
-			conversionText = `≈ $${usdAmount.toFixed(2)} USD`
+			if (usdAmount && !isNaN(usdAmount)) {
+				conversionText = `≈ $${usdAmount.toFixed(2)} USD`
+			}
 		} else {
 			const vesAmount = convertUSDtoVES(currentValue, exchangeRate)
-			conversionText = `≈ ${vesAmount.toFixed(2)} Bs`
+			if (vesAmount && !isNaN(vesAmount)) {
+				conversionText = `≈ ${vesAmount.toFixed(2)} Bs`
+			}
 		}
 	}
 

@@ -1881,7 +1881,7 @@ if (!currentCase) {
 																							Monto
 																						</span>
 																						<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
-																							${payment.amount.toFixed(2)}
+																							${(payment.amount || 0).toFixed(2)}
 																						</span>
 																					</div>
 																					<div className="flex flex-col">
