@@ -233,28 +233,40 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			enabled: !!case_?.id && isOpen,
 		})
 
-		// Query to get the updated case data after saving
-		const { data: updatedCaseData, refetch: refetchCaseData } = useQuery({
-			queryKey: ['case-data', case_?.id],
-			queryFn: async () => {
-				if (!case_?.id) return null
+	// Query to get the updated case data after saving
+	const { data: updatedCaseData, refetch: refetchCaseData, isError: isCaseError } = useQuery({
+		queryKey: ['case-data', case_?.id],
+		queryFn: async () => {
+			if (!case_?.id) return null
 
-				// Usar la función findCaseByCode en lugar de la vista eliminada
-				try {
-					const caseData = await findCaseByCode(case_.code || '')
-					return caseData
-				} catch (error) {
-					console.error('Error fetching updated case data:', error)
-					return null
-				}
-			},
-			enabled: !!case_?.id && isOpen,
-		})
+			// Usar la función findCaseByCode en lugar de la vista eliminada
+			try {
+				const caseData = await findCaseByCode(case_.code || '')
+				return caseData
+			} catch (error) {
+				console.error('Error fetching updated case data:', error)
+				return null
+			}
+		},
+		enabled: !!case_?.id && isOpen,
+		retry: 1,
+	})
 
-		// Use updated case data if available, otherwise fall back to original case
-		const currentCase = updatedCaseData || case_
+	// Use updated case data if available, otherwise fall back to original case
+	const currentCase = updatedCaseData || case_
 
-		// Query to get change logs for this record
+	// Validación temprana: si no hay caso y hubo error, cerrar modal
+	React.useEffect(() => {
+		if (isOpen && !currentCase && isCaseError) {
+			console.error('No se pudo cargar el caso, cerrando modal...')
+			toast({
+				title: '❌ Error al cargar el caso',
+				description: 'No se pudo obtener la información del caso. Por favor intenta de nuevo.',
+				variant: 'destructive',
+			})
+			onClose()
+		}
+	}, [isOpen, currentCase, isCaseError, onClose, toast])		// Query to get change logs for this record
 		const {
 			data: changelogsData,
 			isLoading: isLoadingChangelogs,
@@ -836,31 +848,34 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			})
 		}
 
-		const handleSendWhatsApp = () => {
-			if (!case_?.telefono) {
-				toast({
-					title: '❌ Error',
-					description: 'Este caso no tiene un número de teléfono asociado.',
-					variant: 'destructive',
-				})
-				return
-			}
-
-			// Create WhatsApp message with case information
-			const message = `Hola ${case_.nombre}, le escribimos desde el laboratorio conspat por su caso ${
-				case_.code || 'N/A'
-			}.`
-
-			// Format phone number (remove spaces, dashes, etc.)
-			const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || ''
-			const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
-
-			window.open(whatsappLink, '_blank')
-
+	const handleSendWhatsApp = () => {
+		// Validación mejorada para teléfono
+		const phoneValue = case_?.telefono?.trim()
+		
+		if (!phoneValue || phoneValue === '0' || phoneValue === '' || phoneValue.length < 7) {
 			toast({
-				title: '📱 WhatsApp abierto',
-				description: 'Se ha abierto WhatsApp con los detalles del caso.',
+				title: '❌ Teléfono inválido',
+				description: 'Este caso no tiene un número de teléfono válido asociado.',
+				variant: 'destructive',
 			})
+			return
+	}
+
+	// Create WhatsApp message with case information
+	const message = `Hola ${case_?.nombre || 'estimado/a'}, le escribimos desde el laboratorio conspat por su caso ${
+		case_?.code || 'N/A'
+	}.`
+
+	// Format phone number (remove spaces, dashes, etc.)
+	const cleanPhone = phoneValue.replace(/[\s-()]/g, '')
+	const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+
+	window.open(whatsappLink, '_blank')
+
+	toast({
+		title: '📱 WhatsApp abierto',
+		description: 'Se ha abierto WhatsApp con los detalles del caso.',
+	})
 		}
 
 		const getFieldLabel = (field: string): string => {
@@ -967,16 +982,37 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				case 'cancelado':
 					return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
 				default:
-					return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-			}
-		}
+			return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+	}
+}
 
-		if (!currentCase) return null
+// Si no hay caso, mostrar loader o no renderizar nada
+if (!currentCase) {
+	if (isOpen) {
+		return (
+			<AnimatePresence>
+				<motion.div
+					viewport={{ margin: '0px' }}
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+					className={`fixed inset-0 bg-black/50 ${
+						isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
+					} flex items-center justify-center`}
+				>
+					<div className="bg-white/90 dark:bg-background/70 backdrop-blur-[10px] rounded-lg p-8 flex flex-col items-center gap-4">
+						<Loader2 className="w-8 h-8 animate-spin text-primary" />
+						<p className="text-gray-700 dark:text-gray-300">Cargando caso...</p>
+					</div>
+				</motion.div>
+			</AnimatePresence>
+		)
+	}
+	return null
+}
 
-		// PDF functionality temporarily disabled in new structure
-		// const handleRedirectToPDF = async (caseId: string) => { ... }
-
-	// Calculate financial information
+// PDF functionality temporarily disabled in new structure
+// const handleRedirectToPDF = async (caseId: string) => { ... }	// Calculate financial information
 	const totalAmount = Number(currentCase?.total_amount || 0)
 	const exchangeRate = Number(currentCase?.exchange_rate || 36.5)
 
@@ -991,17 +1027,22 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const amount = currentCase[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number
 		const reference = currentCase[`payment_reference_${i}` as keyof MedicalCaseWithPatient] as string
 
-		if (method && amount) {
-			currentPaymentMethods.push({ method, amount: Number(amount || 0), reference: reference || '' })
+		// Solo agregar si method y amount son válidos
+		if (method && amount && !isNaN(Number(amount))) {
+			currentPaymentMethods.push({ 
+				method, 
+				amount: Number(amount), 
+				reference: reference || '' 
+			})
 		}
 	}
 
 	// Use current payment methods if not editing, otherwise use edited ones
 	const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
-	const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
+	const hasValidExchangeRate = exchangeRate > 0
+	const totalPaidUSD = hasValidExchangeRate ? calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate) : 0
 	const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
 	// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-	const hasValidExchangeRate = exchangeRate > 0
 	const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * exchangeRate : 0
 	const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount
 
@@ -1352,7 +1393,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											</div>
 											<InfoRow
 												label="Teléfono"
-												value={currentCase.telefono || ''}
+												value={currentCase.telefono && currentCase.telefono !== '0' ? currentCase.telefono : 'Sin teléfono'}
 												field="telefono"
 												isEditing={isEditing}
 												editedValue={editedCase.telefono ?? null}
