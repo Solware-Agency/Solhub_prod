@@ -93,8 +93,19 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 		switch (value.mode) {
 			case 'today':
 				return 'Hoy'
-			case 'month':
-				return 'Este Mes'
+			case 'month': {
+				// Check if the selected month is the current month
+				const now = new Date()
+				const isCurrentMonth =
+					value.start.getMonth() === now.getMonth() && value.start.getFullYear() === now.getFullYear()
+
+				if (isCurrentMonth) {
+					return 'Este Mes'
+				} else {
+					// Show the month name and year for other months
+					return format(value.start, 'MMMM yyyy', { locale: es })
+				}
+			}
 			case 'day':
 				return format(value.start, 'dd/MM/yyyy', { locale: es })
 			case 'range':

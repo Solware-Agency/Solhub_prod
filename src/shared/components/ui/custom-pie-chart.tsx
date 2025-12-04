@@ -30,7 +30,9 @@ export const CustomPieChart: React.FC<CustomPieChartProps> = ({ data, total, isL
 	// formatCurrency is now imported from number-utils
 
 	// Función para obtener el color según el nombre de la sede
-	const getBranchColor = (branchName: string) => {
+	const getBranchColor = (branchName: string | null | undefined) => {
+		if (!branchName) return COLORS[5] // Default gray si no hay nombre
+		
 		const branchMap: Record<string, string> = {
 			STX: COLORS[0], // Pink
 			PMG: COLORS[1], // Purple

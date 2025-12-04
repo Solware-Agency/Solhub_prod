@@ -37,13 +37,34 @@ const StatDetailPanelFallback = () => (
 function MainHome() {
 	const navigate = useNavigate()
 	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
-	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
+	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end, selectedYear)
 	const { profile } = useUserProfile()
 	const [selectedStat, setSelectedStat] = useState<any>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 
+	// Mostrar error si falla la carga de estadísticas
 	if (error) {
-		console.error('Error loading dashboard stats:', error)
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-background">
+				<div className="bg-white dark:bg-card p-8 rounded-lg max-w-md text-center shadow-lg">
+					<div className="text-red-500 mb-4">
+						<AlertTriangle className="w-12 h-12 mx-auto mb-4" />
+					</div>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+						Error al cargar estadísticas
+					</h3>
+					<p className="text-gray-600 dark:text-gray-400 mb-4">
+						{error instanceof Error ? error.message : 'No se pudieron cargar las estadísticas del dashboard.'}
+					</p>
+					<button
+						onClick={() => window.location.reload()}
+						className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-none"
+					>
+						Reintentar
+					</button>
+				</div>
+			</div>
+		)
 	}
 
 	// formatCurrency is now imported from number-utils
@@ -168,9 +189,13 @@ function MainHome() {
 						description={`Total histórico: ${formatCurrency(stats?.totalRevenue || 0)}`}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
-							value: isLoading ? '...' : '+13%',
+							value: isLoading
+								? '...'
+								: `${stats?.revenueGrowthPercentage && stats.revenueGrowthPercentage >= 0 ? '+' : ''}${
+										stats?.revenueGrowthPercentage?.toFixed(1) || '0'
+								  }%`,
 							icon: <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-							positive: true,
+							positive: (stats?.revenueGrowthPercentage || 0) >= 0,
 						}}
 						onClick={() => handleStatCardClick('monthlyRevenue')}
 						className="col-span-1 sm:col-span-1 lg:col-span-3 row-span-1 lg:row-span-1 transition-none`"
@@ -185,9 +210,13 @@ function MainHome() {
 						description="Casos registrados"
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 						trend={{
-							value: isLoading ? '...' : `+${formatNumber(stats?.newPatientsThisMonth || 0)}`,
+							value: isLoading
+								? '...'
+								: `${stats?.casesGrowthPercentage && stats.casesGrowthPercentage >= 0 ? '+' : ''}${
+										stats?.casesGrowthPercentage?.toFixed(1) || '0'
+								  }%`,
 							icon: <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-							positive: true,
+							positive: (stats?.casesGrowthPercentage || 0) >= 0,
 						}}
 						onClick={() => handleStatCardClick('totalCases')}
 						className="col-span-1 sm:col-span-1 lg:col-span-3 row-span-1 lg:row-span-1"

@@ -48,7 +48,6 @@ interface PaymentMethodItemProps {
 		// Use useMemo to prevent unnecessary recalculations
 		const { currencyLabel } = useMemo(() => {
 			const isBolivares = isBolivaresMethod(paymentMethod)
-			console.log(`PaymentMethodItem ${index} - isBolivares:`, isBolivares, 'currencyLabel:', isBolivares ? 'Bs' : '$')
 			return {
 				isBolivares,
 				currencyLabel: isBolivares ? 'Bs' : '$',
