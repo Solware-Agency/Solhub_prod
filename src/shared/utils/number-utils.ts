@@ -15,7 +15,10 @@
  * @returns Parsed number or 0 if invalid
  */
 export const parseDecimalNumber = (value: string | number): number => {
-	if (typeof value === 'number') return value
+	if (value === null || value === undefined) return 0
+	if (typeof value === 'number') {
+		return isNaN(value) ? 0 : value
+	}
 	if (!value || typeof value !== 'string') return 0
 
 	// Remove any whitespace
@@ -482,12 +485,12 @@ export const createCalculatorInputHandlerWithCurrency = (
 	if (exchangeRate && exchangeRate > 0 && currentValue > 0) {
 		if (isVES) {
 			const usdAmount = convertVEStoUSD(currentValue, exchangeRate)
-			if (usdAmount && !isNaN(usdAmount)) {
+			if (usdAmount !== null && usdAmount !== undefined && !isNaN(usdAmount) && isFinite(usdAmount)) {
 				conversionText = `≈ $${usdAmount.toFixed(2)} USD`
 			}
 		} else {
 			const vesAmount = convertUSDtoVES(currentValue, exchangeRate)
-			if (vesAmount && !isNaN(vesAmount)) {
+			if (vesAmount !== null && vesAmount !== undefined && !isNaN(vesAmount) && isFinite(vesAmount)) {
 				conversionText = `≈ ${vesAmount.toFixed(2)} Bs`
 			}
 		}
