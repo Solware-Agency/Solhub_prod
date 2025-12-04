@@ -243,17 +243,11 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 							}
 						}
 					}
-					monthlyRevenue += totalPaidUSD
-				})
+				monthlyRevenue += totalPaidUSD
+			})
 
-				console.log('[DEBUG] monthlyRevenue calculation:', {
-					recordCount: transformedFilteredRecords?.length,
-					totalRevenue: monthlyRevenue,
-					dateRange: { start: filterStart, end: filterEnd },
-				})
-
-				// Calculate revenue by currency (Bs vs $) for filtered period
-				let monthlyRevenueBolivares = 0
+			// Calculate revenue by currency (Bs vs $) for filtered period
+			let monthlyRevenueBolivares = 0
 				let monthlyRevenueDollars = 0
 
 				transformedFilteredRecords?.forEach((record) => {
@@ -441,19 +435,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 							}
 						}
 
-						return sum + totalPaidUSD
-					}, 0)
+					return sum + totalPaidUSD
+				}, 0)
 
-					if (month === 0) {
-						// Debug para enero
-						console.log('[DEBUG] Enero tooltip calculation:', {
-							yearRecordsTotal: yearRecords.length,
-							filteredForJanuary: filteredMonthRecords.length,
-							januaryRevenue: monthRevenue,
-						})
-					}
-
-					// Check if this month is within the selected date range
+				// Check if this month is within the selected date range
 					const isSelected =
 						startDate && endDate ? monthDate >= startOfMonth(startDate) && monthDate <= endOfMonth(endDate) : false
 

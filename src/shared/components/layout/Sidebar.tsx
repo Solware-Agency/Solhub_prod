@@ -561,15 +561,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <div className='py-1'>
-                <NavItem
-                  to='/employee/triaje'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Triaje'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
 
@@ -628,15 +619,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <div className='py-1'>
-                <NavItem
-                  to='/cito/triaje'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Triaje'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
 
@@ -651,15 +633,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <div className='py-1'>
-                <NavItem
-                  to='/patolo/triaje'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Triaje'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
 
