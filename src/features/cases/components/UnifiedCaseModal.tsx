@@ -330,27 +330,27 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			enabled: !!case_?.id && isOpen && isChangelogOpen,
 		})
 
-		// Initialize edited case when currentCase changes or when entering edit mode
-		useEffect(() => {
-			if (currentCase && isEditing) {
-				// Initialize with current case data - separating patient and case data
-				setEditedCase({
-					// Patient data
-					nombre: currentCase.nombre,
-					cedula: currentCase.cedula,
-					telefono: currentCase.telefono,
-					patient_email: currentCase.patient_email,
-					edad: currentCase.edad,
-					// Case data
-					exam_type: currentCase.exam_type,
-					treating_doctor: currentCase.treating_doctor,
-					origin: currentCase.origin,
-					branch: currentCase.branch,
-					comments: currentCase.comments,
-					// Financial data
-					total_amount: currentCase.total_amount,
-					exchange_rate: currentCase.exchange_rate,
-				})
+	// Initialize edited case when currentCase changes or when entering edit mode
+	useEffect(() => {
+		if (currentCase && isEditing) {
+			// Initialize with current case data - separating patient and case data
+			setEditedCase({
+				// Patient data
+				nombre: currentCase.nombre ?? '',
+				cedula: currentCase.cedula ?? '',
+				telefono: currentCase.telefono ?? '',
+				patient_email: currentCase.patient_email ?? '',
+				edad: currentCase.edad ?? '',
+				// Case data
+				exam_type: currentCase.exam_type ?? '',
+				treating_doctor: currentCase.treating_doctor ?? '',
+				origin: currentCase.origin ?? '',
+				branch: currentCase.branch ?? '',
+				comments: currentCase.comments ?? '',
+				// Financial data
+				total_amount: currentCase.total_amount ?? 0,
+				exchange_rate: currentCase.exchange_rate ?? 36.5,
+			})
 
 				// Initialize payment methods from current case
 				const methods: PaymentMethod[] = []
@@ -976,27 +976,25 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// PDF functionality temporarily disabled in new structure
 		// const handleRedirectToPDF = async (caseId: string) => { ... }
 
-		// Calculate financial information
-		const totalAmount = currentCase?.total_amount || 0
-		const exchangeRate = currentCase?.exchange_rate || 0
+	// Calculate financial information
+	const totalAmount = Number(currentCase?.total_amount || 0)
+	const exchangeRate = Number(currentCase?.exchange_rate || 36.5)
 
-		// Calculate VES value for converter
-		const converterVesValue =
-			converterUsdValue && exchangeRate > 0 ? (parseFloat(converterUsdValue) * exchangeRate).toFixed(2) : ''
+	// Calculate VES value for converter
+	const converterVesValue =
+		converterUsdValue && exchangeRate > 0 ? (parseFloat(converterUsdValue) * exchangeRate).toFixed(2) : ''
 
-		// Get payment methods from current case data
-		const currentPaymentMethods: PaymentMethod[] = []
-		for (let i = 1; i <= 4; i++) {
-			const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
-			const amount = currentCase[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number
-			const reference = currentCase[`payment_reference_${i}` as keyof MedicalCaseWithPatient] as string
+	// Get payment methods from current case data
+	const currentPaymentMethods: PaymentMethod[] = []
+	for (let i = 1; i <= 4; i++) {
+		const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
+		const amount = currentCase[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number
+		const reference = currentCase[`payment_reference_${i}` as keyof MedicalCaseWithPatient] as string
 
-			if (method && amount) {
-				currentPaymentMethods.push({ method, amount, reference: reference || '' })
-			}
+		if (method && amount) {
+			currentPaymentMethods.push({ method, amount: Number(amount || 0), reference: reference || '' })
 		}
-
-		// Use current payment methods if not editing, otherwise use edited ones
+	}		// Use current payment methods if not editing, otherwise use edited ones
 		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
 		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
 		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
@@ -1538,29 +1536,30 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto total:</span>
 													{isEditing ? (
 														<div className="sm:w-1/2">
-															{(() => {
-																const currentValue =
-																	editedCase.total_amount !== undefined
-																		? editedCase.total_amount
-																		: currentCase?.total_amount || 0
-																const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																	currentValue,
-																	(value) => handleInputChange('total_amount', value),
-																	'USD',
-																	exchangeRate,
-																)
+										{(() => {
+											const currentValue = Number(
+												editedCase.total_amount !== undefined
+													? editedCase.total_amount
+													: currentCase?.total_amount || 0
+											)
+											const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+												currentValue,
+												(value) => handleInputChange('total_amount', value),
+												'USD',
+												exchangeRate,
+											)
 
-																return (
-																	<div className="flex flex-col gap-1 w-full">
-																		<div className="w-full">
-																			<Input
-																				id="total-amount-input"
-																				name="total_amount"
-																				type="text"
-																				inputMode="decimal"
-																				placeholder={calculatorHandler.placeholder}
-																				value={calculatorHandler.displayValue}
-																				onKeyDown={calculatorHandler.handleKeyDown}
+											return (
+												<div className="flex flex-col gap-1 w-full">
+													<div className="w-full">
+														<Input
+															id="total-amount-input"
+															name="total_amount"
+															type="text"
+															inputMode="decimal"
+															placeholder={calculatorHandler.placeholder}
+															value={calculatorHandler.displayValue}
+															onKeyDown={calculatorHandler.handleKeyDown}
 																				onPaste={calculatorHandler.handlePaste}
 																				onFocus={calculatorHandler.handleFocus}
 																				onChange={calculatorHandler.handleChange}
@@ -1758,18 +1757,18 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																						value={payment.method}
 																						onChange={(value) => handlePaymentMethodChange(index, 'method', value)}
 																						placeholder="Método"
-																						className="text-xs border-dashed focus:border-primary focus:ring-primary"
-																						id={`case-payment-method-${index}`}
-																					/>
-																					{(() => {
-																						const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																							payment.amount || 0,
-																							(value) => handlePaymentMethodChange(index, 'amount', value),
-																							payment.method,
-																							exchangeRate,
-																						)
+																	className="text-xs border-dashed focus:border-primary focus:ring-primary"
+																	id={`case-payment-method-${index}`}
+																/>
+													{(() => {
+														const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+															Number(payment.amount || 0),
+															(value) => handlePaymentMethodChange(index, 'amount', value),
+															payment.method,
+															exchangeRate,
+														)
 
-																						return (
+													return (
 																							<div className="flex flex-col gap-1 w-full">
 																								<div className="w-full">
 																									<Input
@@ -1877,15 +1876,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																		className="text-xs border-dashed focus:border-primary focus:ring-primary"
 																		id="new-payment-method"
 																	/>
-																	{(() => {
-																		const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																			newPaymentMethod.amount || 0,
-																			(value) => setNewPaymentMethod({ ...newPaymentMethod, amount: value }),
-																			newPaymentMethod.method,
-																			exchangeRate,
-																		)
+											{(() => {
+												const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+													Number(newPaymentMethod.amount || 0),
+													(value) => setNewPaymentMethod({ ...newPaymentMethod, amount: value }),
+													newPaymentMethod.method,
+													exchangeRate,
+												)
 
-																		return (
+											return (
 																			<div className="flex flex-col gap-1 w-full">
 																				<div className="w-full">
 																					<Input
