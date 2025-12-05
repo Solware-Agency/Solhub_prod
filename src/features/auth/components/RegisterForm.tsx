@@ -5,8 +5,9 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  Shield,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signUp } from '@/services/supabase/auth/auth';
 import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management'; // debe devolver { exists: boolean, error: any }
@@ -15,6 +16,12 @@ import {
   incrementCodeUsage,
   LaboratoryCodeError,
 } from '@/services/supabase/laboratory-codes/laboratory-codes-service';
+import {
+  getAvailableRolesForLaboratory,
+  type UserRole,
+} from '@/services/supabase/laboratories/laboratory-roles-service';
+import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
+import { createDropdownOptions } from '@shared/components/ui/form-dropdown';
 import Aurora from '@shared/components/ui/Aurora';
 import FadeContent from '@shared/components/ui/FadeContent';
 import type { User } from '@supabase/supabase-js';
@@ -26,6 +33,7 @@ function RegisterForm() {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [laboratoryCode, setLaboratoryCode] = useState(''); // ← NUEVO: Código de laboratorio
+  const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -46,6 +54,11 @@ function RegisterForm() {
     message: string;
     laboratoryName?: string;
   }>({ isValid: false, message: '' });
+
+  // UX: roles disponibles para el laboratorio
+  const [availableRoles, setAvailableRoles] = useState<Array<{value: string; label: string}>>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [laboratoryId, setLaboratoryId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -71,6 +84,72 @@ function RegisterForm() {
       });
     }, 1000);
   };
+
+  // Efecto para cargar roles cuando cambia el código de laboratorio
+  useEffect(() => {
+    const loadRolesForLaboratory = async () => {
+      // Limpiar roles anteriores
+      setAvailableRoles([]);
+      setSelectedRole('');
+      setLaboratoryId(null);
+
+      const normalizedCode = laboratoryCode.trim().toUpperCase();
+      if (!normalizedCode) return;
+
+      setLoadingRoles(true);
+      try {
+        // Validar código primero
+        const codeValidationResult = await validateLaboratoryCode(normalizedCode);
+        
+        if (!codeValidationResult?.laboratory?.id) {
+          setLoadingRoles(false);
+          return;
+        }
+
+        setLaboratoryId(codeValidationResult.laboratory.id);
+        setCodeValidation({
+          isValid: true,
+          message: `Código válido - Laboratorio: ${codeValidationResult.laboratory.name}`,
+          laboratoryName: codeValidationResult.laboratory.name,
+        });
+
+        // Obtener roles disponibles
+        const rolesResult = await getAvailableRolesForLaboratory(codeValidationResult.laboratory.id);
+
+        if (rolesResult.success && rolesResult.roles.length > 0) {
+          setAvailableRoles(
+            rolesResult.roles.map(role => ({
+              value: role.value,
+              label: role.label
+            }))
+          );
+        } else {
+          setCodeValidation({
+            isValid: false,
+            message: rolesResult.error || 'No hay roles disponibles para este laboratorio',
+          });
+        }
+      } catch (err) {
+        if (err instanceof LaboratoryCodeError) {
+          setCodeValidation({
+            isValid: false,
+            message: err.message,
+          });
+        } else {
+          console.error('Error loading roles:', err);
+        }
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    // Debounce para evitar múltiples llamadas
+    const timeoutId = setTimeout(() => {
+      loadRolesForLaboratory();
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [laboratoryCode]);
 
   // Pre-check en blur (rápido, sin spam)
   const checkEmail = useCallback(async (value: string) => {
@@ -119,6 +198,12 @@ function RegisterForm() {
     const normalizedCode = laboratoryCode.trim().toUpperCase();
     if (!normalizedCode) {
       setError('El código de laboratorio es obligatorio.');
+      return;
+    }
+
+    // Validar rol seleccionado
+    if (!selectedRole) {
+      setError('Debe seleccionar un rol.');
       return;
     }
 
@@ -431,38 +516,70 @@ function RegisterForm() {
                   </div>
                 </div>
 
-                {/* NUEVO: Campo de código de laboratorio */}
-                <p className='text-sm text-slate-300'>
-                  Código de laboratorio: <span className='text-red-400'>*</span>
-                </p>
-                <input
-                  type='text'
-                  name='laboratoryCode'
-                  placeholder='Ej: VARGAS2024'
-                  value={laboratoryCode}
-                  onChange={(e) => {
-                    // Convertir a mayúsculas automáticamente
-                    setLaboratoryCode(e.target.value.toUpperCase());
-                    // Limpiar validación cuando el usuario escribe
-                    setCodeValidation({ isValid: false, message: '' });
-                  }}
-                  required
-                  disabled={loading || rateLimitError || validatingCode}
-                  className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200 uppercase'
-                  autoComplete='off'
-                />
+                {/* Layout en grid para código de laboratorio y rol */}
+                <div className='flex items-start gap-2'>
+                  <div className='w-full'>
+                    <p className='text-sm text-slate-300'>
+                      Código de laboratorio: <span className='text-red-400'>*</span>
+                    </p>
+                    <input
+                      type='text'
+                      name='laboratoryCode'
+                      placeholder='EJ: VARGAS2024'
+                      value={laboratoryCode}
+                      onChange={(e) => {
+                        setLaboratoryCode(e.target.value.toUpperCase());
+                        setCodeValidation({ isValid: false, message: '' });
+                        setAvailableRoles([]);
+                        setSelectedRole('');
+                      }}
+                      required
+                      disabled={loading || rateLimitError}
+                      className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200 uppercase'
+                      autoComplete='off'
+                    />
+                  </div>
+                  <div className='w-full'>
+                    <p className='text-sm text-slate-300 flex items-center gap-1'>
+                      <Shield className='w-3 h-3' />
+                      Rol: <span className='text-red-400'>*</span>
+                    </p>
+                    {loadingRoles ? (
+                      <div className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-slate-300 flex items-center justify-center'>
+                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-[#3d84f5] mr-2'></div>
+                        <span className='text-sm'>Cargando...</span>
+                      </div>
+                    ) : availableRoles.length > 0 ? (
+                      <CustomDropdown
+                        options={createDropdownOptions(availableRoles)}
+                        value={selectedRole}
+                        onChange={(value) => setSelectedRole(value as UserRole)}
+                        placeholder='Selecciona tu rol'
+                        direction='auto'
+                        disabled={loading || rateLimitError}
+                      />
+                    ) : (
+                      <input
+                        type='text'
+                        placeholder='Ingrese código primero'
+                        className='w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-slate-400 cursor-not-allowed'
+                        disabled
+                      />
+                    )}
+                  </div>
+                </div>
                 <div className='text-xs h-5'>
-                  {validatingCode && (
-                    <span className='text-slate-300'>Validando código…</span>
+                  {loadingRoles && (
+                    <span className='text-slate-300'>Validando código y cargando roles…</span>
                   )}
-                  {codeValidation.isValid && !validatingCode && (
+                  {codeValidation.isValid && !loadingRoles && availableRoles.length > 0 && (
                     <span className='text-green-300'>
                       ✓ {codeValidation.message}
                     </span>
                   )}
                   {codeValidation.message &&
                     !codeValidation.isValid &&
-                    !validatingCode && (
+                    !loadingRoles && (
                       <span className='text-red-300'>
                         {codeValidation.message}
                       </span>
@@ -582,7 +699,7 @@ function RegisterForm() {
               <button
                 type='submit'
                 disabled={
-                  loading || rateLimitError || checkingEmail || validatingCode
+                  loading || rateLimitError || checkingEmail || loadingRoles || !laboratoryId || !selectedRole
                 }
                 className='w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm transform hover:scale-[1.02] active:scale-[0.98]'
               >
@@ -598,7 +715,7 @@ function RegisterForm() {
                       ? `Espera ${formatTime(retryCountdown)}`
                       : 'Límite de email alcanzado'}
                   </>
-                ) : checkingEmail || validatingCode ? (
+                ) : checkingEmail || loadingRoles ? (
                   'Validando...'
                 ) : (
                   'Registrarse'
