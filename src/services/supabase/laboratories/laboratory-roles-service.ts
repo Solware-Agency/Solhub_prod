@@ -1,6 +1,6 @@
 import { supabase } from '@/services/supabase/config/config'
 
-export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno'
+export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante'
 
 export interface RoleOption {
 	value: UserRole
@@ -35,6 +35,21 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 		label: 'Citotecnólogo',
 		description: 'Gestión de citologías y análisis técnico',
 	},
+	patologo: {
+		value: 'patologo',
+		label: 'Patólogo',
+		description: 'Análisis y diagnóstico de muestras patológicas',
+	},
+	enfermero: {
+		value: 'enfermero',
+		label: 'Enfermero',
+		description: 'Atención y seguimiento de pacientes',
+	},
+	medico_tratante: {
+		value: 'medico_tratante',
+		label: 'Médico Tratante',
+		description: 'Médico responsable del tratamiento del paciente',
+	},
 }
 
 /**
@@ -46,6 +61,8 @@ export async function getAvailableRolesForLaboratory(laboratoryId: string): Prom
 	error?: string
 }> {
 	try {
+		console.log('🔍 Buscando roles para laboratorio:', laboratoryId)
+
 		const { data, error } = await (supabase as any)
 			.from('laboratories')
 			.select('available_roles')
@@ -53,7 +70,7 @@ export async function getAvailableRolesForLaboratory(laboratoryId: string): Prom
 			.single()
 
 		if (error) {
-			console.error('Error fetching laboratory roles:', error)
+			console.error('❌ Error fetching laboratory roles:', error)
 			return {
 				success: false,
 				roles: [],
@@ -61,13 +78,16 @@ export async function getAvailableRolesForLaboratory(laboratoryId: string): Prom
 			}
 		}
 
-		// Si no tiene roles configurados, retornar array vacío (sin fallback)
+		console.log('📊 Datos recibidos de Supabase:', data)
+
+		// Obtener array de roles disponibles
 		let availableRoles: UserRole[] = []
 
-		if (data?.available_roles && Array.isArray(data.available_roles) && data.available_roles.length > 0) {
+		if (data?.available_roles && Array.isArray(data.available_roles)) {
 			availableRoles = data.available_roles as UserRole[]
+			console.log('✅ Roles encontrados:', availableRoles)
 		} else {
-			// No hay roles configurados para este laboratorio
+			console.warn('⚠️ No se encontraron roles en available_roles')
 			return {
 				success: false,
 				roles: [],
@@ -75,18 +95,22 @@ export async function getAvailableRolesForLaboratory(laboratoryId: string): Prom
 			}
 		}
 
-		// Mapear a opciones con etiquetas
-		const roleOptions = availableRoles
-			.filter((role) => role in ROLE_LABELS)
-			.map((role) => ROLE_LABELS[role])
+		// Filtrar solo roles válidos que existen en ROLE_LABELS
+		const validRoles = availableRoles.filter((role) => role in ROLE_LABELS)
 
-		if (roleOptions.length === 0) {
+		if (validRoles.length === 0) {
+			console.warn('⚠️ No hay roles válidos después de filtrar')
 			return {
 				success: false,
 				roles: [],
 				error: 'No hay roles válidos configurados para este laboratorio',
 			}
 		}
+
+		// Mapear a opciones con etiquetas
+		const roleOptions = validRoles.map((role) => ROLE_LABELS[role])
+
+		console.log('✅ Roles mapeados:', roleOptions)
 
 		return {
 			success: true,
