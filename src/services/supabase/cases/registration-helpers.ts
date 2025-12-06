@@ -140,9 +140,9 @@ export function preparePaymentValues(
 	payment_amount_4: number | null
 	payment_reference_4: string | null
 } {
-	// Si no hay pagos o no hay monto total, todos los valores de pago son null
+	// Si no hay monto total, todos los valores de pago son null
 	// Esto permite que labs sin módulo de pagos funcionen correctamente
-	if (!hasPayments || !hasTotalAmount) {
+	if (!hasTotalAmount) {
 		return {
 			total_amount: null,
 			payment_status: 'Incompleto', // NOT NULL, siempre debe tener valor
@@ -162,7 +162,28 @@ export function preparePaymentValues(
 		}
 	}
 
-	// Si hay pagos, usar los valores del formulario
+	// Si hay monto total pero NO hay pagos, guardar el monto y marcar como incompleto
+	if (!hasPayments) {
+		return {
+			total_amount: formData.totalAmount,
+			payment_status: 'Incompleto',
+			remaining: formData.totalAmount, // El monto total queda pendiente
+			payment_method_1: null,
+			payment_amount_1: null,
+			payment_reference_1: null,
+			payment_method_2: null,
+			payment_amount_2: null,
+			payment_reference_2: null,
+			payment_method_3: null,
+			payment_amount_3: null,
+			payment_reference_3: null,
+			payment_method_4: null,
+			payment_amount_4: null,
+			payment_reference_4: null,
+		}
+	}
+
+	// Si hay monto total Y hay pagos, usar los valores del formulario
 	return {
 		total_amount: formData.totalAmount,
 		payment_status: isPaymentComplete ? 'Pagado' : 'Incompleto',

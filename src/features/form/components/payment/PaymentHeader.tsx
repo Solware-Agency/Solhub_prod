@@ -63,17 +63,8 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 		return null
 	}, [totalAmount, exchangeRate])
 
-	// Determinar si todos los métodos de pago son en Bs
-	const currencyLabel = useMemo(() => {
-		if (!payments || payments.length === 0) return '$'
-		
-		// Verificar si todos los métodos son en Bs
-		const allBolivares = payments.every(payment => 
-			payment.method && isBolivaresMethod(payment.method)
-		)
-		
-		return allBolivares ? 'Bs' : '$'
-	}, [payments])
+	// Monto Total siempre es en dólares ($)
+	const currencyLabel = '$'
 
 	// Memoize the amount change handler to prevent re-renders
 

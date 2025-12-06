@@ -4,6 +4,7 @@ import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-f
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'
 import { useEffect } from 'react'
+import { extractLaboratoryId } from '@services/supabase/types/helpers'
 
 // Tipo local para casos médicos con información del paciente
 export interface MedicalCaseWithPatient {
@@ -77,6 +78,9 @@ export interface DashboardStats {
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number
+	// Porcentajes de crecimiento vs periodo anterior
+	revenueGrowthPercentage: number
+	casesGrowthPercentage: number
 }
 
 // Function to normalize exam type names
@@ -97,13 +101,33 @@ const normalizeExamType = (examType: string): string => {
 	)
 }
 
-export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
+export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear?: number) => {
 	const queryClient = useQueryClient()
 
 	const query = useQuery({
-		queryKey: ['dashboard-stats', startDate?.toISOString(), endDate?.toISOString()],
+		queryKey: ['dashboard-stats', startDate?.toISOString(), endDate?.toISOString(), selectedYear],
 		queryFn: async (): Promise<DashboardStats> => {
 			try {
+				// Obtener laboratory_id del usuario actual
+				const {
+					data: { user },
+				} = await supabase.auth.getUser()
+				if (!user) {
+					throw new Error('Usuario no autenticado')
+				}
+
+				const { data: profile, error: profileError } = await supabase
+					.from('profiles')
+					.select('laboratory_id')
+					.eq('id', user.id)
+					.single()
+
+				const laboratoryId = extractLaboratoryId(profile)
+
+				if (profileError || !laboratoryId) {
+					throw new Error('Usuario no tiene laboratorio asignado')
+				}
+
 				// Get date range for filtering - use provided dates or default to current month
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
@@ -124,6 +148,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 						treating_doctor,
 						created_at,
 						patient_id,
+						exchange_rate,
 						payment_method_1,
 						payment_amount_1,
 						payment_method_2,
@@ -142,6 +167,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 						)
 					`,
 					)
+					.eq('laboratory_id', laboratoryId)
 					.gte('created_at', filterStart.toISOString())
 					.lte('created_at', filterEnd.toISOString())
 
@@ -162,6 +188,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 				const { data: allRecordsForTotal } = await supabase
 					.from('medical_records_clean')
 					.select('total_amount, patient_id, created_at')
+					.eq('laboratory_id', laboratoryId)
 					.not('created_at', 'is', null)
 
 				const allRecords = allRecordsForTotal || []
@@ -177,6 +204,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 				const { count: actualPatientsCount } = await supabase
 					.from('patients')
 					.select('*', { count: 'exact', head: true })
+					.eq('laboratory_id', laboratoryId)
 
 				// Use actual count from patients table for more accurate stats
 				const finalUniquePatients = actualPatientsCount || uniquePatients
@@ -197,12 +225,29 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 						return sum
 					}, 0) || 0
 
-				// Calculate revenue for the filtered period
-				const monthlyRevenue =
-					transformedFilteredRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
+				// Calculate revenue for the filtered period (REAL paid amounts in USD)
+				let monthlyRevenue = 0
+				transformedFilteredRecords?.forEach((record) => {
+					let totalPaidUSD = 0
+					for (let i = 1; i <= 4; i++) {
+						const method = (record as any)[`payment_method_${i}`]
+						const amount = (record as any)[`payment_amount_${i}`]
+						if (method && amount && amount > 0) {
+							if (isVESPaymentMethod(method)) {
+								const rate = record.exchange_rate || 0
+								if (rate > 0) {
+									totalPaidUSD += amount / rate
+								}
+							} else {
+								totalPaidUSD += amount
+							}
+						}
+					}
+				monthlyRevenue += totalPaidUSD
+			})
 
-				// Calculate revenue by currency (Bs vs $) for filtered period
-				let monthlyRevenueBolivares = 0
+			// Calculate revenue by currency (Bs vs $) for filtered period
+			let monthlyRevenueBolivares = 0
 				let monthlyRevenueDollars = 0
 
 				transformedFilteredRecords?.forEach((record) => {
@@ -233,6 +278,60 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 					transformedFilteredRecords?.filter((record) => record.patient_id).map((record) => record.patient_id) || [],
 				)
 				const newPatientsThisMonth = Array.from(periodPatientIds).filter((id) => !existingPatientIds.has(id)).length
+
+				// Calculate stats for previous period for growth comparison
+				const periodDuration = filterEnd.getTime() - filterStart.getTime()
+				const previousPeriodEnd = new Date(filterStart.getTime() - 1)
+				const previousPeriodStart = new Date(previousPeriodEnd.getTime() - periodDuration)
+
+				const { data: previousPeriodRecords } = await supabase
+					.from('medical_records_clean')
+					.select(
+						`
+						id,
+						exchange_rate,
+						payment_method_1,
+						payment_amount_1,
+						payment_method_2,
+						payment_amount_2,
+						payment_method_3,
+						payment_amount_3,
+						payment_method_4,
+						payment_amount_4
+					`,
+					)
+					.eq('laboratory_id', laboratoryId)
+					.gte('created_at', previousPeriodStart.toISOString())
+					.lte('created_at', previousPeriodEnd.toISOString())
+
+				const previousRecords = previousPeriodRecords || []
+
+				// Calculate previous period revenue (real paid amount)
+				const previousRevenue = previousRecords.reduce((sum, record) => {
+					let totalPaidUSD = 0
+					for (let i = 1; i <= 4; i++) {
+						const method = (record as any)[`payment_method_${i}`]
+						const amount = (record as any)[`payment_amount_${i}`]
+						if (method && amount && amount > 0) {
+							if (isVESPaymentMethod(method)) {
+								const rate = record.exchange_rate || 0
+								if (rate > 0) {
+									totalPaidUSD += amount / rate
+								}
+							} else {
+								totalPaidUSD += amount
+							}
+						}
+					}
+					return sum + totalPaidUSD
+				}, 0)
+
+				const previousCases = previousRecords.length
+
+				// Calculate growth percentages
+				const revenueGrowthPercentage =
+					previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : 0
+				const casesGrowthPercentage = previousCases > 0 ? ((totalCases - previousCases) / previousCases) * 100 : 0
 
 				// Calculate revenue by branch - Use transformedFilteredRecords for the selected period
 				const branchRevenue = new Map<string, number>()
@@ -273,15 +372,30 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 					}))
 					.sort((a, b) => b.revenue - a.revenue)
 
-				// Calculate sales trend by month for the year containing the date range
-				const currentYear = startDate ? startDate.getFullYear() : new Date().getFullYear()
+				// Calculate sales trend by month for the selected year (independent of dateRange)
+				const currentYear = selectedYear || new Date().getFullYear()
 				const yearStart = startOfYear(new Date(currentYear, 0, 1))
 				const yearEnd = endOfYear(new Date(currentYear, 0, 1))
 
 				// Filter records for the selected year - usar consulta separada para el año completo
 				const { data: yearRecordsData } = await supabase
 					.from('medical_records_clean')
-					.select('total_amount, created_at')
+					.select(
+						`
+						total_amount,
+						created_at,
+						exchange_rate,
+						payment_method_1,
+						payment_amount_1,
+						payment_method_2,
+						payment_amount_2,
+						payment_method_3,
+						payment_amount_3,
+						payment_method_4,
+						payment_amount_4
+					`,
+					)
+					.eq('laboratory_id', laboratoryId)
 					.gte('created_at', yearStart.toISOString())
 					.lte('created_at', yearEnd.toISOString())
 					.not('created_at', 'is', null)
@@ -293,11 +407,38 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 				for (let month = 0; month < 12; month++) {
 					const monthDate = new Date(currentYear, month, 1)
 					const monthKey = format(monthDate, 'yyyy-MM')
-					const monthRevenue = yearRecords
-						.filter((record) => record.created_at && format(new Date(record.created_at), 'yyyy-MM') === monthKey)
-						.reduce((sum, record) => sum + (record.total_amount || 0), 0)
 
-					// Check if this month is within the selected date range
+					// Calcular el monto REAL pagado (suma de métodos de pago en USD)
+					const filteredMonthRecords = yearRecords.filter(
+						(record) => record.created_at && format(new Date(record.created_at), 'yyyy-MM') === monthKey,
+					)
+
+					const monthRevenue = filteredMonthRecords.reduce((sum, record) => {
+						let totalPaidUSD = 0
+
+						// Sumar todos los métodos de pago
+						for (let i = 1; i <= 4; i++) {
+							const method = (record as any)[`payment_method_${i}`]
+							const amount = (record as any)[`payment_amount_${i}`]
+
+							if (method && amount && amount > 0) {
+								if (isVESPaymentMethod(method)) {
+									// Convertir Bs a USD usando exchange_rate
+									const rate = record.exchange_rate || 0
+									if (rate > 0) {
+										totalPaidUSD += amount / rate
+									}
+								} else {
+									// Ya está en USD
+									totalPaidUSD += amount
+								}
+							}
+						}
+
+					return sum + totalPaidUSD
+				}, 0)
+
+				// Check if this month is within the selected date range
 					const isSelected =
 						startDate && endDate ? monthDate >= startOfMonth(startDate) && monthDate <= endOfMonth(endDate) : false
 
@@ -392,6 +533,8 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 					totalCases,
 					monthlyRevenueBolivares,
 					monthlyRevenueDollars,
+					revenueGrowthPercentage,
+					casesGrowthPercentage,
 				}
 			} catch (error) {
 				console.error('Error fetching dashboard stats:', error)
@@ -406,18 +549,8 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 
 	// REALTIME: Suscripción para actualizar stats automáticamente
 	useEffect(() => {
-		console.log('🚀 [useDashboardStats] Iniciando suscripción realtime...')
-		console.log('🔍 [useDashboardStats] Estado de realtime:', supabase.realtime.isConnected())
-
-		// Verificar autenticación
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			console.log('🔐 [useDashboardStats] Usuario autenticado:', session?.user?.email)
-			console.log('🔐 [useDashboardStats] Token válido:', !!session?.access_token)
-		})
-
 		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
 		const timeoutId = setTimeout(() => {
-			console.log('⏰ [useDashboardStats] Intentando suscripción después del timeout...')
 
 			const channel = supabase
 				.channel('realtime-dashboard-stats')
@@ -429,9 +562,6 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 						table: 'medical_records_clean',
 					},
 					(payload) => {
-						console.log('🔄 [useDashboardStats] Cambio detectado en medical_records_clean:', payload)
-						console.log('🔄 [useDashboardStats] Invalidando queries de dashboard...')
-
 						// Invalidar todas las queries de dashboard-stats para forzar refetch
 						queryClient.invalidateQueries({
 							queryKey: ['dashboard-stats'],
@@ -441,18 +571,11 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 						// También invalidar queries relacionadas que podrían afectar las stats
 						queryClient.invalidateQueries({ queryKey: ['medical-cases'] })
 						queryClient.invalidateQueries({ queryKey: ['my-medical-cases'] })
-
-						console.log('✅ [useDashboardStats] Queries invalidadas, stats se actualizarán automáticamente')
 					},
 				)
 				.subscribe((status) => {
-					console.log('📡 [useDashboardStats] Estado del canal:', status)
-					if (status === 'SUBSCRIBED') {
-						console.log('✅ [useDashboardStats] Suscripción realtime exitosa')
-					} else if (status === 'CHANNEL_ERROR') {
-						console.error('❌ [useDashboardStats] Error en canal realtime')
-					} else if (status === 'CLOSED') {
-						console.warn('⚠️ [useDashboardStats] Canal realtime cerrado')
+					if (status === 'CHANNEL_ERROR') {
+						console.error('Error en canal realtime de dashboard')
 					}
 				})
 
@@ -461,7 +584,6 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date) => {
 		}, 2000) // Esperar 2 segundos
 
 		return () => {
-			console.log('🧹 [useDashboardStats] Limpiando suscripción realtime')
 			clearTimeout(timeoutId)
 		}
 	}, [queryClient])

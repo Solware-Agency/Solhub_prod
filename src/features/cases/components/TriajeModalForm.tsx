@@ -38,6 +38,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import {
   getTriageByCase,
   createTriageRecord,
+  getSmokingRiskCategory,
   type TriageRecord,
   type HabitLevel,
 } from '@/services/supabase/triage/triage-service';
@@ -54,9 +55,12 @@ interface TriajeFormData {
   antecedentesFamiliares: string;
   antecedentesPersonales: string;
   habitosPsicobiologicos: string;
-  tabaco: HabitLevel;
-  cafe: HabitLevel;
+  tabaco: string; // Dropdown temporal ("Si" / "No")
+  cafe: string; // Número de tazas por día
   alcohol: HabitLevel;
+  cigarrillosPorDia: string;
+  anosFumando: string;
+  indiceTabaquico: string; // Calculado automáticamente
   motivoConsulta: string;
   examenFisico: string;
   comentario: string;
@@ -212,7 +216,8 @@ const TriageInfoDisplay: React.FC<{ record: TriageRecord }> = ({ record }) => {
       {(record.reason ||
         record.personal_background ||
         record.family_history ||
-        record.psychobiological_habits) && (
+        record.psychobiological_habits ||
+        record.tabaco !== null) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg'>
@@ -250,6 +255,41 @@ const TriageInfoDisplay: React.FC<{ record: TriageRecord }> = ({ record }) => {
                   Hábitos psicobiológicos
                 </p>
                 <p className='text-sm'>{record.psychobiological_habits}</p>
+              </div>
+            )}
+            {record.tabaco !== null && record.tabaco !== undefined && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Índice Tabáquico
+                </p>
+                <p className='text-sm font-medium'>
+                  {record.tabaco} paq/año
+                </p>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${
+                    record.tabaco === 0
+                      ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                      : record.tabaco < 10
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : record.tabaco <= 20
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                      : record.tabaco <= 40
+                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                  }`}
+                >
+                  {getSmokingRiskCategory(record.tabaco)}
+                </span>
+              </div>
+            )}
+            {record.cafe !== null && record.cafe !== undefined && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Café (tazas/día)
+                </p>
+                <p className='text-sm font-medium'>
+                  {record.cafe} {record.cafe === 1 ? 'taza' : 'tazas'}
+                </p>
               </div>
             )}
           </CardContent>
@@ -306,6 +346,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     tabaco: '',
     cafe: '',
     alcohol: '',
+    cigarrillosPorDia: '',
+    anosFumando: '',
+    indiceTabaquico: '',
     motivoConsulta: '',
     examenFisico: '',
     comentario: '',
@@ -348,6 +391,40 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       }));
     }
   }, [formData.peso, formData.talla]);
+
+  // Calcular índice tabáquico automáticamente
+  useEffect(() => {
+    const cigarrillos = parseFloat(formData.cigarrillosPorDia);
+    const anos = parseFloat(formData.anosFumando);
+
+    if (cigarrillos > 0 && anos > 0) {
+      const indice = (cigarrillos * anos) / 20;
+      const indiceRedondeado = Math.round(indice * 100) / 100;
+      
+      // Determinar categoría de riesgo
+      let categoria = '';
+      if (indiceRedondeado < 10) {
+        categoria = 'Nulo';
+      } else if (indiceRedondeado <= 20) {
+        categoria = 'Riesgo moderado';
+      } else if (indiceRedondeado <= 40) {
+        categoria = 'Riesgo intenso';
+      } else {
+        categoria = 'Riesgo alto';
+      }
+      
+      const textoIndice = `Índice: ${indiceRedondeado} paq/año (${categoria})`;
+      setFormData((prev) => ({
+        ...prev,
+        indiceTabaquico: textoIndice,
+      }));
+    } else if (!cigarrillos || !anos) {
+      setFormData((prev) => ({
+        ...prev,
+        indiceTabaquico: '',
+      }));
+    }
+  }, [formData.cigarrillosPorDia, formData.anosFumando]);
 
   const handleInputChange = (
     field: keyof TriajeFormData,
@@ -393,8 +470,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         personal_background: formData.antecedentesPersonales || null,
         family_history: formData.antecedentesFamiliares || null,
         psychobiological_habits: formData.habitosPsicobiologicos || null,
-        tabaco: formData.tabaco || null,
-        cafe: formData.cafe || null,
+        tabaco: formData.indiceTabaquico 
+          ? parseFloat(formData.indiceTabaquico.split(':')[1]?.split('paq')[0]?.trim() || '0') || null
+          : (formData.tabaco === 'No' ? 0 : null),
+        cafe: formData.cafe ? parseInt(formData.cafe, 10) : null,
         alcohol: formData.alcohol || null,
         heart_rate: formData.frecuenciaCardiaca
           ? parseInt(formData.frecuenciaCardiaca, 10)
@@ -446,6 +525,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           tabaco: '',
           cafe: '',
           alcohol: '',
+          cigarrillosPorDia: '',
+          anosFumando: '',
+          indiceTabaquico: '',
           motivoConsulta: '',
           examenFisico: '',
           comentario: '',
@@ -534,48 +616,45 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <CardTitle className='text-base sm:text-lg'>Hábitos</CardTitle>
               </CardHeader>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
-                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
                   <div>
                     <label className='text-sm font-medium mb-2 block'>
-                      Tabaco
+                      ¿Fuma?
                     </label>
                     <select
                       value={formData.tabaco}
                       onChange={(e) =>
-                        handleInputChange('tabaco', e.target.value as HabitLevel)
+                        handleInputChange('tabaco', e.target.value)
                       }
                       disabled={loading}
                       className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
                     >
                       <option value=''>Seleccione...</option>
                       <option value='No'>No</option>
-                      <option value='muy alta'>Muy alta</option>
-                      <option value='alta'>Alta</option>
-                      <option value='media'>Media</option>
-                      <option value='baja'>Baja</option>
-                      <option value='muy baja'>Muy baja</option>
+                      <option value='Si'>Sí</option>
                     </select>
                   </div>
                   <div>
                     <label className='text-sm font-medium mb-2 block'>
-                      Café
+                      Café (tazas/día)
                     </label>
-                    <select
+                    <Input
+                      type='number'
+                      min='0'
+                      step='1'
+                      placeholder='Ej: 3'
                       value={formData.cafe}
                       onChange={(e) =>
-                        handleInputChange('cafe', e.target.value as HabitLevel)
+                        handleInputChange('cafe', e.target.value)
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') {
+                          e.preventDefault();
+                        }
+                      }}
                       disabled={loading}
-                      className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
-                    >
-                      <option value=''>Seleccione...</option>
-                      <option value='No'>No</option>
-                      <option value='muy alta'>Muy alta</option>
-                      <option value='alta'>Alta</option>
-                      <option value='media'>Media</option>
-                      <option value='baja'>Baja</option>
-                      <option value='muy baja'>Muy baja</option>
-                    </select>
+                      className={inputStyles}
+                    />
                   </div>
                   <div>
                     <label className='text-sm font-medium mb-2 block'>
@@ -599,6 +678,73 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     </select>
                   </div>
                 </div>
+
+                {/* Sección de Índice Tabáquico */}
+                {formData.tabaco === 'Si' && (
+                  <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
+                    <h4 className='text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300'>
+                      Índice Tabáquico
+                    </h4>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                      <div>
+                        <label className='text-sm font-medium mb-2 block'>
+                          Cigarrillos por día
+                        </label>
+                        <Input
+                          type='number'
+                          min='0'
+                          step='1'
+                          placeholder='Ej: 20'
+                          value={formData.cigarrillosPorDia}
+                          onChange={(e) =>
+                            handleInputChange('cigarrillosPorDia', e.target.value)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') {
+                              e.preventDefault();
+                            }
+                          }}
+                          disabled={loading}
+                          className={inputStyles}
+                        />
+                      </div>
+                      <div>
+                        <label className='text-sm font-medium mb-2 block'>
+                          Años fumando
+                        </label>
+                        <Input
+                          type='number'
+                          min='0'
+                          step='1'
+                          placeholder='Ej: 15'
+                          value={formData.anosFumando}
+                          onChange={(e) =>
+                            handleInputChange('anosFumando', e.target.value)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') {
+                              e.preventDefault();
+                            }
+                          }}
+                          disabled={loading}
+                          className={inputStyles}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Mostrar índice calculado */}
+                    {formData.indiceTabaquico && (
+                      <div className='mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg'>
+                        <p className='text-sm font-semibold text-blue-900 dark:text-blue-100'>
+                          {formData.indiceTabaquico}
+                        </p>
+                        <p className='text-xs text-blue-700 dark:text-blue-300 mt-1'>
+                          Fórmula: (Cigarrillos/día × Años) / 20
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
