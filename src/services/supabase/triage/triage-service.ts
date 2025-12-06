@@ -19,8 +19,8 @@ export interface TriageRecord {
   personal_background: string | null;
   family_history: string | null;
   psychobiological_habits: string | null; // Mantener para compatibilidad
-  tabaco: HabitLevel | null;
-  cafe: HabitLevel | null;
+  tabaco: number | null; // Índice tabáquico (paquetes-año)
+  cafe: number | null; // Tazas de café por día
   alcohol: HabitLevel | null;
   heart_rate: number | null;
   respiratory_rate: number | null;
@@ -46,8 +46,8 @@ export interface TriageRecordInsert {
   personal_background?: string | null;
   family_history?: string | null;
   psychobiological_habits?: string | null; // Mantener para compatibilidad
-  tabaco?: HabitLevel | null;
-  cafe?: HabitLevel | null;
+  tabaco?: number | null; // Índice tabáquico (paquetes-año)
+  cafe?: number | null; // Tazas de café por día
   alcohol?: HabitLevel | null;
   heart_rate?: number | null;
   respiratory_rate?: number | null;
@@ -149,6 +149,25 @@ const calculateBMI = (height_cm: number | null, weight_kg: number | null): numbe
   
   // Redondear a 2 decimales
   return Math.round(bmi * 100) / 100;
+};
+
+/**
+ * Obtener categoría de riesgo EPOC según índice tabáquico
+ */
+export const getSmokingRiskCategory = (smoking_index: number | null): string => {
+  if (smoking_index === null || smoking_index === 0) {
+    return 'No fumador';
+  }
+  if (smoking_index < 10) {
+    return 'Nulo';
+  }
+  if (smoking_index <= 20) {
+    return 'Riesgo moderado';
+  }
+  if (smoking_index <= 40) {
+    return 'Riesgo intenso';
+  }
+  return 'Riesgo alto';
 };
 
 /**

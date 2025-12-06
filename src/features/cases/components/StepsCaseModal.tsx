@@ -133,7 +133,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const computedSteps = useMemo(() => {
     const stepsList = [];
 
-    // Paso 1: Datos del paciente - Solo para empleados (no residentes)
+    // Paso 1: Datos del paciente - Disponible para owner, residente, citotecno, patologo
+    // NO disponible para: employee, medicowner, medico_tratante (ellos generan docs directamente)
     if (!isEmployee && !isMedicowner && !isMedicoTratante) {
       stepsList.push({
         id: 'patient',
@@ -143,7 +144,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    // Paso 2: Marcar como completado - Solo para empleados (no residentes)
+    // Paso 2: Marcar como completado - Disponible para owner, residente, citotecno, patologo
+    // NO disponible para: employee, medicowner, medico_tratante (ellos marcan como completado directamente)
     if (!isEmployee && !isMedicowner && !isMedicoTratante) {
       stepsList.push({
         id: 'complete',

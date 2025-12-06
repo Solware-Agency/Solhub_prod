@@ -12,6 +12,7 @@ import {
   MedicalForm,
   SettingsPage,
   ReceptionistHomePage,
+  TriageAnalyticsPage,
 } from './lazy-routes';
 
 export interface RouteConfig {
@@ -59,6 +60,11 @@ export const dashboardRoutes: RouteConfig[] = [
     component: ChangelogPage,
   },
   {
+    path: 'triage-analytics',
+    feature: 'hasTriaje',
+    component: TriageAnalyticsPage,
+  },
+  {
     path: 'doctors',
     component: DoctorsSection,
   },
@@ -94,9 +100,14 @@ export const employeeRoutes: RouteConfig[] = [
     component: PatientsPage,
   },
   {
-    path: 'changelogpage',
+    path: 'changelog',
     feature: 'hasChangeHistory',
     component: ChangelogPage,
+  },
+  {
+    path: 'triage-analytics',
+    feature: 'hasTriaje',
+    component: TriageAnalyticsPage,
   },
   {
     path: 'settings',
