@@ -14,8 +14,7 @@ import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-man
 import {
   validateLaboratoryCode,
   incrementCodeUsage,
-  LaboratoryCodeError,
-} from '@/services/supabase/laboratory-codes/laboratory-codes-service';
+} from '@/services/supabase/laboratories/laboratory-codes-service';
 import {
   getAvailableRolesForLaboratory,
   type UserRole,
@@ -48,11 +47,10 @@ function RegisterForm() {
   const lastCheckedRef = useRef<string>('');
 
   // UX: validación de código de laboratorio
-  const [validatingCode, setValidatingCode] = useState(false);
   const [codeValidation, setCodeValidation] = useState<{
     isValid: boolean;
     message: string;
-    laboratoryName?: string;
+    remainingUses?: number | null; // null = ilimitado
   }>({ isValid: false, message: '' });
 
   // UX: roles disponibles para el laboratorio
@@ -101,20 +99,32 @@ function RegisterForm() {
         // Validar código primero
         const codeValidationResult = await validateLaboratoryCode(normalizedCode);
         
-        if (!codeValidationResult?.laboratory?.id) {
+        if (!codeValidationResult.success || !codeValidationResult.laboratory_id) {
+          setCodeValidation({
+            isValid: false,
+            message: codeValidationResult.error || 'Código inválido',
+          });
           setLoadingRoles(false);
           return;
         }
 
-        setLaboratoryId(codeValidationResult.laboratory.id);
+        setLaboratoryId(codeValidationResult.laboratory_id);
+        
+        // Calcular usos restantes
+        const remainingUses = codeValidationResult.code?.max_uses !== null && codeValidationResult.code?.max_uses !== undefined
+          ? codeValidationResult.code.max_uses - codeValidationResult.code.current_uses
+          : null; // null = ilimitado
+        
         setCodeValidation({
           isValid: true,
-          message: `Código válido - Laboratorio: ${codeValidationResult.laboratory.name}`,
-          laboratoryName: codeValidationResult.laboratory.name,
+          message: remainingUses === null 
+            ? `Código válido (usos ilimitados)` 
+            : `Código válido (${remainingUses} usos restantes)`,
+          remainingUses,
         });
 
         // Obtener roles disponibles
-        const rolesResult = await getAvailableRolesForLaboratory(codeValidationResult.laboratory.id);
+        const rolesResult = await getAvailableRolesForLaboratory(codeValidationResult.laboratory_id);
 
         if (rolesResult.success && rolesResult.roles.length > 0) {
           setAvailableRoles(
@@ -130,14 +140,11 @@ function RegisterForm() {
           });
         }
       } catch (err) {
-        if (err instanceof LaboratoryCodeError) {
-          setCodeValidation({
-            isValid: false,
-            message: err.message,
-          });
-        } else {
-          console.error('Error loading roles:', err);
-        }
+        console.error('Error loading roles:', err);
+        setCodeValidation({
+          isValid: false,
+          message: 'Error al validar el código',
+        });
       } finally {
         setLoadingRoles(false);
       }
@@ -222,36 +229,23 @@ function RegisterForm() {
       const cleanedEmail = normalizeEmail(email);
       console.log('Attempting to register user:', cleanedEmail);
 
-      // NUEVO: Validar código de laboratorio ANTES de registrar
-      let codeValidationResult;
-      try {
-        setValidatingCode(true);
-        codeValidationResult = await validateLaboratoryCode(normalizedCode);
-        console.log(
-          'Código válido para laboratorio:',
-          codeValidationResult.laboratory.name,
-        );
-        setCodeValidation({
-          isValid: true,
-          message: `Código válido - Laboratorio: ${codeValidationResult.laboratory.name}`,
-          laboratoryName: codeValidationResult.laboratory.name,
-        });
-      } catch (codeError) {
-        setValidatingCode(false);
-        if (codeError instanceof LaboratoryCodeError) {
-          // Error específico del código (no existe, expirado, etc.)
-          setError(codeError.message);
-        } else {
-          // Error genérico (red, servidor, etc.)
-          setError(
-            'Error al validar el código de laboratorio. Por favor, intenta de nuevo.',
-          );
-        }
+      // Validar que el código ya fue validado previamente
+      if (!laboratoryId || !codeValidation.isValid) {
+        setError('Por favor valida el código de laboratorio antes de continuar.');
         setLoading(false);
         return;
-      } finally {
-        setValidatingCode(false);
       }
+
+      // Re-validar código antes de registro (por seguridad)
+      const codeValidationResult = await validateLaboratoryCode(normalizedCode);
+      
+      if (!codeValidationResult.success || !codeValidationResult.laboratory_id) {
+        setError(codeValidationResult.error || 'El código de laboratorio ya no es válido.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Código re-validado para laboratorio:', codeValidationResult.laboratory_id);
 
       // Pre-check de UX (opcional, pero útil). No es seguridad, el hook es quien manda.
       try {
@@ -279,20 +273,13 @@ function RegisterForm() {
         return;
       }
 
-      // ⚠️ VALIDACIÓN CRÍTICA: El código DEBE estar validado antes de registrar
-      if (!codeValidationResult || !codeValidationResult.laboratory?.id) {
-        setError('El código de laboratorio es obligatorio y debe ser válido.');
-        setLoading(false);
-        return;
-      }
-
       // Signup — aquí el HOOK bloqueará duplicados reales con un 400 "User already registered"
       // ⚠️ ORDEN CORRECTO DE PARÁMETROS:
       // signUp(email, password, laboratoryId, displayName, phone)
       const { user, error: signUpError } = await signUp(
         cleanedEmail,
         password,
-        codeValidationResult.laboratory.id, // ← CORREGIDO: laboratoryId como 3er parámetro (obligatorio)
+        codeValidationResult.laboratory_id, // ← CORREGIDO: laboratoryId como 3er parámetro (obligatorio)
         displayName.trim(), // ← CORREGIDO: displayName como 4to parámetro
         normalizedPhone, // ← CORREGIDO: phone como 5to parámetro
       );
@@ -351,10 +338,10 @@ function RegisterForm() {
 
         // NUEVO: Incrementar uso del código después de registro exitoso
         try {
-          await incrementCodeUsage(codeValidationResult.code.id);
+          await incrementCodeUsage(codeValidationResult.code!.id);
           console.log(
             'Código usage incrementado:',
-            codeValidationResult.code.id,
+            codeValidationResult.code!.id,
           );
         } catch (incrementError) {
           // Si falla incrementar el uso, no es crítico (el usuario ya está registrado)
@@ -364,7 +351,7 @@ function RegisterForm() {
         }
 
         setMessage(
-          `¡Cuenta creada exitosamente para ${codeValidationResult.laboratory.name}! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam. Tu cuenta está pendiente de aprobación por el administrador del laboratorio.`,
+          `¡Cuenta creada exitosamente! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam. Tu cuenta está pendiente de aprobación por el administrador del laboratorio.`,
         );
 
         try {
@@ -715,8 +702,16 @@ function RegisterForm() {
                       ? `Espera ${formatTime(retryCountdown)}`
                       : 'Límite de email alcanzado'}
                   </>
-                ) : checkingEmail || loadingRoles ? (
-                  'Validando...'
+                ) : loadingRoles ? (
+                  <>
+                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+                    Validando código...
+                  </>
+                ) : checkingEmail ? (
+                  <>
+                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+                    Verificando email...
+                  </>
                 ) : (
                   'Registrarse'
                 )}
