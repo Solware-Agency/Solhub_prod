@@ -792,36 +792,55 @@ export const createOrUpdateImmunoRequest = async (
 	precioUnitario: number = 18.0,
 ) => {
 	try {
-		const inmunorreaccionesString = inmunorreacciones.join(',')
-		const nReacciones = inmunorreacciones.length
-		const total = nReacciones * precioUnitario
+    // Obtener laboratory_id del usuario autenticado
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		const { data, error } = await supabase
-			.from('immuno_requests')
-			.upsert(
-				{
-					case_id: caseId,
-					inmunorreacciones: inmunorreaccionesString,
-					n_reacciones: nReacciones,
-					precio_unitario: precioUnitario,
-					total: total,
-					pagado: false,
-				},
-				{
-					onConflict: 'case_id',
-				},
-			)
-			.select()
-			.single()
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
 
-		if (error) {
-			console.error('❌ Error creating/updating immuno request:', error)
-			return { data: null, error }
-		}
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
 
-		console.log('✅ Immuno request created/updated successfully:', data)
-		return { data, error: null }
-	} catch (error) {
+    const inmunorreaccionesString = inmunorreacciones.join(',');
+    const nReacciones = inmunorreacciones.length;
+    const total = nReacciones * precioUnitario;
+
+    const { data, error } = await supabase
+      .from('immuno_requests')
+      .upsert(
+        {
+          case_id: caseId,
+          laboratory_id: profile.laboratory_id, // CRÍTICO: Multi-tenant
+          inmunorreacciones: inmunorreaccionesString,
+          n_reacciones: nReacciones,
+          precio_unitario: precioUnitario,
+          total: total,
+          pagado: false,
+        },
+        {
+          onConflict: 'case_id',
+        },
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error creating/updating immuno request:', error);
+      return { data: null, error };
+    }
+
+    console.log('✅ Immuno request created/updated successfully:', data);
+    return { data, error: null };
+  } catch (error) {
 		console.error('❌ Unexpected error creating/updating immuno request:', error)
 		return { data: null, error }
 	}

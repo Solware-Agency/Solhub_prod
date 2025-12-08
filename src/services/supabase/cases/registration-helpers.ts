@@ -36,11 +36,13 @@ export function getDefaultFieldValue(
  * 
  * @param formData - Datos del formulario
  * @param moduleConfig - Configuración del módulo registrationForm
+ * @param userAssignedBranch - Sede asignada al usuario (assigned_branch del perfil)
  * @returns Objeto con valores por defecto para campos NOT NULL
  */
 export function prepareDefaultValues(
 	formData: FormValues,
-	moduleConfig: ModuleConfig | null | undefined
+	moduleConfig: ModuleConfig | null | undefined,
+	userAssignedBranch?: string | null
 ): Partial<MedicalCaseInsert> {
 	const defaults: Partial<MedicalCaseInsert> = {}
 
@@ -85,15 +87,15 @@ export function prepareDefaultValues(
 
 	// branch (nullable en BD)
 	// Si está deshabilitado, usar null
-	// Si está habilitado, usar valor del formulario o null si no hay valor
+	// Si está habilitado, usar valor del formulario, luego patientBranch, luego assigned_branch del usuario, o null
 	const branchConfig = moduleConfig?.fields?.branch
 	if (branchConfig && !branchConfig.enabled) {
 		// Campo deshabilitado: usar null (campo es nullable en BD)
 		defaults.branch = null
 	} else {
-		// Campo habilitado: usar valor del formulario o null si no hay valor
-		// Mantener compatibilidad con código existente: branch || patientBranch
-		defaults.branch = formData.branch || formData.patientBranch || null
+		// Campo habilitado: usar valor del formulario, luego patientBranch, luego assigned_branch del usuario, o null
+		// Prioridad: formData.branch > formData.patientBranch > userAssignedBranch > null
+		defaults.branch = formData.branch || formData.patientBranch || userAssignedBranch || null
 	}
 
 	// date (NOT NULL) - fecha actual si no hay valor

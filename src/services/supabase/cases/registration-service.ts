@@ -122,85 +122,100 @@ export interface RegistrationResult {
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
  */
 export const registerMedicalCase = async (
-	formData: FormValues,
-	exchangeRate?: number,
-	moduleConfig?: ModuleConfig | null
+  formData: FormValues,
+  exchangeRate?: number,
+  moduleConfig?: ModuleConfig | null,
 ): Promise<RegistrationResult> => {
-	try {
-		console.log('🚀 Iniciando registro con nueva estructura...')
+  try {
+    console.log('🚀 Iniciando registro con nueva estructura...');
 
-		// Obtener información del usuario actual
-		const {
-			data: { user },
-		} = await supabase.auth.getUser()
-		if (!user) {
-			throw new Error('Usuario no autenticado')
-		}
+    // Obtener información del usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
 
-		// Preparar datos del paciente y del caso
-		const { patientData, caseData } = prepareRegistrationData(formData, user, exchangeRate, moduleConfig)
+    // Obtener perfil del usuario para acceder a assigned_branch
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('assigned_branch')
+      .eq('id', user.id)
+      .single();
 
-		console.log('📊 Datos preparados para inserción:')
-		console.log('Patient Data:', patientData)
-		console.log('Case Data:', caseData)
-		console.log('Exchange Rate:', exchangeRate)
+    // Preparar datos del paciente y del caso
+    const { patientData, caseData } = prepareRegistrationData(
+      formData,
+      user,
+      exchangeRate,
+      moduleConfig,
+      profile?.assigned_branch,
+    );
 
-		// PASO 1: Buscar paciente existente por cédula
-		console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`)
-		let patient = await findPatientByCedula(patientData.cedula)
+    console.log('📊 Datos preparados para inserción:');
+    console.log('Patient Data:', patientData);
+    console.log('Case Data:', caseData);
+    console.log('Exchange Rate:', exchangeRate);
 
-		let isNewPatient = false
-		let patientUpdated = false
+    // PASO 1: Buscar paciente existente por cédula
+    console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`);
+    let patient = await findPatientByCedula(patientData.cedula);
 
-		if (!patient) {
-			// CASO A: Paciente nuevo - crear registro
-			console.log('👤 Paciente no existe, creando nuevo...')
-			patient = await createPatient(patientData)
-			isNewPatient = true
-		} else {
-			// CASO B: Paciente existente - verificar si hay cambios
-			console.log(`👤 Paciente existe (${patient.cedula}), verificando cambios...`)
-			const hasChanges = detectPatientChanges(patient, patientData)
+    let isNewPatient = false;
+    let patientUpdated = false;
 
-			if (hasChanges) {
-				console.log('📝 Cambios detectados en el paciente, actualizando...')
-				// Si la cédula cambió, actualizar el registro existente
-				patient = await updatePatient(patient.id, patientData, user.id)
-				patientUpdated = true
-			} else {
-				console.log('✅ No hay cambios en los datos del paciente')
-			}
-		}
+    if (!patient) {
+      // CASO A: Paciente nuevo - crear registro
+      console.log('👤 Paciente no existe, creando nuevo...');
+      patient = await createPatient(patientData);
+      isNewPatient = true;
+    } else {
+      // CASO B: Paciente existente - verificar si hay cambios
+      console.log(
+        `👤 Paciente existe (${patient.cedula}), verificando cambios...`,
+      );
+      const hasChanges = detectPatientChanges(patient, patientData);
 
-		// PASO 2: Crear caso médico enlazado al paciente
-		console.log('📋 Creando caso médico...')
-		// Remove auto-generated fields before passing to createMedicalCase
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { created_at, updated_at, ...cleanCaseData } = caseData
-		const medicalCase = await createMedicalCase({
-			...cleanCaseData,
-			patient_id: patient.id,
-		})
+      if (hasChanges) {
+        console.log('📝 Cambios detectados en el paciente, actualizando...');
+        // Si la cédula cambió, actualizar el registro existente
+        patient = await updatePatient(patient.id, patientData, user.id);
+        patientUpdated = true;
+      } else {
+        console.log('✅ No hay cambios en los datos del paciente');
+      }
+    }
 
-		console.log('✅ Registro completado exitosamente')
+    // PASO 2: Crear caso médico enlazado al paciente
+    console.log('📋 Creando caso médico...');
+    // Remove auto-generated fields before passing to createMedicalCase
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { created_at, updated_at, ...cleanCaseData } = caseData;
+    const medicalCase = await createMedicalCase({
+      ...cleanCaseData,
+      patient_id: patient.id,
+    });
 
-		return {
-			patient,
-			medicalCase,
-			isNewPatient,
-			patientUpdated,
-		}
-	} catch (error) {
-		console.error('❌ Error en registro:', error)
-		return {
-			patient: null,
-			medicalCase: null,
-			isNewPatient: false,
-			patientUpdated: false,
-			error: error instanceof Error ? error.message : 'Error desconocido',
-		}
-	}
-}
+    console.log('✅ Registro completado exitosamente');
+
+    return {
+      patient,
+      medicalCase,
+      isNewPatient,
+      patientUpdated,
+    };
+  } catch (error) {
+    console.error('❌ Error en registro:', error);
+    return {
+      patient: null,
+      medicalCase: null,
+      isNewPatient: false,
+      patientUpdated: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+};
 
 // =====================================================================
 // FUNCIONES AUXILIARES
@@ -208,113 +223,131 @@ export const registerMedicalCase = async (
 
 /**
  * Preparar datos separados para paciente y caso médico
- * 
+ *
  * @param formData - Datos del formulario
  * @param user - Usuario actual
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
+ * @param userAssignedBranch - Sede asignada al usuario (assigned_branch del perfil)
  */
 const prepareRegistrationData = (
-	formData: FormValues,
-	user: any,
-	exchangeRate?: number,
-	moduleConfig?: ModuleConfig | null
+  formData: FormValues,
+  user: any,
+  exchangeRate?: number,
+  moduleConfig?: ModuleConfig | null,
+  userAssignedBranch?: string | null,
 ) => {
-	// Datos del paciente (tabla patients)
-	const patientData: PatientInsert = {
-		cedula: formData.idType === 'S/C' ? 'S/C' : `${formData.idType}-${formData.idNumber}`,
-		nombre: formData.fullName,
-		edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
-		telefono: formData.phone,
-		email: formData.email || null,
-		gender: formData.gender || null, // Si está vacío, guardar como null
-	}
+  // Datos del paciente (tabla patients)
+  const patientData: PatientInsert = {
+    cedula:
+      formData.idType === 'S/C'
+        ? 'S/C'
+        : `${formData.idType}-${formData.idNumber}`,
+    nombre: formData.fullName,
+    edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
+    telefono: formData.phone,
+    email: formData.email || null,
+    gender: formData.gender || null, // Si está vacío, guardar como null
+  };
 
-	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
-	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
+  // Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
+  // const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
-	// Verificar si hay pagos
-	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
-	const hasTotalAmount = formData.totalAmount > 0
+  // Verificar si hay pagos
+  const hasPayments =
+    formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
+  const hasTotalAmount = formData.totalAmount > 0;
 
-	// Calcular remaining amount y estado de pago solo si hay pagos
-	let missingAmount = 0
-	let isPaymentComplete = false
-	let remaining = 0
+  // Calcular remaining amount y estado de pago solo si hay pagos
+  let missingAmount = 0;
+  let isPaymentComplete = false;
+  let remaining = 0;
 
-	if (hasPayments && hasTotalAmount) {
-		const paymentDetails = calculatePaymentDetails(
-			formData.payments || [],
-			formData.totalAmount,
-			exchangeRate,
-		)
-		missingAmount = paymentDetails.missingAmount || 0
-		isPaymentComplete = paymentDetails.isPaymentComplete
-		remaining = missingAmount
-	}
+  if (hasPayments && hasTotalAmount) {
+    const paymentDetails = calculatePaymentDetails(
+      formData.payments || [],
+      formData.totalAmount,
+      exchangeRate,
+    );
+    missingAmount = paymentDetails.missingAmount || 0;
+    isPaymentComplete = paymentDetails.isPaymentComplete;
+    remaining = missingAmount;
+  }
 
-	// Obtener valores por defecto basados en configuración del módulo
-	// Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
-	const defaultValues = prepareDefaultValues(formData, moduleConfig)
-	
-	// Preparar valores de pago (maneja labs sin módulo de pagos)
-	const paymentValues = preparePaymentValues(
-		formData,
-		hasPayments,
-		hasTotalAmount,
-		isPaymentComplete,
-		remaining
-	)
+  // Obtener valores por defecto basados en configuración del módulo
+  // Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
+  // Pasar userAssignedBranch para que se use como fallback si no hay branch en el formulario
+  const defaultValues = prepareDefaultValues(
+    formData,
+    moduleConfig,
+    userAssignedBranch,
+  );
 
-	// Datos del caso médico (tabla medical_records_clean)
-	const caseData: MedicalCaseInsert = {
-		// Aplicar valores por defecto primero (para campos NOT NULL)
-		// Estos valores ya tienen en cuenta si el campo está habilitado o deshabilitado
-		// Asegurar que campos NOT NULL nunca sean null/undefined
-		origin: (defaultValues.origin || '') as string,
-		treating_doctor: (defaultValues.treating_doctor || '') as string,
-		sample_type: (defaultValues.sample_type || '') as string,
-		number_of_samples: defaultValues.number_of_samples || 1,
-		branch: defaultValues.branch,
-		date: defaultValues.date || new Date().toISOString(),
-		payment_status: defaultValues.payment_status || 'Incompleto',
+  // Preparar valores de pago (maneja labs sin módulo de pagos)
+  const paymentValues = preparePaymentValues(
+    formData,
+    hasPayments,
+    hasTotalAmount,
+    isPaymentComplete,
+    remaining,
+  );
 
-		// Información del examen (puede ser NULL)
-		exam_type: formData.examType || null,
+  // Datos del caso médico (tabla medical_records_clean)
+  const caseData: MedicalCaseInsert = {
+    // Aplicar valores por defecto primero (para campos NOT NULL)
+    // Estos valores ya tienen en cuenta si el campo está habilitado o deshabilitado
+    // Asegurar que campos NOT NULL nunca sean null/undefined
+    origin: (defaultValues.origin || '') as string,
+    treating_doctor: (defaultValues.treating_doctor || '') as string,
+    sample_type: (defaultValues.sample_type || '') as string,
+    number_of_samples: defaultValues.number_of_samples || 1,
+    branch: defaultValues.branch,
+    date: defaultValues.date || new Date().toISOString(),
+    payment_status: defaultValues.payment_status || 'Incompleto',
 
-		// Campos opcionales
-		relationship: formData.relationship || null,
-		consulta: formData.consulta || null, // Especialidad médica (solo para lab SPT)
-		code: '', // Se generará automáticamente
+    // Información del examen (puede ser NULL)
+    exam_type: formData.examType || null,
 
-		// Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
-		...paymentValues,
-		exchange_rate: exchangeRate || null,
+    // Campos opcionales
+    relationship: formData.relationship || null,
+    consulta: formData.consulta || null, // Especialidad médica (solo para lab SPT)
+    code: '', // Se generará automáticamente
 
-		// Información adicional
-		comments: formData.comments || null,
+    // Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
+    ...paymentValues,
+    exchange_rate: exchangeRate || null,
 
-		// Metadatos
-		generated_by: user.id || null,
-		// Campos adicionales para tracking de creación
-		created_by: user.id || null,
-		created_by_display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email || null,
-	}
+    // Información adicional
+    comments: formData.comments || null,
 
-	// Debug: Verificar que treating_doctor nunca sea null/undefined
-	if (caseData.treating_doctor === null || caseData.treating_doctor === undefined) {
-		console.error('❌ ERROR: treating_doctor es null/undefined!', {
-			defaultValue: defaultValues.treating_doctor,
-			formValue: formData.treatingDoctor,
-			doctorName: formData.doctorName,
-			moduleConfig: moduleConfig?.fields?.medicoTratante,
-		})
-		// Forzar string vacío si es null/undefined
-		caseData.treating_doctor = ''
-	}
+    // Metadatos
+    generated_by: user.id || null,
+    // Campos adicionales para tracking de creación
+    created_by: user.id || null,
+    created_by_display_name:
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email ||
+      null,
+  };
 
-	return { patientData, caseData }
-}
+  // Debug: Verificar que treating_doctor nunca sea null/undefined
+  if (
+    caseData.treating_doctor === null ||
+    caseData.treating_doctor === undefined
+  ) {
+    console.error('❌ ERROR: treating_doctor es null/undefined!', {
+      defaultValue: defaultValues.treating_doctor,
+      formValue: formData.treatingDoctor,
+      doctorName: formData.doctorName,
+      moduleConfig: moduleConfig?.fields?.medicoTratante,
+    });
+    // Forzar string vacío si es null/undefined
+    caseData.treating_doctor = '';
+  }
+
+  return { patientData, caseData };
+};
 
 /**
  * Detectar si hay cambios en los datos del paciente
