@@ -4,14 +4,15 @@ import { parseDecimalNumber } from '@shared/utils/number-utils'
 type Payment = FormValues['payments'][0]
 
 // List of payment methods that are in bolívares (VES)
-const BOLIVARES_METHODS = ['Punto de venta', 'Pago móvil', 'Bs en efectivo']
+const BOLIVARES_METHODS = ['punto de venta', 'pago móvil', 'pago movil', 'bs en efectivo', 'transferencia']
 
 /**
  * Checks if a payment method is in bolívares (VES)
  */
 export const isBolivaresMethod = (method: string | undefined): boolean => {
 	if (!method) return false
-	return BOLIVARES_METHODS.includes(method)
+	const normalized = method.toLowerCase().trim()
+	return BOLIVARES_METHODS.includes(normalized)
 }
 
 /**
@@ -155,22 +156,20 @@ export const calculateTotalPaidUSD = (payments: Payment[], exchangeRate: number 
 
 		if (isBolivaresMethod(payment.method)) {
 			if (exchangeRate && exchangeRate > 0) {
+				// Convertir Bs a USD usando la tasa
 				const usdAmount = amount / exchangeRate
-				console.log(`💰 Convirtiendo ${amount} Bs a USD: ${amount} / ${exchangeRate} = ${usdAmount.toFixed(2)} USD`)
 				totalUSD += usdAmount
 			} else {
-				console.warn(`⚠️ No hay tasa de cambio para convertir ${amount} Bs (método: ${payment.method})`)
-				// Si no hay tasa de cambio, no podemos validar correctamente
-				// Retornamos el monto original para evitar falsos positivos
-				totalUSD += amount
+				// Si no hay tasa de cambio válida, no podemos convertir
+				// No sumamos nada para evitar cálculos incorrectos
+				// Esto mostrará el pago como incompleto hasta que se actualice la tasa
 			}
 		} else {
-			console.log(`💵 Pago en USD: ${amount} USD`)
+			// Pago en USD, sumar directamente
 			totalUSD += amount
 		}
 	})
 	
-	console.log(`📊 Total calculado en USD: ${totalUSD.toFixed(2)} USD`)
 	return totalUSD
 }
 

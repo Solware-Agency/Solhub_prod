@@ -2,24 +2,97 @@ import { supabase } from '@/services/supabase/config/config'
 import { format, getYear, getMonth } from 'date-fns'
 
 /**
- * Generates a unique medical record code following the format:
- * [caseType][yearSince2000][monthlyCounter][monthLetter]
+ * Generates a unique medical record code using the flexible template system.
+ * Uses Supabase RPC function that reads configuration from laboratories.config.
+ * Falls back to old logic if RPC fails (for backwards compatibility).
  *
- * @param examType - The type of exam (Citología, Biopsia, Inmunohistoquímica)
+ * @param examType - The type of exam (Citología, Biopsia, Inmunohistoquímica, etc.)
  * @param caseDate - The date of the case
  * @param currentRecordId - Optional ID of current record (for updates)
+ * @param laboratoryId - Optional laboratory ID. If not provided, will be obtained from authenticated user
  * @returns Promise<string> - The generated unique code
  */
 export async function generateMedicalRecordCode(
 	examType: string,
 	caseDate: Date | string,
 	currentRecordId?: string,
+	laboratoryId?: string,
 ): Promise<string> {
 	try {
-		console.log('🔢 Generating code for:', { examType, caseDate, currentRecordId })
+		console.log('🔢 Generating code for:', { examType, caseDate, currentRecordId, laboratoryId })
 
 		// Convert string date to Date object if needed
 		const date = typeof caseDate === 'string' ? new Date(caseDate) : caseDate
+
+		// Obtener laboratory_id si no se proporcionó
+		let finalLaboratoryId = laboratoryId
+		if (!finalLaboratoryId) {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (!user) {
+				throw new Error('Usuario no autenticado y laboratory_id no proporcionado')
+			}
+
+			const { data: profile, error: profileError } = await supabase
+				.from('profiles')
+				.select('laboratory_id')
+				.eq('id', user.id)
+				.single()
+
+			if (profileError || !profile?.laboratory_id) {
+				throw new Error('Usuario no tiene laboratory_id asignado')
+			}
+
+			finalLaboratoryId = profile.laboratory_id
+		}
+
+		// Intentar usar función RPC de Supabase (sistema flexible)
+		try {
+			const { data: generatedCode, error: rpcError } = await supabase.rpc(
+				'preview_medical_record_code',
+				{
+					exam_type_input: examType,
+					case_date_input: date.toISOString(),
+					laboratory_id_input: finalLaboratoryId,
+				}
+			)
+
+			if (!rpcError && generatedCode) {
+				console.log('✅ Generated code using flexible system:', {
+					examType,
+					laboratoryId: finalLaboratoryId,
+					finalCode: generatedCode,
+				})
+
+				// Verificar unicidad (aunque la función ya lo hace, verificamos por seguridad)
+				const { data: existingCode } = await supabase
+					.from('medical_records_clean')
+					.select('id')
+					.eq('code', generatedCode)
+					.eq('laboratory_id', finalLaboratoryId)
+					.maybeSingle()
+
+				if (existingCode && existingCode.id !== currentRecordId) {
+					console.warn('⚠️ Code collision detected, regenerating...')
+					// Reintentar (la función RPC debería manejar esto, pero por seguridad)
+					const { data: newCode } = await supabase.rpc('preview_medical_record_code', {
+						exam_type_input: examType,
+						case_date_input: date.toISOString(),
+						laboratory_id_input: finalLaboratoryId,
+					})
+					return newCode || generatedCode
+				}
+
+				return generatedCode
+			}
+
+			// Si RPC falla, usar lógica antigua (fallback)
+			console.warn('⚠️ RPC function failed, using fallback logic:', rpcError)
+		} catch (rpcError) {
+			console.warn('⚠️ RPC function error, using fallback logic:', rpcError)
+		}
+
+		// FALLBACK: Lógica antigua (formato Conspat)
+		console.log('📊 Using fallback code generation (Conspat format)')
 
 		// 1. Get case type number
 		const caseTypeMap: Record<string, string> = {
@@ -41,29 +114,22 @@ export async function generateMedicalRecordCode(
 		const yearSince2000 = String(year - 2000).padStart(2, '0')
 
 		// 3. Get month letter (A=January, B=February, ..., L=December)
-		const month = getMonth(date) + 1 // getMonth() returns 0-11, we need 1-12
+		const month = getMonth(date) + 1
 		const monthLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 		const monthLetter = monthLetters[month - 1]
 
-		// 4. Count existing cases for the same type, year, and month
+		// 4. Count existing cases for the same type, year, month, AND laboratory_id
 		const startOfMonth = new Date(year, month - 1, 1)
 		const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
 
-		console.log('📊 Counting existing cases:', {
-			examType,
-			startOfMonth: format(startOfMonth, 'yyyy-MM-dd'),
-			endOfMonth: format(endOfMonth, 'yyyy-MM-dd'),
-		})
-
-		// Build query to count existing cases
 		let query = supabase
 			.from('medical_records_clean')
 			.select('id', { count: 'exact', head: true })
 			.eq('exam_type', examType)
+			.eq('laboratory_id', finalLaboratoryId)
 			.gte('date', startOfMonth.toISOString())
 			.lte('date', endOfMonth.toISOString())
 
-		// Exclude current record if updating
 		if (currentRecordId) {
 			query = query.neq('id', currentRecordId)
 		}
@@ -75,17 +141,18 @@ export async function generateMedicalRecordCode(
 			throw error
 		}
 
-		// 5. Calculate monthly counter (including current case)
+		// 5. Calculate monthly counter
 		const monthlyCounter = String((count || 0) + 1).padStart(3, '0')
 
-		// 6. Generate final code
+		// 6. Generate final code (formato Conspat)
 		const generatedCode = `${caseTypeNumber}${yearSince2000}${monthlyCounter}${monthLetter}`
 
-		console.log('✅ Generated code:', {
+		console.log('✅ Generated code (fallback):', {
 			caseType: caseTypeNumber,
 			year: yearSince2000,
 			counter: monthlyCounter,
 			month: monthLetter,
+			laboratoryId: finalLaboratoryId,
 			finalCode: generatedCode,
 		})
 
@@ -94,11 +161,11 @@ export async function generateMedicalRecordCode(
 			.from('medical_records_clean')
 			.select('id')
 			.eq('code', generatedCode)
+			.eq('laboratory_id', finalLaboratoryId)
 			.maybeSingle()
 
 		if (existingCode && existingCode.id !== currentRecordId) {
 			console.warn('⚠️ Code collision detected, regenerating...')
-			// If there's a collision, increment counter and try again
 			const newCounter = String((count || 0) + 2).padStart(3, '0')
 			const newCode = `${caseTypeNumber}${yearSince2000}${newCounter}${monthLetter}`
 			console.log('🔄 New code after collision:', newCode)
@@ -115,15 +182,16 @@ export async function generateMedicalRecordCode(
 /**
  * Batch update all existing records without codes
  * This function should be run once to generate codes for existing records
+ * Genera códigos únicos por laboratorio
  */
 export async function generateCodesForExistingRecords(): Promise<{ success: number; errors: number }> {
 	try {
 		console.log('🔄 Starting batch code generation for existing records...')
 
-		// Get all records without codes
+		// Get all records without codes (incluyendo laboratory_id)
 		const { data: records, error } = await supabase
 			.from('medical_records_clean')
-			.select('id, exam_type, date')
+			.select('id, exam_type, date, laboratory_id')
 			.is('code', null)
 			.order('date', { ascending: true })
 
@@ -149,7 +217,17 @@ export async function generateCodesForExistingRecords(): Promise<{ success: numb
 			await Promise.all(
 				batch.map(async (record) => {
 					try {
-						const code = await generateMedicalRecordCode(record.exam_type, record.date, record.id)
+						// Pasar laboratory_id al generador para que filtre correctamente
+						if (!record.laboratory_id) {
+							throw new Error(`Record ${record.id} no tiene laboratory_id asignado`)
+						}
+
+						const code = await generateMedicalRecordCode(
+							record.exam_type, 
+							record.date, 
+							record.id,
+							record.laboratory_id  // Pasar laboratory_id
+						)
 
 						const { error: updateError } = await supabase
 							.from('medical_records_clean')
@@ -161,7 +239,7 @@ export async function generateCodesForExistingRecords(): Promise<{ success: numb
 						}
 
 						successCount++
-						console.log(`✅ Generated code ${code} for record ${record.id}`)
+						console.log(`✅ Generated code ${code} for record ${record.id} (lab: ${record.laboratory_id})`)
 					} catch (error) {
 						errorCount++
 						console.error(`❌ Failed to generate code for record ${record.id}:`, error)

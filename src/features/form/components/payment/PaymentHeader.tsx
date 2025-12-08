@@ -1,12 +1,14 @@
-import React, { memo } from 'react'
+import React, { memo, useMemo } from 'react'
 import { type Control, useWatch, useFormContext } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
 import { FormField, FormItem, FormLabel, FormControl } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useEffect } from 'react'
 import { createCalculatorInputHandler } from '@shared/utils/number-utils'
+import { isBolivaresMethod } from '@features/form/lib/payment/payment-utils'
 
 interface PaymentHeaderProps {
 	control: Control<FormValues>
@@ -17,6 +19,7 @@ interface PaymentHeaderProps {
 
 export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadingRate }: PaymentHeaderProps) => {
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 	const { setValue } = useFormContext()
 	const totalAmount = useWatch({
 		control,
@@ -26,6 +29,21 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 		control,
 		name: 'branch',
 	})
+	const payments = useWatch({
+		control,
+		name: 'payments',
+	})
+
+	// Obtener branches desde la configuración del laboratorio
+	const branchOptions = useMemo(() => {
+		const branches = laboratory?.config?.branches || []
+		// Si hay branches configurados, usarlos; si no, usar valores por defecto
+		if (branches.length > 0) {
+			return branches
+		}
+		// Fallback a valores por defecto si no hay configuración
+		return ['PMG', 'CPC', 'CNX', 'STX', 'MCY']
+	}, [laboratory?.config?.branches])
 
 	// Auto-set branch if user has an assigned branch
 	useEffect(() => {
@@ -45,6 +63,9 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 		return null
 	}, [totalAmount, exchangeRate])
 
+	// Monto Total siempre es en dólares ($)
+	const currencyLabel = '$'
+
 	// Memoize the amount change handler to prevent re-renders
 
 	return (
@@ -58,7 +79,7 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 						<FormControl>
 							<FormDropdown
 								options={createDropdownOptions(
-									!profile?.assigned_branch ? ['PMG', 'CPC', 'CNX', 'STX', 'MCY'] : [profile.assigned_branch],
+									!profile?.assigned_branch ? branchOptions : [profile.assigned_branch],
 								)}
 								value={field.value}
 								onChange={field.onChange}
@@ -81,7 +102,7 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 				name="totalAmount"
 				render={({ field }) => (
 					<FormItem className="w-full">
-						<FormLabel className="text-sm sm:text-base">Monto Total $</FormLabel>
+						<FormLabel className="text-sm sm:text-base">Monto Total {currencyLabel}</FormLabel>
 						<FormControl>
 							{(() => {
 								const calculatorHandler = createCalculatorInputHandler(field.value || 0, field.onChange)

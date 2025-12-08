@@ -35,7 +35,6 @@ export const useUserProfile = () => {
 				'postgres_changes',
 				{ event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
 				(payload: RealtimePostgresChangesPayload<Tables<'profiles'>>) => {
-					console.log('[RT][useUserProfile] change payload:', payload)
 					const nextProfile = (payload?.new as Tables<'profiles'>) ?? null
 					const prevProfile = (payload?.old as Tables<'profiles'>) ?? null
 					// Update React Query cache immediately for snappy UI
@@ -58,7 +57,7 @@ export const useUserProfile = () => {
 					}
 				},
 			)
-			.subscribe((status) => console.log('[RT][useUserProfile] channel status:', status))
+			.subscribe()
 
 		return () => {
 			supabase.removeChannel(channel)
