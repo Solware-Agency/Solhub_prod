@@ -3,6 +3,7 @@ import { supabase } from '@/services/supabase/config/config';
 import { useAuth } from './AuthContext';
 import type { Laboratory } from '@/shared/types/types';
 import { extractLaboratoryId } from '@/services/supabase/types/helpers';
+import { updateFavicon } from '@/shared/utils/favicon-utils';
 
 interface LaboratoryContextType {
   laboratory: Laboratory | null;
@@ -62,6 +63,12 @@ export function LaboratoryProvider({
       }
 
       setLaboratory(lab as unknown as Laboratory);
+
+      // Aplicar favicon si existe en el branding
+      const labData = lab as unknown as Laboratory;
+      if (labData?.branding?.favicon) {
+        updateFavicon(labData.branding.favicon);
+      }
     } catch (error) {
       console.error('Unexpected error loading laboratory:', error);
       setLaboratory(null);
