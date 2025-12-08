@@ -80,7 +80,12 @@ export const formatNumberForInput = (value: number | string, decimals: number = 
  * @param showCurrency Whether to show currency symbol (default: false)
  * @returns Formatted string (e.g., "1.000,12" or "$1.000,12")
  */
-export const formatNumberForDisplay = (value: number | string, decimals: number = 2, showCurrency: boolean = false): string => {
+export const formatNumberForDisplay = (value: number | string | null | undefined, decimals: number = 2, showCurrency: boolean = false): string => {
+	// Handle null/undefined
+	if (value === null || value === undefined) {
+		return showCurrency ? '$0,00' : '0,00'
+	}
+	
 	const num = parseDecimalNumber(value)
 	
 	// Format with European style: dots for thousands, comma for decimals
@@ -100,7 +105,12 @@ export const formatNumberForDisplay = (value: number | string, decimals: number 
  * @param decimals Number of decimal places (default: 2)
  * @returns Formatted currency string (e.g., "$1.000,12")
  */
-export const formatCurrency = (value: number | string, decimals: number = 2): string => {
+export const formatCurrency = (value: number | string | null | undefined, decimals: number = 2): string => {
+	// Handle null/undefined
+	if (value === null || value === undefined) {
+		return '$0,00'
+	}
+	
 	const num = parseDecimalNumber(value)
 	
 	// Format with European style: dots for thousands, comma for decimals
@@ -120,7 +130,12 @@ export const formatCurrency = (value: number | string, decimals: number = 2): st
  * @param decimals Number of decimal places
  * @returns Formatted currency string
  */
-export const formatCurrencyWithSymbol = (value: number | string, symbol: string = '$', decimals: number = 2): string => {
+export const formatCurrencyWithSymbol = (value: number | string | null | undefined, symbol: string = '$', decimals: number = 2): string => {
+	// Handle null/undefined
+	if (value === null || value === undefined) {
+		return `${symbol}0,00`
+	}
+	
 	const num = parseDecimalNumber(value)
 	
 	// Format with European style: dots for thousands, comma for decimals
@@ -345,7 +360,11 @@ export const removeLastDigitFromAmount = (currentAmount: number): number => {
  * @param amount Amount to format
  * @returns Formatted string (e.g., "10,50")
  */
-export const formatCalculatorAmount = (amount: number): string => {
+export const formatCalculatorAmount = (amount: number | null | undefined): string => {
+	// Handle null/undefined
+	if (amount === null || amount === undefined) {
+		return '0,00'
+	}
 	return amount.toFixed(2).replace('.', ',')
 }
 
@@ -355,8 +374,9 @@ export const formatCalculatorAmount = (amount: number): string => {
  * @param onChange Callback when value changes
  * @returns Object with event handlers and formatted display value
  */
-export const createCalculatorInputHandler = (currentValue: number, onChange: (newValue: number) => void) => {
-	const displayValue = formatCalculatorAmount(currentValue)
+export const createCalculatorInputHandler = (currentValue: number | null | undefined, onChange: (newValue: number) => void) => {
+	const safeValue = currentValue ?? 0
+	const displayValue = formatCalculatorAmount(safeValue)
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		const key = e.key
@@ -364,7 +384,7 @@ export const createCalculatorInputHandler = (currentValue: number, onChange: (ne
 		// Handle digits 0-9
 		if (/^[0-9]$/.test(key)) {
 			e.preventDefault()
-			const newValue = addDigitToAmount(currentValue, key)
+			const newValue = addDigitToAmount(safeValue, key)
 			onChange(newValue)
 			return
 		}
@@ -372,7 +392,7 @@ export const createCalculatorInputHandler = (currentValue: number, onChange: (ne
 		// Handle backspace
 		if (key === 'Backspace') {
 			e.preventDefault()
-			const newValue = removeLastDigitFromAmount(currentValue)
+			const newValue = removeLastDigitFromAmount(safeValue)
 			onChange(newValue)
 			return
 		}
