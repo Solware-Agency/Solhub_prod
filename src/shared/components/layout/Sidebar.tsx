@@ -326,10 +326,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4'>
         <div className='flex justify-between items-center w-full mb-2 sm:mb-4'>
           <div className='flex items-center gap-3 ml-1'>
-            <SolHubIcon
-              fill={laboratory?.branding.primaryColor}
-              className={`size-8 shrink-0 -ml-1`}
-            />
+            {laboratory?.branding?.logo ? (
+              <img 
+                src={laboratory.branding.logo} 
+                alt={laboratory.branding.icon || 'Logo'}
+                className='h-8 w-auto shrink-0 -ml-1 object-contain rounded'
+                onError={(e) => {
+                  console.error('Error loading logo:', laboratory.branding.logo);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <SolHubIcon
+                fill={laboratory?.branding?.primaryColor || '#3b82f6'}
+                className={`size-8 shrink-0 -ml-1`}
+              />
+            )}
             <p
               className={`text-2xl font-bold whitespace-nowrap transition-none ${
                 showFullContent
@@ -337,7 +349,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'opacity-0 w-0 overflow-hidden'
               }`}
             >
-              Solhub
+              {laboratory?.branding?.icon || laboratory?.name || 'Solhub'}
             </p>
           </div>
         </div>
