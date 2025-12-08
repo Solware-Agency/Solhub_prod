@@ -767,6 +767,12 @@ export interface Laboratory {
   config: LaboratoryConfig
   created_at: string
   updated_at: string
+  // Propiedades opcionales para estructura sin nivel branding (retrocompatibilidad)
+  logo?: string | null
+  icon?: string
+  favicon?: string | null
+  primaryColor?: string
+  secondaryColor?: string
 }
 
 // =====================================================================
