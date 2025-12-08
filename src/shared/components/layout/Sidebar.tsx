@@ -656,6 +656,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/medico-tratante/patients'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -666,6 +675,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/enfermero/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>  
+                <NavItem
+                  to='/enfermero/patients'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

@@ -162,6 +162,11 @@ export const medicoTratanteRoutes: RouteConfig[] = [
     component: CasesPage,
   },
   {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+  {
     path: 'settings',
     component: SettingsPage,
   },
@@ -173,6 +178,11 @@ export const enfermeroRoutes: RouteConfig[] = [
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
   },
   {
     path: 'settings',

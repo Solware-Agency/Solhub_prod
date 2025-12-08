@@ -247,6 +247,70 @@ export const createTriageRecord = async (
 };
 
 /**
+ * Actualizar un registro de triaje existente
+ * Calcula BMI automáticamente si hay altura y peso
+ */
+export const updateTriageRecord = async (
+  triage_id: string,
+  data: Partial<Omit<TriageRecordInsert, 'laboratory_id' | 'created_by' | 'patient_id' | 'case_id'>>
+): Promise<TriageRecord> => {
+  try {
+    const laboratoryId = await getUserLaboratoryId();
+
+    // Calcular BMI si hay altura y peso
+    const bmi = calculateBMI(data.height_cm || null, data.weight_kg || null);
+
+    // Parsear presión arterial si viene como string
+    const blood_pressure = data.blood_pressure !== undefined 
+      ? parseBloodPressure(data.blood_pressure) 
+      : undefined;
+
+    const updateData: Record<string, any> = {
+      ...data,
+    };
+
+    // Agregar BMI si se calculó
+    if (bmi !== null) {
+      updateData.bmi = bmi;
+    }
+
+    // Agregar presión arterial parseada si existe
+    if (blood_pressure !== undefined) {
+      updateData.blood_pressure = blood_pressure;
+    }
+
+    // Remover campos undefined
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    const { data: record, error } = await supabase
+      .from('triaje_records')
+      .update(updateData)
+      .eq('id', triage_id)
+      .eq('laboratory_id', laboratoryId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error actualizando registro de triaje:', error);
+      throw new Error(`Error al actualizar registro de triaje: ${error.message}`);
+    }
+
+    if (!record) {
+      throw new Error('No se pudo actualizar el registro de triaje');
+    }
+
+    return record as TriageRecord;
+  } catch (error) {
+    console.error('Error en updateTriageRecord:', error);
+    throw error;
+  }
+};
+
+/**
  * Obtener triaje de un caso médico específico
  * Retorna el registro de triaje asociado al caso o null si no existe
  */
