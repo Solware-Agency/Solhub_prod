@@ -12,17 +12,21 @@ export function updateFavicon(faviconUrl: string | null | undefined) {
     return;
   }
 
-  // Buscar el elemento link existente o crear uno nuevo
-  let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+  // Actualizar todos los link tags de favicon
+  const faviconLinks = document.querySelectorAll("link[rel~='icon'], link[rel~='shortcut icon'], link[rel~='apple-touch-icon']");
   
-  if (!link) {
-    link = document.createElement('link');
+  faviconLinks.forEach((link) => {
+    (link as HTMLLinkElement).href = faviconUrl;
+  });
+
+  // Si no hay ningún link, crear uno nuevo
+  if (faviconLinks.length === 0) {
+    const link = document.createElement('link');
     link.rel = 'icon';
+    link.type = 'image/x-icon';
+    link.href = faviconUrl;
     document.head.appendChild(link);
   }
-
-  // Actualizar el href
-  link.href = faviconUrl;
   
   console.log('✅ Favicon updated to:', faviconUrl);
 }
