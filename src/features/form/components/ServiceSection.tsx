@@ -88,7 +88,7 @@ export const ServiceSection = memo(
 
     // Opciones de especialidades médicas para el dropdown de consulta
     const consultaOptions = useMemo(() => {
-      return createDropdownOptions([
+      const options = [
         { value: 'Cardiología', label: 'Cardiología' },
         { value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
         { value: 'Dermatología', label: 'Dermatología' },
@@ -113,22 +113,31 @@ export const ServiceSection = memo(
         { value: 'Psiquiatría', label: 'Psiquiatría' },
         { value: 'Optometría', label: 'Optometría' },
         { value: 'Odontología', label: 'Odontología' },
-      ]);
+      ];
+      // Ordenar alfabéticamente por label
+      const sortedOptions = [...options].sort((a, b) => 
+        a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
+      );
+      return createDropdownOptions(sortedOptions);
     }, []);
     // Obtener tipos de examen desde la configuración del laboratorio
     const examTypesOptions = useMemo(() => {
       const examTypes = laboratory?.config?.examTypes || [];
       // Si hay tipos configurados, usarlos; si no, usar valores por defecto
       if (examTypes.length > 0) {
+        // Ordenar alfabéticamente antes de crear las opciones
+        const sortedExamTypes = [...examTypes].sort((a, b) => 
+          a.localeCompare(b, 'es', { sensitivity: 'base' })
+        );
         return createDropdownOptions(
-          examTypes.map((type) => ({ value: type, label: type })),
+          sortedExamTypes.map((type) => ({ value: type, label: type })),
         );
       }
-      // Fallback a valores por defecto si no hay configuración
+      // Fallback a valores por defecto si no hay configuración (también ordenados)
       return createDropdownOptions([
-        { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
         { value: 'Biopsia', label: 'Biopsia' },
         { value: 'Citología', label: 'Citología' },
+        { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
       ]);
     }, [laboratory?.config?.examTypes]);
 

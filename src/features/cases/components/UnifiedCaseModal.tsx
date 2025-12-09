@@ -224,15 +224,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       const examTypes = laboratory?.config?.examTypes || [];
       // Si hay tipos configurados, usarlos; si no, usar valores por defecto
       if (examTypes.length > 0) {
+        // Ordenar alfabéticamente antes de crear las opciones
+        const sortedExamTypes = [...examTypes].sort((a, b) => 
+          a.localeCompare(b, 'es', { sensitivity: 'base' })
+        );
         return createDropdownOptions(
-          examTypes.map((type) => ({ value: type, label: type })),
+          sortedExamTypes.map((type) => ({ value: type, label: type })),
         );
       }
-      // Fallback a valores por defecto si no hay configuración
+      // Fallback a valores por defecto si no hay configuración (también ordenados)
       return createDropdownOptions([
-        { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
         { value: 'Biopsia', label: 'Biopsia' },
         { value: 'Citología', label: 'Citología' },
+        { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
       ]);
     }, [laboratory?.config?.examTypes]);
 

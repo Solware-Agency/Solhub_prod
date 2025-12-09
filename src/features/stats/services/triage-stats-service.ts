@@ -13,8 +13,8 @@ interface TriageRecordRaw {
 	temperature_celsius: number | null
 	bmi: number | null
 	blood_pressure: number | null
-	tabaco: HabitLevel | null
-	cafe: HabitLevel | null
+	tabaco: number | null // Índice tabáquico (paquetes-año)
+	cafe: number | null // Tazas de café por día
 	alcohol: HabitLevel | null
 	measurement_date: string
 }
@@ -36,6 +36,7 @@ export interface TriageStats {
 		oxygenSaturation: { low: number; normal: number; high: number }
 		temperature: { low: number; normal: number; high: number }
 		bmi: { underweight: number; normal: number; overweight: number; obese: number }
+		bloodPressure: { low: number; normal: number; high: number }
 	}
 	habits: {
 		tabaco: { [key: string]: number }
@@ -101,6 +102,7 @@ export async function getTriageStats(
 						oxygenSaturation: { low: 0, normal: 0, high: 0 },
 						temperature: { low: 0, normal: 0, high: 0 },
 						bmi: { underweight: 0, normal: 0, overweight: 0, obese: 0 },
+						bloodPressure: { low: 0, normal: 0, high: 0 },
 					},
 					habits: {
 						tabaco: {},
@@ -160,6 +162,12 @@ export async function getTriageStats(
 			return 'obese'
 		}
 
+		const classifyBloodPressure = (bp: number) => {
+			if (bp < 90) return 'low'
+			if (bp > 120) return 'high'
+			return 'normal'
+		}
+
 		const hrRanges = { low: 0, normal: 0, high: 0 }
 		heartRates.forEach((hr) => {
 			const range = classifyHeartRate(hr)
@@ -190,13 +198,54 @@ export async function getTriageStats(
 			bmiRanges[range]++
 		})
 
+		const bpRanges = { low: 0, normal: 0, high: 0 }
+		systolicBPs.forEach((bp) => {
+			const range = classifyBloodPressure(bp)
+			bpRanges[range]++
+		})
+
 		// Contar hábitos
 		const countHabits = (field: 'tabaco' | 'cafe' | 'alcohol') => {
 			const counts: { [key: string]: number } = {}
 			records.forEach((t) => {
 				const value = t[field]
-				if (value) {
-					counts[value] = (counts[value] || 0) + 1
+				if (value !== null && value !== undefined) {
+					let category: string
+					
+					if (field === 'tabaco') {
+						// Categorizar índice tabáquico
+						const index = value as number
+						if (index === 0) {
+							category = 'No fuma'
+						} else if (index < 10) {
+							category = 'Nulo'
+						} else if (index <= 20) {
+							category = 'Riesgo moderado'
+						} else if (index <= 40) {
+							category = 'Riesgo intenso'
+						} else {
+							category = 'Riesgo alto'
+						}
+					} else if (field === 'cafe') {
+						// Categorizar café por tazas por día
+						const cups = value as number
+						if (cups === 0) {
+							category = 'No toma'
+						} else if (cups <= 2) {
+							category = 'Bajo (1-2 tazas)'
+						} else if (cups <= 4) {
+							category = 'Moderado (3-4 tazas)'
+						} else if (cups <= 6) {
+							category = 'Alto (5-6 tazas)'
+						} else {
+							category = 'Muy alto (7+ tazas)'
+						}
+					} else {
+						// Alcohol sigue siendo HabitLevel (string)
+						category = value as string
+					}
+					
+					counts[category] = (counts[category] || 0) + 1
 				}
 			})
 			return counts
@@ -221,6 +270,7 @@ export async function getTriageStats(
 					oxygenSaturation: osRanges,
 					temperature: tempRanges,
 					bmi: bmiRanges,
+					bloodPressure: bpRanges,
 				},
 				habits: {
 					tabaco: countHabits('tabaco'),

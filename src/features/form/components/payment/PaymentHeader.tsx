@@ -123,9 +123,9 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 								)
 							})()}
 						</FormControl>
-						<div className="flex gap-2 items-center">
-							{totalInVes && <p className="text-xs sm:text-sm font-bold text-green-600">{totalInVes} VES</p>}
-							<p className="text-[10px] sm:text-xs text-muted-foreground">
+						<div className="flex gap-2 items-center flex-nowrap">
+							{totalInVes && <p className="text-xs sm:text-sm font-bold text-green-600 whitespace-nowrap">{totalInVes} VES</p>}
+							<p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
 								{isLoadingRate ? 'Cargando tasa...' : `Tasa BCV: ${exchangeRate?.toFixed(2) || 'N/A'} VES/USD`}
 							</p>
 						</div>

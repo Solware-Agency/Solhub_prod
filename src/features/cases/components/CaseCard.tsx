@@ -17,8 +17,8 @@ interface CaseCardProps {
 
 const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest }) => {
 	return (
-		<div className="bg-white dark:bg-background rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
-			<div className="flex flex-wrap gap-1.5 mb-2">
+		<div className="bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
+			<div className="flex flex-wrap gap-1.5 mb-1.5">
 				<span
 					className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.payment_status)}`}
 				>
@@ -51,7 +51,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 				)}
 			</div>
 
-			<div className="grid grid-cols-1 gap-2 mb-2">
+			<div className="grid grid-cols-1 gap-1.5 mb-1.5">
 				<div>
 					<div className="flex items-center gap-2">
 						<User className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -67,7 +67,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-2 mb-2">
+			<div className="grid grid-cols-2 gap-1.5 mb-1.5">
 				<div>
 					<p className="text-xs text-gray-500 dark:text-gray-400">Sede</p>
 					<BranchBadge branch={case_.branch} className="text-xs" />
@@ -79,7 +79,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 				</div>
 			</div>
 
-			<div className="flex justify-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+			<div className="flex justify-center mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
 				<CaseActionsPopover
 					case_={case_}
 					onView={onView}

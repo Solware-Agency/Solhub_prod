@@ -1380,7 +1380,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             <div className='flex-1 overflow-hidden'>
               {/* Mobile View - Cards */}
               <div className='block lg:hidden h-full overflow-y-auto px-3 py-4 custom-scrollbar'>
-                <div className='p-2 sm:p-4 space-y-3 max-h-[45vh] overflow-y-auto custom-scrollbar'>
+                <div className='p-2 sm:p-4 space-y-2 max-h-[75vh] overflow-y-auto custom-scrollbar'>
                   {paginatedCases.length > 0 ? (
                     paginatedCases.map((case_) => (
                       <CaseCard
@@ -1731,7 +1731,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             // totalFilteredCases={pagination?.totalItems}
           />
         </div>
-        <div className='bg-white dark:bg-background rounded-xl h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
+        <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
           {/* Search and Filter Controls */}
           <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
             <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
@@ -1826,7 +1826,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
           {/* Mobile View - Cards */}
           <div className='block lg:hidden overflow-hidden'>
-            <div className='p-4 space-y-4 max-h-[45vh] overflow-y-auto custom-scrollbar'>
+            <div className='p-4 space-y-2 max-h-[75vh] overflow-y-auto custom-scrollbar'>
               {paginatedCases.length > 0 ? (
                 paginatedCases.map((case_) => (
                   <CaseCard

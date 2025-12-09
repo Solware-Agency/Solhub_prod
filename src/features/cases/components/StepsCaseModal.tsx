@@ -1573,7 +1573,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               que dice "SI" de lo contrario seleccione el boton que dice "NO"
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               onClick={() => {
                 setConfirmDialogOpen(false);

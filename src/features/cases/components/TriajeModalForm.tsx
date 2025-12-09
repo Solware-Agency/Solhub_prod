@@ -30,6 +30,7 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import {
+  Tooltip,
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
@@ -410,6 +411,41 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       }));
     }
   }, [formData.peso, formData.talla]);
+
+  // Función para obtener las clases CSS según el valor del índice tabáquico
+  const getSmokingIndexColorClasses = (indice: number) => {
+    if (indice === 0) {
+      return {
+        bg: 'bg-gray-50 dark:bg-gray-900',
+        border: 'border-gray-200 dark:border-gray-800',
+        text: 'text-gray-700 dark:text-gray-300',
+      };
+    } else if (indice < 10) {
+      return {
+        bg: 'bg-green-50 dark:bg-green-950',
+        border: 'border-green-200 dark:border-green-800',
+        text: 'text-green-900 dark:text-green-100',
+      };
+    } else if (indice <= 20) {
+      return {
+        bg: 'bg-yellow-50 dark:bg-yellow-950',
+        border: 'border-yellow-200 dark:border-yellow-800',
+        text: 'text-yellow-900 dark:text-yellow-100',
+      };
+    } else if (indice <= 40) {
+      return {
+        bg: 'bg-orange-50 dark:bg-orange-950',
+        border: 'border-orange-200 dark:border-orange-800',
+        text: 'text-orange-900 dark:text-orange-100',
+      };
+    } else {
+      return {
+        bg: 'bg-red-50 dark:bg-red-950',
+        border: 'border-red-200 dark:border-red-800',
+        text: 'text-red-900 dark:text-red-100',
+      };
+    }
+  };
 
   // Calcular índice tabáquico automáticamente
   useEffect(() => {
@@ -935,13 +971,29 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   {/* Sección de Índice Tabáquico */}
                   {formData.tabaco === 'Si' && (
                     <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
-                      <h4 className='text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300'>
-                        Índice Tabáquico
-                      </h4>
-                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                      <div className='flex items-center gap-2 mb-3'>
+                        <h4 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
+                          Índice Tabáquico
+                        </h4>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side='top'
+                            sideOffset={5}
+                            className='!z-[9999999] max-w-xs'
+                          >
+                            <p className='text-sm'>
+                              Fórmula: (Cigarrillos al día × Años) / 20
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
                         <div>
                           <label className='text-sm font-medium mb-2 block'>
-                            Cigarrillos por día
+                            Cigarrillos al día
                           </label>
                           <Input
                             type='number'
@@ -996,19 +1048,38 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                             className={inputStyles}
                           />
                         </div>
-                      </div>
-
-                      {/* Mostrar índice calculado */}
-                      {formData.indiceTabaquico && (
-                        <div className='mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg'>
-                          <p className='text-sm font-semibold text-blue-900 dark:text-blue-100'>
-                            {formData.indiceTabaquico}
-                          </p>
-                          <p className='text-xs text-blue-700 dark:text-blue-300 mt-1'>
-                            Fórmula: (Cigarrillos/día × Años) / 20
-                          </p>
+                        {/* Mostrar índice calculado en la misma línea */}
+                        <div>
+                          <label className='text-sm font-medium mb-2 block'>
+                            Resultado
+                          </label>
+                          {formData.indiceTabaquico ? (
+                            (() => {
+                              // Calcular el índice para determinar el color
+                              const cigarrillos = parseFloat(formData.cigarrillosPorDia);
+                              const anos = parseFloat(formData.anosFumando);
+                              const indice = cigarrillos > 0 && anos > 0 
+                                ? Math.round(((cigarrillos * anos) / 20) * 100) / 100 
+                                : 0;
+                              const colorClasses = getSmokingIndexColorClasses(indice);
+                              
+                              return (
+                                <div className={`p-3 ${colorClasses.bg} border ${colorClasses.border} rounded-lg h-10 flex items-center`}>
+                                  <p className={`text-sm font-semibold ${colorClasses.text}`}>
+                                    {formData.indiceTabaquico}
+                                  </p>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className='p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg h-10 flex items-center'>
+                              <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                Ingrese valores
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </CardContent>

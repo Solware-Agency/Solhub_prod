@@ -172,14 +172,14 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className='max-w-4xl max-h-[90vh] overflow-y-auto'
+        className='max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-full'
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(5px)',
         }}
       >
-        <Tabs defaultValue='general' className='w-full'>
-          <TabsList className='grid w-full grid-cols-2 gap-4 mt-4'>
+        <Tabs defaultValue='general' className='w-full overflow-x-hidden'>
+          <TabsList className='grid w-full grid-cols-2 gap-2 sm:gap-4 mt-4'>
             <TabsTrigger
               value='general'
               className='flex items-center gap-2 cursor-pointer'
@@ -196,9 +196,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value='general' className='space-y-6 mt-6'>
+          <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden'>
             {/* Status and Branch Filters */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
                   options={statusOptions}
@@ -221,7 +221,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </div>
 
             {/* New Filters Row 1: PDF Status and Date Range */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
                   options={[
@@ -292,7 +292,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </div>
 
             {/* New Filters Row 2: Exam Type and Document Status */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
                   options={[
@@ -340,7 +340,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </div>
 
             {/* Doctor and Origin Filters - Same line */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               {/* Doctor Filter */}
               <div className='space-y-3'>
                 <Button
@@ -566,9 +566,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             )}
           </TabsContent>
 
-          <TabsContent value='role-specific' className='space-y-6 mt-6'>
-            <div className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <TabsContent value='role-specific' className='space-y-6 mt-6 overflow-x-hidden'>
+            <div className='space-y-4 w-full'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
                 {/* Filtro Citología Positiva */}
                 <Card
                   className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
@@ -665,7 +665,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           </TabsContent>
 
           {/* Action Buttons */}
-          <div className='flex justify-between pt-4 border-t mt-6'>
+          <div className='flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 pt-4 border-t mt-6 w-full'>
             <Button
               onClick={onClearAllFilters}
               variant='outline'
