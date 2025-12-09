@@ -121,7 +121,7 @@ export const useExportToExcel = () => {
 
 					return {
 						Código: case_.code || '',
-						'Fecha de Registro': case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
+						'Registro': case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
 						'Nombre del Paciente': case_.nombre || '',
 						Cédula: case_.cedula || '',
 						Edad: ageDisplay,
@@ -157,7 +157,7 @@ export const useExportToExcel = () => {
 				// Ajustar el ancho de las columnas
 				const colWidths = [
 					{ wch: 15 }, // Código
-					{ wch: 18 }, // Fecha de Registro
+					{ wch: 18 }, // Registro
 					{ wch: 25 }, // Nombre del Paciente
 					{ wch: 15 }, // Cédula
 					{ wch: 8 }, // Edad

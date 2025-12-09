@@ -141,32 +141,37 @@ export const ServiceSection = memo(
       ]);
     }, [laboratory?.config?.examTypes]);
 
-    // Auto-set branch if user has an assigned branch - memoized with useCallback
-    useEffect(() => {
-      if (profile?.assigned_branch && !branch) {
-        // Set the branch to the user's assigned branch
-        // Note: This would need to be passed as a prop or use useFormContext
-        // For now, we'll comment this out as it's not working correctly
-        // const setValue = control._options.context?.setValue
-        // if (setValue) {
-        // 	setValue('branch', profile.assigned_branch)
-        // }
+    // Obtener branches desde la configuración del laboratorio
+    const branchOptions = useMemo(() => {
+      const branches = laboratory?.config?.branches || [];
+      // Si hay branches configurados, usarlos; si no, usar valores por defecto
+      if (branches.length > 0) {
+        return branches;
       }
-    }, [profile, branch, control]);
+      // Fallback a valores por defecto si no hay configuración
+      return ['PMG', 'CPC', 'CNX', 'STX', 'MCY'];
+    }, [laboratory?.config?.branches]);
+
+    // Auto-set branch if user has an assigned branch
+    useEffect(() => {
+      if (profile?.assigned_branch && !branch && setValue) {
+        setValue('branch', profile.assigned_branch);
+      }
+    }, [profile, branch, setValue]);
 
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
         <CardHeader className='p-3 sm:p-4 md:p-6'>
           <CardTitle className='text-base sm:text-lg'>Servicio</CardTitle>
         </CardHeader>
-        <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3'>
+        <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap gap-2 sm:gap-3'>
           {/* Tipo de Examen - Usa config.examTypes del laboratorio */}
           {examTypeConfig?.enabled && (
             <FormField
               control={control}
               name='examType'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>Tipo de Examen *</FormLabel>
                   <FormControl>
                     <FormDropdown
@@ -188,7 +193,7 @@ export const ServiceSection = memo(
               control={control}
               name='origin'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>Procedencia *</FormLabel>
                   <FormControl>
                     <AutocompleteInput
@@ -212,13 +217,42 @@ export const ServiceSection = memo(
             />
           )}
 
+          {/* Sede - Movido desde la sección de Pagos */}
+          <FormField
+            control={control}
+            name='branch'
+            render={({ field }) => (
+              <FormItem className='min-w-[180px] flex-1'>
+                <FormLabel>Sede *</FormLabel>
+                <FormControl>
+                  <FormDropdown
+                    options={createDropdownOptions(
+                      !profile?.assigned_branch ? branchOptions : [profile.assigned_branch],
+                    )}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder='Seleccione una sede'
+                    className={inputStyles}
+                    disabled={!!profile?.assigned_branch}
+                    id='service-branch'
+                  />
+                </FormControl>
+                {profile?.assigned_branch && (
+                  <p className='text-[10px] sm:text-xs text-muted-foreground mt-1'>
+                    Tu cuenta está limitada a la sede {profile.assigned_branch}
+                  </p>
+                )}
+              </FormItem>
+            )}
+          />
+
           {/* Médico Tratante - CON AUTOCOMPLETADO - Solo visible si está habilitado en la configuración */}
           {medicoTratanteConfig?.enabled && (
             <FormField
               control={control}
               name='treatingDoctor'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>
                     Médico Tratante {medicoTratanteConfig.required && '*'}
                   </FormLabel>
@@ -249,7 +283,7 @@ export const ServiceSection = memo(
               control={control}
               name='sampleType'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>Tipo de Muestra *</FormLabel>
                   <FormControl>
                     <AutocompleteInput
@@ -273,7 +307,7 @@ export const ServiceSection = memo(
               control={control}
               name='numberOfSamples'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>Cantidad de Muestras *</FormLabel>
                   <FormControl>
                     <Input
@@ -299,7 +333,7 @@ export const ServiceSection = memo(
               control={control}
               name='relationship'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>Relación</FormLabel>
                   <FormControl>
                     <AutocompleteInput
@@ -320,7 +354,7 @@ export const ServiceSection = memo(
               control={control}
               name='consulta'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>
                     Consulta {consultaConfig.required && '*'}
                   </FormLabel>

@@ -361,7 +361,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className='space-y-3'>
+							<div className='grid grid-cols-3 gap-4'>
 								{/* Tabaco */}
 								{Object.keys(stats.habits.tabaco).length > 0 && (
 									<div>
