@@ -12,6 +12,7 @@ export interface MedicalCase {
   laboratory_id: string; // NUEVO: Multi-tenant
   patient_id: string | null;
   exam_type: string;
+  consulta: string | null; // Especialidad médica (SPT)
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -70,6 +71,7 @@ export interface MedicalCaseInsert {
   laboratory_id: string; // NUEVO: Multi-tenant
   patient_id?: string | null;
   exam_type: string | null; // NULL permitido si no está configurado
+  consulta?: string | null; // Especialidad médica (SPT)
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -136,6 +138,7 @@ export interface MedicalCaseUpdate {
   laboratory_id?: string; // NUEVO: Multi-tenant
   patient_id?: string | null;
   exam_type?: string;
+  consulta?: string | null; // Especialidad médica (SPT)
   origin?: string;
   treating_doctor?: string;
   sample_type?: string;
@@ -203,6 +206,7 @@ export interface MedicalCaseWithPatient {
   id: string;
   patient_id: string | null;
   exam_type: string;
+  consulta: string | null; // Especialidad médica (SPT)
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -274,7 +278,7 @@ export const createMedicalCase = async (
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id: string } | null; error: any };
 
     if (profileError || !profile?.laboratory_id) {
       throw new Error('Usuario no tiene laboratorio asignado');
@@ -293,7 +297,7 @@ export const createMedicalCase = async (
       .insert({
         ...insertData,
         laboratory_id: profile.laboratory_id, // CRÍTICO: Multi-tenant
-      })
+      } as any)
       .select()
       .single();
 
@@ -441,7 +445,7 @@ export const getCaseById = async (
       .from('profiles')
       .select('laboratory_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { laboratory_id: string } | null; error: any };
 
     if (profileError || !profile?.laboratory_id) {
       throw new Error('Usuario no tiene laboratorio asignado');
@@ -1540,6 +1544,7 @@ export const findCaseByCode = async (
       edad: (data as any).patients?.edad || null,
       telefono: (data as any).patients?.telefono || null,
       patient_email: (data as any).patients?.email || null,
+      consulta: (data as any).consulta || null,
       version: (data as any).version || null,
       // Asegurar que todas las propiedades requeridas estén presentes
       material_remitido: (data as any).material_remitido || null,
