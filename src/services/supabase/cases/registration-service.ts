@@ -511,6 +511,15 @@ export const validateRegistrationData = (
     errors.push('La consulta (especialidad médica) es obligatoria');
   }
 
+  // Validación especial para SPT: al menos uno de examType o consulta debe estar presente
+  // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
+  const isSPT = laboratorySlug?.toLowerCase() === 'spt';
+  if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
+    if (!formData.examType && !formData.consulta) {
+      errors.push('Debe seleccionar al menos un Tipo de Examen o una Consulta');
+    }
+  }
+
   // Solo validar totalAmount si hay pagos (labs con módulo de pagos)
   const hasPayments =
     formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
