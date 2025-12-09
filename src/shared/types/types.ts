@@ -712,6 +712,7 @@ export interface LaboratoryFeatures {
   hasUsers: boolean
   hasChangeHistory: boolean
   hasTriaje: boolean
+  hasEvaluateCitology: boolean
   hasReports: boolean
 }
 

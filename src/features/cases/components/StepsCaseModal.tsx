@@ -155,7 +155,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    if ((isOwner || isCitotecno || isMedicowner) && isCitology) {
+    if (
+      (isOwner || isCitotecno || isMedicowner) &&
+      isCitology &&
+      laboratory?.features?.hasEvaluateCitology
+    ) {
       stepsList.push({
         id: 'citology',
         title: 'Citología',
@@ -184,7 +188,16 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     return stepsList;
-  }, [isResidente, isEmployee, isCitology, isCitoAdmin]);
+  }, [
+    isResidente,
+    isEmployee,
+    isCitology,
+    isCitoAdmin,
+    isOwner,
+    isCitotecno,
+    isMedicowner,
+    laboratory?.features?.hasEvaluateCitology,
+  ]);
 
   // Función para determinar el paso inicial basado en el estado del documento
   const getInitialStep = () => {
@@ -196,8 +209,19 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       return computedSteps.findIndex((step) => step.id === 'approve');
     }
 
-    if ((isOwner || isCitotecno) && docAprobado === 'pendiente' && isCitology) {
-      return computedSteps.findIndex((step) => step.id === 'citology');
+    if (
+      (isOwner || isCitotecno) &&
+      docAprobado === 'pendiente' &&
+      isCitology &&
+      laboratory?.features?.hasEvaluateCitology
+    ) {
+      const citologyStepIndex = computedSteps.findIndex(
+        (step) => step.id === 'citology',
+      );
+      // Si el paso de citología existe, usarlo; si no, ir al paso de aprobación
+      return citologyStepIndex !== -1
+        ? citologyStepIndex
+        : computedSteps.findIndex((step) => step.id === 'approve');
     }
 
     if (
@@ -1563,9 +1587,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         )}
       </AnimatePresence>
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent
-          className={isFullscreen ? 'z-[999999999999999999]' : ''}
-        >
+        <DialogContent className={isFullscreen ? 'z-[999999999999999999]' : ''}>
           <DialogHeader>
             <DialogTitle>Confirmar descargar PDF</DialogTitle>
             <DialogDescription>
@@ -1573,7 +1595,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               que dice "SI" de lo contrario seleccione el boton que dice "NO"
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className='gap-2 sm:gap-0'>
             <Button
               onClick={() => {
                 setConfirmDialogOpen(false);
