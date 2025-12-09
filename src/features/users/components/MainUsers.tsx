@@ -45,6 +45,7 @@ import {
 import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import { getAvailableRolesForLaboratory } from '@/services/supabase/laboratories/laboratory-roles-service'
 
 interface UserProfile {
 	id: string
@@ -73,6 +74,7 @@ const MainUsers: React.FC = () => {
 	const [branchFilter, setbranchFilter] = useState<string>('')
 	const [approvalFilter, setApprovalFilter] = useState<string>('')
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+	const [availableRoles, setAvailableRoles] = useState<Array<{value: string; label: string}>>([])
 
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
@@ -96,6 +98,24 @@ const MainUsers: React.FC = () => {
 			{ value: 'MCY', label: 'MCY' },
 		]
 	}, [laboratory?.config?.branches])
+
+	// Cargar roles disponibles cuando se carga el laboratorio
+	useEffect(() => {
+		const loadRoles = async () => {
+			if (laboratory?.id) {
+				const rolesResult = await getAvailableRolesForLaboratory(laboratory.id)
+				if (rolesResult.success && rolesResult.roles.length > 0) {
+					setAvailableRoles(
+						rolesResult.roles.map(role => ({
+							value: role.value,
+							label: role.label
+						}))
+					)
+				}
+			}
+		}
+		loadRoles()
+	}, [laboratory?.id])
 
 	// Query para obtener usuarios
 	const {
@@ -890,32 +910,21 @@ const MainUsers: React.FC = () => {
 											>
 												Cambiar Rol:
 											</label>
-											<CustomDropdown
-												id={`user-role-${user.id}`}
-												defaultValue={user.role}
-												onChange={(value) =>
-													handleRoleChange(
-														user.id,
-														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
-													)
-												}
-												options={[
-													{ value: 'owner', label: 'Propietario' },
-													{ value: 'employee', label: 'Recepcionista' },
-													{ value: 'residente', label: 'Residente' },
-													{ value: 'citotecno', label: 'Citotecnologo' },
-													{ value: 'patologo', label: 'Patologo' },
-													{ value: 'medicowner', label: 'Medico Owner' },
-													{ value: 'medico_tratante', label: 'Médico Tratante' },
-										{ value: 'enfermero', label: 'Enfermero' },
-									]}
-												placeholder="Seleccionar rol"
-												className="w-full"
-											/>
-										</div>
-									)}
-
-									{/* Selector de sede */}
+										<CustomDropdown
+											id={`user-role-${user.id}`}
+											defaultValue={user.role}
+											onChange={(value) =>
+												handleRoleChange(
+													user.id,
+													value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+												)
+											}
+											options={availableRoles}
+											placeholder="Seleccionar rol"
+											className="w-full"
+										/>
+									</div>
+								)}									{/* Selector de sede */}
 									{canManage && (
 										<div className="mt-3">
 											<label
@@ -1021,28 +1030,19 @@ const MainUsers: React.FC = () => {
 											</div>
 										</td>
 										<td className="px-6 py-4">
-											{canManage && user.id !== currentUser?.id ? (
-												<CustomDropdown
-													defaultValue={user.role}
-													onChange={(value) =>
-														handleRoleChange(
-															user.id,
-															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
-														)
-													}
-													options={[
-														{ value: 'owner', label: 'Propietario' },
-														{ value: 'employee', label: 'Recepcionista' },
-														{ value: 'residente', label: 'Residente' },
-														{ value: 'citotecno', label: 'Citotecnologo' },
-														{ value: 'patologo', label: 'Patologo' },
-														{ value: 'medicowner', label: 'Medico Owner' },
-														{ value: 'medico_tratante', label: 'Médico Tratante' },
-										{ value: 'enfermero', label: 'Enfermero' },
-									]}
-													placeholder="Seleccionar rol"
-													className="w-40"
-												/>
+												{canManage && user.id !== currentUser?.id ? (
+													<CustomDropdown
+														defaultValue={user.role}
+														onChange={(value) =>
+															handleRoleChange(
+																user.id,
+																value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+															)
+														}
+														options={availableRoles}
+														placeholder="Seleccionar rol"
+														className="w-40"
+													/>
 											) : (
 												<span
 													className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(
