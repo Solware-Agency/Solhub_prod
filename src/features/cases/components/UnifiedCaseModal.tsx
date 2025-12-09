@@ -1820,7 +1820,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
                       {/* Fecha de registro - NO EDITABLE */}
                       <InfoRow
-                        label='Fecha de registro'
+                        label='Registro'
                         value={new Date(
                           currentCase.created_at || '',
                         ).toLocaleDateString('es-ES')}

@@ -1428,7 +1428,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                           onClick={() => handleSort('created_at')}
                           className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
                         >
-                          Fecha de Registro
+                          Registro
                           <SortIcon field='created_at' />
                         </button>
                       </th>
@@ -1875,7 +1875,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                           onClick={() => handleSort('created_at')}
                           className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
                         >
-                          Fecha de Registro
+                          Registro
                           <SortIcon field='created_at' />
                         </button>
                       </th>

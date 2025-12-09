@@ -1,14 +1,9 @@
 import React, { memo, useMemo } from 'react'
-import { type Control, useWatch, useFormContext } from 'react-hook-form'
+import { type Control, useWatch } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
 import { FormField, FormItem, FormLabel, FormControl } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
-import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
-import { useEffect } from 'react'
 import { createCalculatorInputHandler } from '@shared/utils/number-utils'
-import { isBolivaresMethod } from '@features/form/lib/payment/payment-utils'
 
 interface PaymentHeaderProps {
 	control: Control<FormValues>
@@ -18,41 +13,10 @@ interface PaymentHeaderProps {
 }
 
 export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadingRate }: PaymentHeaderProps) => {
-	const { profile } = useUserProfile()
-	const { laboratory } = useLaboratory()
-	const { setValue } = useFormContext()
 	const totalAmount = useWatch({
 		control,
 		name: 'totalAmount',
 	})
-	const branch = useWatch({
-		control,
-		name: 'branch',
-	})
-	const payments = useWatch({
-		control,
-		name: 'payments',
-	})
-
-	// Obtener branches desde la configuración del laboratorio
-	const branchOptions = useMemo(() => {
-		const branches = laboratory?.config?.branches || []
-		// Si hay branches configurados, usarlos; si no, usar valores por defecto
-		if (branches.length > 0) {
-			return branches
-		}
-		// Fallback a valores por defecto si no hay configuración
-		return ['PMG', 'CPC', 'CNX', 'STX', 'MCY']
-	}, [laboratory?.config?.branches])
-
-	// Auto-set branch if user has an assigned branch
-	useEffect(() => {
-		if (profile?.assigned_branch && !branch) {
-			// Set the branch to the user's assigned branch
-			setValue('branch', profile.assigned_branch)
-		}
-	}, [profile, branch, setValue])
-
 	const totalInVes = React.useMemo(() => {
 		if (exchangeRate && totalAmount) {
 			const amount = parseFloat(String(totalAmount))
@@ -70,33 +34,6 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 
 	return (
 		<React.Fragment>
-			<FormField
-				control={control}
-				name="branch"
-				render={({ field }) => (
-					<FormItem className="w-full">
-						<FormLabel className="text-sm sm:text-base">Sede *</FormLabel>
-						<FormControl>
-							<FormDropdown
-								options={createDropdownOptions(
-									!profile?.assigned_branch ? branchOptions : [profile.assigned_branch],
-								)}
-								value={field.value}
-								onChange={field.onChange}
-								placeholder="Seleccione una sede"
-								className={inputStyles}
-								disabled={!!profile?.assigned_branch}
-								id="payment-branch"
-							/>
-						</FormControl>
-						{profile?.assigned_branch && (
-							<p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-								Tu cuenta está limitada a la sede {profile.assigned_branch}
-							</p>
-						)}
-					</FormItem>
-				)}
-			/>
 			<FormField
 				control={control}
 				name="totalAmount"
