@@ -846,7 +846,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
   // Si el triaje está completo y no estamos editando, mostrar vista
   const triageComplete = isTriageComplete(existingTriage ?? null);
-  const canEditTriage = isEnfermero || isMedico;
+  const canEditTriage = (isEnfermero || isMedico) && userRole !== 'employee';
 
   if (existingTriage && triageComplete && !isEditing) {
     return (

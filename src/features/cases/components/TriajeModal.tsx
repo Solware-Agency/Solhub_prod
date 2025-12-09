@@ -34,7 +34,6 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     profile?.role &&
     [
       'owner',
-      'employee',
       'residente',
       'citotecno',
       'patologo',
