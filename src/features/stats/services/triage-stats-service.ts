@@ -115,12 +115,22 @@ export async function getTriageStats(
 
 		const records = triages as TriageRecordRaw[]
 
+		// Filtrar solo registros que tienen al menos un signo vital
+		const validRecords = records.filter((t) => 
+			t.heart_rate !== null ||
+			t.respiratory_rate !== null ||
+			t.oxygen_saturation !== null ||
+			t.temperature_celsius !== null ||
+			t.bmi !== null ||
+			t.blood_pressure !== null
+		)
+
 		// Calcular promedios
-		const heartRates = records.map((t) => t.heart_rate).filter((v): v is number => v !== null)
-		const respiratoryRates = records.map((t) => t.respiratory_rate).filter((v): v is number => v !== null)
-		const oxygenSaturations = records.map((t) => t.oxygen_saturation).filter((v): v is number => v !== null)
-		const temperatures = records.map((t) => t.temperature_celsius).filter((v): v is number => v !== null)
-		const bmis = records.map((t) => t.bmi).filter((v): v is number => v !== null)
+		const heartRates = validRecords.map((t) => t.heart_rate).filter((v): v is number => v !== null)
+		const respiratoryRates = validRecords.map((t) => t.respiratory_rate).filter((v): v is number => v !== null)
+		const oxygenSaturations = validRecords.map((t) => t.oxygen_saturation).filter((v): v is number => v !== null)
+		const temperatures = validRecords.map((t) => t.temperature_celsius).filter((v): v is number => v !== null)
+		const bmis = validRecords.map((t) => t.bmi).filter((v): v is number => v !== null)
 
 		// Extraer presión arterial (entero en mmHg)
 		const bloodPressures = records.map((t) => t.blood_pressure).filter((v): v is number => v !== null)
@@ -207,7 +217,7 @@ export async function getTriageStats(
 		// Contar hábitos
 		const countHabits = (field: 'tabaco' | 'cafe' | 'alcohol') => {
 			const counts: { [key: string]: number } = {}
-			records.forEach((t) => {
+			validRecords.forEach((t) => {
 				const value = t[field]
 				if (value !== null && value !== undefined) {
 					let category: string
@@ -254,7 +264,7 @@ export async function getTriageStats(
 		return {
 			success: true,
 			data: {
-				totalTriages: records.length,
+				totalTriages: validRecords.length,
 				averages: {
 					heartRate: avg(heartRates),
 					respiratoryRate: avg(respiratoryRates),
