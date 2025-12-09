@@ -575,7 +575,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </FeatureGuard>
               <FeatureGuard feature='hasChangeHistory'>
                 <NavItem
-                  to='/employee/changelogpage'
+                  to='/employee/changelog'
                   icon={<History className='stroke-2 size-5 shrink-0' />}
                   label='Historial'
                   showFullContent={showFullContent}
