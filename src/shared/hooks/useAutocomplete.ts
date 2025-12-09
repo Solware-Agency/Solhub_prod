@@ -114,6 +114,20 @@ export const useAutocomplete = (fieldName: string) => {
 			try {
 				setIsLoading(true)
 
+				// Obtener laboratory_id del usuario autenticado para filtro multi-tenant
+				const { data: { user } } = await supabase.auth.getUser()
+				let userLaboratoryId: string | null = null
+				
+				if (user) {
+					const { data: profile } = await supabase
+						.from('profiles')
+						.select('laboratory_id')
+						.eq('id', user.id)
+						.single() as { data: { laboratory_id: string } | null }
+					
+					userLaboratoryId = profile?.laboratory_id || null
+				}
+
 				// Updated field mapping to match the actual database schema
 				const fieldMapping: Record<string, string> = {
 					// Datos del paciente (ahora en tabla patients)
@@ -180,11 +194,19 @@ export const useAutocomplete = (fieldName: string) => {
 				// Seleccionar la tabla correcta
 				const tableName = isPatientField ? 'patients' : 'medical_records_clean'
 
-				const { data, error } = await supabase
+				// Construir query con filtro multi-tenant
+				let query = supabase
 					.from(tableName)
 					.select(dbFieldName)
 					.not(dbFieldName, 'is', null)
 					.not(dbFieldName, 'eq', '')
+
+				// Aplicar filtro de laboratory_id solo para tablas que lo tienen
+				if (userLaboratoryId && (tableName === 'patients' || tableName === 'medical_records_clean')) {
+					query = query.eq('laboratory_id', userLaboratoryId)
+				}
+
+				const { data, error } = await query
 
 				if (error) {
 					console.error('Error preloading field values:', error)
