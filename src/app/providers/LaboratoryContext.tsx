@@ -66,8 +66,16 @@ export function LaboratoryProvider({
 
       // Aplicar favicon si existe en el branding
       const labData = lab as unknown as Laboratory;
-      if (labData?.branding?.favicon) {
-        updateFavicon(labData.branding.favicon);
+      console.log('🔍 Laboratory branding data:', labData?.branding);
+      
+      // Prioridad: favicon > logo
+      const faviconUrl = labData?.branding?.favicon || labData?.branding?.logo;
+      
+      if (faviconUrl) {
+        console.log('✅ Updating favicon to:', faviconUrl);
+        updateFavicon(faviconUrl);
+      } else {
+        console.warn('⚠️ No favicon or logo found in laboratory branding');
       }
     } catch (error) {
       console.error('Unexpected error loading laboratory:', error);
