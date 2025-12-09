@@ -5,7 +5,6 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  Shield,
 } from 'lucide-react';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -527,8 +526,7 @@ function RegisterForm() {
                     />
                   </div>
                   <div className='w-full'>
-                    <p className='text-sm text-slate-300 flex items-center gap-1'>
-                      <Shield className='w-3 h-3' />
+                    <p className='text-sm text-slate-300'>
                       Rol: <span className='text-red-400'>*</span>
                     </p>
                     {loadingRoles ? (

@@ -22,7 +22,7 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 	},
 	employee: {
 		value: 'employee',
-		label: 'Empleado',
+		label: 'Recepcionista',
 		description: 'Registro y edición de casos médicos',
 	},
 	residente: {
