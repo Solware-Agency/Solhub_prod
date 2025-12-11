@@ -35,6 +35,8 @@ import {
   patologoRoutes,
   medicoTratanteRoutes,
   enfermeroRoutes,
+  callCenterRoutes,
+  pruebaRoutes,
 } from '@app/routes/route-config';
 
 // Loading component for Suspense fallback
@@ -330,6 +332,74 @@ function App() {
                           <FeatureRoute
                             feature={routeConfig.feature}
                             fallbackPath='/enfermero/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                <Route
+                  path='/call-center'
+                  element={
+                    <PrivateRoute requiredRole={'call_center'}>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  {/* Nested routes that will render in the Outlet */}
+                  <Route index element={<CasesPage />} />
+                  {callCenterRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/call-center/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                <Route
+                  path='/prueba'
+                  element={
+                    <PrivateRoute requiredRole={'prueba'}>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  {/* Nested routes that will render in the Outlet */}
+                  <Route
+                    index
+                    element={
+                      <FeatureRoute
+                        feature='hasStats'
+                        fallbackPath='/prueba/home'
+                      >
+                        <HomePage />
+                      </FeatureRoute>
+                    }
+                  />
+                  {pruebaRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/prueba/home'
                           >
                             <Component />
                           </FeatureRoute>

@@ -63,7 +63,7 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 	call_center: {
 		value: 'call_center',
 		label: 'Call Center',
-		description: 'Atención al cliente y gestión de llamadas',
+		description: 'Visualización y envío de casos, edición básica de pacientes (sin formulario de registro)',
 	},
 }
 

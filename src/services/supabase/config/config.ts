@@ -58,23 +58,26 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 	},
 })
 
-supabase
-	.from('medical_records_clean')
-	.select('count', { count: 'exact', head: true })
-	.then(({ error }) => {
-		if (error) {
-			console.error('❌ Error de conexión con tabla medical_records_clean:', error)
-			console.log('💡 Ejecuta las migraciones para crear la tabla medical_records_clean')
-		} else {
-			console.log('✅ Conexión con tabla medical_records_clean establecida correctamente')
-		}
-	})
-	.then(
-		() => {},
-		(err: any) => {
-			console.error('❌ Error inesperado conectando con tabla medical_records_clean:', err)
-		},
-	)
+// Verificar conexión con medical_records_clean (después de que la sesión esté disponible)
+setTimeout(async () => {
+	const { data: { session } } = await supabase.auth.getSession()
+	
+	if (session) {
+		supabase
+			.from('medical_records_clean')
+			.select('count', { count: 'exact', head: true })
+			.then(({ error }) => {
+				if (error) {
+					console.warn('⚠️ No se pudo verificar conexión con medical_records_clean:', error.message || error)
+				} else {
+					console.log('✅ Conexión con tabla medical_records_clean verificada')
+				}
+			})
+			.catch((err: any) => {
+				console.warn('⚠️ Error verificando medical_records_clean:', err?.message || err)
+			})
+	}
+}, 1000)
 
 // Verificar conexión de realtime
 console.log('📡 [Realtime] Inicializando realtime...')

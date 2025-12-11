@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba'>
 }
 
 /**
@@ -105,6 +105,10 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 				return <Navigate to="/medico-tratante/cases" replace />
 			case 'enfermero':
 				return <Navigate to="/enfermero/cases" replace />
+			case 'call_center':
+				return <Navigate to="/call-center/cases" replace />
+			case 'prueba':
+				return <Navigate to="/prueba/home" replace />
 			default:
 				// Fallback for unknown roles
 				return <Navigate to="/employee/home" replace />

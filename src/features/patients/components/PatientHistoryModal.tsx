@@ -647,15 +647,14 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             <div className='space-y-4'>
                               {filteredCases.map(
                                 (caseItem: MedicalCaseWithPatient) => (
-                                  <>
-                                    <div
-                                      key={caseItem.id}
-                                      className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                                        selectedCases.has(caseItem.id)
-                                          ? 'border-primary border-2'
-                                          : 'border-input'
-                                      }`}
-                                    >
+                                  <div
+                                    key={caseItem.id}
+                                    className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                      selectedCases.has(caseItem.id)
+                                        ? 'border-primary border-2'
+                                        : 'border-input'
+                                    }`}
+                                  >
                                       <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
                                         <div className='flex items-center gap-2'>
                                           {caseItem.doc_aprobado ===
@@ -822,7 +821,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         </div>
                                       )}
                                     </div>
-                                  </>
                                 ),
                               )}
                             </div>

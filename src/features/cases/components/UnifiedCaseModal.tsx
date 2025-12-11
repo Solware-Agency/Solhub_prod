@@ -63,6 +63,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { getCodeLegend } from '@/shared/utils/code-legend-utils';
+import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 
 interface ChangeLogEntry {
   id: string;
@@ -196,6 +197,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const { toast } = useToast();
     const { user } = useAuth();
     const { laboratory } = useLaboratory();
+    const moduleConfig = useModuleConfig('registrationForm');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -1573,183 +1575,195 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Medical Information */}
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
-                      {/* Estudio - Dropdown */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Estudio:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <CustomDropdown
-                              options={examTypesOptions}
-                              value={
-                                editedCase.exam_type ||
-                                currentCase.exam_type ||
-                                ''
-                              }
-                              onChange={(value) =>
-                                handleInputChange('exam_type', value)
-                              }
-                              placeholder='Seleccione una opción'
-                              className='text-sm'
-                              direction='auto'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.exam_type || 'N/A'}
+                      {/* Estudio - Dropdown - Solo si está habilitado */}
+                      {moduleConfig?.fields?.examType?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Estudio:
                           </span>
-                        )}
-                      </div>
-
-                      {/* Médico Tratante - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Médico tratante:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='treating-doctor-input'
-                              name='treating_doctor'
-                              fieldName='treatingDoctor'
-                              placeholder='Nombre del Médico'
-                              value={
-                                editedCase.treating_doctor ||
-                                currentCase.treating_doctor ||
-                                ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
-                                  handleInputChange('treating_doctor', value);
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <CustomDropdown
+                                options={examTypesOptions}
+                                value={
+                                  editedCase.exam_type ||
+                                  currentCase.exam_type ||
+                                  ''
                                 }
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.treating_doctor || 'N/A'}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Procedencia - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Procedencia:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='origin-input'
-                              name='origin'
-                              fieldName='origin'
-                              placeholder='Hospital o Clínica'
-                              value={
-                                editedCase.origin || currentCase.origin || ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                if (
-                                  /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)
-                                ) {
-                                  handleInputChange('origin', value);
+                                onChange={(value) =>
+                                  handleInputChange('exam_type', value)
                                 }
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.origin || 'N/A'}
-                          </span>
-                        )}
-                      </div>
+                                placeholder='Seleccione una opción'
+                                className='text-sm'
+                                direction='auto'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.exam_type || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Sede - Dropdown */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Sede:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <CustomDropdown
-                              options={branchOptions}
-                              value={
-                                editedCase.branch || currentCase.branch || ''
-                              }
-                              onChange={(value) =>
-                                handleInputChange('branch', value)
-                              }
-                              placeholder='Seleccione una sede'
-                              className='text-sm'
-                              direction='auto'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.branch || 'N/A'}
+                      {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Médico tratante:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='treating-doctor-input'
+                                name='treating_doctor'
+                                fieldName='treatingDoctor'
+                                placeholder='Nombre del Médico'
+                                value={
+                                  editedCase.treating_doctor ||
+                                  currentCase.treating_doctor ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+                                    handleInputChange('treating_doctor', value);
+                                  }
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.treating_doctor || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Muestra - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Muestra:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='sample-type-input'
-                              name='sample_type'
-                              fieldName='sampleType'
-                              placeholder='Ej: Biopsia de Piel'
-                              value={
-                                editedCase.sample_type ||
-                                currentCase.sample_type ||
-                                ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                handleInputChange('sample_type', value);
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.sample_type || 'N/A'}
+                      {/* Procedencia - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.procedencia?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Procedencia:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='origin-input'
+                                name='origin'
+                                fieldName='origin'
+                                placeholder='Hospital o Clínica'
+                                value={
+                                  editedCase.origin || currentCase.origin || ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  if (
+                                    /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)
+                                  ) {
+                                    handleInputChange('origin', value);
+                                  }
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.origin || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Cantidad de muestras - Numérico */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Cantidad de muestras:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            {/* Note: number_of_samples not in current new structure, can be added if needed */}
-                            <Input
-                              id='number-of-samples-input'
-                              name='number_of_samples'
-                              type='number'
-                              placeholder='1'
-                              value='1'
-                              disabled
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            1
+                      {/* Sede - Dropdown - Solo si está habilitado */}
+                      {moduleConfig?.fields?.branch?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Sede:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <CustomDropdown
+                                options={branchOptions}
+                                value={
+                                  editedCase.branch || currentCase.branch || ''
+                                }
+                                onChange={(value) =>
+                                  handleInputChange('branch', value)
+                                }
+                                placeholder='Seleccione una sede'
+                                className='text-sm'
+                                direction='auto'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.branch || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Muestra - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.sampleType?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Muestra:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='sample-type-input'
+                                name='sample_type'
+                                fieldName='sampleType'
+                                placeholder='Ej: Biopsia de Piel'
+                                value={
+                                  editedCase.sample_type ||
+                                  currentCase.sample_type ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  handleInputChange('sample_type', value);
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.sample_type || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
+                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Cantidad de muestras:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              {/* Note: number_of_samples not in current new structure, can be added if needed */}
+                              <Input
+                                id='number-of-samples-input'
+                                name='number_of_samples'
+                                type='number'
+                                placeholder='1'
+                                value='1'
+                                disabled
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              1
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Fecha de registro - NO EDITABLE */}
                       <InfoRow
