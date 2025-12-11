@@ -73,9 +73,6 @@ setTimeout(async () => {
 					console.log('✅ Conexión con tabla medical_records_clean verificada')
 				}
 			})
-			.catch((err: any) => {
-				console.warn('⚠️ Error verificando medical_records_clean:', err?.message || err)
-			})
 	}
 }, 1000)
 
