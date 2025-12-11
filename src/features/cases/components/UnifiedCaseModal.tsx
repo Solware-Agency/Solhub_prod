@@ -62,6 +62,7 @@ import { createCalculatorInputHandler } from '@shared/utils/number-utils';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 
 interface ChangeLogEntry {
   id: string;
@@ -225,8 +226,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       // Si hay tipos configurados, usarlos; si no, usar valores por defecto
       if (examTypes.length > 0) {
         // Ordenar alfabéticamente antes de crear las opciones
-        const sortedExamTypes = [...examTypes].sort((a, b) => 
-          a.localeCompare(b, 'es', { sensitivity: 'base' })
+        const sortedExamTypes = [...examTypes].sort((a, b) =>
+          a.localeCompare(b, 'es', { sensitivity: 'base' }),
         );
         return createDropdownOptions(
           sortedExamTypes.map((type) => ({ value: type, label: type })),
@@ -1161,7 +1162,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // Calculate financial information
     const totalAmount = currentCase?.total_amount || 0;
     const exchangeRate = currentCase?.exchange_rate || 0;
-    
+
     // Validar si falta la tasa de cambio para casos antiguos
     const hasValidExchangeRate = exchangeRate > 0;
 
@@ -1203,7 +1204,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     );
     const remainingUSD = Math.max(0, totalAmount - totalPaidUSD);
     // Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-    const remainingVES = remainingUSD < 0.01 ? 0 : (hasValidExchangeRate ? remainingUSD * exchangeRate : 0);
+    const remainingVES =
+      remainingUSD < 0.01
+        ? 0
+        : hasValidExchangeRate
+        ? remainingUSD * exchangeRate
+        : 0;
     // Un pago está completo solo si: hay monto total > 0 Y el pago cubre el total
     const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount;
 
@@ -1264,80 +1270,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {(() => {
-                                const code = String(currentCase.code ?? '');
-                                // Formato esperado: D + YY + NNN + L (ej: 125005H)
-                                const isValid = /^\d{6}[A-Za-z]$/.test(code);
-
-                                if (!isValid) {
-                                  return <p>Código del caso.</p>;
-                                }
-
-                                const typeDigit = code[0];
-                                const yearSuffix = code.slice(1, 3);
-                                const yearNumber =
-                                  2000 + Number.parseInt(yearSuffix, 10);
-                                const caseNumber = code.slice(3, 6);
-                                const monthLetter = code.slice(6).toUpperCase();
-
-                                const examTypeMap: Record<string, string> = {
-                                  '1': 'Citología',
-                                  '2': 'Biopsia',
-                                  '3': 'Inmunohistoquímica',
-                                };
-                                const monthMap: Record<string, string> = {
-                                  A: 'Enero',
-                                  B: 'Febrero',
-                                  C: 'Marzo',
-                                  D: 'Abril',
-                                  E: 'Mayo',
-                                  F: 'Junio',
-                                  G: 'Julio',
-                                  H: 'Agosto',
-                                  I: 'Septiembre',
-                                  J: 'Octubre',
-                                  K: 'Noviembre',
-                                  L: 'Diciembre',
-                                };
-
-                                const examType =
-                                  examTypeMap[typeDigit] ?? 'Desconocido';
-                                const monthName =
-                                  monthMap[monthLetter] ?? 'Desconocido';
-
-                                return (
-                                  <div className='text-xs leading-5 max-w-none'>
-                                    <div className='font-semibold mb-1'>
-                                      Explicación del código
-                                    </div>
-                                    <div className='font-mono text-sm mb-1'>
-                                      {code}
-                                    </div>
-                                    <ul className='list-disc pl-4 space-y-0.5 text-left text-xs'>
-                                      <li>
-                                        1er dígito: <b>{typeDigit}</b> ={' '}
-                                        {examType}{' '}
-                                        {examType === 'Desconocido'
-                                          ? ' (1 = Citología, 2 = Biopsia, 3 = Inmunohistoquímica)'
-                                          : ''}
-                                      </li>
-                                      <li>
-                                        Siguientes dos: <b>{yearSuffix}</b> =
-                                        Año {yearNumber}
-                                      </li>
-                                      <li>
-                                        Siguientes tres: <b>{caseNumber}</b> =
-                                        Consecutivo del mes
-                                      </li>
-                                      <li className='whitespace-nowrap'>
-                                        Última letra: <b>{monthLetter}</b> ={' '}
-                                        {monthName} (A = Enero ... L =
-                                        Diciembre)
-                                      </li>
-                                    </ul>
-                                  </div>
-                                );
-                              })()}
+                              {getCodeLegend(currentCase.code, laboratory)}
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1839,15 +1772,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         {!hasValidExchangeRate && (
                           <div className='mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg'>
                             <div className='flex items-start gap-2'>
-                              <svg className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' />
+                              <svg
+                                className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5'
+                                fill='none'
+                                stroke='currentColor'
+                                viewBox='0 0 24 24'
+                              >
+                                <path
+                                  strokeLinecap='round'
+                                  strokeLinejoin='round'
+                                  strokeWidth={2}
+                                  d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+                                />
                               </svg>
                               <div className='flex-1'>
                                 <p className='text-sm font-medium text-yellow-800 dark:text-yellow-300'>
                                   Tasa de cambio no disponible
                                 </p>
                                 <p className='text-xs text-yellow-700 dark:text-yellow-400 mt-1'>
-                                  Este caso fue creado sin tasa de cambio. Los pagos en Bs no pueden ser convertidos. Edita el caso para actualizar la información financiera.
+                                  Este caso fue creado sin tasa de cambio. Los
+                                  pagos en Bs no pueden ser convertidos. Edita
+                                  el caso para actualizar la información
+                                  financiera.
                                 </p>
                               </div>
                             </div>
