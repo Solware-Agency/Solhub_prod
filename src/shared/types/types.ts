@@ -756,6 +756,11 @@ export interface LaboratoryConfig {
   modules?: {                // Configuración granular de módulos por laboratorio
     [moduleName: string]: ModuleConfig
   }
+  // Configuración de códigos personalizados (opcional)
+  codeTemplate?: string      // Plantilla de código (ej: "{type}{year:2}{counter:3}{month}" o "{examCode}{counter:4}{month}{year:2}")
+  codeMappings?: {           // Mapeo de exámenes a códigos (ej: {"Citología": "CI", "Mamografía": "MA"})
+    [examType: string]: string
+  }
 }
 
 export interface Laboratory {
