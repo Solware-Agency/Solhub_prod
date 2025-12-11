@@ -1,6 +1,6 @@
 import { supabase } from '@/services/supabase/config/config'
 
-export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante' | 'imagenologia' | 'prueba'
+export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante' | 'imagenologia' | 'prueba' | 'call_center'
 
 export interface RoleOption {
 	value: UserRole
@@ -59,6 +59,11 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 		value: 'prueba',
 		label: 'Prueba (GodMode)',
 		description: 'Rol de prueba con acceso completo sin restricciones',
+	},
+	call_center: {
+		value: 'call_center',
+		label: 'Call Center',
+		description: 'Atención al cliente y gestión de llamadas',
 	},
 }
 
