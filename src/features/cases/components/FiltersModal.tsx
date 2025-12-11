@@ -133,15 +133,15 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     const examTypes = laboratory?.config?.examTypes || [];
     if (examTypes.length > 0) {
       return examTypes.map((type) => ({
-        value: type.toLowerCase().trim(),
+        value: type,
         label: type,
       }));
     }
     // Fallback por defecto
     return [
-      { value: 'biopsia', label: 'Biopsia' },
-      { value: 'citologia', label: 'Citología' },
-      { value: 'inmunohistoquimica', label: 'Inmunohistoquímica' },
+      { value: 'Biopsia', label: 'Biopsia' },
+      { value: 'Citología', label: 'Citología' },
+      { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
     ];
   }, [laboratory?.config?.examTypes]);
 
