@@ -54,20 +54,20 @@ export function prepareDefaultValues(
 		'' // String vacío para NOT NULL
 	) || '') as string // Asegurar que nunca sea null/undefined
 
-	// treating_doctor (NOT NULL) - string vacío si deshabilitado
+	// treating_doctor (NOT NULL) - "No especificado" si deshabilitado
 	const doctorConfig = moduleConfig?.fields?.medicoTratante
 	const doctorValue = (formData.treatingDoctor || formData.doctorName || '').trim()
 	
-	// Si el campo está habilitado, usar el valor del formulario (o string vacío si no hay)
-	// Si está deshabilitado, usar string vacío
+	// Si el campo está habilitado, usar el valor del formulario (o "No especificado" si no hay)
+	// Si está deshabilitado, usar "No especificado"
 	if (doctorConfig?.enabled) {
-		defaults.treating_doctor = doctorValue || ''
+		defaults.treating_doctor = doctorValue || 'No especificado'
 	} else {
-		defaults.treating_doctor = '' // Campo deshabilitado: string vacío
+		defaults.treating_doctor = 'No especificado' // Campo deshabilitado
 	}
 	
 	// Asegurar que nunca sea null/undefined
-	defaults.treating_doctor = (defaults.treating_doctor || '') as string
+	defaults.treating_doctor = (defaults.treating_doctor || 'No especificado') as string
 
 	// sample_type (NOT NULL) - string vacío si deshabilitado
 	const sampleConfig = moduleConfig?.fields?.sampleType
