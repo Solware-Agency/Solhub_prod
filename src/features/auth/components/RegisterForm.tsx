@@ -274,13 +274,14 @@ function RegisterForm() {
 
       // Signup — aquí el HOOK bloqueará duplicados reales con un 400 "User already registered"
       // ⚠️ ORDEN CORRECTO DE PARÁMETROS:
-      // signUp(email, password, laboratoryId, displayName, phone)
+      // signUp(email, password, laboratoryId, role, displayName, phone)
       const { user, error: signUpError } = await signUp(
         cleanedEmail,
         password,
         codeValidationResult.laboratory_id, // ← CORREGIDO: laboratoryId como 3er parámetro (obligatorio)
-        displayName.trim(), // ← CORREGIDO: displayName como 4to parámetro
-        normalizedPhone, // ← CORREGIDO: phone como 5to parámetro
+        selectedRole, // ← NUEVO: Rol seleccionado como 4to parámetro (obligatorio)
+        displayName.trim(), // ← CORREGIDO: displayName como 5to parámetro
+        normalizedPhone, // ← CORREGIDO: phone como 6to parámetro
       );
 
       if (signUpError) {

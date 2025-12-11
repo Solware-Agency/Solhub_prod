@@ -37,12 +37,14 @@ export interface UserProfile {
 // 
 // ¿Qué cambió?
 // - Agregamos parámetro OBLIGATORIO laboratoryId
+// - Agregamos parámetro OBLIGATORIO role (rol seleccionado por el usuario)
 // - Lo pasamos en los metadatos del usuario
-// - El trigger SQL handle_new_user() leerá este metadata y asignará laboratory_id al perfil
+// - El trigger SQL handle_new_user() leerá este metadata y asignará laboratory_id y role al perfil
 export const signUp = async (
 	email: string,
 	password: string,
 	laboratoryId: string, // ← OBLIGATORIO: ID del laboratorio (obtenido del código)
+	role: string, // ← OBLIGATORIO: Rol seleccionado por el usuario
 	displayName?: string,
 	phone?: string,
 ): Promise<AuthResponse> => {
@@ -62,7 +64,20 @@ export const signUp = async (
 			}
 		}
 		
+		// Validar que role existe y no está vacío
+		if (!role || role.trim() === '') {
+			console.error('Role is required but not provided')
+			return {
+				user: null,
+				error: {
+					message: 'El rol es obligatorio para registrarse',
+					name: 'RoleRequired',
+				} as AuthError,
+			}
+		}
+		
 		console.log('Registering user with laboratory_id:', laboratoryId)
+		console.log('Registering user with role:', role)
 		console.log('Display name provided:', displayName)
 		console.log('Phone provided:', phone)
 
@@ -91,6 +106,7 @@ export const signUp = async (
 			display_name: normalizedDisplayName,
 			phone: normalizedPhone,
 			laboratory_id: laboratoryId,
+			role: role, // ← NUEVO: Rol seleccionado
 		})
 
 		const { data, error } = await supabase.auth.signUp({
@@ -104,6 +120,7 @@ export const signUp = async (
 					display_name: normalizedDisplayName, // ← NUNCA el teléfono
 					phone: normalizedPhone, // ← Teléfono normalizado (solo números, máximo 15)
 					laboratory_id: laboratoryId, // ← OBLIGATORIO, siempre presente
+					role: role, // ← NUEVO: Rol seleccionado por el usuario
 				},
 			},
 		})
