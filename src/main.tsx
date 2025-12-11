@@ -10,18 +10,16 @@ import { SessionTimeoutWarning } from '@shared/components/ui/session-timeout-war
 import { ThemeProvider } from '@app/providers/ThemeProvider.tsx';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ThemeProvider defaultTheme='system' storageKey='ui-theme'>
-      <AuthProvider>
-        <LaboratoryProvider>
-          <LaboratoryThemeProvider>
-            <SessionTimeoutProvider>
-              <App />
-              <SessionTimeoutWarning />
-            </SessionTimeoutProvider>
-          </LaboratoryThemeProvider>
-        </LaboratoryProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </StrictMode>,
+  <ThemeProvider defaultTheme='system' storageKey='ui-theme'>
+    <AuthProvider>
+      <LaboratoryProvider>
+        <LaboratoryThemeProvider>
+          <SessionTimeoutProvider>
+            <App />
+            <SessionTimeoutWarning />
+          </SessionTimeoutProvider>
+        </LaboratoryThemeProvider>
+      </LaboratoryProvider>
+    </AuthProvider>
+  </ThemeProvider>,
 );

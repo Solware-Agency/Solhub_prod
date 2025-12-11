@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => ({
 		},
 	},
 	server: {
+		hmr: {
+			overlay: false,
+		},
 		proxy: {
 			'/api': {
 				target: 'http://localhost:3001',
