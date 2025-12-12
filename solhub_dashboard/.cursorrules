@@ -1,0 +1,991 @@
+# 📚 Guía Completa de SolHub - Para Desarrolladores y Onboarding
+
+Este documento es tu **fuente única de verdad** sobre SolHub. Está diseñado para que cualquier desarrollador nuevo pueda entender completamente el proyecto, sus procesos, configuración y estado actual. También sirve como referencia para agregar nuevas features, roles y clientes.
+
+---
+
+## 🎯 1. ¿Qué es SolHub? (Visión General)
+
+**SolHub** es una plataforma SaaS multi-tenant para la gestión integral de laboratorios clínicos en Venezuela. Permite que múltiples laboratorios compartan la misma infraestructura mientras mantienen un **aislamiento total de datos** mediante Row-Level Security (RLS).
+
+### Características Principales
+- **Multi-tenancy completo:** Cada laboratorio tiene su propio espacio aislado de datos
+- **Branding personalizado:** Logo, colores y nombre personalizables por laboratorio
+- **Feature flags:** Funcionalidades habilitadas/deshabilitadas por laboratorio
+- **Configuración granular:** Campos, acciones y módulos personalizables por laboratorio
+- **Gestión de casos médicos:** Registro, seguimiento y aprobación de casos
+- **Sistema de roles:** Owner, employee, residente, citotecno, patologo, medicowner, medico_tratante, enfermero, etc.
+- **Auditoría completa:** Historial de cambios y logs de todas las operaciones
+
+### Arquitectura Multi-Tenant
+- **Patrón:** Shared Database, Shared Schema (todos los laboratorios usan las mismas tablas)
+- **Aislamiento:** Columna `laboratory_id` en todas las tablas principales
+- **Seguridad:** RLS (Row-Level Security) filtra automáticamente por `laboratory_id`
+- **Feature Flags:** Configuración JSON por laboratorio en `laboratories.features`
+- **Un solo codebase:** Todo en la rama `main`, features condicionadas por configuración
+
+---
+
+## 🏗️ 2. Stack Tecnológico y Estructura del Proyecto
+
+### Stack Actual
+- **Frontend:** React 18.2.0 + TypeScript, Vite 6.3.5 (Solhub_prod) / Next.js 15 (solhub_dashboard)
+- **UI:** TailwindCSS 4.1.12, Radix UI, shadcn/ui
+- **Estado:** TanStack Query, React Hook Form, Zod
+- **Backend:** Supabase (PostgreSQL + RLS, Auth, Storage, Edge Functions)
+- **Hosting:** Vercel (Frontend + Serverless Functions), Supabase Cloud (Database)
+- **Package Manager:** pnpm (versión 10.17.1)
+
+### Repositorios
+1. **Solhub_prod** - Aplicación principal SaaS multi-tenant
+   - URL: `https://github.com/Solware-Agency/Solhub_prod`
+   - Estado: ✅ 100% MULTI-TENANT COMPLETADO
+   - Estructura: `src/features/` (dominios), `src/shared/` (código compartido)
+
+2. **solhub_dashboard** - Panel administrativo para gestionar el SaaS
+   - URL: `https://github.com/Solware-Agency/solhub_dashboard`
+   - Estado: ✅ 90% COMPLETADO
+   - Estructura: `app/` (Next.js App Router), `components/`, `lib/`
+
+---
+
+## 🎨 3. Estilos y Configuración de Branding
+
+### Cómo Funciona el Branding Dinámico
+
+**Concepto:** Cada laboratorio puede personalizar su apariencia (logo, colores, nombre) sin afectar a otros laboratorios.
+
+**Dónde se almacena:** Tabla `laboratories.branding` (JSONB) en Supabase.
+
+**Estructura del branding:**
+```json
+{
+  "logo": "https://...",
+  "name": "Laboratorio Conspat",
+  "colors": {
+    "primary": "#3B82F6",
+    "secondary": "#10B981",
+    "accent": "#F59E0B"
+  },
+  "icon": "🏥"
+}
+```
+
+**Cómo se aplica:**
+1. El frontend carga el branding del laboratorio desde `LaboratoryContext`
+2. Se inyectan CSS Variables globales desde `src/styles/globals.css`
+3. TailwindCSS usa estas variables para colorear componentes
+4. El logo y nombre se muestran dinámicamente en la UI
+
+**Dónde configurarlo:**
+- **Dashboard:** `solhub_dashboard/app/(dashboard)/laboratories/[id]/edit/page.tsx`
+- **Base de datos:** Tabla `laboratories`, campo `branding` (JSONB)
+
+**Para agregar nuevos campos de branding:**
+1. Actualizar el tipo TypeScript en `src/shared/types/` (Solhub_prod) o `lib/types/` (dashboard)
+2. Agregar el campo al formulario de edición del laboratorio
+3. Actualizar `globals.css` si necesitas nuevas CSS Variables
+4. Usar el nuevo campo en los componentes que necesiten mostrarlo
+
+---
+
+## ⚙️ 4. Cómo Agregar una Nueva Feature
+
+### Proceso Completo (Paso a Paso)
+
+**¿Qué es una Feature?** Una funcionalidad que puede estar habilitada o deshabilitada por laboratorio (ej: "Inmunohistoquímica", "Chat AI", "Múltiples Sucursales").
+
+#### Paso 1: Crear la Feature en el Catálogo
+**Dónde:** Dashboard → Features → Catálogo → Crear Nueva Feature
+
+**Campos requeridos:**
+- `key`: Identificador único (ej: `hasNewFeature`)
+- `name`: Nombre legible (ej: "Nueva Funcionalidad")
+- `description`: Descripción de qué hace
+- `category`: Categoría (ej: "modules", "integrations")
+- `default_value`: Valor por defecto (normalmente `false`)
+- `is_active`: Si está activa en el sistema
+
+**Qué pasa automáticamente:**
+- La feature se agrega a TODOS los laboratorios con valor `false` (trigger automático)
+- Los laboratorios existentes la reciben automáticamente
+
+#### Paso 2: Implementar la Feature en el Código
+**En Solhub_prod:**
+1. Crear componente/feature en `src/features/[nombre-feature]/`
+2. Usar `<FeatureGuard featureKey="hasNewFeature">` para condicionar la UI
+3. Verificar la feature con `useLaboratory()` hook:
+   ```typescript
+   const { laboratory } = useLaboratory();
+   if (laboratory?.features?.hasNewFeature) {
+     // Mostrar funcionalidad
+   }
+   ```
+
+**En el Dashboard:**
+- La feature ya aparece automáticamente en la lista de features
+- Los admins pueden habilitarla/deshabilitarla por laboratorio
+
+#### Paso 3: Crear Módulo Asociado (Opcional)
+Si la feature requiere configuración granular (campos, acciones, settings):
+1. Ir a Dashboard → Módulos → Crear Módulo
+2. Asociar con `feature_key` de la feature creada
+3. Definir `structure` (JSONB) con campos, acciones y settings
+4. La configuración se sincroniza automáticamente a todos los labs con la feature habilitada
+
+#### Paso 4: Testing
+- Verificar que la feature aparece en el dashboard
+- Verificar que se puede habilitar/deshabilitar por laboratorio
+- Verificar que la UI se muestra/oculta correctamente según el estado
+- Verificar que el aislamiento multi-tenant funciona (un lab no ve datos de otro)
+
+**Checklist de Nueva Feature:**
+- [ ] Feature creada en `feature_catalog`
+- [ ] Feature agregada automáticamente a todos los labs (verificar)
+- [ ] Código implementado en `src/features/[nombre]/`
+- [ ] `<FeatureGuard>` usado para condicionar UI
+- [ ] Módulo creado (si aplica) con configuración granular
+- [ ] Testing de habilitación/deshabilitación por laboratorio
+- [ ] Testing de aislamiento multi-tenant
+
+---
+
+## 👥 5. Cómo Agregar un Nuevo Rol
+
+### Proceso Completo (Paso a Paso)
+
+**¿Qué es un Rol?** Define los permisos y capacidades de un usuario en el sistema (ej: "owner", "employee", "patologo").
+
+#### Paso 1: Agregar el Rol a la Base de Datos
+**Dónde:** Migración SQL en `supabase/migrations/`
+
+**Qué hacer:**
+1. Actualizar el ENUM de roles en la tabla `profiles`:
+   ```sql
+   ALTER TYPE role_enum ADD VALUE 'nuevo_rol';
+   ```
+2. Si el rol tiene permisos especiales, actualizar las políticas RLS correspondientes
+
+#### Paso 2: Actualizar Tipos TypeScript
+**Dónde:** `src/shared/types/types.ts` (Solhub_prod) o `lib/types/` (dashboard)
+
+**Qué hacer:**
+- Agregar el nuevo rol al tipo `Role` o `ProfileRole`
+
+#### Paso 3: Configurar Roles Disponibles por Laboratorio
+**Dónde:** Tabla `laboratories.available_roles` (array de texto)
+
+**Cómo funciona:**
+- Cada laboratorio puede tener diferentes roles disponibles
+- Se configura en el dashboard al editar un laboratorio
+- El campo `available_roles` es un array: `['owner', 'employee', 'nuevo_rol']`
+
+#### Paso 4: Implementar Lógica de Permisos (Si Aplica)
+**Dónde:** Componentes, servicios y políticas RLS
+
+**Qué hacer:**
+- Si el rol tiene permisos especiales, actualizar:
+  - Políticas RLS en Supabase (si el rol puede ver/editar datos específicos)
+  - Validaciones en el frontend (componentes que verifican el rol)
+  - Servicios que filtran por rol
+
+**Ejemplo de validación de rol:**
+```typescript
+const { profile } = useAuth();
+if (profile?.role === 'nuevo_rol') {
+  // Permitir acción
+}
+```
+
+#### Paso 5: Actualizar UI (Si Aplica)
+**Dónde:** Formularios de registro, selección de roles, etc.
+
+**Qué hacer:**
+- Si el rol debe aparecer en formularios de registro, actualizar `RegisterForm.tsx`
+- Si el rol debe aparecer en selección de roles (dashboard), actualizar los componentes correspondientes
+
+**Checklist de Nuevo Rol:**
+- [ ] Rol agregado al ENUM en base de datos (migración)
+- [ ] Tipos TypeScript actualizados
+- [ ] Rol agregado a `available_roles` de laboratorios que lo necesiten
+- [ ] Políticas RLS actualizadas (si aplica)
+- [ ] Validaciones de permisos implementadas
+- [ ] UI actualizada (formularios, selecciones)
+- [ ] Testing de permisos y aislamiento
+
+---
+
+## 🏢 6. Qué Hacer Cuando Llega un Nuevo Cliente (Laboratorio)
+
+### Checklist Completo de Onboarding
+
+#### Fase 1: Creación del Laboratorio (Dashboard)
+**Dónde:** Dashboard → Laboratorios → Crear Nuevo Laboratorio
+
+**Pasos:**
+1. **Crear el laboratorio:**
+   - Nombre del laboratorio
+   - Slug único (ej: "conspat", "vargas")
+   - Estado: "active"
+
+2. **Configurar Branding:**
+   - Subir logo (URL o archivo)
+   - Configurar colores (primary, secondary, accent)
+   - Nombre para mostrar
+   - Ícono (opcional)
+
+3. **Configurar Features:**
+   - Habilitar/deshabilitar features según el plan del cliente
+   - Las features se sincronizan automáticamente con sus módulos
+
+4. **Configurar Módulos (Si aplica):**
+   - Para cada feature habilitada, configurar campos, acciones y settings
+   - Esto se hace automáticamente al habilitar la feature, pero puedes ajustar valores por defecto
+
+5. **Configurar Sucursales (Si aplica):**
+   - Si `hasMultipleBranches` está habilitado, agregar sucursales en `config.branches`
+
+6. **Configurar Métodos de Pago:**
+   - Agregar métodos de pago permitidos en `config.paymentMethods`
+
+7. **Configurar Roles Disponibles:**
+   - Definir qué roles puede tener este laboratorio en `available_roles`
+
+8. **Configurar Sistema de Códigos:**
+   - Configurar plantilla de códigos en `config.codeTemplate`
+   - Configurar mapeos de exámenes en `config.codeMappings`
+
+#### Fase 2: Crear Usuario Owner
+**Dónde:** Dashboard → Usuarios o directamente en Supabase
+
+**Pasos:**
+1. Crear usuario en `auth.users` (Supabase Auth)
+2. Crear perfil en `profiles` con:
+   - `laboratory_id`: ID del laboratorio creado
+   - `role`: "owner"
+   - `estado`: "aprobado"
+   - Email y datos del owner
+
+#### Fase 3: Generar Códigos de Acceso
+**Dónde:** Dashboard → Códigos → Crear Código
+
+**Pasos:**
+1. Seleccionar el laboratorio
+2. Generar código (ej: "CONSPAT2024")
+3. Configurar:
+   - `max_uses`: Número máximo de usos (opcional)
+   - `expires_at`: Fecha de expiración (opcional)
+   - `is_active`: true
+
+4. Compartir código con el owner para que lo distribuya a empleados
+
+#### Fase 4: Verificación
+**Checklist de Verificación:**
+- [ ] Laboratorio creado con todos los datos
+- [ ] Branding configurado y visible
+- [ ] Features habilitadas según plan
+- [ ] Módulos configurados correctamente
+- [ ] Usuario owner creado y puede iniciar sesión
+- [ ] Códigos de acceso generados
+- [ ] Owner puede ver su laboratorio al iniciar sesión
+- [ ] Aislamiento de datos verificado (no ve datos de otros labs)
+
+#### Fase 5: Documentación y Entrenamiento
+- Proporcionar acceso al owner
+- Explicar cómo generar más códigos
+- Explicar cómo aprobar usuarios pendientes
+- Proporcionar documentación de uso (si existe)
+
+---
+
+## 🚀 7. Onboarding para Nuevos Desarrolladores
+
+### ¿Por Dónde Empezar?
+
+#### Paso 1: Entender la Arquitectura Multi-Tenant
+**Concepto clave:** `laboratory_id` es el corazón del sistema. TODAS las operaciones deben filtrar por `laboratory_id`.
+
+**Qué leer primero:**
+- Esta sección del documento (sección 1)
+- Sección 8 (Estado Actual del Sistema)
+- Sección 9 (Reglas Críticas de Desarrollo)
+
+#### Paso 2: Configurar el Entorno
+**Requisitos:**
+- Node.js 18+
+- pnpm 10.17.1
+- Cuenta de Supabase (acceso al proyecto)
+- Acceso a repositorios de GitHub (Solware-Agency)
+
+**Pasos:**
+1. Clonar repositorios:
+   ```bash
+   git clone https://github.com/Solware-Agency/Solhub_prod.git
+   git clone https://github.com/Solware-Agency/solhub_dashboard.git
+   ```
+
+2. Instalar dependencias:
+   ```bash
+   cd Solhub_prod && pnpm install
+   cd ../solhub_dashboard && pnpm install
+   ```
+
+3. Configurar variables de entorno:
+   - Crear `.env.local` con credenciales de Supabase
+   - Obtener credenciales del equipo
+
+4. Ejecutar proyectos:
+   ```bash
+   # Solhub_prod
+   cd Solhub_prod && pnpm dev
+
+   # solhub_dashboard
+   cd solhub_dashboard && pnpm dev
+   ```
+
+#### Paso 3: Explorar la Base de Datos
+**Dónde:** Supabase Dashboard o usando MCP
+
+**Qué explorar:**
+1. Tabla `laboratories` - Ver laboratorios existentes
+2. Tabla `profiles` - Ver usuarios y sus `laboratory_id`
+3. Tabla `patients` - Ver cómo se filtra por `laboratory_id`
+4. Políticas RLS - Entender cómo funcionan
+
+**Ejercicio práctico:**
+- Crear un laboratorio de prueba desde el dashboard
+- Ver cómo se crea automáticamente la configuración
+- Verificar que las features se agregan automáticamente
+
+#### Paso 4: Entender el Flujo de Datos
+**Flujo típico:**
+1. Usuario inicia sesión → `LaboratoryContext` carga el laboratorio
+2. Componente necesita datos → Servicio filtra por `laboratory_id`
+3. Datos se muestran → Solo datos del laboratorio del usuario
+4. Usuario crea/edita → `laboratory_id` se asigna automáticamente
+
+**Archivos clave para entender:**
+- `src/shared/contexts/LaboratoryContext.tsx` - Contexto del laboratorio
+- `src/shared/services/supabase/` - Servicios que interactúan con Supabase
+- `src/shared/components/FeatureGuard.tsx` - Componente para condicionar UI
+
+#### Paso 5: Hacer tu Primera Modificación
+**Ejercicio sugerido:**
+1. Agregar un campo nuevo a un formulario existente
+2. Verificar que se guarda correctamente
+3. Verificar que se filtra por `laboratory_id`
+4. Verificar que otros laboratorios no ven ese dato
+
+#### Paso 6: Leer Código Existente
+**Archivos recomendados para leer:**
+- `src/features/cases/components/MedicalFormContainer.tsx` - Ejemplo de formulario complejo
+- `src/shared/services/supabase/cases/registration-service.ts` - Ejemplo de servicio
+- `src/features/auth/components/RegisterForm.tsx` - Ejemplo de autenticación
+
+**Patrones a identificar:**
+- Cómo se usa `useLaboratory()` hook
+- Cómo se filtran queries por `laboratory_id`
+- Cómo se usan `<FeatureGuard>` componentes
+- Cómo se manejan errores y validaciones
+
+### Recursos Adicionales
+- Documentación de Supabase: https://supabase.com/docs
+- Documentación de React Query: https://tanstack.com/query
+- Documentación de shadcn/ui: https://ui.shadcn.com
+
+---
+
+## 📊 8. Estado Actual del Sistema (Checkpoints)
+
+### ✅ Completado (100%)
+
+#### Base de Datos
+- ✅ Sistema multi-tenant completamente implementado
+- ✅ Todas las tablas tienen `laboratory_id`
+- ✅ RLS policies configuradas en todas las tablas
+- ✅ Triggers automáticos funcionando (códigos, formateo, sincronización)
+- ✅ Funciones SQL para generación de códigos flexibles
+- ✅ Sistema de módulos con configuración granular
+
+#### Frontend (Solhub_prod)
+- ✅ Aislamiento total de datos por laboratorio
+- ✅ Branding dinámico funcionando (logo, colores, nombre)
+- ✅ Feature flags operativos
+- ✅ Sistema de módulos con configuración granular
+- ✅ Generador de tipos TypeScript funcional
+- ✅ Contexto de laboratorio (`LaboratoryContext`)
+
+#### Dashboard (solhub_dashboard)
+- ✅ CRUD completo de laboratorios
+- ✅ Gestión completa de features (catálogo + asignación)
+- ✅ Sistema de Configuración Granular de Módulos
+- ✅ Generador automático de tipos TypeScript
+- ✅ Creación de códigos de acceso
+
+### ⚠️ Pendiente (Crítico)
+
+#### Registro con Códigos en Solhub_prod (0% implementado)
+**Qué falta:**
+- Campo de código en formulario de registro
+- Servicio de validación de códigos
+- Asignación automática de `laboratory_id` al registrar
+- Incremento de uso del código
+- Usuario en estado "pending approval"
+
+**Por qué es crítico:**
+- Sin esto, el flujo completo no funciona
+- Los códigos generados en el dashboard no se pueden usar
+- Los empleados no pueden registrarse
+
+**Tiempo estimado:** 2-3 días
+
+### 🟢 Pendiente (Opcional)
+
+#### Dashboard
+- Vista global de usuarios (30% - falta gestión avanzada)
+- Gestión de códigos (60% - falta edición, estadísticas, exportar)
+
+#### Frontend Principal
+- Hooks `useModuleConfig` y `useModuleField` para usar configuración granular
+- Mejoras de UX (gráficas, animaciones, diseño pulido)
+
+---
+
+## 🗄️ 9. Base de Datos Supabase - Estructura Completa Verificada
+
+### Proyecto
+- **Project ID:** `sbqepjsxnqtldyvlntqk`
+- **URL:** `https://sbqepjsxnqtldyvlntqk.supabase.co`
+- **PostgreSQL:** 17.4.1
+- **Migraciones:** 115 aplicadas
+- **Proyecto:** Forms conspat (SolHub)
+
+### Tablas Principales (Verificadas en Supabase)
+
+#### Tablas Multi-Tenant (Tienen `laboratory_id` y RLS habilitado)
+1. **`patients`** - Pacientes/asegurados del laboratorio
+   - Campos principales: `id`, `cedula`, `nombre`, `edad`, `telefono`, `email`, `gender`, `version`, `laboratory_id`
+   - Constraint único: `(cedula, laboratory_id)` - permite duplicados entre labs
+   - Índices: `idx_patients_laboratory`, `idx_patients_cedula`, `idx_patients_cedula_lower`, `idx_patients_nombre_lower`, `idx_patients_lab_created`, `unique_cedula_per_laboratory`
+
+2. **`medical_records_clean`** - Casos/registros médicos
+   - Campos principales: `id`, `code`, `exam_type`, `origin`, `treating_doctor`, `sample_type`, `number_of_samples`, `date`, `patient_id`, `laboratory_id`
+   - Campos de pago: `payment_method_1-4`, `payment_amount_1-4`, `payment_reference_1-4`, `total_amount`, `exchange_rate`, `payment_status`, `remaining`
+   - Campos de documentos: `attachment_url`, `googledocs_url`, `informepdf_url`, `informe_qr`, `token`, `pdf_en_ready`
+   - Campos de aprobación: `doc_aprobado`, `cito_status`, `email_sent`
+   - Auditoría: `created_by`, `created_by_display_name`, `generated_by`, `generated_by_display_name`, `generated_at`
+   - Constraint único: `(code, laboratory_id)`
+   - Índices: Múltiples índices en `laboratory_id`, `code`, `patient_id`, `created_at`, `payment_status`, `exam_type`, `branch`, `doc_aprobado`, `cito_status`
+
+3. **`profiles`** - Perfiles de usuarios (vinculados a un laboratorio)
+   - Campos principales: `id` (FK → auth.users.id), `email`, `email_lower`, `role`, `estado`, `display_name`, `phone`, `assigned_branch`, `laboratory_id`
+   - Roles disponibles: `owner`, `employee`, `admin`, `residente`, `citotecno`, `patologo`, `medicowner`, `medico_tratante`, `enfermero`, `prueba`, `call_center`, `imagenologia`
+   - Estados: `pendiente`, `aprobado`
+   - Índices: `idx_profiles_laboratory`, `idx_profiles_email`, `idx_profiles_role`, `idx_profiles_estado`, `idx_profiles_lab_role`, `profiles_email_key`, `profiles_email_lower_uq`
+
+4. **`triaje_records`** - Registros de triaje médico
+   - Campos principales: `id`, `patient_id`, `case_id`, `laboratory_id`, `measurement_date`
+   - Mediciones físicas: `height_cm`, `weight_kg`, `bmi`, `blood_pressure`, `heart_rate`, `respiratory_rate`, `oxygen_saturation`, `temperature_celsius`
+   - Hábitos: `alcohol` (enum habit_level_type), `tabaco` (numeric - paquetes-año), `cafe` (integer - tazas/día)
+   - Historial médico: `reason`, `personal_background`, `family_history`, `psychobiological_habits`, `examen_fisico`, `comment`
+   - Constraint único: `(case_id)` - un caso puede tener máximo un triaje
+   - Índices: `idx_triage_records_laboratory_id`, `idx_triage_records_patient_id`, `idx_triaje_records_case_id`, `idx_triage_records_measurement_date`, `idx_triage_records_patient_date`, `idx_triaje_records_tabaco`, `idx_triaje_records_cafe`
+
+5. **`change_logs`** - Historial de cambios (auditoría)
+   - Campos principales: `id`, `medical_record_id`, `patient_id`, `user_id`, `user_email`, `user_display_name`, `field_name`, `field_label`, `old_value`, `new_value`, `entity_type`, `deleted_record_info`, `changed_at`, `laboratory_id`
+   - Índices: `idx_change_logs_laboratory`, `idx_change_logs_medical_record_id`, `idx_change_logs_patient_id`, `idx_change_logs_user_id`, `idx_change_logs_changed_at`, `idx_change_logs_entity_type`
+
+6. **`immuno_requests`** - Solicitudes de inmunohistoquímica
+   - Campos principales: `id`, `case_id` (UNIQUE), `inmunorreacciones`, `n_reacciones`, `precio_unitario`, `total`, `pagado`, `laboratory_id`
+   - Índices: `idx_immuno_requests_case_id`, `idx_immuno_requests_laboratory`, `idx_immuno_requests_pagado`, `idx_immuno_requests_created_at`, `immuno_requests_case_id_key`
+
+7. **`user_settings`** - Configuraciones de usuario
+   - Campos principales: `id` (FK → auth.users.id), `session_timeout`, `laboratory_id`
+   - Índices: `idx_user_settings_laboratory`
+
+#### Tablas Globales (No tienen `laboratory_id`)
+1. **`laboratories`** - Catálogo de laboratorios (configuración, branding, features)
+   - Campos principales: `id`, `slug` (UNIQUE), `name`, `status` (enum: active, inactive, trial), `features` (JSONB), `branding` (JSONB), `config` (JSONB), `available_roles` (text[])
+   - Índices: `idx_laboratories_slug`, `idx_laboratories_status`, `laboratories_slug_key`
+
+2. **`feature_catalog`** - Catálogo maestro de features del sistema
+   - Campos principales: `id`, `key` (UNIQUE), `name`, `description`, `category` (enum: core, premium, addon), `required_plan` (enum: free, basic, pro, enterprise), `icon`, `is_active`, `default_value`, `component_path`
+   - RLS: Deshabilitado (lectura pública)
+   - Índices: `idx_feature_catalog_key`, `idx_feature_catalog_active`, `feature_catalog_key_key`
+
+3. **`module_catalog`** - Catálogo de módulos (configuración granular)
+   - Campos principales: `id`, `feature_key` (UNIQUE, FK → feature_catalog.key), `module_name`, `structure` (JSONB), `is_active`
+   - RLS: Habilitado (lectura pública)
+   - Índices: `idx_module_catalog_feature_key`, `idx_module_catalog_active`, `module_catalog_feature_key_key`
+
+4. **`laboratory_codes`** - Códigos de acceso para registro
+   - Campos principales: `id`, `laboratory_id` (FK → laboratories.id), `code` (UNIQUE), `is_active`, `max_uses`, `current_uses`, `expires_at`, `created_by`
+   - Índices: `idx_lab_codes_laboratory`, `idx_lab_codes_code`, `idx_lab_codes_active`, `laboratory_codes_code_key`
+
+#### Vistas
+1. **`laboratory_stats`** - Vista agregada con estadísticas por laboratorio
+   - Campos: `id`, `slug`, `name`, `status`, `total_patients`, `total_medical_records`, `total_users`, `last_record_date`
+   - Agrupa datos de `laboratories`, `patients`, `medical_records_clean`, `profiles`
+
+### Tipos ENUM Definidos
+
+1. **`cito_status_type`**: `positivo`, `negativo`
+2. **`doc_aprobado_status`**: `faltante`, `pendiente`, `aprobado`, `rechazado`
+3. **`exam_type`**: `Biopsia`, `Inmunohistoquímica`, `Citología`
+4. **`gender_type`**: `Masculino`, `Femenino`
+5. **`habit_level_type`**: `muy alta`, `alta`, `media`, `baja`, `muy baja`, `No`
+6. **`payment_status_type`**: `Incompleto`, `Pagado`
+
+### Funciones SQL (Lista Completa Verificada)
+
+#### Generación de Códigos
+1. **`generate_medical_record_code_flexible(exam_type_input, case_date_input, laboratory_id_input)`** ⭐
+   - Genera códigos únicos por laboratorio según plantilla configurable
+   - Soporta placeholders: `{examCode}`, `{type}`, `{counter:N}`, `{month}`, `{year:2}`, `{year:4}`, `{day:2}`
+   - Usa `pg_advisory_xact_lock` para evitar condiciones de carrera
+
+2. **`generate_medical_record_code_from_table(exam_type_input, case_date_input, laboratory_id_input)`**
+   - Función principal que detecta formato del laboratorio
+   - Si `config.codeFormat.type="custom"` usa `generate_spt_custom_code()`
+   - Si no, usa formato Conspat: `[tipo][año][contador:3d][mes]`
+
+3. **`generate_spt_custom_code(exam_type_input, consulta_input, case_date_input, laboratory_id_input, laboratory_config)`**
+   - Genera códigos formato SPT: `[CÓDIGO][0001][MES][AÑO]`
+   - Ejemplo: `CI0001K25`
+
+4. **`get_exam_code_from_mapping(exam_type_input, code_mappings)`**
+   - Busca código de examen en codeMappings JSONB
+   - Búsqueda case-insensitive y parcial
+
+5. **`get_exam_type_number(exam_type_input)`**
+   - Convierte tipo de examen a número: 1=citología, 2=biopsia, 3=inmunohistoquímica
+
+6. **`preview_medical_record_code(exam_type_input, case_date_input, laboratory_id_input)`**
+   - Genera preview del código antes de crear el caso
+
+#### Configuración de Módulos
+7. **`build_module_config_from_structure(module_structure)`** ⭐
+   - Construye configuración de módulo desde estructura base
+   - Define `{enabled, required}` para campos, `boolean` para acciones, valores por defecto para settings
+
+8. **`sync_new_field_to_all_labs(p_feature_key, p_field_name, p_field_config)`**
+   - Sincroniza nuevo campo a todos los labs con la feature habilitada
+   - Establece `enabled: false` por defecto
+
+9. **`remove_field_from_all_labs(p_feature_key, p_field_name)`**
+   - Elimina campo de todos los labs con la feature habilitada
+
+10. **`sync_missing_module_configs()`**
+    - Sincroniza configuraciones faltantes de módulos a laboratorios
+
+#### Formateo y Validación
+11. **`format_name(input_name)`**
+    - Formatea nombres (capitaliza palabras, elimina espacios extra)
+
+12. **`email_exists_auth(p_email)`**
+    - Verifica si un email existe en `auth.users`
+
+#### Autenticación y Usuarios
+13. **`handle_new_user()`** ⭐ (Trigger Function)
+    - Crea perfil automáticamente cuando se registra un nuevo usuario
+    - Lee `laboratory_id` y `role` de `raw_user_meta_data`
+    - Asigna `laboratory_id` desde código de laboratorio
+    - Estado inicial: `pendiente`
+
+14. **`get_user_laboratory_id()`**
+    - Retorna `laboratory_id` del usuario autenticado
+    - Usado en políticas RLS y queries
+
+15. **`get_user_role()`**
+    - Retorna `role` del usuario autenticado
+    - Usado en validaciones y RLS policies
+
+16. **`is_authenticated_superadmin()`**
+    - Verifica si el usuario autenticado es superadmin activo
+    - SECURITY DEFINER evita recursión en RLS
+
+#### Cálculos Automáticos
+17. **`calculate_bmi()`** (Trigger Function)
+    - Calcula automáticamente BMI desde altura y peso
+
+18. **`actualizar_pdf_en_ready_medical()`**
+    - Actualiza `pdf_en_ready` a `TRUE` si `informe_qr` tiene contenido
+
+#### Auditoría
+19. **`get_all_change_logs_with_deleted()`**
+    - Obtiene todos los logs incluyendo registros eliminados
+    - Incluye información de caso si existe
+
+20. **`save_change_log_for_deleted_record(p_medical_record_id, p_user_id, p_user_email, p_deleted_record_info)`**
+    - Guarda log de eliminación de registro
+
+#### Testing
+21. **`test_multitenant_isolation()`**
+    - Verifica que el aislamiento de datos funciona correctamente
+
+### Triggers Automáticos (Lista Completa Verificada)
+
+#### En `medical_records_clean`
+1. **`trg_set_medical_record_code`** (BEFORE INSERT) - Genera código usando `set_medical_record_code()`
+2. **`trigger_actualizar_pdf_en_ready_medical`** (BEFORE INSERT/UPDATE) - Actualiza `pdf_en_ready`
+3. **`trigger_format_medical_record_names`** (BEFORE INSERT/UPDATE) - Formatea nombres de médicos
+4. **`trigger_validate_laboratory_id_medical_records`** (BEFORE INSERT) - Valida y asigna `laboratory_id`
+5. **`trg_doc_aprobado_transition`** (BEFORE UPDATE) - Aplica transiciones válidas de `doc_aprobado`
+6. **`update_medical_records_clean_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `patients`
+7. **`trigger_format_patient_names`** (BEFORE INSERT/UPDATE) - Formatea nombres de pacientes
+8. **`trigger_validate_laboratory_id_patients`** (BEFORE INSERT) - Valida y asigna `laboratory_id`
+9. **`update_patients_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `profiles`
+10. **`profiles_email_lower_tr`** (BEFORE INSERT/UPDATE) - Establece `email_lower`
+11. **`sync_display_name_to_auth_trigger`** (AFTER UPDATE) - Sincroniza `display_name` a auth
+12. **`update_profiles_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `triaje_records`
+13. **`calculate_bmi_trigger`** (BEFORE INSERT/UPDATE) - Calcula BMI automáticamente
+14. **`update_triage_records_timestamp`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `change_logs`
+15. **`trigger_validate_laboratory_id_change_logs`** (BEFORE INSERT) - Valida y asigna `laboratory_id`
+16. **`update_change_logs_created_at`** (BEFORE INSERT) - Actualiza timestamp
+
+#### En `laboratories`
+17. **`before_insert_laboratory`** (BEFORE INSERT) - Asigna valores por defecto
+18. **`on_feature_enable_sync_module`** (BEFORE UPDATE) - Sincroniza módulo al habilitar feature
+19. **`on_lab_insert_apply_module_config`** (BEFORE INSERT) - Aplica configuración de módulos
+20. **`trigger_update_laboratories_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `feature_catalog`
+21. **`on_feature_created_sync_labs`** (AFTER INSERT) - Sincroniza nueva feature a todos los labs
+22. **`trigger_update_feature_catalog_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+#### En `module_catalog`
+23. **`before_insert_module_validate_feature`** (BEFORE INSERT/UPDATE) - Valida que feature existe
+24. **`on_module_update_sync_fields`** (AFTER UPDATE) - Sincroniza nuevos campos a todos los labs
+
+#### En `immuno_requests`
+25. **`update_immuno_requests_updated_at`** (BEFORE UPDATE) - Actualiza timestamp
+
+### Políticas RLS (Lista Completa Verificada)
+
+#### Patrón General
+Todas las políticas RLS filtran por `laboratory_id` del usuario autenticado usando:
+```sql
+laboratory_id = (SELECT laboratory_id FROM profiles WHERE id = auth.uid())
+```
+
+#### Políticas por Tabla
+
+**`patients`** (4 políticas):
+- SELECT: Usuarios ven solo pacientes de su laboratorio
+- INSERT: Usuarios insertan solo en su laboratorio
+- UPDATE: Usuarios actualizan solo pacientes de su laboratorio
+- DELETE: Usuarios eliminan solo pacientes de su laboratorio
+- Lectura pública: Política adicional permite lectura anónima
+
+**`medical_records_clean`** (12 políticas):
+- SELECT: Múltiples políticas (por laboratorio, por branch, owners, lectura pública con token)
+- INSERT: Por laboratorio y por branch
+- UPDATE: Por laboratorio y por branch
+- DELETE: Owners y usuarios por branch
+- Lectura pública: Política para lectura anónima y con token
+
+**`profiles`** (6 políticas):
+- SELECT: Usuarios ven perfiles de su laboratorio
+- INSERT: Usuarios insertan solo su propio perfil
+- UPDATE: Usuarios actualizan su perfil o owners/admins actualizan perfiles de su lab
+- DELETE: Solo owners pueden eliminar
+
+**`change_logs`** (6 políticas):
+- SELECT: 2 políticas (una permite lectura general, otra filtra por laboratorio)
+- INSERT: 2 políticas (una valida `user_id`, otra valida `laboratory_id`)
+- UPDATE: Usuarios actualizan logs de su laboratorio
+- DELETE: Usuarios eliminan logs de su laboratorio
+
+**`immuno_requests`** (7 políticas):
+- SELECT: Múltiples políticas (lectura general y filtrada por laboratorio)
+- INSERT: Por laboratorio y general
+- UPDATE: Por laboratorio y general
+- DELETE: Owners y usuarios por laboratorio
+
+**`triaje_records`** (4 políticas):
+- SELECT: Usuarios ven solo triajes de su laboratorio
+- INSERT: Usuarios insertan solo en su laboratorio (valida que `patient_id` pertenezca al lab)
+- UPDATE: Usuarios actualizan solo triajes de su laboratorio
+- DELETE: Usuarios eliminan solo triajes de su laboratorio
+
+**`user_settings`** (4 políticas):
+- SELECT: Usuarios leen solo su configuración
+- INSERT: Usuarios insertan solo su configuración
+- UPDATE: Usuarios actualizan solo su configuración
+- DELETE: Usuarios eliminan solo su configuración
+
+**`laboratories`** (5 políticas):
+- SELECT: Lectura pública para todos
+- INSERT: Bloqueado para anon_key
+- UPDATE: Permitido para anon/authenticated y service_role
+- DELETE: Bloqueado para anon_key
+
+**`laboratory_codes`** (5 políticas):
+- SELECT: 2 políticas (lectura de códigos activos para registro público)
+- INSERT: Bloqueado para anon_key
+- UPDATE: Bloqueado para anon_key
+- DELETE: Bloqueado para anon_key
+
+**`feature_catalog`** (RLS deshabilitado):
+- Lectura pública sin restricciones
+
+**`module_catalog`** (2 políticas):
+- SELECT: 2 políticas (lectura general y lectura de módulos activos)
+- ALL: Política general permite todas las operaciones
+
+### Índices de Performance (Principales)
+
+#### Índices en `laboratory_id` (Multi-tenant)
+- Todas las tablas multi-tenant tienen índice en `laboratory_id`
+- Índices compuestos: `(laboratory_id, created_at)`, `(laboratory_id, payment_status)`, etc.
+
+#### Índices de Búsqueda
+- `idx_patients_cedula_lower`, `idx_patients_nombre_lower` - Búsqueda case-insensitive
+- `idx_medical_records_treating_doctor_lower` - Búsqueda de médicos
+- `idx_triaje_records_tabaco`, `idx_triaje_records_cafe` - Búsqueda por hábitos
+
+#### Índices Únicos
+- `unique_cedula_per_laboratory` - Cédula única por laboratorio
+- `medical_records_clean_code_laboratory_unique` - Código único por laboratorio
+- `idx_triaje_records_case_unique` - Un triaje por caso
+
+### Nota Importante sobre `admin_users`
+**La tabla `admin_users` NO existe en la base de datos actual.** Fue mencionada en documentación anterior pero no está implementada. El sistema de administración del dashboard actualmente funciona sin esta tabla, usando políticas RLS especiales en `laboratories` y `laboratory_codes` que permiten operaciones desde el dashboard.
+
+---
+
+## 🔄 10. Integración con n8n (Automatizaciones)
+
+### ¿Qué es n8n?
+n8n es una plataforma de automatización que extiende las funcionalidades de SolHub conectándolo con servicios externos (Google Docs, Google Drive, emails, etc.).
+
+### Flujos Identificados y Verificados
+
+#### "Encabezados SPT" (ID: `QuTpwzyUBw29ZbZN`)
+**Qué hace:** Genera y actualiza documentos (informes médicos) usando datos de Supabase y Google Docs/Drive para el cliente SPT.
+
+**Tablas de Supabase que usa:**
+- `patients` - Obtiene información del paciente
+- `medical_records_clean` - Actualiza URLs de documentos (`googledocs_url`)
+
+**Nodos del flujo:**
+1. `Webhook` - Activa el flujo cuando se requiere generar encabezado
+2. `Get a row` (Supabase) - Obtiene datos de `patients` desde Supabase
+3. `Update a document` (Google Docs) - Actualiza plantilla de documento con datos del paciente
+4. `If` - Lógica condicional dentro del flujo
+5. `Actualizar URL de Docs` (Supabase) - Actualiza `googledocs_url` en `medical_records_clean`
+6. `Edit Fields3` (Set) - Transforma campos de datos
+7. `Crear encabezado` (Google Drive) - Crea encabezado de documento en Google Drive
+
+**Flujo detallado:**
+1. Webhook activa el flujo (probablemente desde SolHub cuando se crea/actualiza un caso)
+2. n8n obtiene datos de `patients` desde Supabase (filtrando por `laboratory_id` del cliente SPT)
+3. n8n actualiza plantilla en Google Docs con datos del paciente
+4. n8n crea encabezado en Google Drive
+5. n8n actualiza `googledocs_url` en `medical_records_clean` en Supabase
+
+#### "SPT - PDF" (ID: `vLtR1C7AIAcvlo4f`)
+**Qué hace:** Automatiza la generación, carga a Supabase Storage y actualización de archivos PDF con códigos QR, interactuando con las tablas `patients` y `medical_records_clean` para el cliente SPT.
+
+**Tablas de Supabase que usa:**
+- `patients` - Obtiene información del paciente
+- `medical_records_clean` - Obtiene datos del caso y actualiza URLs de PDF (`informepdf_url`, `informe_qr`, `pdf_en_ready`)
+
+**Nodos del flujo:**
+1. `Webhook` - Activa el flujo cuando se requiere generar PDF
+2. `Get a document` (Google Docs) - Obtiene documento de Google Docs
+3. `Download file` (Google Drive) - Descarga archivo de Google Drive
+4. `Obtener URL` (HTTP Request) - Obtiene URL del documento
+5. `Generate QR` (HTTP Request) - Genera código QR mediante servicio externo
+6. `Code` (Code) - Ejecuta lógica personalizada para procesar datos
+7. `Build Download URL` (Set) - Construye URL de descarga
+8. `Doc ID` (Set) - Establece ID de documento
+9. `Cargar PDf en bucket` (HTTP Request) - Carga PDF a Supabase Storage
+10. `Update a row` (Supabase) - Actualiza `medical_records_clean` con URLs del PDF
+11. `If` - Lógica condicional
+12. `(borrar + insertar)` (HTTP Request) - Operación HTTP con borrar e insertar
+13. `(solo insertar)` (HTTP Request) - Operación HTTP solo insertar
+
+**Flujo detallado:**
+1. Webhook activa el flujo (probablemente cuando un caso es aprobado o se requiere PDF)
+2. n8n obtiene datos de `patients` y `medical_records_clean` desde Supabase (filtrando por `laboratory_id` del cliente SPT)
+3. n8n descarga documento de Google Drive usando `googledocs_url`
+4. n8n genera código QR con datos del caso (probablemente usando `code` o `token` del caso)
+5. n8n genera PDF con código QR incrustado
+6. n8n carga PDF a Supabase Storage (bucket de archivos)
+7. n8n actualiza `medical_records_clean` con:
+   - `informepdf_url` - URL del PDF generado
+   - `informe_qr` - URL o contenido del informe con QR
+   - `pdf_en_ready` - `TRUE` cuando el PDF está listo
+
+### Campos de Supabase Usados por n8n
+
+#### En `patients`
+- `id`, `cedula`, `nombre`, `edad`, `telefono`, `email`, `gender` - Datos del paciente para documentos
+
+#### En `medical_records_clean`
+- `id`, `code` - Identificación del caso
+- `patient_id` - Relación con paciente
+- `googledocs_url` - URL del documento editable (usado por "Encabezados SPT")
+- `informepdf_url` - URL del PDF final (actualizado por "SPT - PDF")
+- `informe_qr` - URL del informe con QR (actualizado por "SPT - PDF")
+- `pdf_en_ready` - Estado de disponibilidad del PDF (actualizado por "SPT - PDF")
+- `token` - Token de verificación para acceso a informes
+- `laboratory_id` - **CRÍTICO:** Debe filtrarse en todas las consultas
+
+### Reglas Críticas para n8n
+
+1. **SIEMPRE filtrar por `laboratory_id`** en todas las consultas a Supabase desde n8n
+   - Ejemplo: `SELECT * FROM patients WHERE laboratory_id = 'uuid-del-cliente'`
+   - Esto garantiza el aislamiento de datos multi-tenant
+
+2. **Validar `laboratory_id` en webhooks**
+   - El webhook debe incluir `laboratory_id` en el payload
+   - Verificar que el `laboratory_id` existe en la tabla `laboratories`
+
+3. **Usar campos correctos para actualizaciones**
+   - `googledocs_url` - Para documentos editables en Google Docs
+   - `informepdf_url` - Para PDFs finales
+   - `informe_qr` - Para informes con QR
+   - `pdf_en_ready` - Para indicar que el PDF está listo
+
+4. **Manejar errores de Supabase**
+   - Si una actualización falla, no continuar con el flujo
+   - Loggear errores para debugging
+
+### Integración Futura con n8n
+
+Para agregar nuevos flujos de n8n:
+1. Identificar qué tablas de Supabase necesita el flujo
+2. Asegurar que todas las consultas filtren por `laboratory_id`
+3. Documentar qué campos se leen y escriben
+4. Agregar validaciones de `laboratory_id` en webhooks
+5. Probar el flujo con múltiples laboratorios para verificar aislamiento
+
+---
+
+## 🚨 11. Reglas Críticas de Desarrollo (NON-NEGOTIABLE)
+
+### Seguridad Multi-Tenant
+1. **NUNCA** hacer queries sin filtrar por `laboratory_id`
+2. **SIEMPRE** validar que RLS está habilitado en tablas nuevas
+3. **SIEMPRE** verificar que el usuario pertenece al laboratorio antes de operaciones críticas
+4. **LOGUEAR** todos los accesos a datos sensibles en `change_logs`
+5. **TESTEAR** exhaustivamente el aislamiento de datos entre laboratorios
+
+### Código
+1. Usar `<FeatureGuard>` para condicionar UI por features
+2. Usar `useLaboratory()` hook para acceder al laboratorio actual
+3. **NUNCA** hardcodear configuración de laboratorios en código
+4. Mantener configuración en tabla `laboratories` de Supabase
+5. Todo servicio de Supabase **DEBE** incluir `.eq('laboratory_id', laboratoryId)`
+6. Al insertar datos, **SIEMPRE** incluir `laboratory_id`
+
+### Base de Datos
+1. Toda tabla nueva **DEBE** tener `laboratory_id uuid references laboratories(id)`
+2. Crear índice en `laboratory_id` para performance
+3. Configurar RLS policies para filtrar por `laboratory_id`
+4. Backups regulares con `pg_dump`
+
+---
+
+## 📋 12. Procesos de Trabajo Comunes
+
+### Cómo Agregar un Campo Nuevo a un Formulario Existente
+
+1. **Actualizar la tabla en Supabase:**
+   - Crear migración SQL agregando la columna
+   - Agregar `laboratory_id` si es una tabla nueva
+   - Crear índice si es necesario
+
+2. **Actualizar tipos TypeScript:**
+   - Regenerar tipos desde Supabase o actualizar manualmente
+   - Actualizar interfaces en `src/shared/types/`
+
+3. **Actualizar el formulario:**
+   - Agregar campo al componente del formulario
+   - Agregar validación con Zod (si aplica)
+   - Actualizar servicio que guarda los datos
+
+4. **Testing:**
+   - Verificar que se guarda correctamente
+   - Verificar que se filtra por `laboratory_id`
+   - Verificar que otros labs no ven el dato
+
+### Cómo Agregar una Nueva Tabla Multi-Tenant
+
+1. **Crear migración SQL:**
+   ```sql
+   CREATE TABLE nueva_tabla (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     laboratory_id uuid NOT NULL REFERENCES laboratories(id),
+     -- otros campos
+     created_at timestamptz DEFAULT now()
+   );
+
+   CREATE INDEX idx_nueva_tabla_laboratory ON nueva_tabla(laboratory_id);
+   ```
+
+2. **Configurar RLS:**
+   - Habilitar RLS en la tabla
+   - Crear políticas SELECT, INSERT, UPDATE, DELETE
+   - Todas deben filtrar por `laboratory_id`
+
+3. **Crear trigger para asignar `laboratory_id`:**
+   - Trigger BEFORE INSERT que asigna `laboratory_id` desde el perfil del usuario
+
+4. **Actualizar tipos TypeScript:**
+   - Regenerar tipos desde Supabase
+
+5. **Crear servicio en el frontend:**
+   - Crear servicio en `src/shared/services/supabase/[nombre]/`
+   - Todos los queries deben filtrar por `laboratory_id`
+
+6. **Testing:**
+   - Verificar que RLS funciona correctamente
+   - Verificar que el trigger asigna `laboratory_id`
+   - Verificar aislamiento entre laboratorios
+
+---
+
+## 🔧 13. Configuración MCP (Model Context Protocol)
+
+### Supabase MCP
+- **Project ID:** `sbqepjsxnqtldyvlntqk`
+- **Estado:** ACTIVE_HEALTHY
+- **Token:** Configurado en `C:\Users\andre\.cursor\mcp.json`
+
+### GitHub MCP
+- **Organización:** Solware-Agency
+- **Repositorios:** Todos los repos de Solware-Agency accesibles
+
+### n8n MCP
+- Flujos identificados: "Encabezados SPT", "SPT - PDF"
+- Se puede usar para ejecutar y consultar flujos de trabajo
+
+---
+
+## 📝 14. Notas Importantes
+
+- **Package Manager:** Usar `pnpm` por defecto (versión 10.17.1)
+- **Idioma de respuestas:** Español
+- **Proyecto Supabase principal:** Forms conspat (`sbqepjsxnqtldyvlntqk`)
+- **Repositorio principal:** `Solhub_prod`
+- **Dashboard administrativo:** `solhub_dashboard`
+
+### Referencias
+- Planes de implementación en `.cursor/plans/*.plan.md`
+- Documentación del Proyecto Inntegras (módulo aseguradoras)
+
+---
+
+**Última actualización:** 2025-12-12
+**Versión del documento:** 2.0 (Orientado a procesos y onboarding)
