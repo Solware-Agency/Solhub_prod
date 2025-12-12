@@ -1825,8 +1825,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           </div>
 
           {/* Mobile View - Cards */}
-          <div className='block lg:hidden overflow-hidden'>
-            <div className='p-4 space-y-2 max-h-[75vh] overflow-y-auto custom-scrollbar'>
+          <div className='block md:hidden overflow-hidden'>
+            <div className='p-3 sm:p-4 space-y-2 sm:space-y-3 max-h-[75vh] overflow-y-auto custom-scrollbar'>
               {paginatedCases.length > 0 ? (
                 paginatedCases.map((case_) => (
                   <CaseCard
@@ -1855,9 +1855,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           </div>
 
           {/* Desktop View - Table */}
-          <div className='hidden lg:block'>
+          <div className='hidden md:block'>
             <div className='overflow-x-auto responsive-table'>
-              <div className='max-h-[55vh] overflow-y-auto custom-scrollbar'>
+              <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto custom-scrollbar'>
                 <table className='w-full min-w-[800px]'>
                   <thead className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]'>
                     <tr>
@@ -1902,10 +1902,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       <FeatureGuard feature='hasPayment'>
 
                       {!notShow && (
-                        <th className='px-4 py-3 text-left'>
+                        <th className='px-3 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-left'>
                           <button
                             onClick={() => handleSort('total_amount')}
-                            className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
+                            className='flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
                             >
                             Monto Total
                             <SortIcon field='total_amount' />
