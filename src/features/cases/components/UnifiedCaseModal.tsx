@@ -979,7 +979,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     };
 
-    const handleSendEmail = () => {
+    const handleSendEmail = async () => {
       if (!case_?.patient_email) {
         toast({
           title: '❌ Error',
@@ -989,28 +989,94 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
-      // Create mailto link with case information
-      const subject = `Caso ${case_.code || case_.id} - ${case_.nombre}`;
-      const body =
-        `Hola ${
-          case_.nombre
-        },\n\nLe escribimos desde el laboratorio conspat por su caso ${
-          case_.code || 'N/A'
-        }.\n\n` + `Saludos cordiales.`;
+      if (!case_?.attachment_url) {
+        toast({
+          title: '❌ Error',
+          description: 'El PDF del caso aún no está disponible.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const mailtoLink = `mailto:${
-        case_.patient_email
-      }?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-        body,
-      )}`;
+      setIsSaving(true);
 
-      window.open(mailtoLink, '_blank');
+      try {
+        // Crear el mensaje personalizado con el nombre del laboratorio
+        const laboratoryName = laboratory?.name || 'nuestro laboratorio';
+        const emailSubject = `Caso ${case_.code || case_.id} - ${case_.nombre}`;
+        const emailBody = `Hola ${case_.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_.code || 'N/A'}.\n\nSaludos cordiales.`;
+        
+        // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
+        const isDevelopment = import.meta.env.DEV;
+        const apiUrl = isDevelopment
+          ? 'http://localhost:3001/api/send-email'
+          : '/api/send-email';
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patientEmail: case_.patient_email,
+            patientName: case_.nombre,
+            caseCode: case_.code || case_.id,
+            pdfUrl: case_.attachment_url,
+            subject: emailSubject,
+            message: emailBody,
+          }),
+        });
 
-      toast({
-        title: '📧 Correo preparado',
-        description:
-          'Se ha abierto tu cliente de correo con los detalles del caso.',
-      });
+        let result;
+        try {
+          result = await response.json();
+        } catch (jsonError) {
+          console.error('Error parseando JSON:', jsonError);
+          throw new Error(
+            `Error del servidor (${response.status}): ${response.statusText}`,
+          );
+        }
+
+        if (!response.ok) {
+          console.error('Error del servidor:', result);
+          throw new Error(
+            result.error || result.details || 'Error al enviar el email',
+          );
+        }
+
+        // Actualizar el campo email_sent en la base de datos
+        if (case_?.id) {
+          const { error: updateError } = await supabase
+            .from('medical_records_clean')
+            .update({ email_sent: true })
+            .eq('id', case_.id);
+
+          if (updateError) {
+            console.error('Error actualizando email_sent:', updateError);
+            // No mostramos error al usuario ya que el email se envió exitosamente
+          }
+        }
+
+        toast({
+          title: '✅ Correo enviado',
+          description: `Se ha enviado el informe al correo ${case_.patient_email}`,
+          className: 'bg-green-100 border-green-400 text-green-800',
+        });
+
+        // Refrescar el caso para mostrar el estado actualizado
+        if (onSave) {
+          onSave();
+        }
+      } catch (error) {
+        console.error('Error enviando correo:', error);
+        toast({
+          title: '❌ Error',
+          description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSaving(false);
+      }
     };
 
     const handleSendWhatsApp = () => {
@@ -1336,10 +1402,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               </button>
                               <button
                                 onClick={handleSendEmail}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
+                                disabled={isSaving}
+                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
                               >
-                                <Send className='w-4 h-4' />
-                                Correo
+                                {isSaving ? (
+                                  <>
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                    Enviando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className='w-4 h-4' />
+                                    Correo
+                                  </>
+                                )}
                               </button>
                               <button
                                 onClick={handleSendWhatsApp}
