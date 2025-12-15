@@ -128,7 +128,7 @@ export default async function handler(req, res) {
           try {
             const slug = lab.slug || lab.name || '';
             if (slug && String(slug).toLowerCase().includes('spt')) {
-              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/SALUD%20PARA%20TODOS%20(1).svg';
+              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
             }
           } catch (e) {
             // no bloquear
