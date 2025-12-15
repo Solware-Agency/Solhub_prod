@@ -989,7 +989,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
-      if (!case_?.attachment_url) {
+      // Verificar que exista el PDF (informe_qr es el campo actual, attachment_url es legacy)
+      const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
+      if (!pdfUrl) {
         toast({
           title: '❌ Error',
           description: 'El PDF del caso aún no está disponible.',
@@ -1021,7 +1023,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             patientEmail: case_.patient_email,
             patientName: case_.nombre,
             caseCode: case_.code || case_.id,
-            pdfUrl: case_.attachment_url,
+            pdfUrl: pdfUrl, // Usar la URL determinada anteriormente (informe_qr o attachment_url)
             subject: emailSubject,
             message: emailBody,
           }),
