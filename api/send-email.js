@@ -73,17 +73,20 @@ export default async function handler(req, res) {
             if (branding.logo.startsWith('http')) {
               labLogo = branding.logo;
             } else if (branding.logo.startsWith('/')) {
-              // Construir una URL absoluta usando los headers del request si es posible
+              // Construir una URL absoluta.
+              // Prioridad: FRONEND_URL env (ej. https://app.mydomain.com) -> PUBLIC_URL -> request headers -> fallback
               try {
-                const host = req.headers['x-forwarded-host'] || req.headers.host;
-                const proto = req.headers['x-forwarded-proto'] || 'https';
-                if (host) {
-                  labLogo = `${proto}://${host}${branding.logo}`;
-                } else if (process.env.PUBLIC_URL) {
-                  labLogo = process.env.PUBLIC_URL + branding.logo;
+                const frontendUrl = process.env.FRONTEND_URL || process.env.PUBLIC_URL || null;
+                if (frontendUrl) {
+                  labLogo = frontendUrl.replace(/\/$/, '') + branding.logo;
                 } else {
-                  // Fallback: usar el logo por defecto si no podemos construir la URL
-                  labLogo = labLogo || defaultLogoUrl;
+                  const host = req.headers['x-forwarded-host'] || req.headers.host;
+                  const proto = req.headers['x-forwarded-proto'] || (req.protocol ? req.protocol : 'https');
+                  if (host) {
+                    labLogo = `${proto}://${host}${branding.logo}`;
+                  } else {
+                    labLogo = labLogo || defaultLogoUrl;
+                  }
                 }
               } catch (e) {
                 labLogo = labLogo || defaultLogoUrl;
@@ -91,6 +94,44 @@ export default async function handler(req, res) {
             } else {
               labLogo = branding.logo || labLogo;
             }
+          }
+
+          // Si el logo es un SVG muchas veces no se renderiza en clientes de email.
+          // Intentar localizar una variante raster (.png/.jpg) en el mismo path público.
+          try {
+            if (labLogo && typeof labLogo === 'string' && labLogo.match(/\.svg(\?|$)/i)) {
+              const pngCandidate = labLogo.replace(/\.svg(\?*.*)?$/i, '.png$1');
+              const jpgCandidate = labLogo.replace(/\.svg(\?*.*)?$/i, '.jpg$1');
+
+              // Hacer requests HEAD para comprobar si la imagen existe (server-side)
+              const tryHead = async (url) => {
+                try {
+                  const r = await fetch(url, { method: 'HEAD' });
+                  return r && r.ok;
+                } catch (e) {
+                  return false;
+                }
+              };
+
+              if (await tryHead(pngCandidate)) {
+                labLogo = pngCandidate;
+              } else if (await tryHead(jpgCandidate)) {
+                labLogo = jpgCandidate;
+              }
+            }
+          } catch (e) {
+            // No bloquear el envío por este fallback
+            console.warn('Error comprobando variantes de logo:', e && e.message ? e.message : e);
+          }
+
+          // Hardcode temporal: forzar logo SPT (evita tocar dashboard ahora)
+          try {
+            const slug = lab.slug || lab.name || '';
+            if (slug && String(slug).toLowerCase().includes('spt')) {
+              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/SALUD%20PARA%20TODOS%20(1).svg';
+            }
+          } catch (e) {
+            // no bloquear
           }
 
         // Teléfono en config.contactPhone (si se configuró)
