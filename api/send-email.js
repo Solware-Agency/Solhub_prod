@@ -134,9 +134,24 @@ export default async function handler(req, res) {
             // no bloquear
           }
 
-        // Teléfono en config.contactPhone (si se configuró)
-        if (config.contactPhone) {
-        labPhone = config.contactPhone;
+        // Resolver teléfono del laboratorio (varias rutas posibles en config/branding)
+        try {
+          const phoneCandidates = [
+            config.contactPhone,
+            config.phoneNumber,
+            (branding && branding.phoneNumber) || null,
+            (branding && branding.phone) || null,
+            lab.phone || null,
+            lab.contact_phone || null,
+          ];
+
+          const validPhone = phoneCandidates.find((p) => p && String(p).trim().length > 0);
+          if (validPhone) {
+            labPhone = String(validPhone).trim();
+          }
+        } catch (e) {
+          // mantener labPhone por defecto si algo falla
+          console.warn('Error resolviendo teléfono del laboratorio:', e && e.message ? e.message : e);
         }
 
         // Si el slug es conspat y no hay logo, mantener el URL por compatibilidad
@@ -154,6 +169,21 @@ export default async function handler(req, res) {
     const resolvedSubject = subject
       ? `${labName} - ${subject}`
       : `${labName} - Informe Médico - Caso ${caseCode || 'N/A'}`;
+
+    // Preparar enlace de contacto: usar WhatsApp salvo que el número sea fijo (ej. 0212 SPT)
+    let phoneDigits = String(labPhone || '').replace(/\D/g, '');
+    if (phoneDigits.startsWith('0')) phoneDigits = phoneDigits.replace(/^0+/, '');
+    if (!phoneDigits) phoneDigits = '';
+
+    // Detectar fijo 0212 en distintas formas: +58 212..., 0212..., 212...
+    const isFixed212 = (phoneDigits.startsWith('58') && phoneDigits.slice(2, 5) === '212') || phoneDigits.startsWith('212');
+
+    // Construir HTML del enlace de contacto: si es fijo 0212 usamos tel:, si no usamos wa.me
+    const whatsappHref = `https://wa.me/${phoneDigits}?text=Hola%20${encodeURIComponent(labName)}%2C%20tengo%20una%20consulta`;
+    const telHref = phoneDigits ? `tel:+${phoneDigits}` : '';
+    const contactAnchorHtml = isFixed212
+      ? (telHref ? `<a href="${telHref}" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">${labPhone}</a>` : `${labPhone}`)
+      : `<a href="${whatsappHref}" target="_blank" rel="noopener noreferrer" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">${labPhone}</a>`;
 
     const emailData = {
       from: `${process.env.RESEND_FROM_NAME || labName} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
@@ -205,9 +235,7 @@ export default async function handler(req, res) {
 
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
         Si tiene alguna pregunta, no dude en contactarnos al
-        <a href="https://wa.me/${labPhone.replace(/\D/g, '')}?text=Hola%20${encodeURIComponent(labName)}%2C%20tengo%20una%20consulta" target="_blank" rel="noopener noreferrer" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">
-          ${labPhone}
-        </a>
+        ${contactAnchorHtml}
       </p>
 
       <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
