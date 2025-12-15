@@ -68,16 +68,30 @@ export default async function handler(req, res) {
         const branding = lab.branding || {};
         const config = lab.config || {};
 
-        // Logo: si viene como URL absoluta úsala; si viene como path relativo intenta prefix con PUBLIC_URL si existe
-        if (branding.logo && typeof branding.logo === 'string') {
-        if (branding.logo.startsWith('http')) {
-          labLogo = branding.logo;
-        } else if (branding.logo.startsWith('/')) {
-          labLogo = (process.env.PUBLIC_URL || '') + branding.logo;
-        } else {
-          labLogo = branding.logo || labLogo;
-        }
-        }
+          // Logo: si viene como URL absoluta úsala; si viene como path relativo conviértela a URL absoluta
+          if (branding.logo && typeof branding.logo === 'string') {
+            if (branding.logo.startsWith('http')) {
+              labLogo = branding.logo;
+            } else if (branding.logo.startsWith('/')) {
+              // Construir una URL absoluta usando los headers del request si es posible
+              try {
+                const host = req.headers['x-forwarded-host'] || req.headers.host;
+                const proto = req.headers['x-forwarded-proto'] || 'https';
+                if (host) {
+                  labLogo = `${proto}://${host}${branding.logo}`;
+                } else if (process.env.PUBLIC_URL) {
+                  labLogo = process.env.PUBLIC_URL + branding.logo;
+                } else {
+                  // Fallback: usar el logo por defecto si no podemos construir la URL
+                  labLogo = labLogo || defaultLogoUrl;
+                }
+              } catch (e) {
+                labLogo = labLogo || defaultLogoUrl;
+              }
+            } else {
+              labLogo = branding.logo || labLogo;
+            }
+          }
 
         // Teléfono en config.contactPhone (si se configuró)
         if (config.contactPhone) {
@@ -95,10 +109,15 @@ export default async function handler(req, res) {
     }
 
     // Configurar el email
+    // Si el frontend envió un subject, respetarlo; si no, anteponer nombre del laboratorio
+    const resolvedSubject = subject
+      ? `${labName} - ${subject}`
+      : `${labName} - Informe Médico - Caso ${caseCode || 'N/A'}`;
+
     const emailData = {
       from: `${process.env.RESEND_FROM_NAME || labName} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: [patientEmail],
-      subject: subject || `Informe Médico - Caso ${caseCode || 'N/A'}`,
+      subject: resolvedSubject,
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
