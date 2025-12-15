@@ -1024,6 +1024,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             patientName: case_.nombre,
             caseCode: case_.code || case_.id,
             pdfUrl: pdfUrl, // Usar la URL determinada anteriormente (informe_qr o attachment_url)
+            laboratory_id: case_.laboratory_id || laboratory?.id,
             subject: emailSubject,
             message: emailBody,
           }),
