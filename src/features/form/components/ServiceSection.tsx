@@ -34,27 +34,10 @@ export const ServiceSection = memo(
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
     const branch = useWatch({ control, name: 'branch' });
-
-    // Obtener setValue del contexto del formulario (si está disponible)
-    let setValue: ((name: string, value: any) => void) | undefined;
-    try {
-      const formContext = useFormContext<FormValues>();
-      setValue = formContext.setValue;
-    } catch {
-      // Si no hay FormContext, usar el control directamente
-      setValue = (name: string, value: any) => {
-        if (control._formValues) {
-          control._formValues[name as keyof typeof control._formValues] = value;
-        }
-        // Notificar el cambio
-        if (control._subjects?.values) {
-          control._subjects.values.next({
-            ...control._formValues,
-            [name]: value,
-          });
-        }
-      };
-    }
+    
+    // Obtener setValue del contexto del formulario de forma segura
+    const formContext = useFormContext<FormValues>();
+    const setValue = formContext.setValue;
 
     // Verificar si el campo "médico tratante" está habilitado en la configuración del módulo
     const medicoTratanteConfig = useModuleField(
@@ -82,7 +65,7 @@ export const ServiceSection = memo(
     // Resetear el valor a string vacío cuando el campo se deshabilita
     useEffect(() => {
       if (!consultaConfig?.enabled && consultaValue) {
-        setValue('consulta', '');
+        setValue('consulta', '', { shouldValidate: false, shouldDirty: false });
       }
     }, [consultaConfig?.enabled, consultaValue, setValue]);
 
@@ -139,7 +122,7 @@ export const ServiceSection = memo(
         { value: 'Citología', label: 'Citología' },
         { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
       ]);
-    }, [laboratory?.config?.examTypes]);
+    }, [JSON.stringify(laboratory?.config?.examTypes)]);
 
     // Obtener branches desde la configuración del laboratorio
     const branchOptions = useMemo(() => {
@@ -154,10 +137,10 @@ export const ServiceSection = memo(
 
     // Auto-set branch if user has an assigned branch
     useEffect(() => {
-      if (profile?.assigned_branch && !branch && setValue) {
-        setValue('branch', profile.assigned_branch);
+      if (profile?.assigned_branch && !branch) {
+        setValue('branch', profile.assigned_branch, { shouldValidate: true, shouldDirty: false });
       }
-    }, [profile, branch, setValue]);
+    }, [profile?.assigned_branch, branch, setValue]);
 
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>

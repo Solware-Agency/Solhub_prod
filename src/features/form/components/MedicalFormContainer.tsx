@@ -82,17 +82,21 @@ export function MedicalFormContainer() {
     resolver: dynamicResolver,
     defaultValues: getInitialFormValues(),
     mode: 'onChange', // Validate on change instead of on blur
+    shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
   });
 
   // Actualizar el resolver cuando cambie el schema dinámico
   // Esto es necesario porque react-hook-form no actualiza el resolver automáticamente
   useEffect(() => {
-    // Limpiar errores previos cuando cambia el schema
-    form.clearErrors();
-    // Revalidar el formulario con el nuevo schema
-    // Esto fuerza a usar el nuevo resolver
-    form.trigger();
-  }, [dynamicFormSchema, form]);
+    // Limpiar solo errores de campos que ya no son requeridos
+    // No limpiar TODOS los errores para evitar perder validaciones en curso
+    const currentErrors = form.formState.errors;
+    
+    // Solo re-trigger si hay errores existentes, para evitar validaciones innecesarias
+    if (Object.keys(currentErrors).length > 0) {
+      form.trigger();
+    }
+  }, [dynamicFormSchema]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
