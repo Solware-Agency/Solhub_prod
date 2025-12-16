@@ -1,22 +1,10 @@
-/*
-  # Agregar soporte para laboratory_id en registro de usuarios
+set check_function_bodies = off;
 
-  - Actualiza handle_new_user() para leer laboratory_id de raw_user_meta_data
-  - Asigna laboratory_id al perfil cuando se crea
-  - Mantiene compatibilidad hacia atrás (laboratory_id puede ser NULL)
-  
-  ¿Cómo funciona?
-  1. Usuario se registra con código → Frontend valida código
-  2. Frontend llama a signUp() con laboratory_id en metadata
-  3. Supabase crea usuario en auth.users con metadata
-  4. Trigger handle_new_user() se ejecuta automáticamente
-  5. Trigger lee laboratory_id de NEW.raw_user_meta_data->>'laboratory_id'
-  6. Trigger asigna laboratory_id al perfil en profiles
-*/
-
--- Actualizar función handle_new_user() para incluir laboratory_id
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
 DECLARE
   v_phone_text text;
   v_phone_numeric numeric;
@@ -104,11 +92,79 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$function$
+;
 
--- Comentario explicativo
-COMMENT ON FUNCTION public.handle_new_user() IS 
-'Crea automáticamente un perfil cuando se registra un nuevo usuario. 
-Lee laboratory_id de raw_user_meta_data si está disponible (cuando el usuario se registra con código).
-Si laboratory_id es NULL, el usuario no pertenece a ningún laboratorio (caso especial).';
+CREATE OR REPLACE FUNCTION public.log_medical_record_deletion()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  current_user_id uuid;
+  current_user_email text;
+  current_user_display_name text;
+  record_info text;
+  existing_log_count integer;
+BEGIN
+  -- Get current user information
+  current_user_id := auth.uid();
+  
+  -- If no user is authenticated, skip logging
+  IF current_user_id IS NULL THEN
+    RETURN OLD;
+  END IF;
+  
+  -- Get user email and display name from profiles table
+  SELECT email, display_name INTO current_user_email, current_user_display_name
+  FROM profiles 
+  WHERE id = current_user_id;
+  
+  -- Check if a deletion log already exists for this record (avoid duplicates)
+  SELECT COUNT(*) INTO existing_log_count
+  FROM change_logs 
+  WHERE patient_id = OLD.patient_id 
+    AND field_name = 'deleted_record'
+    AND changed_at > now() - interval '1 second';
+  
+  -- If a deletion log already exists in the last second, skip
+  IF existing_log_count > 0 THEN
+    RETURN OLD;
+  END IF;
+  
+  -- Create record info string using available fields
+  record_info := COALESCE(OLD.code, 'Sin código') || ' - ' || COALESCE(OLD.exam_type, 'Sin tipo de examen');
+  
+  -- Save the deletion log using patient_id (required by constraint)
+  -- Note: We use patient_id instead of medical_record_id since the record is being deleted
+  INSERT INTO change_logs (
+    patient_id,
+    user_id,
+    user_email,
+    user_display_name,
+    field_name,
+    field_label,
+    old_value,
+    new_value,
+    deleted_record_info,
+    changed_at,
+    entity_type
+  ) VALUES (
+    OLD.patient_id,
+    current_user_id,
+    COALESCE(current_user_email, 'unknown@email.com'),
+    current_user_display_name,
+    'deleted_record',
+    'Registro Eliminado',
+    record_info,
+    NULL,
+    record_info,
+    now(),
+    'medical_case'
+  );
+  
+  RETURN OLD;
+END;
+$function$
+;
+
 
