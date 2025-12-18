@@ -864,33 +864,93 @@ export const getCasesWithPatientInfo = async (
       query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica']);
     }
 
-    // Paginación
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
     // Aplicar ordenamiento dinámico
     const sortField = filters?.sortField || 'created_at';
     const sortDirection = filters?.sortDirection || 'desc';
     const ascending = sortDirection === 'asc';
 
-    const { data, error, count } = await query
-      .range(from, to)
-      .order(sortField, { ascending });
+    // Campos que pertenecen a la tabla relacionada 'patients'
+    const relatedFields = ['nombre', 'cedula'];
+    const isRelatedField = relatedFields.includes(sortField);
+
+    let data: any[] = [];
+    let count = 0;
+    let error: any = null;
+
+    if (isRelatedField) {
+      // Si el campo de ordenamiento es de la tabla relacionada,
+      // necesitamos obtener todos los datos, ordenarlos en el cliente y luego paginar
+      const { data: allData, error: allError, count: totalCount } = await query;
+
+      if (allError) {
+        error = allError;
+      } else {
+        // Transformar los datos primero para tener acceso a los campos aplanados
+        const transformedAll = (allData || []).map((item: any) => ({
+          ...item,
+          cedula: item.patients?.cedula || '',
+          nombre: item.patients?.nombre || '',
+          edad: item.patients?.edad || null,
+          telefono: item.patients?.telefono || null,
+          patient_email: item.patients?.email || null,
+          version: item.version || null,
+        })) as MedicalCaseWithPatient[];
+
+        // Ordenar en el cliente
+        transformedAll.sort((a: any, b: any) => {
+          let aValue = a[sortField];
+          let bValue = b[sortField];
+
+          // Manejar valores null/undefined
+          if (aValue === null || aValue === undefined) aValue = '';
+          if (bValue === null || bValue === undefined) bValue = '';
+
+          // Convertir a minúsculas si son strings
+          if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+          if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+          if (ascending) {
+            return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+          } else {
+            return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+          }
+        });
+
+        // Aplicar paginación después del ordenamiento
+        count = totalCount || 0;
+        const from = (page - 1) * limit;
+        const to = from + limit;
+        data = transformedAll.slice(from, to);
+      }
+    } else {
+      // Si el campo es de la tabla principal, ordenar en Supabase
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      const result = await query
+        .range(from, to)
+        .order(sortField, { ascending });
+      data = result.data || [];
+      count = result.count || 0;
+      error = result.error;
+    }
 
     if (error) {
       throw error;
     }
 
-    // Transformar los datos
-    const transformedData = (data || []).map((item: any) => ({
-      ...item,
-      cedula: item.patients?.cedula || '',
-      nombre: item.patients?.nombre || '',
-      edad: item.patients?.edad || null,
-      telefono: item.patients?.telefono || null,
-      patient_email: item.patients?.email || null,
-      version: item.version || null,
-    })) as MedicalCaseWithPatient[];
+    // Transformar los datos (solo si no se transformaron antes)
+    const transformedData = isRelatedField
+      ? (data as MedicalCaseWithPatient[])
+      : ((data || []).map((item: any) => ({
+          ...item,
+          cedula: item.patients?.cedula || '',
+          nombre: item.patients?.nombre || '',
+          edad: item.patients?.edad || null,
+          telefono: item.patients?.telefono || null,
+          patient_email: item.patients?.email || null,
+          version: item.version || null,
+        })) as MedicalCaseWithPatient[]);
 
     return {
       data: transformedData,
