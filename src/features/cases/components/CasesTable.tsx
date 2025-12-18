@@ -34,6 +34,7 @@ import { BranchBadge } from '@shared/components/ui/branch-badge';
 import { formatCurrency } from '@shared/utils/number-utils';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { formatDateFromISO } from '@shared/utils/date-utils';
 
 interface CasesTableProps {
   cases: UnifiedMedicalRecord[];
@@ -1522,11 +1523,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                               </div>
                             </td>
                             <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left'>
-                              {case_.created_at
-                                ? new Date(case_.created_at).toLocaleDateString(
-                                    'es-ES',
-                                  )
-                                : 'N/A'}
+                              {formatDateFromISO(case_.created_at)}
                             </td>
                             <td className='px-4 py-4'>
                               <div className='text-left'>
@@ -1900,18 +1897,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                         Médico Tratante
                       </th>
                       <FeatureGuard feature='hasPayment'>
-
-                      {!notShow && (
-                        <th className='px-4 py-3 text-left'>
-                          <button
-                            onClick={() => handleSort('total_amount')}
-                            className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
+                        {!notShow && (
+                          <th className='px-4 py-3 text-left'>
+                            <button
+                              onClick={() => handleSort('total_amount')}
+                              className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
                             >
-                            Monto Total
-                            <SortIcon field='total_amount' />
-                          </button>
-                        </th>
-                      )}
+                              Monto Total
+                              <SortIcon field='total_amount' />
+                            </button>
+                          </th>
+                        )}
                       </FeatureGuard>
                       <th className='px-4 py-3 text-center'>
                         <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
@@ -1972,11 +1968,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                               </div>
                             </td>
                             <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left'>
-                              {case_.created_at
-                                ? new Date(case_.created_at).toLocaleDateString(
-                                    'es-ES',
-                                  )
-                                : 'N/A'}
+                              {formatDateFromISO(case_.created_at)}
                             </td>
                             <td className='px-4 py-4'>
                               <div className='text-left'>
@@ -1998,25 +1990,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                               {case_.treating_doctor}
                             </td>
                             <FeatureGuard feature='hasPayment'>
-
-                            {!notShow && (
-                              <td className='px-4 py-4'>
-                                <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                  {formatCurrency(case_.total_amount)}
-                                </div>
-                                {(() => {
-                                  const { missingAmount } =
-                                  getCasePaymentStatus(case_);
-                                  return (
-                                    missingAmount > 0 && (
-                                      <div className='text-xs text-red-600 dark:text-red-400'>
-                                        {formatCurrency(missingAmount)}
-                                      </div>
-                                    )
-                                  );
-                                })()}
-                              </td>
-                            )}
+                              {!notShow && (
+                                <td className='px-4 py-4'>
+                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                                    {formatCurrency(case_.total_amount)}
+                                  </div>
+                                  {(() => {
+                                    const { missingAmount } =
+                                      getCasePaymentStatus(case_);
+                                    return (
+                                      missingAmount > 0 && (
+                                        <div className='text-xs text-red-600 dark:text-red-400'>
+                                          {formatCurrency(missingAmount)}
+                                        </div>
+                                      )
+                                    );
+                                  })()}
+                                </td>
+                              )}
                             </FeatureGuard>
                             <td className='px-4 py-4'>
                               <div className='flex justify-center mx-5'>

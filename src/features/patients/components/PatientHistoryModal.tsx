@@ -29,6 +29,7 @@ import {
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatDateFromISO } from '@shared/utils/date-utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase/config/config';
 import { getCasesByPatientIdWithInfo } from '@/services/supabase/cases/medical-cases-service';
@@ -691,13 +692,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
                                         <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
                                           <Calendar className='h-4 w-4' />
-                                          {format(
-                                            new Date(
-                                              caseItem.created_at ||
-                                                caseItem.date,
-                                            ),
-                                            'dd/MM/yyyy',
-                                            { locale: es },
+                                          {formatDateFromISO(
+                                            caseItem.created_at ||
+                                              caseItem.date,
                                           )}
                                         </div>
                                       </div>

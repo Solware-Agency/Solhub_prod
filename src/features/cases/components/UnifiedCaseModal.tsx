@@ -32,6 +32,7 @@ import {
 import { updatePatient } from '@/services/supabase/patients/patients-service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatDateFromISO } from '@shared/utils/date-utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase/config/config';
 import { useToast } from '@shared/hooks/use-toast';
@@ -225,8 +226,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       // Si hay tipos configurados, usarlos; si no, usar valores por defecto
       if (examTypes.length > 0) {
         // Ordenar alfabéticamente antes de crear las opciones
-        const sortedExamTypes = [...examTypes].sort((a, b) => 
-          a.localeCompare(b, 'es', { sensitivity: 'base' })
+        const sortedExamTypes = [...examTypes].sort((a, b) =>
+          a.localeCompare(b, 'es', { sensitivity: 'base' }),
         );
         return createDropdownOptions(
           sortedExamTypes.map((type) => ({ value: type, label: type })),
@@ -1161,7 +1162,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // Calculate financial information
     const totalAmount = currentCase?.total_amount || 0;
     const exchangeRate = currentCase?.exchange_rate || 0;
-    
+
     // Validar si falta la tasa de cambio para casos antiguos
     const hasValidExchangeRate = exchangeRate > 0;
 
@@ -1203,7 +1204,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     );
     const remainingUSD = Math.max(0, totalAmount - totalPaidUSD);
     // Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-    const remainingVES = remainingUSD < 0.01 ? 0 : (hasValidExchangeRate ? remainingUSD * exchangeRate : 0);
+    const remainingVES =
+      remainingUSD < 0.01
+        ? 0
+        : hasValidExchangeRate
+        ? remainingUSD * exchangeRate
+        : 0;
     // Un pago está completo solo si: hay monto total > 0 Y el pago cubre el total
     const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount;
 
@@ -1437,14 +1443,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       <span className='font-semibold'>
                         {creatorData?.displayName || 'Usuario del sistema'}
                       </span>{' '}
-                      el{' '}
-                      {currentCase.created_at
-                        ? format(
-                            new Date(currentCase.created_at),
-                            'dd/MM/yyyy',
-                            { locale: es },
-                          )
-                        : 'Fecha no disponible'}
+                      el {formatDateFromISO(currentCase.created_at)}
                     </p>
                   </div>
 
@@ -1839,15 +1838,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         {!hasValidExchangeRate && (
                           <div className='mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg'>
                             <div className='flex items-start gap-2'>
-                              <svg className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' />
+                              <svg
+                                className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5'
+                                fill='none'
+                                stroke='currentColor'
+                                viewBox='0 0 24 24'
+                              >
+                                <path
+                                  strokeLinecap='round'
+                                  strokeLinejoin='round'
+                                  strokeWidth={2}
+                                  d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+                                />
                               </svg>
                               <div className='flex-1'>
                                 <p className='text-sm font-medium text-yellow-800 dark:text-yellow-300'>
                                   Tasa de cambio no disponible
                                 </p>
                                 <p className='text-xs text-yellow-700 dark:text-yellow-400 mt-1'>
-                                  Este caso fue creado sin tasa de cambio. Los pagos en Bs no pueden ser convertidos. Edita el caso para actualizar la información financiera.
+                                  Este caso fue creado sin tasa de cambio. Los
+                                  pagos en Bs no pueden ser convertidos. Edita
+                                  el caso para actualizar la información
+                                  financiera.
                                 </p>
                               </div>
                             </div>
