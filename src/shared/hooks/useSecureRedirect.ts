@@ -13,6 +13,7 @@ interface UseSecureRedirectOptions {
 	adminPath?: string
 	citoPath?: string
 	patoloPath?: string
+	imagenologiaPath?: string
 	/** Callback when redirect is about to happen */
 	onRedirect?: (role: string, path: string) => void
 }
@@ -33,6 +34,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		ownerPath = '/dashboard/home',
 		medicownerPath = '/dashboard/home',
 		employeePath = '/employee/home',
+		imagenologiaPath = '/imagenologia/cases',
 		adminPath = '/medic/cases',
 		citoPath = '/cito/cases',
 		patoloPath = '/patolo/cases',
@@ -123,6 +125,9 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'patologo':
 				redirectPath = patoloPath
 				break
+			case 'imagenologia':
+				redirectPath = imagenologiaPath
+				break
 			default:
 				redirectPath = employeePath // fallback to employee
 		}
@@ -142,7 +147,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Checks if user can access a specific role-protected route
 	 */
-	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'): boolean => {
+	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'imagenologia'): boolean => {
 		if (!user || !profile || !user.email_confirmed_at || profileError) {
 			return false
 		}

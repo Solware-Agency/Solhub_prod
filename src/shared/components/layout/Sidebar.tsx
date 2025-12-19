@@ -321,6 +321,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isEnfermero = profile?.role === 'enfermero';
   const isCallCenter = profile?.role === 'call_center' as any;
   const isPrueba = profile?.role === 'prueba' as any;
+  const isImagenologia = profile?.role === 'imagenologia';
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -634,6 +635,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/patolo/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isImagenologia && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/imagenologia/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/imagenologia/patients'
+                  icon={<User className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

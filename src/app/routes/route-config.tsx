@@ -128,6 +128,20 @@ export const medicRoutes: RouteConfig[] = [
   },
 ];
 
+// Configuración de rutas para imagenologia
+export const imagenologiaRoutes: RouteConfig[] = [
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+];
+
 // Configuración de rutas para citotecno
 export const citotecnoRoutes: RouteConfig[] = [
   {

@@ -26,6 +26,7 @@ import {
   PrivateRoute,
   StandaloneChatPage,
 } from '@app/routes/lazy-routes';
+import { imagenologiaRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
 import {
   dashboardRoutes,
@@ -274,6 +275,35 @@ function App() {
                           <FeatureRoute
                             feature={routeConfig.feature}
                             fallbackPath='/patolo/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                <Route
+                  path='/imagenologia'
+                  element={
+                    <PrivateRoute requiredRole={'imagenologia'}>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  {/* Nested routes for imagenologia */}
+                  <Route index element={<CasesPage />} />
+                  {imagenologiaRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/imagenologia/cases'
                           >
                             <Component />
                           </FeatureRoute>

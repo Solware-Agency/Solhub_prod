@@ -64,6 +64,7 @@ import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
+// import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
   id: string;
@@ -209,6 +210,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false)
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+    const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
+    
+    // Image URL state for imagenologia role (will be saved to medical_record_clean when column is defined)
+    const [imageUrl, setImageUrl] = useState('');
 
     // Payment editing states
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -358,6 +363,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+    
+    // Load patient data for EditPatientInfoModal - COMMENTED OUT (not needed, using inline image_url field)
+    /*
+    const { data: patientData, refetch: refetchPatient } = useQuery({
+      queryKey: ['patient', currentCase?.patient_id],
+      queryFn: async () => {
+        if (!currentCase?.patient_id) return null
+        const { data, error } = await supabase.from('patients').select('*').eq('id', currentCase.patient_id).single()
+        if (error) return null
+        return data
+      },
+      enabled: !!currentCase?.patient_id && isOpen,
+    })
+    */
 
     // Query to get change logs for this record
     const {
@@ -462,6 +481,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           total_amount: currentCase.total_amount,
           exchange_rate: currentCase.exchange_rate,
         });
+        
+        // Initialize image URL for imagenologia role
+        setImageUrl((currentCase as any).image_url || '');
 
         // Initialize payment methods from current case
         const methods: PaymentMethod[] = [];
@@ -938,6 +960,29 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
+        // Save image URL for imagenologia role
+        if (profile?.role === 'imagenologia' && imageUrl) {
+          const { error: imageUrlError } = await supabase
+            .from('medical_records_clean')
+            .update({ image_url: imageUrl })
+            .eq('id', currentCase.id);
+            
+          if (imageUrlError) {
+            console.error('Error saving image URL:', imageUrlError);
+            toast({
+              title: '❌ Error al guardar URL',
+              description: 'No se pudo guardar la URL de la imagen.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: '✅ URL de imagen guardada',
+              description: 'La URL de la imagen se ha guardado correctamente.',
+              className: 'bg-green-100 border-green-400 text-green-800',
+            });
+          }
+        }
+
         // Refetch the case data to get the updated information
         refetchCaseData();
 
@@ -949,6 +994,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         setPaymentMethods([]);
         setIsAddingNewPayment(false);
         setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+        setImageUrl(''); // Clear image URL
 
         // Call onSave callback if provided
         if (onSave) {
@@ -1492,6 +1538,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                     className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
                                   >
                                     {actionInfo.icon}
+                    {/* Render EditPatientInfoModal outside the panel to avoid z-index issues - COMMENTED OUT (not needed) */}
+                    {/*
+                    <EditPatientInfoModal
+                      isOpen={isEditPatientModalOpen}
+                      onClose={() => setIsEditPatientModalOpen(false)}
+                      patient={patientData as any}
+                      onSave={() => {
+                        setIsEditPatientModalOpen(false)
+                        refetchPatient()
+                        refetchCaseData()
+                      }}
+                    />
+                    */}
                                     <span>{actionInfo.text}</span>
                                   </div>
                                   <div className='text-xs text-gray-500 dark:text-gray-400'>
@@ -1648,6 +1707,61 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.patient_email ?? null}
                         onChange={handleInputChange}
                       />
+                      
+                      {/* Image URL field - Only visible for imagenologia role */}
+                      {profile?.role === 'imagenologia' && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            URL de Imagen:
+                          </span>
+                          <div className='sm:w-1/2 space-y-2'>
+                            <Input
+                              id='image-url-input'
+                              name='image_url'
+                              type='url'
+                              placeholder='https://ejemplo.com/imagen.jpg'
+                              value={imageUrl}
+                              onChange={(e) => setImageUrl(e.target.value)}
+                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
+                            />
+                            <div className='flex gap-2'>
+                              <Button
+                                size='sm'
+                                onClick={async () => {
+                                  if (!imageUrl) {
+                                    toast({
+                                      title: '⚠️ Campo vacío',
+                                      description: 'Por favor ingresa una URL válida',
+                                      variant: 'default',
+                                    });
+                                    return;
+                                  }
+                                  // TODO: Implementar guardado cuando se defina la columna
+                                  toast({
+                                    title: '⏳ Pendiente',
+                                    description: 'La funcionalidad de guardado se implementará cuando se defina la columna en la BD',
+                                    variant: 'default',
+                                  });
+                                }}
+                              >
+                                <Save className='w-3 h-3 mr-1' />
+                                Guardar URL
+                              </Button>
+                              {imageUrl && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  onClick={() => window.open(imageUrl, '_blank')}
+                                >
+                                  <Eye className='w-3 h-3 mr-1' />
+                                  Ver
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Note: relationship field not in new structure, could be added if needed */}
                     </div>
                   </InfoSection>

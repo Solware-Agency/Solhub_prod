@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia'>
 }
 
 /**
@@ -86,6 +86,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 
 		if (!allowedRoles.includes(profile.role)) {
 			console.log(`User role "${profile.role}" not in allowed roles: ${allowedRoles.join(', ')}`)
+			console.debug('PrivateRoute debug - allowedRoles:', allowedRoles, 'profile.role:', profile.role)
 
 			// Redirect based on actual user role to their proper home
 			switch (profile.role) {
@@ -99,6 +100,8 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 					return <Navigate to="/cito/cases" replace />
 				case 'patologo':
 					return <Navigate to="/patolo/cases" replace />
+				case 'imagenologia':
+					return <Navigate to="/imagenologia/cases" replace />
 			case 'medicowner':
 				return <Navigate to="/dashboard/home" replace />
 			case 'medico_tratante':

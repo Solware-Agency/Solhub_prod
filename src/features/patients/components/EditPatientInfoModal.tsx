@@ -10,6 +10,7 @@ import { supabase } from '@/services/supabase/config/config'
 import type { ChangeLog } from '@/services/legacy/supabase-service'
 import type { Patient } from '@/services/supabase/patients/patients-service'
 import { cn } from '@shared/lib/cn'
+import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
 function parseEdad(edad: string | null | undefined): { value: number | ''; unit: 'Años' | 'Meses' | '' } {
@@ -48,10 +49,14 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 	const initialCedula = parseCedula(patient.cedula)
 
+	const { profile } = useUserProfile()
+	const isImagenologia = profile?.role === 'imagenologia'
+
 	const [formData, setFormData] = useState({
 		nombre: patient.nombre,
 		telefono: patient.telefono || '',
 		email: patient.email || '',
+		image_url: (patient as any).image_url || '',
 		edad: patient.edad || '',
 		cedulaType: initialCedula.type,
 		cedulaNumber: initialCedula.number,
@@ -153,6 +158,16 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				})
 			}
 
+			// Solo registrar cambio de image_url si el usuario es imagenologia
+			if (isImagenologia && formData.image_url !== (patient as any).image_url) {
+				changes.push({
+					field: 'image_url',
+					fieldLabel: 'URL de Imagen',
+					oldValue: (patient as any).image_url || null,
+					newValue: formData.image_url || null,
+				})
+			}
+
 			if (changes.length === 0) {
 				toast({
 					description: 'No se detectaron cambios que guardar.',
@@ -162,16 +177,23 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 			}
 
 			// Actualizar el paciente en la nueva tabla patients
+			// Construir payload de update; solo incluir image_url si imagenologia
+			const updatePayload: any = {
+				cedula: newCedula,
+				nombre: formData.nombre,
+				telefono: formData.telefono || null,
+				email: formData.email || null,
+				edad: formData.edad,
+				updated_at: new Date().toISOString(),
+			}
+			if (isImagenologia) {
+				updatePayload.image_url = formData.image_url || null
+			}
+
 			const { error: updateError } = await supabase
 				.from('patients')
-				.update({
-					cedula: newCedula,
-					nombre: formData.nombre,
-					telefono: formData.telefono || null,
-					email: formData.email || null,
-					edad: formData.edad,
-					updated_at: new Date().toISOString(),
-				})
+				.update(updatePayload)
+				.eq('id', patient.id)
 				.eq('id', patient.id)
 
 			if (updateError) throw updateError
@@ -268,6 +290,12 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 									<div className="space-y-4">
 										<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-lg p-4 hover:shadow-md transition-shadow">
 											<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+													{isImagenologia && (
+														<div className="space-y-2">
+															<label className="text-sm text-gray-500 dark:text-gray-400">URL de Imagen</label>
+															<Input name="image_url" value={formData.image_url} onChange={(e) => setFormData(prev => ({...prev, image_url: e.target.value}))} placeholder="https://..." />
+														</div>
+													)}
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Nombre Completo</label>
 													<Input name="nombre" value={formData.nombre} onChange={handleChange} required />
