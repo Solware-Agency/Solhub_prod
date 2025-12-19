@@ -180,7 +180,9 @@ export type Database = {
           generated_by_display_name: string | null;
           googledocs_url: string | null;
           id: string;
+          image_url: string | null;
           ims: string | null;
+          laboratory_id: string;
           informe_qr: string | null;
           informepdf_url: string | null;
           number_of_samples: number;
@@ -227,9 +229,11 @@ export type Database = {
           generated_by_display_name?: string | null;
           googledocs_url?: string | null;
           id?: string;
+          image_url?: string | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
+          laboratory_id: string;
           number_of_samples: number;
           origin: string;
           patient_id?: string | null;
@@ -274,9 +278,11 @@ export type Database = {
           generated_by_display_name?: string | null;
           googledocs_url?: string | null;
           id?: string;
+          image_url?: string | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
+          laboratory_id?: string;
           number_of_samples?: number;
           origin?: string;
           patient_id?: string | null;
@@ -693,6 +699,7 @@ export interface MedicalRecord {
   ki67?: string | null;
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
+  image_url?: string | null; // URL de imagen para imagenología
 }
 
 // =====================================================================

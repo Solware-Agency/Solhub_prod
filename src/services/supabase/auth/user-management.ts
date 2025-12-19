@@ -5,7 +5,7 @@ import { extractLaboratoryId } from '../types/helpers'
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -45,7 +45,10 @@ export const updateUserRole = async (
     | 'patologo'
     | 'medicowner'
     | 'medico_tratante'
-    | 'enfermero',
+    | 'enfermero'
+    | 'imagenologia'
+    | 'call_center'
+    | 'prueba',
 ): Promise<{
   data: UserProfile | null;
   error: PostgrestError | Error | null;
