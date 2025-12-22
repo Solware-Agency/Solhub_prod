@@ -77,6 +77,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const { isGeneratingPDF, isSaving, handleCheckAndDownloadPDF, getPDFBlob } =
     usePDFDownload();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  const isImagenologia = profile?.role === 'imagenologia';
 
   const editPatient = () => {
     setIsEditing(true);
@@ -485,22 +487,18 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           </a>
                         )}
                       </div>
-                      {(() => {
-                        const { profile } = useUserProfile()
-                        const isImagenologia = profile?.role === 'imagenologia'
-                        return isImagenologia ? (
-                          <div className='flex items-center gap-2 ml-2'>
-                            <Button
-                              variant='outline'
-                              onClick={editPatient}
-                              title='Editar URL de imagen'
-                            >
-                              <Eye className='w-4 h-4 mr-2' />
-                              Editar URL de Imagen
-                            </Button>
-                          </div>
-                        ) : null
-                      })()}
+                      {isImagenologia && (
+                        <div className='flex items-center gap-2 ml-2'>
+                          <Button
+                            variant='outline'
+                            onClick={editPatient}
+                            title='Editar URL de imagen'
+                          >
+                            <Eye className='w-4 h-4 mr-2' />
+                            Editar URL de Imagen
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
