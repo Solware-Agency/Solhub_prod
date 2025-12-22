@@ -198,6 +198,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const { toast } = useToast();
     const { user } = useAuth();
     const { laboratory } = useLaboratory();
+    const isSpt = laboratory?.slug === 'spt';
     const moduleConfig = useModuleConfig('registrationForm');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1391,7 +1392,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {!notShow && (
+                        {!notShow && !(isSpt && currentCase.payment_status === 'Incompleto') && (
                           <span
                             className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
                               currentCase.payment_status,
@@ -1957,15 +1958,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           )}
                         </div>
                       )}
-
-                      {/* Fecha de registro - NO EDITABLE */}
-                      <InfoRow
-                        label='Registro'
-                        value={new Date(
-                          currentCase.created_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
                     </div>
                   </InfoSection>
 

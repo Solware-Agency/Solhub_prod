@@ -910,7 +910,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         disabled={loading}
                         className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
                       >
-                        <option value=''>Seleccione...</option>
+                        <option value='' disabled hidden>
+                          Seleccione...
+                        </option>
                         <option value='No'>No</option>
                         <option value='Si'>Sí</option>
                       </select>
@@ -957,7 +959,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         disabled={loading}
                         className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
                       >
-                        <option value=''>Seleccione...</option>
+                        <option value='' disabled hidden>
+                          Seleccione...
+                        </option>
                         <option value='No'>No</option>
                         <option value='muy alta'>Muy alta</option>
                         <option value='alta'>Alta</option>
@@ -982,7 +986,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                           <TooltipContent
                             side='top'
                             sideOffset={5}
-                            className='!z-[9999999] max-w-xs'
+                            className='!z-40 max-w-xs'
                           >
                             <p className='text-sm'>
                               Fórmula: (Cigarrillos al día × Años) / 20
@@ -1172,7 +1176,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-[9999999]'
+                      className='!z-40'
                     >
                       <p>Frecuencia cardíaca</p>
                     </TooltipContent>
@@ -1199,7 +1203,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-[9999999]'
+                      className='!z-40'
                     >
                       <p>Frecuencia respiratoria</p>
                     </TooltipContent>
@@ -1226,7 +1230,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-[9999999]'
+                      className='!z-40'
                     >
                       <p>Saturación de oxígeno</p>
                     </TooltipContent>
@@ -1307,7 +1311,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-[9999999]'
+                      className='!z-40'
                     >
                       <p>Índice de masa corporal</p>
                     </TooltipContent>

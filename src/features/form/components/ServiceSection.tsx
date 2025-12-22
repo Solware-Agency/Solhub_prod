@@ -142,6 +142,9 @@ export const ServiceSection = memo(
       }
     }, [profile?.assigned_branch, branch, setValue]);
 
+    // Verificar si es el laboratorio Conspat para aplicar layout especial
+    const isConspat = laboratory?.slug === 'conspat';
+
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
         <CardHeader className='p-3 sm:p-4 md:p-6'>
@@ -260,75 +263,155 @@ export const ServiceSection = memo(
               )}
             />
           )}
-          {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
-          {sampleTypeConfig?.enabled && (
-            <FormField
-              control={control}
-              name='sampleType'
-              render={({ field }) => (
-                <FormItem className='min-w-[180px] flex-1'>
-                  <FormLabel>Tipo de Muestra *</FormLabel>
-                  <FormControl>
-                    <AutocompleteInput
-                      fieldName='sampleType'
-                      placeholder='Ej: Biopsia de Piel'
-                      iconRight={
-                        <Microscope className='h-4 w-4 text-muted-foreground' />
-                      }
-                      {...field}
-                      className={inputStyles}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          )}
 
-          {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-          {numberOfSamplesConfig?.enabled && (
-            <FormField
-              control={control}
-              name='numberOfSamples'
-              render={({ field }) => (
-                <FormItem className='min-w-[180px] flex-1'>
-                  <FormLabel>Cantidad de Muestras *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      placeholder='0'
-                      {...field}
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === '' ? 0 : Number(value));
-                      }}
-                      className={inputStyles}
-                    />
-                  </FormControl>
-                </FormItem>
+          {/* Para Conspat: Tipo de Muestra, Cantidad de Muestras y Relación van juntos en la segunda línea (Relación al final) */}
+          {/* Para otros laboratorios: Tipo de Muestra y Cantidad de Muestras van antes de Relación */}
+          {isConspat ? (
+            <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
+              {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
+              {sampleTypeConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='sampleType'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Tipo de Muestra *</FormLabel>
+                      <FormControl>
+                        <AutocompleteInput
+                          fieldName='sampleType'
+                          placeholder='Ej: Biopsia de Piel'
+                          iconRight={
+                            <Microscope className='h-4 w-4 text-muted-foreground' />
+                          }
+                          {...field}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-          )}
 
-          {/* Relación - CON AUTOCOMPLETADO */}
-          {relationshipConfig?.enabled && (
-            <FormField
-              control={control}
-              name='relationship'
-              render={({ field }) => (
-                <FormItem className='min-w-[180px] flex-1'>
-                  <FormLabel>Relación</FormLabel>
-                  <FormControl>
-                    <AutocompleteInput
-                      fieldName='relationship'
-                      placeholder='Relación con el Caso'
-                      {...field}
-                      className={inputStyles}
-                    />
-                  </FormControl>
-                </FormItem>
+              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
+              {numberOfSamplesConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='numberOfSamples'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Cantidad de Muestras *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type='number'
+                          placeholder='0'
+                          {...field}
+                          value={field.value === 0 ? '' : field.value}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === '' ? 0 : Number(value));
+                          }}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+
+              {/* Relación - CON AUTOCOMPLETADO - Al final a la derecha */}
+              {relationshipConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='relationship'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Relación</FormLabel>
+                      <FormControl>
+                        <AutocompleteInput
+                          fieldName='relationship'
+                          placeholder='Relación con el Caso'
+                          {...field}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
+              {sampleTypeConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='sampleType'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Tipo de Muestra *</FormLabel>
+                      <FormControl>
+                        <AutocompleteInput
+                          fieldName='sampleType'
+                          placeholder='Ej: Biopsia de Piel'
+                          iconRight={
+                            <Microscope className='h-4 w-4 text-muted-foreground' />
+                          }
+                          {...field}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
+              {numberOfSamplesConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='numberOfSamples'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Cantidad de Muestras *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type='number'
+                          placeholder='0'
+                          {...field}
+                          value={field.value === 0 ? '' : field.value}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === '' ? 0 : Number(value));
+                          }}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Relación - CON AUTOCOMPLETADO */}
+              {relationshipConfig?.enabled && (
+                <FormField
+                  control={control}
+                  name='relationship'
+                  render={({ field }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Relación</FormLabel>
+                      <FormControl>
+                        <AutocompleteInput
+                          fieldName='relationship'
+                          placeholder='Relación con el Caso'
+                          {...field}
+                          className={inputStyles}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+            </>
           )}
 
           {/* Consulta (Especialidad Médica) - Solo visible si está habilitado en la configuración del módulo */}

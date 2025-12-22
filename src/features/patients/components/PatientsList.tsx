@@ -221,7 +221,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 										</th>
 									</tr>
 								</thead>
-								<tbody className="bg-black divide-y divide-gray-200 dark:divide-gray-700">
+								<tbody className="bg-white dark:bg-black divide-y divide-gray-200 dark:divide-gray-700">
 									{sortedPatients.length > 0 ? (
 										sortedPatients.map((patient: Patient) => (
 											<PatientRow key={patient.id} patient={patient} onClick={handlePatientClick} />

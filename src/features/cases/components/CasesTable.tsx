@@ -153,6 +153,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     useAuth();
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
+    const isSpt = laboratory?.slug === 'spt';
     const { toast } = useToast();
     const {
       exportToExcel,
@@ -1380,33 +1381,52 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             {/* Scrollable Content Area */}
             <div className='flex-1 overflow-hidden'>
               {/* Mobile View - Cards */}
-              <div className='block lg:hidden h-full overflow-y-auto px-3 py-4 custom-scrollbar'>
-                <div className='p-2 sm:p-4 space-y-2 max-h-[75vh] overflow-y-auto custom-scrollbar'>
-                  {paginatedCases.length > 0 ? (
-                    paginatedCases.map((case_) => (
-                      <CaseCard
-                        key={case_.id}
-                        case_={case_}
-                        onView={handleCaseSelect}
-                        onGenerate={handleGenerateEmployeeCase}
-                        onReactions={handleGenerateCase}
-                        onTriaje={handleTriaje}
-                        canRequest={canRequest}
-                      />
-                    ))
-                  ) : (
-                    <div className='text-center py-12'>
-                      <div className='text-gray-500 dark:text-gray-400'>
-                        <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                        <p className='text-lg font-medium'>
-                          No se encontraron casos
-                        </p>
-                        <p className='text-sm'>
-                          Intenta ajustar los filtros de búsqueda
-                        </p>
+              <div className='block lg:hidden h-full flex flex-col overflow-hidden'>
+                <div className='flex-1 overflow-y-auto px-3 py-4 custom-scrollbar'>
+                  <div className='p-2 sm:p-4 space-y-2'>
+                    {paginatedCases.length > 0 ? (
+                      paginatedCases.map((case_) => (
+                        <CaseCard
+                          key={case_.id}
+                          case_={case_}
+                          onView={handleCaseSelect}
+                          onGenerate={handleGenerateEmployeeCase}
+                          onReactions={handleGenerateCase}
+                          onTriaje={handleTriaje}
+                          canRequest={canRequest}
+                        />
+                      ))
+                    ) : (
+                      <div className='text-center py-12'>
+                        <div className='text-gray-500 dark:text-gray-400'>
+                          <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                          <p className='text-lg font-medium'>
+                            No se encontraron casos
+                          </p>
+                          <p className='text-sm'>
+                            Intenta ajustar los filtros de búsqueda
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+                {/* Paginación en vista móvil fullscreen - Siempre visible */}
+                <div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    itemsPerPage={itemsPerPage}
+                    pageSizeOptions={pageSizeOptions}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                    onGoToPage={goToPage}
+                    onNext={goToNextPage}
+                    onPrev={goToPreviousPage}
+                    totalItems={
+                      pagination?.totalItems ??
+                      filteredAndSortedCases.filtered.length
+                    }
+                  />
                 </div>
               </div>
 
@@ -1492,6 +1512,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                 {(() => {
                                   const { paymentStatus } =
                                     getCasePaymentStatus(case_);
+                                  // Ocultar estado "Incompleto" para SPT
+                                  if (isSpt && paymentStatus === 'Incompleto') {
+                                    return null;
+                                  }
                                   return (
                                     <span
                                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
@@ -1822,8 +1846,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           </div>
 
           {/* Mobile View - Cards */}
-          <div className='block md:hidden overflow-hidden'>
-            <div className='p-3 sm:p-4 space-y-2 sm:space-y-3 max-h-[75vh] overflow-y-auto custom-scrollbar'>
+          <div className='block md:hidden overflow-hidden flex flex-col h-[calc(100vh-280px)] sm:h-[calc(100vh-320px)]'>
+            <div className='flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 custom-scrollbar'>
               {paginatedCases.length > 0 ? (
                 paginatedCases.map((case_) => (
                   <CaseCard
@@ -1848,6 +1872,23 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   </div>
                 </div>
               )}
+            </div>
+            {/* Paginación en vista móvil - Siempre visible */}
+            <div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                pageSizeOptions={pageSizeOptions}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                onGoToPage={goToPage}
+                onNext={goToNextPage}
+                onPrev={goToPreviousPage}
+                totalItems={
+                  pagination?.totalItems ??
+                  filteredAndSortedCases.filtered.length
+                }
+              />
             </div>
           </div>
 
@@ -1937,6 +1978,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                 {(() => {
                                   const { paymentStatus } =
                                     getCasePaymentStatus(case_);
+                                  // Ocultar estado "Incompleto" para SPT
+                                  if (isSpt && paymentStatus === 'Incompleto') {
+                                    return null;
+                                  }
                                   return (
                                     <span
                                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
