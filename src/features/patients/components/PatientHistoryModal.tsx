@@ -49,6 +49,7 @@ import TriageHistoryTab from '@features/triaje/components/TriageHistoryTab';
 import type { Patient } from '@/services/supabase/patients/patients-service';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -83,6 +84,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     usePDFDownload();
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { laboratory } = useLaboratory();
   const isImagenologia = profile?.role === 'imagenologia';
 
   const editPatient = () => {
@@ -424,8 +426,19 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             throw new Error('PDF no disponible');
           }
 
+          // Crear mensaje personalizado con el nombre del laboratorio
+          const laboratoryName = laboratory?.name || 'nuestro laboratorio';
+          const emailSubject = `${laboratoryName} - Caso ${caseItem.code || 'N/A'} - ${patient.nombre}`;
+          const emailBody = `Hola ${patient.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${caseItem.code || 'N/A'}.\n\nSaludos cordiales.`;
+
+          // Usar la misma lógica que UnifiedCaseModal
+          const isDevelopment = import.meta.env.DEV;
+          const apiUrl = isDevelopment
+            ? 'http://localhost:3001/api/send-email'
+            : '/api/send-email';
+
           // Enviar email
-          const response = await fetch('/api/send-email', {
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -435,6 +448,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               patientName: patient.nombre,
               caseCode: caseItem.code || 'N/A',
               pdfUrl: caseItem.informepdf_url,
+              laboratory_id: caseItem.laboratory_id || laboratory?.id,
+              subject: emailSubject,
+              message: emailBody,
             }),
           });
 
@@ -656,7 +672,18 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   try {
                                     setEmailProgress({ current: i + 1, total: approvedCases.length });
 
-                                    const response = await fetch('/api/send-email', {
+                                    // Crear mensaje personalizado con el nombre del laboratorio
+                                    const laboratoryName = laboratory?.name || 'nuestro laboratorio';
+                                    const emailSubject = `${laboratoryName} - Caso ${caseItem.code || 'N/A'} - ${patient.nombre}`;
+                                    const emailBody = `Hola ${patient.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${caseItem.code || 'N/A'}.\n\nSaludos cordiales.`;
+
+                                    // Usar la misma lógica que UnifiedCaseModal
+                                    const isDevelopment = import.meta.env.DEV;
+                                    const apiUrl = isDevelopment
+                                      ? 'http://localhost:3001/api/send-email'
+                                      : '/api/send-email';
+
+                                    const response = await fetch(apiUrl, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
@@ -664,6 +691,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         patientName: patient.nombre,
                                         caseCode: caseItem.code || 'N/A',
                                         pdfUrl: caseItem.informepdf_url,
+                                        laboratory_id: caseItem.laboratory_id || laboratory?.id,
+                                        subject: emailSubject,
+                                        message: emailBody,
                                       }),
                                     });
 
