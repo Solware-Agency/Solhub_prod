@@ -210,9 +210,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false)
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-    const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
     
-    // Image URL state for imagenologia role (will be saved to medical_record_clean when column is defined)
+    // Image URL state for imagenologia role
     const [imageUrl, setImageUrl] = useState('');
 
     // Payment editing states
