@@ -622,16 +622,109 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {patient.email && (
-                          <a
-                            href={`mailto:${patient.email}`}
-                            className='flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start'
-                            title='Enviar mensaje por correo'
+                          <button
+                            onClick={async () => {
+                              // Obtener casos aprobados del paciente
+                              const approvedCases = filteredCases?.filter(
+                                (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
+                              ) || [];
+
+                              if (approvedCases.length === 0) {
+                                toast({
+                                  title: '⚠️ Sin casos disponibles',
+                                  description: 'No hay casos aprobados con PDF disponible para enviar.',
+                                  variant: 'destructive',
+                                });
+                                return;
+                              }
+
+                              setIsSendingEmails(true);
+                              setEmailProgress({ current: 0, total: approvedCases.length });
+
+                              let successCount = 0;
+                              let errorCount = 0;
+
+                              try {
+                                toast({
+                                  title: '📧 Enviando emails...',
+                                  description: `Enviando ${approvedCases.length} informe${approvedCases.length > 1 ? 's' : ''}.`,
+                                });
+
+                                for (let i = 0; i < approvedCases.length; i++) {
+                                  const caseItem = approvedCases[i];
+                                  
+                                  try {
+                                    setEmailProgress({ current: i + 1, total: approvedCases.length });
+
+                                    const response = await fetch('/api/send-email', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        patientEmail: patient.email,
+                                        patientName: patient.nombre,
+                                        caseCode: caseItem.code || 'N/A',
+                                        pdfUrl: caseItem.informepdf_url,
+                                      }),
+                                    });
+
+                                    if (!response.ok) throw new Error('Error al enviar email');
+
+                                    await supabase
+                                      .from('medical_records_clean')
+                                      .update({ email_sent: true })
+                                      .eq('id', caseItem.id);
+
+                                    successCount++;
+                                  } catch (error) {
+                                    errorCount++;
+                                  }
+                                }
+
+                                if (successCount > 0 && errorCount === 0) {
+                                  toast({
+                                    title: '✅ Emails enviados',
+                                    description: `Se enviaron ${successCount} informe${successCount > 1 ? 's' : ''} a ${patient.email}.`,
+                                  });
+                                } else if (successCount > 0) {
+                                  toast({
+                                    title: '⚠️ Emails enviados parcialmente',
+                                    description: `${successCount} exitosos, ${errorCount} fallidos.`,
+                                    variant: 'destructive',
+                                  });
+                                }
+
+                                refetch();
+                              } catch (error) {
+                                toast({
+                                  title: '❌ Error',
+                                  description: 'No se pudieron enviar los emails.',
+                                  variant: 'destructive',
+                                });
+                              } finally {
+                                setIsSendingEmails(false);
+                                setEmailProgress({ current: 0, total: 0 });
+                              }
+                            }}
+                            disabled={isSendingEmails}
+                            className='flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed'
+                            title='Enviar todos los informes por correo'
                           >
-                            <Mail className='h-4 w-4 text-gray-500 group-hover:text-blue-600 transition-colors duration-200' />
-                            <span className='text-sm font-medium'>
-                              {patient.email}
-                            </span>
-                          </a>
+                            {isSendingEmails ? (
+                              <>
+                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 group-hover:border-blue-600' />
+                                <span className='text-sm font-medium'>
+                                  Enviando ({emailProgress.current}/{emailProgress.total})...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Mail className='h-4 w-4 text-gray-500 group-hover:text-blue-600 transition-colors duration-200' />
+                                <span className='text-sm font-medium'>
+                                  {patient.email}
+                                </span>
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                       {isImagenologia && (
