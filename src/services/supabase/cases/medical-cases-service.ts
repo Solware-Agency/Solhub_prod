@@ -514,6 +514,22 @@ export const getCasesWithPatientInfo = async (
   },
 ) => {
   try {
+    // Obtener laboratory_id del usuario autenticado para filtro multi-tenant
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data: profile, error: profileError } = (await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single()) as { data: { laboratory_id: string } | null; error: any };
+
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('No se pudo obtener el laboratory_id del usuario');
+    }
+
     const cleanSearchTerm = filters?.searchTerm?.trim();
 
     // Si hay término de búsqueda, usar estrategia de búsquedas múltiples
@@ -521,7 +537,7 @@ export const getCasesWithPatientInfo = async (
       console.log('🔍 [DEBUG] Término de búsqueda:', cleanSearchTerm);
       const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
 
-      // Hacer búsquedas separadas por cada campo
+      // Hacer búsquedas separadas por cada campo con filtro multi-tenant
       const searchPromises = [
         // Búsqueda por código
         supabase
@@ -539,6 +555,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('code', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -558,6 +575,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('treating_doctor', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -577,6 +595,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('patients.nombre', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -596,6 +615,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('patients.cedula', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
       ];
@@ -794,6 +814,9 @@ export const getCasesWithPatientInfo = async (
 		`,
       { count: 'exact' },
     );
+
+    // Filtro multi-tenant crítico
+    query = query.eq('laboratory_id', profile.laboratory_id);
 
     // Aplicar filtros
     if (filters?.branch) {

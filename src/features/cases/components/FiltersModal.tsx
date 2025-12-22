@@ -329,20 +329,23 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 />
               </div>
 
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={[
-                    { value: 'faltante', label: 'Faltante' },
-                    { value: 'pendiente', label: 'Pendiente' },
-                    { value: 'aprobado', label: 'Aprobado' },
-                    { value: 'rechazado', label: 'Rechazado' },
-                  ]}
-                  value={documentStatusFilter}
-                  placeholder='Estatus de Documento'
-                  onChange={onDocumentStatusFilterChange}
-                  data-testid='document-status-filter'
-                />
-              </div>
+              {/* Ocultar Estatus de Documento solo para SPT */}
+              {!isSpt && (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'faltante', label: 'Faltante' },
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'aprobado', label: 'Aprobado' },
+                      { value: 'rechazado', label: 'Rechazado' },
+                    ]}
+                    value={documentStatusFilter}
+                    placeholder='Estatus de Documento'
+                    onChange={onDocumentStatusFilterChange}
+                    data-testid='document-status-filter'
+                  />
+                </div>
+              )}
 
               <div className='space-y-3'>
                 <CustomDropdown
