@@ -32,7 +32,6 @@ import {
 import { updatePatient } from '@/services/supabase/patients/patients-service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatDateFromISO } from '@shared/utils/date-utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase/config/config';
 import { useToast } from '@shared/hooks/use-toast';
@@ -63,6 +62,9 @@ import { createCalculatorInputHandler } from '@shared/utils/number-utils';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { getCodeLegend } from '@/shared/utils/code-legend-utils';
+import { useModuleConfig } from '@shared/hooks/useModuleConfig';
+// import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
   id: string;
@@ -196,6 +198,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const { toast } = useToast();
     const { user } = useAuth();
     const { laboratory } = useLaboratory();
+    const isSpt = laboratory?.slug === 'spt';
+    const moduleConfig = useModuleConfig('registrationForm');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -207,6 +211,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false)
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+    
+    // Image URL state for imagenologia role
+    const [imageUrl, setImageUrl] = useState('');
 
     // Payment editing states
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -356,6 +363,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+    
+    // Load patient data for EditPatientInfoModal - COMMENTED OUT (not needed, using inline image_url field)
+    /*
+    const { data: patientData, refetch: refetchPatient } = useQuery({
+      queryKey: ['patient', currentCase?.patient_id],
+      queryFn: async () => {
+        if (!currentCase?.patient_id) return null
+        const { data, error } = await supabase.from('patients').select('*').eq('id', currentCase.patient_id).single()
+        if (error) return null
+        return data
+      },
+      enabled: !!currentCase?.patient_id && isOpen,
+    })
+    */
 
     // Query to get change logs for this record
     const {
@@ -460,6 +481,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           total_amount: currentCase.total_amount,
           exchange_rate: currentCase.exchange_rate,
         });
+        
+        // Initialize image URL for imagenologia role
+        setImageUrl((currentCase as any).image_url || '');
 
         // Initialize payment methods from current case
         const methods: PaymentMethod[] = [];
@@ -936,6 +960,29 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
+        // Save image URL for imagenologia role
+        if (profile?.role === 'imagenologia' && imageUrl) {
+          const { error: imageUrlError } = await supabase
+            .from('medical_records_clean')
+            .update({ image_url: imageUrl })
+            .eq('id', currentCase.id);
+            
+          if (imageUrlError) {
+            console.error('Error saving image URL:', imageUrlError);
+            toast({
+              title: '❌ Error al guardar URL',
+              description: 'No se pudo guardar la URL de la imagen.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: '✅ URL de imagen guardada',
+              description: 'La URL de la imagen se ha guardado correctamente.',
+              className: 'bg-green-100 border-green-400 text-green-800',
+            });
+          }
+        }
+
         // Refetch the case data to get the updated information
         refetchCaseData();
 
@@ -947,6 +994,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         setPaymentMethods([]);
         setIsAddingNewPayment(false);
         setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+        setImageUrl(''); // Clear image URL
 
         // Call onSave callback if provided
         if (onSave) {
@@ -977,7 +1025,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     };
 
-    const handleSendEmail = () => {
+    const handleSendEmail = async () => {
       if (!case_?.patient_email) {
         toast({
           title: '❌ Error',
@@ -987,28 +1035,98 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
-      // Create mailto link with case information
-      const subject = `Caso ${case_.code || case_.id} - ${case_.nombre}`;
-      const body =
-        `Hola ${
-          case_.nombre
-        },\n\nLe escribimos desde el laboratorio conspat por su caso ${
-          case_.code || 'N/A'
-        }.\n\n` + `Saludos cordiales.`;
+      // Verificar que exista el PDF (informe_qr es el campo actual, attachment_url es legacy)
+      const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
+      if (!pdfUrl) {
+        toast({
+          title: '❌ Error',
+          description: 'El PDF del caso aún no está disponible.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const mailtoLink = `mailto:${
-        case_.patient_email
-      }?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-        body,
-      )}`;
+      setIsSaving(true);
 
-      window.open(mailtoLink, '_blank');
+      try {
+        // Crear el mensaje personalizado con el nombre del laboratorio
+        const laboratoryName = laboratory?.name || 'nuestro laboratorio';
+        // Asunto: anteponer el nombre del laboratorio
+        const emailSubject = `${laboratoryName} - Caso ${case_.code || case_.id} - ${case_.nombre}`;
+        const emailBody = `Hola ${case_.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_.code || 'N/A'}.\n\nSaludos cordiales.`;
+        
+        // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
+        const isDevelopment = import.meta.env.DEV;
+        const apiUrl = isDevelopment
+          ? 'http://localhost:3001/api/send-email'
+          : '/api/send-email';
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patientEmail: case_.patient_email,
+            patientName: case_.nombre,
+            caseCode: case_.code || case_.id,
+            pdfUrl: pdfUrl, // Usar la URL determinada anteriormente (informe_qr o attachment_url)
+            laboratory_id: case_.laboratory_id || laboratory?.id,
+            subject: emailSubject,
+            message: emailBody,
+          }),
+        });
 
-      toast({
-        title: '📧 Correo preparado',
-        description:
-          'Se ha abierto tu cliente de correo con los detalles del caso.',
-      });
+        let result;
+        try {
+          result = await response.json();
+        } catch (jsonError) {
+          console.error('Error parseando JSON:', jsonError);
+          throw new Error(
+            `Error del servidor (${response.status}): ${response.statusText}`,
+          );
+        }
+
+        if (!response.ok) {
+          console.error('Error del servidor:', result);
+          throw new Error(
+            result.error || result.details || 'Error al enviar el email',
+          );
+        }
+
+        // Actualizar el campo email_sent en la base de datos
+        if (case_?.id) {
+          const { error: updateError } = await supabase
+            .from('medical_records_clean')
+            .update({ email_sent: true })
+            .eq('id', case_.id);
+
+          if (updateError) {
+            console.error('Error actualizando email_sent:', updateError);
+            // No mostramos error al usuario ya que el email se envió exitosamente
+          }
+        }
+
+        toast({
+          title: '✅ Correo enviado',
+          description: `Se ha enviado el informe al correo ${case_.patient_email}`,
+          className: 'bg-green-100 border-green-400 text-green-800',
+        });
+
+        // Refrescar el caso para mostrar el estado actualizado
+        if (onSave) {
+          onSave();
+        }
+      } catch (error) {
+        console.error('Error enviando correo:', error);
+        toast({
+          title: '❌ Error',
+          description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSaving(false);
+      }
     };
 
     const handleSendWhatsApp = () => {
@@ -1270,84 +1388,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {(() => {
-                                const code = String(currentCase.code ?? '');
-                                // Formato esperado: D + YY + NNN + L (ej: 125005H)
-                                const isValid = /^\d{6}[A-Za-z]$/.test(code);
-
-                                if (!isValid) {
-                                  return <p>Código del caso.</p>;
-                                }
-
-                                const typeDigit = code[0];
-                                const yearSuffix = code.slice(1, 3);
-                                const yearNumber =
-                                  2000 + Number.parseInt(yearSuffix, 10);
-                                const caseNumber = code.slice(3, 6);
-                                const monthLetter = code.slice(6).toUpperCase();
-
-                                const examTypeMap: Record<string, string> = {
-                                  '1': 'Citología',
-                                  '2': 'Biopsia',
-                                  '3': 'Inmunohistoquímica',
-                                };
-                                const monthMap: Record<string, string> = {
-                                  A: 'Enero',
-                                  B: 'Febrero',
-                                  C: 'Marzo',
-                                  D: 'Abril',
-                                  E: 'Mayo',
-                                  F: 'Junio',
-                                  G: 'Julio',
-                                  H: 'Agosto',
-                                  I: 'Septiembre',
-                                  J: 'Octubre',
-                                  K: 'Noviembre',
-                                  L: 'Diciembre',
-                                };
-
-                                const examType =
-                                  examTypeMap[typeDigit] ?? 'Desconocido';
-                                const monthName =
-                                  monthMap[monthLetter] ?? 'Desconocido';
-
-                                return (
-                                  <div className='text-xs leading-5 max-w-none'>
-                                    <div className='font-semibold mb-1'>
-                                      Explicación del código
-                                    </div>
-                                    <div className='font-mono text-sm mb-1'>
-                                      {code}
-                                    </div>
-                                    <ul className='list-disc pl-4 space-y-0.5 text-left text-xs'>
-                                      <li>
-                                        1er dígito: <b>{typeDigit}</b> ={' '}
-                                        {examType}{' '}
-                                        {examType === 'Desconocido'
-                                          ? ' (1 = Citología, 2 = Biopsia, 3 = Inmunohistoquímica)'
-                                          : ''}
-                                      </li>
-                                      <li>
-                                        Siguientes dos: <b>{yearSuffix}</b> =
-                                        Año {yearNumber}
-                                      </li>
-                                      <li>
-                                        Siguientes tres: <b>{caseNumber}</b> =
-                                        Consecutivo del mes
-                                      </li>
-                                      <li className='whitespace-nowrap'>
-                                        Última letra: <b>{monthLetter}</b> ={' '}
-                                        {monthName} (A = Enero ... L =
-                                        Diciembre)
-                                      </li>
-                                    </ul>
-                                  </div>
-                                );
-                              })()}
+                              {getCodeLegend(currentCase.code, laboratory)}
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {!notShow && (
+                        {!notShow && !(isSpt && currentCase.payment_status === 'Incompleto') && (
                           <span
                             className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
                               currentCase.payment_status,
@@ -1407,10 +1452,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               </button>
                               <button
                                 onClick={handleSendEmail}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
+                                disabled={isSaving}
+                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
                               >
-                                <Send className='w-4 h-4' />
-                                Correo
+                                {isSaving ? (
+                                  <>
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                    Enviando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className='w-4 h-4' />
+                                    Correo
+                                  </>
+                                )}
                               </button>
                               <button
                                 onClick={handleSendWhatsApp}
@@ -1443,7 +1498,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       <span className='font-semibold'>
                         {creatorData?.displayName || 'Usuario del sistema'}
                       </span>{' '}
-                      el {formatDateFromISO(currentCase.created_at)}
+                      el{' '}
+                      {currentCase.created_at
+                        ? format(
+                            new Date(currentCase.created_at),
+                            'dd/MM/yyyy',
+                            { locale: es },
+                          )
+                        : 'Fecha no disponible'}
                     </p>
                   </div>
 
@@ -1476,6 +1538,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                     className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
                                   >
                                     {actionInfo.icon}
+                    {/* Render EditPatientInfoModal outside the panel to avoid z-index issues - COMMENTED OUT (not needed) */}
+                    {/*
+                    <EditPatientInfoModal
+                      isOpen={isEditPatientModalOpen}
+                      onClose={() => setIsEditPatientModalOpen(false)}
+                      patient={patientData as any}
+                      onSave={() => {
+                        setIsEditPatientModalOpen(false)
+                        refetchPatient()
+                        refetchCaseData()
+                      }}
+                    />
+                    */}
                                     <span>{actionInfo.text}</span>
                                   </div>
                                   <div className='text-xs text-gray-500 dark:text-gray-400'>
@@ -1632,6 +1707,61 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.patient_email ?? null}
                         onChange={handleInputChange}
                       />
+                      
+                      {/* Image URL field - Only visible for imagenologia role */}
+                      {profile?.role === 'imagenologia' && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            URL de Imagen:
+                          </span>
+                          <div className='sm:w-1/2 space-y-2'>
+                            <Input
+                              id='image-url-input'
+                              name='image_url'
+                              type='url'
+                              placeholder='https://ejemplo.com/imagen.jpg'
+                              value={imageUrl}
+                              onChange={(e) => setImageUrl(e.target.value)}
+                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
+                            />
+                            <div className='flex gap-2'>
+                              <Button
+                                size='sm'
+                                onClick={async () => {
+                                  if (!imageUrl) {
+                                    toast({
+                                      title: '⚠️ Campo vacío',
+                                      description: 'Por favor ingresa una URL válida',
+                                      variant: 'default',
+                                    });
+                                    return;
+                                  }
+                                  // TODO: Implementar guardado cuando se defina la columna
+                                  toast({
+                                    title: '⏳ Pendiente',
+                                    description: 'La funcionalidad de guardado se implementará cuando se defina la columna en la BD',
+                                    variant: 'default',
+                                  });
+                                }}
+                              >
+                                <Save className='w-3 h-3 mr-1' />
+                                Guardar URL
+                              </Button>
+                              {imageUrl && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  onClick={() => window.open(imageUrl, '_blank')}
+                                >
+                                  <Eye className='w-3 h-3 mr-1' />
+                                  Ver
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Note: relationship field not in new structure, could be added if needed */}
                     </div>
                   </InfoSection>
@@ -1639,192 +1769,195 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Medical Information */}
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
-                      {/* Estudio - Dropdown */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Estudio:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <CustomDropdown
-                              options={examTypesOptions}
-                              value={
-                                editedCase.exam_type ||
-                                currentCase.exam_type ||
-                                ''
-                              }
-                              onChange={(value) =>
-                                handleInputChange('exam_type', value)
-                              }
-                              placeholder='Seleccione una opción'
-                              className='text-sm'
-                              direction='auto'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.exam_type || 'N/A'}
+                      {/* Estudio - Dropdown - Solo si está habilitado */}
+                      {moduleConfig?.fields?.examType?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Estudio:
                           </span>
-                        )}
-                      </div>
-
-                      {/* Médico Tratante - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Médico tratante:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='treating-doctor-input'
-                              name='treating_doctor'
-                              fieldName='treatingDoctor'
-                              placeholder='Nombre del Médico'
-                              value={
-                                editedCase.treating_doctor ||
-                                currentCase.treating_doctor ||
-                                ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
-                                  handleInputChange('treating_doctor', value);
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <CustomDropdown
+                                options={examTypesOptions}
+                                value={
+                                  editedCase.exam_type ||
+                                  currentCase.exam_type ||
+                                  ''
                                 }
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.treating_doctor || 'N/A'}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Procedencia - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Procedencia:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='origin-input'
-                              name='origin'
-                              fieldName='origin'
-                              placeholder='Hospital o Clínica'
-                              value={
-                                editedCase.origin || currentCase.origin || ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                if (
-                                  /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)
-                                ) {
-                                  handleInputChange('origin', value);
+                                onChange={(value) =>
+                                  handleInputChange('exam_type', value)
                                 }
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.origin || 'N/A'}
-                          </span>
-                        )}
-                      </div>
+                                placeholder='Seleccione una opción'
+                                className='text-sm'
+                                direction='auto'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.exam_type || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Sede - Dropdown */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Sede:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <CustomDropdown
-                              options={branchOptions}
-                              value={
-                                editedCase.branch || currentCase.branch || ''
-                              }
-                              onChange={(value) =>
-                                handleInputChange('branch', value)
-                              }
-                              placeholder='Seleccione una sede'
-                              className='text-sm'
-                              direction='auto'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.branch || 'N/A'}
+                      {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Médico tratante:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='treating-doctor-input'
+                                name='treating_doctor'
+                                fieldName='treatingDoctor'
+                                placeholder='Nombre del Médico'
+                                value={
+                                  editedCase.treating_doctor ||
+                                  currentCase.treating_doctor ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+                                    handleInputChange('treating_doctor', value);
+                                  }
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.treating_doctor || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Muestra - Autocompletado */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Muestra:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            <AutocompleteInput
-                              id='sample-type-input'
-                              name='sample_type'
-                              fieldName='sampleType'
-                              placeholder='Ej: Biopsia de Piel'
-                              value={
-                                editedCase.sample_type ||
-                                currentCase.sample_type ||
-                                ''
-                              }
-                              onChange={(e) => {
-                                const { value } = e.target;
-                                handleInputChange('sample_type', value);
-                              }}
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.sample_type || 'N/A'}
+                      {/* Procedencia - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.procedencia?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Procedencia:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='origin-input'
+                                name='origin'
+                                fieldName='origin'
+                                placeholder='Hospital o Clínica'
+                                value={
+                                  editedCase.origin || currentCase.origin || ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  if (
+                                    /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)
+                                  ) {
+                                    handleInputChange('origin', value);
+                                  }
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.origin || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Cantidad de muestras - Numérico */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Cantidad de muestras:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2'>
-                            {/* Note: number_of_samples not in current new structure, can be added if needed */}
-                            <Input
-                              id='number-of-samples-input'
-                              name='number_of_samples'
-                              type='number'
-                              placeholder='1'
-                              value='1'
-                              disabled
-                              className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            />
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            1
+                      {/* Sede - Dropdown - Solo si está habilitado */}
+                      {moduleConfig?.fields?.branch?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Sede:
                           </span>
-                        )}
-                      </div>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <CustomDropdown
+                                options={branchOptions}
+                                value={
+                                  editedCase.branch || currentCase.branch || ''
+                                }
+                                onChange={(value) =>
+                                  handleInputChange('branch', value)
+                                }
+                                placeholder='Seleccione una sede'
+                                className='text-sm'
+                                direction='auto'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.branch || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Fecha de registro - NO EDITABLE */}
-                      <InfoRow
-                        label='Registro'
-                        value={new Date(
-                          currentCase.created_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
+                      {/* Muestra - Autocompletado - Solo si está habilitado */}
+                      {moduleConfig?.fields?.sampleType?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Muestra:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='sample-type-input'
+                                name='sample_type'
+                                fieldName='sampleType'
+                                placeholder='Ej: Biopsia de Piel'
+                                value={
+                                  editedCase.sample_type ||
+                                  currentCase.sample_type ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  handleInputChange('sample_type', value);
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.sample_type || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
+                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Cantidad de muestras:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              {/* Note: number_of_samples not in current new structure, can be added if needed */}
+                              <Input
+                                id='number-of-samples-input'
+                                name='number_of_samples'
+                                type='number'
+                                placeholder='1'
+                                value='1'
+                                disabled
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              1
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </InfoSection>
 

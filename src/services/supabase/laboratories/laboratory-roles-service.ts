@@ -1,6 +1,6 @@
 import { supabase } from '@/services/supabase/config/config'
 
-export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante'
+export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante' | 'imagenologia' | 'prueba' | 'call_center'
 
 export interface RoleOption {
 	value: UserRole
@@ -18,7 +18,7 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 	admin: {
 		value: 'admin',
 		label: 'Administrador',
-		description: 'Gestión completa de casos y usuarios',
+		description: 'Acceso completo sin restricciones a todas las funcionalidades',
 	},
 	employee: {
 		value: 'employee',
@@ -49,6 +49,21 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 		value: 'medico_tratante',
 		label: 'Médico Tratante',
 		description: 'Médico responsable del tratamiento del paciente',
+	},
+	imagenologia: {
+		value: 'imagenologia',
+		label: 'Imagenología',
+		description: 'Gestión de estudios de imagen y radiología',
+	},
+	prueba: {
+		value: 'prueba',
+		label: 'Prueba (GodMode)',
+		description: 'Rol de prueba con acceso completo sin restricciones',
+	},
+	call_center: {
+		value: 'call_center',
+		label: 'Call Center',
+		description: 'Visualización y envío de casos, edición básica de pacientes (sin formulario de registro)',
 	},
 }
 

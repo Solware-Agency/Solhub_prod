@@ -41,6 +41,8 @@ import DoctorFilterPanel from './DoctorFilterPanel';
 import PatientOriginFilterPanel from './PatientOriginFilterPanel';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { useMemo } from 'react';
 
 interface FiltersModalProps {
   isOpen: boolean;
@@ -119,9 +121,29 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   onApplyFilters,
   onClearAllFilters,
 }) => {
+  const { laboratory } = useLaboratory();
+  const isSpt = laboratory?.slug === 'spt';
+  
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [showDoctorFilter, setShowDoctorFilter] = useState(false);
   const [showOriginFilter, setShowOriginFilter] = useState(false);
+  
+  // Obtener tipos de examen del laboratorio
+  const examTypeOptions = useMemo(() => {
+    const examTypes = laboratory?.config?.examTypes || [];
+    if (examTypes.length > 0) {
+      return examTypes.map((type) => ({
+        value: type,
+        label: type,
+      }));
+    }
+    // Fallback por defecto
+    return [
+      { value: 'Biopsia', label: 'Biopsia' },
+      { value: 'Citología', label: 'Citología' },
+      { value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
+    ];
+  }, [laboratory?.config?.examTypes]);
 
   // Check if there are any active filters
   const hasActiveFilters =
@@ -179,7 +201,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         }}
       >
         <Tabs defaultValue='general' className='w-full overflow-x-hidden'>
-          <TabsList className='grid w-full grid-cols-2 gap-2 sm:gap-4 mt-4'>
+          <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger
               value='general'
               className='flex items-center gap-2 cursor-pointer'
@@ -187,27 +209,31 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               <Filter className='w-4 h-4' />
               Filtros Generales
             </TabsTrigger>
-            <TabsTrigger
-              value='role-specific'
-              className='flex items-center gap-2 cursor-pointer'
-            >
-              <Settings className='w-4 h-4' />
-              Filtros por Rol
-            </TabsTrigger>
+            {!isSpt && (
+              <TabsTrigger
+                value='role-specific'
+                className='flex items-center gap-2 cursor-pointer'
+              >
+                <Settings className='w-4 h-4' />
+                Filtros por Rol
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden'>
             {/* Status and Branch Filters */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={statusOptions}
-                  value={statusFilter}
-                  placeholder='Estado de Pago'
-                  onChange={onStatusFilterChange}
-                  data-testid='status-filter'
-                />
-              </div>
+            <div className={`grid grid-cols-1 ${isSpt ? '' : 'md:grid-cols-2'} gap-4 w-full`}>
+              {!isSpt && (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={statusOptions}
+                    value={statusFilter}
+                    placeholder='Estado de Pago'
+                    onChange={onStatusFilterChange}
+                    data-testid='status-filter'
+                  />
+                </div>
+              )}
 
               <div className='space-y-3'>
                 <CustomDropdown
@@ -295,14 +321,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
-                  options={[
-                    { value: 'biopsia', label: 'Biopsia' },
-                    { value: 'citologia', label: 'Citología' },
-                    {
-                      value: 'inmunohistoquimica',
-                      label: 'Inmunohistoquímica',
-                    },
-                  ]}
+                  options={examTypeOptions}
                   value={examTypeFilter}
                   placeholder='Tipo de Examen'
                   onChange={onExamTypeFilterChange}
@@ -310,20 +329,23 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 />
               </div>
 
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={[
-                    { value: 'faltante', label: 'Faltante' },
-                    { value: 'pendiente', label: 'Pendiente' },
-                    { value: 'aprobado', label: 'Aprobado' },
-                    { value: 'rechazado', label: 'Rechazado' },
-                  ]}
-                  value={documentStatusFilter}
-                  placeholder='Estatus de Documento'
-                  onChange={onDocumentStatusFilterChange}
-                  data-testid='document-status-filter'
-                />
-              </div>
+              {/* Ocultar Estatus de Documento solo para SPT */}
+              {!isSpt && (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'faltante', label: 'Faltante' },
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'aprobado', label: 'Aprobado' },
+                      { value: 'rechazado', label: 'Rechazado' },
+                    ]}
+                    value={documentStatusFilter}
+                    placeholder='Estatus de Documento'
+                    onChange={onDocumentStatusFilterChange}
+                    data-testid='document-status-filter'
+                  />
+                </div>
+              )}
 
               <div className='space-y-3'>
                 <CustomDropdown
@@ -340,7 +362,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </div>
 
             {/* Doctor and Origin Filters - Same line */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+            <div className={`grid grid-cols-1 ${isSpt ? '' : 'md:grid-cols-2'} gap-4 w-full`}>
               {/* Doctor Filter */}
               <div className='space-y-3'>
                 <Button
@@ -360,25 +382,27 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 )}
               </div>
 
-              {/* Origin Filter */}
-              <div className='space-y-3'>
-                <Button
-                  onClick={() => setShowOriginFilter(!showOriginFilter)}
-                  variant={showOriginFilter ? 'default' : 'outline'}
-                  className='w-full justify-start font-bold'
-                  disabled={!onOriginFilterChange}
-                >
-                  <MapPin className='w-4 h-4 mr-2' />
-                  Filtrar por Procedencia
-                </Button>
+              {/* Origin Filter - Oculto para SPT */}
+              {!isSpt && (
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => setShowOriginFilter(!showOriginFilter)}
+                    variant={showOriginFilter ? 'default' : 'outline'}
+                    className='w-full justify-start font-bold'
+                    disabled={!onOriginFilterChange}
+                  >
+                    <MapPin className='w-4 h-4 mr-2' />
+                    Filtrar por Procedencia
+                  </Button>
 
-                {showOriginFilter && onOriginFilterChange && (
-                  <PatientOriginFilterPanel
-                    cases={cases}
-                    onFilterChange={onOriginFilterChange}
-                  />
-                )}
-              </div>
+                  {showOriginFilter && onOriginFilterChange && (
+                    <PatientOriginFilterPanel
+                      cases={cases}
+                      onFilterChange={onOriginFilterChange}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Active Filters Summary */}

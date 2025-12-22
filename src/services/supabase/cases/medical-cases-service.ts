@@ -64,6 +64,12 @@ export interface MedicalCase {
   token: string | null;
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
+  version: number | null;
+  positivo: string | null;
+  negativo: string | null;
+  ki67: string | null;
+  conclusion_diagnostica: string | null;
+  image_url: string | null; // URL de imagen para imagenología
 }
 
 export interface MedicalCaseInsert {
@@ -204,6 +210,7 @@ export interface MedicalCaseUpdate {
 export interface MedicalCaseWithPatient {
   // Campos de medical_records_clean
   id: string;
+  laboratory_id: string; // Multi-tenant
   patient_id: string | null;
   exam_type: string;
   consulta: string | null; // Especialidad médica (SPT)
@@ -248,6 +255,7 @@ export interface MedicalCaseWithPatient {
   version: number | null;
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
+  image_url: string | null; // URL de imagen para imagenología
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;
@@ -506,6 +514,22 @@ export const getCasesWithPatientInfo = async (
   },
 ) => {
   try {
+    // Obtener laboratory_id del usuario autenticado para filtro multi-tenant
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { data: profile, error: profileError } = (await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single()) as { data: { laboratory_id: string } | null; error: any };
+
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('No se pudo obtener el laboratory_id del usuario');
+    }
+
     const cleanSearchTerm = filters?.searchTerm?.trim();
 
     // Si hay término de búsqueda, usar estrategia de búsquedas múltiples
@@ -513,7 +537,7 @@ export const getCasesWithPatientInfo = async (
       console.log('🔍 [DEBUG] Término de búsqueda:', cleanSearchTerm);
       const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
 
-      // Hacer búsquedas separadas por cada campo
+      // Hacer búsquedas separadas por cada campo con filtro multi-tenant
       const searchPromises = [
         // Búsqueda por código
         supabase
@@ -531,6 +555,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('code', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -550,6 +575,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('treating_doctor', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -569,6 +595,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('patients.nombre', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -588,6 +615,7 @@ export const getCasesWithPatientInfo = async (
 					`,
             { count: 'exact' },
           )
+          .eq('laboratory_id', profile.laboratory_id)
           .ilike('patients.cedula', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
       ];
@@ -786,6 +814,9 @@ export const getCasesWithPatientInfo = async (
 		`,
       { count: 'exact' },
     );
+
+    // Filtro multi-tenant crítico
+    query = query.eq('laboratory_id', profile.laboratory_id);
 
     // Aplicar filtros
     if (filters?.branch) {
@@ -1598,6 +1629,7 @@ export const findCaseByCode = async (
     // Transformar los datos para que coincidan con la interfaz
     const transformedData = {
       ...data,
+      laboratory_id: data.laboratory_id || '',
       patient_id: (data as any).patients?.id || data.patient_id,
       cedula: (data as any).patients?.cedula || '',
       nombre: (data as any).patients?.nombre || '',
@@ -1606,6 +1638,7 @@ export const findCaseByCode = async (
       patient_email: (data as any).patients?.email || null,
       consulta: (data as any).consulta || null,
       version: (data as any).version || null,
+      image_url: (data as any).image_url || null,
       // Asegurar que todas las propiedades requeridas estén presentes
       material_remitido: (data as any).material_remitido || null,
       informacion_clinica: (data as any).informacion_clinica || null,

@@ -55,7 +55,7 @@ export const getAndSyncUserProfile = async (userId: string, userMeta: any): Prom
 
 		return {
 			...profile,
-			role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+			role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia',
 			created_at: profile.created_at || new Date().toISOString(),
 			updated_at: profile.updated_at || new Date().toISOString(),
 		estado: (profile.estado as 'pendiente' | 'aprobado') || undefined,

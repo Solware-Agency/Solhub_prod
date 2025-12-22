@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getCasesWithPatientInfo } from '@/services/supabase/cases/medical-cases-service'
 import { mapToLegacyRecords } from '@services/utils/mappers'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 const CasesPage: React.FC = () => {
 	const [isFullscreen, setIsFullscreen] = useState(false)
@@ -29,6 +30,8 @@ const CasesPage: React.FC = () => {
 
 	// Obtener perfil del usuario para filtrar por rol
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
+	const isSpt = laboratory?.slug === 'spt'
 
 	const {
 		data: casesData,
@@ -47,8 +50,8 @@ const CasesPage: React.FC = () => {
 				filters.searchTerm = cleanSearchTerm
 			}
 
-			// Pasar el rol del usuario para filtrar en el servidor
-			if (profile?.role) {
+			// Pasar el rol del usuario para filtrar en el servidor (excepto en SPT)
+			if (profile?.role && !isSpt) {
 				filters.userRole = profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
 			}
 

@@ -128,6 +128,20 @@ export const medicRoutes: RouteConfig[] = [
   },
 ];
 
+// Configuración de rutas para imagenologia
+export const imagenologiaRoutes: RouteConfig[] = [
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+];
+
 // Configuración de rutas para citotecno
 export const citotecnoRoutes: RouteConfig[] = [
   {
@@ -183,6 +197,80 @@ export const enfermeroRoutes: RouteConfig[] = [
     path: 'patients',
     feature: 'hasPatients',
     component: PatientsPage,
+  },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
+];
+
+// Configuración de rutas para call_center
+export const callCenterRoutes: RouteConfig[] = [
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
+];
+
+// Configuración de rutas para prueba (GodMode - todas las features incluyendo users)
+export const pruebaRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    feature: 'hasStats',
+    component: HomePage,
+  },
+  {
+    path: 'stats',
+    feature: 'hasStats',
+    component: StatsPage,
+  },
+  {
+    path: 'reports',
+    feature: 'hasReports',
+    component: ReportsPage,
+  },
+  {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
+  },
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+  {
+    path: 'changelog',
+    feature: 'hasChangeHistory',
+    component: ChangelogPage,
+  },
+  {
+    path: 'triage-analytics',
+    feature: 'hasTriaje',
+    component: TriageAnalyticsPage,
+  },
+  {
+    path: 'doctors',
+    component: DoctorsSection,
+  },
+  {
+    path: 'medical-form',
+    component: MedicalForm,
   },
   {
     path: 'settings',

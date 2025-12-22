@@ -29,7 +29,6 @@ import {
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatDateFromISO } from '@shared/utils/date-utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase/config/config';
 import { getCasesByPatientIdWithInfo } from '@/services/supabase/cases/medical-cases-service';
@@ -49,6 +48,8 @@ import TriageHistoryTab from '@features/triaje/components/TriageHistoryTab';
 
 import type { Patient } from '@/services/supabase/patients/patients-service';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { useUserProfile } from '@shared/hooks/useUserProfile';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -65,7 +66,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCases, setSelectedCases] = useState<Set<string>>(new Set());
   const [isDownloadingMultiple, setIsDownloadingMultiple] = useState(false);
+  const [isSendingEmails, setIsSendingEmails] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({
+    current: 0,
+    total: 0,
+  });
+  const [emailProgress, setEmailProgress] = useState({
     current: 0,
     total: 0,
   });
@@ -77,6 +83,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const { isGeneratingPDF, isSaving, handleCheckAndDownloadPDF, getPDFBlob } =
     usePDFDownload();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  const { laboratory } = useLaboratory();
+  const isImagenologia = profile?.role === 'imagenologia';
 
   const editPatient = () => {
     setIsEditing(true);
@@ -349,6 +358,149 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     }
   };
 
+  // Función para enviar emails a múltiples casos
+  const handleSendMultipleEmails = async () => {
+    if (selectedCases.size === 0) {
+      toast({
+        title: '⚠️ No hay casos seleccionados',
+        description: 'Por favor selecciona al menos un caso para enviar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!patient?.email) {
+      toast({
+        title: '⚠️ Sin email',
+        description: 'El paciente no tiene un email registrado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Filtrar solo casos aprobados y que están en la selección
+    const casesToEmail =
+      filteredCases?.filter(
+        (caseItem) =>
+          selectedCases.has(caseItem.id) &&
+          caseItem.doc_aprobado === 'aprobado',
+      ) || [];
+
+    if (casesToEmail.length === 0) {
+      toast({
+        title: '⚠️ No hay casos válidos',
+        description:
+          'Los casos seleccionados deben estar aprobados para poder enviar sus PDFs por email.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSendingEmails(true);
+    setEmailProgress({ current: 0, total: casesToEmail.length });
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    try {
+      toast({
+        title: '📧 Enviando emails...',
+        description: `Enviando ${casesToEmail.length} informe${
+          casesToEmail.length > 1 ? 's' : ''
+        } por correo electrónico.`,
+      });
+
+      // Enviar todos los emails en secuencia
+      for (let i = 0; i < casesToEmail.length; i++) {
+        const caseItem = casesToEmail[i];
+        
+        try {
+          setEmailProgress({
+            current: i + 1,
+            total: casesToEmail.length,
+          });
+
+          // Verificar que el PDF esté generado
+          if (!caseItem.informepdf_url) {
+            throw new Error('PDF no disponible');
+          }
+
+          // Enviar email usando send-email.js
+          const response = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              patientEmail: patient.email,
+              patientName: patient.nombre,
+              caseCode: caseItem.code || 'N/A',
+              pdfUrl: caseItem.informepdf_url,
+              laboratory_id: caseItem.laboratory_id || laboratory?.id,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Error al enviar email');
+          }
+
+          // Marcar como enviado en la base de datos
+          await supabase
+            .from('medical_records_clean')
+            .update({ email_sent: true })
+            .eq('id', caseItem.id);
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error enviando email para caso ${caseItem.code}:`, error);
+          errorCount++;
+          errors.push(`Caso ${caseItem.code || 'N/A'}`);
+        }
+      }
+
+      // Mostrar resultado final
+      if (successCount > 0 && errorCount === 0) {
+        toast({
+          title: '✅ Emails enviados correctamente',
+          description: `Se enviaron ${successCount} informe${
+            successCount > 1 ? 's' : ''
+          } a ${patient.email}.`,
+        });
+      } else if (successCount > 0 && errorCount > 0) {
+        toast({
+          title: '⚠️ Emails enviados parcialmente',
+          description: `Se enviaron ${successCount} informe${
+            successCount > 1 ? 's' : ''
+          } correctamente, pero ${errorCount} fallaron.`,
+          variant: 'destructive',
+        });
+        console.warn('Errores en envío múltiple:', errors);
+      } else {
+        toast({
+          title: '❌ Error',
+          description: 'No se pudo enviar ningún email. Por favor intenta de nuevo.',
+          variant: 'destructive',
+        });
+      }
+
+      // Refrescar los datos
+      refetch();
+    } catch (error) {
+      console.error('Error enviando emails:', error);
+      toast({
+        title: '❌ Error',
+        description:
+          'Hubo un problema al enviar los emails. Por favor intenta de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingEmails(false);
+      setEmailProgress({ current: 0, total: 0 });
+      clearSelection();
+    }
+  };
+
   // Limpiar selección cuando se cierra el modal
   useEffect(() => {
     if (!isOpen) {
@@ -473,18 +625,125 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {patient.email && (
-                          <a
-                            href={`mailto:${patient.email}`}
-                            className='flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start'
-                            title='Enviar mensaje por correo'
+                          <button
+                            onClick={async () => {
+                              // Obtener casos aprobados del paciente
+                              const approvedCases = filteredCases?.filter(
+                                (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
+                              ) || [];
+
+                              if (approvedCases.length === 0) {
+                                toast({
+                                  title: '⚠️ Sin casos disponibles',
+                                  description: 'No hay casos aprobados con PDF disponible para enviar.',
+                                  variant: 'destructive',
+                                });
+                                return;
+                              }
+
+                              setIsSendingEmails(true);
+                              setEmailProgress({ current: 0, total: approvedCases.length });
+
+                              let successCount = 0;
+                              let errorCount = 0;
+
+                              try {
+                                toast({
+                                  title: '📧 Enviando emails...',
+                                  description: `Enviando ${approvedCases.length} informe${approvedCases.length > 1 ? 's' : ''}.`,
+                                });
+
+                                for (let i = 0; i < approvedCases.length; i++) {
+                                  const caseItem = approvedCases[i];
+                                  
+                                  try {
+                                    setEmailProgress({ current: i + 1, total: approvedCases.length });
+
+                                    // Enviar email usando send-email.js
+                                    const response = await fetch('/api/send-email', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        patientEmail: patient.email,
+                                        patientName: patient.nombre,
+                                        caseCode: caseItem.code || 'N/A',
+                                        pdfUrl: caseItem.informepdf_url,
+                                        laboratory_id: caseItem.laboratory_id || laboratory?.id,
+                                      }),
+                                    });
+
+                                    if (!response.ok) throw new Error('Error al enviar email');
+
+                                    await supabase
+                                      .from('medical_records_clean')
+                                      .update({ email_sent: true })
+                                      .eq('id', caseItem.id);
+
+                                    successCount++;
+                                  } catch (error) {
+                                    errorCount++;
+                                  }
+                                }
+
+                                if (successCount > 0 && errorCount === 0) {
+                                  toast({
+                                    title: '✅ Emails enviados',
+                                    description: `Se enviaron ${successCount} informe${successCount > 1 ? 's' : ''} a ${patient.email}.`,
+                                  });
+                                } else if (successCount > 0) {
+                                  toast({
+                                    title: '⚠️ Emails enviados parcialmente',
+                                    description: `${successCount} exitosos, ${errorCount} fallidos.`,
+                                    variant: 'destructive',
+                                  });
+                                }
+
+                                refetch();
+                              } catch (error) {
+                                toast({
+                                  title: '❌ Error',
+                                  description: 'No se pudieron enviar los emails.',
+                                  variant: 'destructive',
+                                });
+                              } finally {
+                                setIsSendingEmails(false);
+                                setEmailProgress({ current: 0, total: 0 });
+                              }
+                            }}
+                            disabled={isSendingEmails}
+                            className='flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed'
+                            title='Enviar todos los informes por correo'
                           >
-                            <Mail className='h-4 w-4 text-gray-500 group-hover:text-blue-600 transition-colors duration-200' />
-                            <span className='text-sm font-medium'>
-                              {patient.email}
-                            </span>
-                          </a>
+                            {isSendingEmails ? (
+                              <>
+                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 group-hover:border-blue-600' />
+                                <span className='text-sm font-medium'>
+                                  Enviando ({emailProgress.current}/{emailProgress.total})...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Mail className='h-4 w-4 text-gray-500 group-hover:text-blue-600 transition-colors duration-200' />
+                                <span className='text-sm font-medium'>
+                                  {patient.email}
+                                </span>
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
+                      {isImagenologia && (
+                        <div className='flex items-center gap-2 ml-2'>
+                          <Button
+                            variant='outline'
+                            onClick={editPatient}
+                            title='Editar URL de imagen'
+                          >
+                            <Eye className='w-4 h-4 mr-2' />
+                            Editar URL de Imagen
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -561,28 +820,56 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   )}
                                 </Button>
                                 {selectedCases.size > 0 && (
-                                  <Button
-                                    variant='default'
-                                    onClick={handleDownloadMultiplePDFs}
-                                    disabled={
-                                      isDownloadingMultiple ||
-                                      isGeneratingPDF ||
-                                      isSaving
-                                    }
-                                  >
-                                    {isDownloadingMultiple ? (
-                                      <>
-                                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                        Descargando ({downloadProgress.current}/
-                                        {downloadProgress.total})...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Download className='h-4 w-4 mr-2' />
-                                        Descargar ({selectedCases.size})
-                                      </>
-                                    )}
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant='default'
+                                      onClick={handleDownloadMultiplePDFs}
+                                      disabled={
+                                        isDownloadingMultiple ||
+                                        isSendingEmails ||
+                                        isGeneratingPDF ||
+                                        isSaving
+                                      }
+                                    >
+                                      {isDownloadingMultiple ? (
+                                        <>
+                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                          Descargando ({downloadProgress.current}/
+                                          {downloadProgress.total})...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download className='h-4 w-4 mr-2' />
+                                          Descargar ({selectedCases.size})
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant='default'
+                                      onClick={handleSendMultipleEmails}
+                                      disabled={
+                                        isDownloadingMultiple ||
+                                        isSendingEmails ||
+                                        isGeneratingPDF ||
+                                        isSaving ||
+                                        !patient?.email
+                                      }
+                                      className='bg-blue-600 hover:bg-blue-700'
+                                    >
+                                      {isSendingEmails ? (
+                                        <>
+                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                          Enviando ({emailProgress.current}/
+                                          {emailProgress.total})...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Mail className='h-4 w-4 mr-2' />
+                                          Enviar Email ({selectedCases.size})
+                                        </>
+                                      )}
+                                    </Button>
+                                  </>
                                 )}
                               </div>
                             )}
@@ -648,15 +935,14 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             <div className='space-y-4'>
                               {filteredCases.map(
                                 (caseItem: MedicalCaseWithPatient) => (
-                                  <>
-                                    <div
-                                      key={caseItem.id}
-                                      className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                                        selectedCases.has(caseItem.id)
-                                          ? 'border-primary border-2'
-                                          : 'border-input'
-                                      }`}
-                                    >
+                                  <div
+                                    key={caseItem.id}
+                                    className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                      selectedCases.has(caseItem.id)
+                                        ? 'border-primary border-2'
+                                        : 'border-input'
+                                    }`}
+                                  >
                                       <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
                                         <div className='flex items-center gap-2'>
                                           {caseItem.doc_aprobado ===
@@ -692,9 +978,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
                                         <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
                                           <Calendar className='h-4 w-4' />
-                                          {formatDateFromISO(
-                                            caseItem.created_at ||
-                                              caseItem.date,
+                                          {format(
+                                            new Date(
+                                              caseItem.created_at ||
+                                                caseItem.date,
+                                            ),
+                                            'dd/MM/yyyy',
+                                            { locale: es },
                                           )}
                                         </div>
                                       </div>
@@ -819,7 +1109,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         </div>
                                       )}
                                     </div>
-                                  </>
                                 ),
                               )}
                             </div>

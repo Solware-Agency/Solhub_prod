@@ -319,6 +319,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isMedicowner = profile?.role === 'medicowner';
   const isMedicoTratante = profile?.role === 'medico_tratante';
   const isEnfermero = profile?.role === 'enfermero';
+  const isCallCenter = profile?.role === 'call_center' as any;
+  const isPrueba = profile?.role === 'prueba' as any;
+  const isImagenologia = profile?.role === 'imagenologia';
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -524,15 +527,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <div className='py-1'>
-                <NavItem
-                  to='/dashboard/triaje'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Triaje'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
 
@@ -603,15 +597,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <div className='py-1'>
-                <NavItem
-                  to='/medic/triaje'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Triaje'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
               {/* <NavItem
 								to="/medic/my-cases"
 								icon={<FolderInput className="stroke-2 size-5 shrink-0" />}
@@ -650,6 +635,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/patolo/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isImagenologia && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/imagenologia/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/imagenologia/patients'
+                  icon={<User className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -696,6 +704,145 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/enfermero/patients'
                   icon={<Users className='stroke-2 size-5 shrink-0' />}
                   label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isCallCenter && (
+            <>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/call-center/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/call-center/patients'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
+          {isPrueba && (
+            <>
+              <FeatureGuard feature='hasStats'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/prueba/home'
+                    icon={<Home className='stroke-2 size-5 shrink-0' />}
+                    label='Inicio'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
+              <FeatureGuard feature='hasForm'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/prueba/medical-form'
+                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                    label='Formulario'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
+              <NavGroup
+                icon={
+                  <Microscope className='stroke-2 size-4 sm:size-5 shrink-0' />
+                }
+                label='Clínico'
+                showFullContent={showFullContent}
+                isExpanded={expandedGroups.clinical}
+                onToggle={() => toggleGroup('clinical')}
+                childPaths={clinicalPaths}
+                isMobile={isMobile}
+              >
+                <FeatureGuard feature='hasCases'>
+                  <NavItem
+                    to='/prueba/cases'
+                    icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                    label='Casos'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasPatients'>
+                  <NavItem
+                    to='/prueba/patients'
+                    icon={<User className='stroke-2 size-5 shrink-0' />}
+                    label='Pacientes'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              </NavGroup>
+              <NavGroup
+                icon={
+                  <FolderSearch className='stroke-2 size-4 sm:size-5 shrink-0' />
+                }
+                label='Análisis'
+                showFullContent={showFullContent}
+                isExpanded={expandedGroups.reports}
+                onToggle={() => toggleGroup('reports')}
+                childPaths={reportsPaths}
+                isMobile={isMobile}
+              >
+                <FeatureGuard feature='hasStats'>
+                  <NavItem
+                    to='/prueba/stats'
+                    icon={<PieChart className='stroke-2 size-5 shrink-0' />}
+                    label='Estadísticas'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasTriaje'>
+                  <NavItem
+                    to='/prueba/triage-analytics'
+                    icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                    label='Triaje'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasReports'>
+                  <NavItem
+                    to='/prueba/reports'
+                    icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
+                    label='Reportes'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+                <FeatureGuard feature='hasChangeHistory'>
+                  <NavItem
+                    to='/prueba/changelog'
+                    icon={<History className='stroke-2 size-5 shrink-0' />}
+                    label='Historial'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              </NavGroup>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/prueba/users'
+                  icon={
+                    <Users className='stroke-2 size-4 sm:size-5 shrink-0' />
+                  }
+                  label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -792,6 +939,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isEnfermero && (
           <NavItem
             to='/enfermero/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isCallCenter && (
+          <NavItem
+            to='/call-center/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isPrueba && (
+          <NavItem
+            to='/prueba/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
             label='Ajustes'
             showFullContent={showFullContent}

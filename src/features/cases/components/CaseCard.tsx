@@ -5,6 +5,7 @@ import { BranchBadge } from '@shared/components/ui/branch-badge'
 import CaseActionsPopover from './CaseActionsPopover'
 import { getStatusColor } from './status'
 import { formatCurrency } from '@shared/utils/number-utils'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
@@ -16,14 +17,20 @@ interface CaseCardProps {
 }
 
 const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest }) => {
+	const { laboratory } = useLaboratory()
+	const isSpt = laboratory?.slug === 'spt'
+	
 	return (
 		<div className="bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
 			<div className="flex flex-wrap gap-1.5 mb-1.5">
-				<span
-					className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.payment_status)}`}
-				>
-					{case_.payment_status}
-				</span>
+				{/* Ocultar estado "Incompleto" para SPT */}
+				{!(isSpt && case_.payment_status === 'Incompleto') && (
+					<span
+						className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.payment_status)}`}
+					>
+						{case_.payment_status}
+					</span>
+				)}
 				<div className="flex items-center">
 					{case_.code && (
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
@@ -67,16 +74,18 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-1.5 mb-1.5">
+			<div className={`grid ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-1.5 mb-1.5`}>
 				<div>
 					<p className="text-xs text-gray-500 dark:text-gray-400">Sede</p>
 					<BranchBadge branch={case_.branch} className="text-xs" />
 				</div>
 
-				<div>
-					<p className="text-xs text-gray-500 dark:text-gray-400">Monto</p>
-					<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(case_.total_amount)}</p>
-				</div>
+				{!isSpt && (
+					<div>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Monto</p>
+						<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(case_.total_amount)}</p>
+					</div>
+				)}
 			</div>
 
 			<div className="flex justify-center mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
