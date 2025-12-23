@@ -1394,6 +1394,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                           onReactions={handleGenerateCase}
                           onTriaje={handleTriaje}
                           canRequest={canRequest}
+                          userRole={profile?.role}
                         />
                       ))
                     ) : (
@@ -1598,6 +1599,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                   onReactions={handleGenerateCase}
                                   onTriaje={handleTriaje}
                                   canRequest={canRequest}
+                                  userRole={profile?.role}
+                                  isSpt={isSpt}
                                 />
                               </div>
                             </td>
@@ -1857,6 +1860,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     onGenerate={handleGenerateEmployeeCase}
                     onReactions={handleGenerateCase}
                     canRequest={canRequest}
+                    userRole={profile?.role}
                   />
                 ))
               ) : (
@@ -2063,6 +2067,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                                   onReactions={handleGenerateCase}
                                   onTriaje={handleTriaje}
                                   canRequest={canRequest}
+                                  userRole={profile?.role}
+                                  isSpt={isSpt}
                                 />
                               </div>
                             </td>

@@ -14,9 +14,10 @@ interface CaseCardProps {
 	onReactions?: (case_: MedicalCaseWithPatient) => void
 	onTriaje?: (case_: MedicalCaseWithPatient) => void
 	canRequest: boolean
+	userRole?: string
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest }) => {
+const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest, userRole }) => {
 	const { laboratory } = useLaboratory()
 	const isSpt = laboratory?.slug === 'spt'
 	
@@ -96,6 +97,8 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 					onReactions={onReactions}
 					onTriaje={onTriaje}
 					canRequest={canRequest}
+					userRole={userRole}
+					isSpt={isSpt}
 				/>
 			</div>
 		</div>

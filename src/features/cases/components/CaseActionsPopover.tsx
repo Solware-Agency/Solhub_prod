@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { Eye, FileText, FlaskConical, ClipboardList } from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from '@shared/components/ui/PopoverInput';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { Button } from '@shared/components/ui/button';
 
 interface CaseActionsPopoverProps {
   case_: MedicalCaseWithPatient;
@@ -17,6 +18,8 @@ interface CaseActionsPopoverProps {
   onReactions?: (case_: MedicalCaseWithPatient) => void;
   onTriaje?: (case_: MedicalCaseWithPatient) => void;
   canRequest: boolean;
+  userRole?: string;
+  isSpt?: boolean;
 }
 
 const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
@@ -26,10 +29,64 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   onReactions,
   onTriaje,
   canRequest,
+  userRole,
+  isSpt = false,
 }) => {
   const examType = case_.exam_type?.toLowerCase().trim() || '';
   const isRequestableCase = examType.includes('inmuno');
 
+  // Determinar qué acciones están disponibles basado en el rol y laboratorio
+  const canShowGenerate = useMemo(() => {
+    if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
+    return userRole === 'medico_tratante'; // Para SPT, solo medico_tratante
+  }, [isSpt, userRole]);
+
+  const canShowTriaje = useMemo(() => {
+    if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
+    return userRole === 'medico_tratante' || userRole === 'enfermero'; // Para SPT, medico_tratante y enfermero
+  }, [isSpt, userRole]);
+
+  // Contar cuántas acciones están disponibles
+  const availableActions = useMemo(() => {
+    const actions = [];
+    // Ver siempre está disponible
+    actions.push({ name: 'ver', icon: Eye, label: 'Ver', onClick: () => onView(case_) });
+    
+    // Generar
+    if (canShowGenerate) {
+      actions.push({ name: 'generar', icon: FileText, label: 'Generar', onClick: () => onGenerate(case_) });
+    }
+    
+    // Reacciones
+    if (canRequest && isRequestableCase && onReactions) {
+      actions.push({ name: 'reacciones', icon: FlaskConical, label: 'Reacciones', onClick: () => onReactions(case_) });
+    }
+    
+    // Triaje
+    if (canShowTriaje && onTriaje) {
+      actions.push({ name: 'triaje', icon: ClipboardList, label: 'Triaje', onClick: () => onTriaje(case_) });
+    }
+    
+    return actions;
+  }, [case_, onView, onGenerate, onReactions, onTriaje, canShowGenerate, canShowTriaje, canRequest, isRequestableCase]);
+
+  // Si solo hay una acción, mostrar botón directo
+  if (availableActions.length === 1) {
+    const action = availableActions[0];
+    const Icon = action.icon;
+    return (
+      <Button
+        variant='outline'
+        className='flex items-center gap-2 cursor-pointer'
+        onClick={action.onClick}
+      >
+        <Icon className="w-4 h-4" />
+        {action.label}
+      </Button>
+    );
+  }
+
+  // Si hay múltiples acciones, mostrar el popover
   return (
     <PopoverRoot>
       <PopoverTrigger className='px-3 py-1 text-xs'>Acciones</PopoverTrigger>
@@ -40,12 +97,14 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
             <span>Ver</span>
           </PopoverButton>
 
-          <FeatureGuard feature='hasCaseGenerator'>
-            <PopoverButton onClick={() => onGenerate(case_)}>
-              <FileText className='w-4 h-4' />
-              <span>Generar</span>
-            </PopoverButton>
-          </FeatureGuard>
+          {canShowGenerate && (
+            <FeatureGuard feature='hasCaseGenerator'>
+              <PopoverButton onClick={() => onGenerate(case_)}>
+                <FileText className='w-4 h-4' />
+                <span>Generar</span>
+              </PopoverButton>
+            </FeatureGuard>
+          )}
 
           {canRequest && isRequestableCase && onReactions && (
             <PopoverButton onClick={() => onReactions(case_)}>
@@ -54,7 +113,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
             </PopoverButton>
           )}
 
-          {onTriaje && (
+          {canShowTriaje && onTriaje && (
             <FeatureGuard feature='hasTriaje'>
               <PopoverButton onClick={() => onTriaje(case_)}>
                 <ClipboardList className='w-4 h-4' />
