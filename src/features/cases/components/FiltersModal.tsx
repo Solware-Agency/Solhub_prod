@@ -259,8 +259,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   options={
                     isSpt
                       ? [
-                          { value: 'faltantes', label: 'PDF Faltantes' },
-                          { value: 'generados', label: 'PDF Generados' },
+                          { value: 'faltantes', label: 'PDF Generados' },
+                          { value: 'generados', label: 'PDF Faltantes' },
                         ]
                       : [
                           { value: 'pendientes', label: 'PDF Pendientes' },
