@@ -3,6 +3,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
+  DialogDescription,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
@@ -200,6 +202,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           backdropFilter: 'blur(5px)',
         }}
       >
+        <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
+        <DialogDescription className="sr-only">
+          Configure los filtros para buscar casos específicos
+        </DialogDescription>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger

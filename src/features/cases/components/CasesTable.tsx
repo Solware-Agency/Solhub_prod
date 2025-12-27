@@ -1044,11 +1044,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (pdfStatusFilter !== 'all') {
           const pdfReadyValue = case_.pdf_en_ready;
           
-          // Para SPT: usar lógica corregida (faltantes=false, generados=true)
+          // Para SPT: faltantes=false (sin PDF), generados=true (con PDF)
           // Para otros labs: mantener lógica original (pendientes=false, faltantes=true)
           if (isSpt) {
             if (pdfStatusFilter === 'faltantes') {
-              // PDF faltantes = pdf_en_ready es false (no generado)
+              // PDF faltantes = NO tiene PDF = pdf_en_ready es false
               if (typeof pdfReadyValue === 'string') {
                 matchesPdfStatus = pdfReadyValue === 'FALSE';
               } else if (typeof pdfReadyValue === 'boolean') {
@@ -1057,7 +1057,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 matchesPdfStatus = false;
               }
             } else if (pdfStatusFilter === 'generados') {
-              // PDF generados = pdf_en_ready es true (ya generado)
+              // PDF generados = SÍ tiene PDF = pdf_en_ready es true
               if (typeof pdfReadyValue === 'string') {
                 matchesPdfStatus = pdfReadyValue === 'TRUE';
               } else if (typeof pdfReadyValue === 'boolean') {
