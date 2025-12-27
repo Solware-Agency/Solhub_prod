@@ -1712,7 +1712,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
           </div>
 
-<<<<<<< HEAD
           {/* Unified Cards View - Responsive for all screen sizes */}
           <div className='overflow-hidden'>
             {/* Sort filters header */}
