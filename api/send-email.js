@@ -186,7 +186,7 @@ export default async function handler(req, res) {
       : `<a href="${whatsappHref}" target="_blank" rel="noopener noreferrer" style="color: #5877da; font-size: 14px; text-align: center; margin: 0;">${labPhone}</a>`;
 
     const emailData = {
-      from: `${process.env.RESEND_FROM_NAME || labName} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+      from: `${labName || process.env.RESEND_FROM_NAME || 'Solware Agency'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: [patientEmail],
       subject: resolvedSubject,
       html: `
