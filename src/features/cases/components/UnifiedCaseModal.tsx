@@ -1525,13 +1525,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </p>
                         </div>
                       ) : (
-                        <div className='space-y-4 max-h-80 overflow-y-auto'>
+                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-80 overflow-y-auto'>
                           {changelogsData.data.map((log) => {
                             const actionInfo = getActionTypeInfo(log);
                             return (
                               <div
                                 key={log.id}
-                                className='border-b border-gray-200 dark:border-gray-700 pb-3 last:border-0'
+                                className='border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors'
                               >
                                 <div className='flex justify-between items-start mb-2'>
                                   <div

@@ -609,6 +609,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           </h3>
                           <p className='text-sm text-gray-600 dark:text-gray-400'>
                             Cédula: {patient.cedula}
+                            {patient.gender && (
+                              <span className='ml-3'>
+                                • Género: {patient.gender}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>

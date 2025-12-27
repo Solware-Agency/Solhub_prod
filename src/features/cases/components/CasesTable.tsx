@@ -1380,12 +1380,60 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
             {/* Scrollable Content Area */}
             <div className='flex-1 overflow-hidden'>
-              {/* Mobile View - Cards */}
-              <div className='block lg:hidden h-full flex flex-col overflow-hidden'>
+              {/* Unified Cards View - Responsive for all screen sizes */}
+              <div className='h-full flex flex-col overflow-hidden'>
+                {/* Sort filters header */}
+                <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 flex-shrink-0'>
+                  <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
+                    <button
+                      onClick={() => handleSort('code')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Código
+                      <SortIcon field='code' />
+                    </button>
+                    <button
+                      onClick={() => handleSort('created_at')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Registro
+                      <SortIcon field='created_at' />
+                    </button>
+                    <button
+                      onClick={() => handleSort('nombre')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Paciente
+                      <SortIcon field='nombre' />
+                    </button>
+                    <FeatureGuard feature='hasPayment'>
+                      {!notShow && (
+                        <button
+                          onClick={() => handleSort('total_amount')}
+                          className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                        >
+                          Monto
+                          <SortIcon field='total_amount' />
+                        </button>
+                      )}
+                    </FeatureGuard>
+                  </div>
+                </div>
+
+                {/* Cards grid - responsive */}
                 <div className='flex-1 overflow-y-auto px-3 py-4 custom-scrollbar'>
-                  <div className='p-2 sm:p-4 space-y-2'>
-                    {paginatedCases.length > 0 ? (
-                      paginatedCases.map((case_) => (
+                  {isLoading ? (
+                    <div className='flex items-center justify-center py-12'>
+                      <div className='flex items-center gap-3'>
+                        <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500'></div>
+                        <span className='text-lg text-gray-700 dark:text-gray-300'>
+                          Cargando casos...
+                        </span>
+                      </div>
+                    </div>
+                  ) : paginatedCases.length > 0 ? (
+                    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'>
+                      {paginatedCases.map((case_) => (
                         <CaseCard
                           key={case_.id}
                           case_={case_}
@@ -1395,23 +1443,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                           onTriaje={handleTriaje}
                           canRequest={canRequest}
                         />
-                      ))
-                    ) : (
-                      <div className='text-center py-12'>
-                        <div className='text-gray-500 dark:text-gray-400'>
-                          <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                          <p className='text-lg font-medium'>
-                            No se encontraron casos
-                          </p>
-                          <p className='text-sm'>
-                            Intenta ajustar los filtros de búsqueda
-                          </p>
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='text-center py-12'>
+                      <div className='text-gray-500 dark:text-gray-400'>
+                        <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                        <p className='text-lg font-medium'>
+                          No se encontraron casos
+                        </p>
+                        <p className='text-sm'>
+                          Intenta ajustar los filtros de búsqueda
+                        </p>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-                {/* Paginación en vista móvil fullscreen - Siempre visible */}
+
+                {/* Paginación fullscreen - Siempre visible */}
                 <div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
                   <Pagination
                     currentPage={currentPage}
@@ -1428,217 +1477,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     }
                   />
                 </div>
-              </div>
-
-              {/* Desktop View - Table with virtualization */}
-              <div className='hidden lg:block h-full overflow-y-auto custom-scrollbar'>
-                <table className='w-full responsive-table'>
-                  <thead className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]'>
-                    <tr>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('code')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Código / Estatus
-                          <SortIcon field='code' />
-                        </button>
-                      </th>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('created_at')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Registro
-                          <SortIcon field='created_at' />
-                        </button>
-                      </th>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('nombre')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Paciente
-                          <SortIcon field='nombre' />
-                        </button>
-                      </th>
-                      <th className='px-3 py-3 text-center'>
-                        <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Sede
-                        </span>
-                      </th>
-                      <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center'>
-                        Estudio
-                      </th>
-                      <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left'>
-                        Médico Tratante
-                      </th>
-                      <FeatureGuard feature='hasPayment'>
-                        {!notShow && (
-                          <th className='px-4 py-3 text-left'>
-                            <button
-                              onClick={() => handleSort('total_amount')}
-                              className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                            >
-                              Monto Total
-                              <SortIcon field='total_amount' />
-                            </button>
-                          </th>
-                        )}
-                      </FeatureGuard>
-                      <th className='px-4 py-3 text-center'>
-                        <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Opciones
-                        </span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
-                    {paginatedCases.length > 0 ? (
-                      // Render paginated cases
-                      paginatedCases.map((case_) => {
-                        return (
-                          <tr
-                            key={case_.id}
-                            className='hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                          >
-                            <td className='px-4 py-4'>
-                              <div className='flex flex-col items-start space-y-1 text-left'>
-                                {case_.code && (
-                                  <div className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 mb-1'>
-                                    {case_.code}
-                                  </div>
-                                )}
-                                {(() => {
-                                  const { paymentStatus } =
-                                    getCasePaymentStatus(case_);
-                                  // Ocultar estado "Incompleto" para SPT
-                                  if (isSpt && paymentStatus === 'Incompleto') {
-                                    return null;
-                                  }
-                                  return (
-                                    <span
-                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                                        paymentStatus,
-                                      )}`}
-                                    >
-                                      {paymentStatus}
-                                    </span>
-                                  );
-                                })()}
-                                {case_.email_sent && (
-                                    <span
-                                      className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                      title='Email enviado'
-                                    >
-                                      <MailCheck className='w-3 h-3' />
-                                      Enviado
-                                    </span>
-                                  ) &&
-                                  !case_.email_sent && (
-                                    <span
-                                      className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                      title='Email enviado'
-                                    >
-                                      <MailCheck className='w-3 h-3' />
-                                      No enviado
-                                    </span>
-                                  )}
-                              </div>
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left'>
-                              {formatDateFromISO(case_.created_at)}
-                            </td>
-                            <td className='px-4 py-4'>
-                              <div className='text-left'>
-                                <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                  {case_.nombre}
-                                </div>
-                                <div className='flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400'>
-                                  <span>{case_.cedula}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className='text-sm text-gray-900 dark:text-gray-100'>
-                              <BranchBadge branch={case_.branch} />
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-center'>
-                              {case_.exam_type}
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100'>
-                              {case_.treating_doctor}
-                            </td>
-                            <FeatureGuard feature='hasPayment'>
-                              {!notShow && (
-                                <td className='px-4 py-4'>
-                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                    {formatCurrency(case_.total_amount)}
-                                  </div>
-                                  {(() => {
-                                    const { missingAmount } =
-                                      getCasePaymentStatus(case_);
-                                    return (
-                                      missingAmount > 0 && (
-                                        <div className='text-xs text-red-600 dark:text-red-400'>
-                                          Faltante:{' '}
-                                          {formatCurrency(missingAmount)}
-                                        </div>
-                                      )
-                                    );
-                                  })()}
-                                </td>
-                              )}
-                            </FeatureGuard>
-                            <td className='px-4 py-4'>
-                              <div className='flex justify-center mx-5'>
-                                <CaseActionsPopover
-                                  case_={case_}
-                                  onView={handleCaseSelect}
-                                  onGenerate={handleGenerateEmployeeCase}
-                                  onReactions={handleGenerateCase}
-                                  onTriaje={handleTriaje}
-                                  canRequest={canRequest}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={8}>
-                          <div className='text-center py-12'>
-                            <div className='text-gray-500 dark:text-gray-400'>
-                              <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                              <p className='text-lg font-medium'>
-                                No se encontraron casos
-                              </p>
-                              <p className='text-sm'>
-                                Intenta ajustar los filtros de búsqueda
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Paginación en vista fullscreen */}
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  itemsPerPage={itemsPerPage}
-                  pageSizeOptions={pageSizeOptions}
-                  onItemsPerPageChange={handleItemsPerPageChange}
-                  onGoToPage={goToPage}
-                  onNext={goToNextPage}
-                  onPrev={goToPreviousPage}
-                  totalItems={
-                    pagination?.totalItems ??
-                    filteredAndSortedCases.filtered.length
-                  }
-                />
               </div>
             </div>
           </div>
@@ -1845,20 +1683,71 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
           </div>
 
-          {/* Mobile View - Cards */}
-          <div className='block md:hidden overflow-hidden flex flex-col h-[calc(100vh-280px)] sm:h-[calc(100vh-320px)]'>
-            <div className='flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 custom-scrollbar'>
-              {paginatedCases.length > 0 ? (
-                paginatedCases.map((case_) => (
-                  <CaseCard
-                    key={case_.id}
-                    case_={case_}
-                    onView={handleCaseSelect}
-                    onGenerate={handleGenerateEmployeeCase}
-                    onReactions={handleGenerateCase}
-                    canRequest={canRequest}
-                  />
-                ))
+          {/* Unified Cards View - Responsive for all screen sizes */}
+          <div className='overflow-hidden'>
+            {/* Sort filters header */}
+            <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3'>
+              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
+                <button
+                  onClick={() => handleSort('code')}
+                  className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                >
+                  Código
+                  <SortIcon field='code' />
+                </button>
+                <button
+                  onClick={() => handleSort('created_at')}
+                  className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                >
+                  Registro
+                  <SortIcon field='created_at' />
+                </button>
+                <button
+                  onClick={() => handleSort('nombre')}
+                  className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                >
+                  Paciente
+                  <SortIcon field='nombre' />
+                </button>
+                <FeatureGuard feature='hasPayment'>
+                  {!notShow && (
+                    <button
+                      onClick={() => handleSort('total_amount')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Monto
+                      <SortIcon field='total_amount' />
+                    </button>
+                  )}
+                </FeatureGuard>
+              </div>
+            </div>
+
+            {/* Cards grid - responsive */}
+            <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto custom-scrollbar p-3 sm:p-4'>
+              {isLoading ? (
+                <div className='flex items-center justify-center py-12'>
+                  <div className='flex items-center gap-3'>
+                    <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500'></div>
+                    <span className='text-lg text-gray-700 dark:text-gray-300'>
+                      Cargando casos...
+                    </span>
+                  </div>
+                </div>
+              ) : paginatedCases.length > 0 ? (
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'>
+                  {paginatedCases.map((case_) => (
+                    <CaseCard
+                      key={case_.id}
+                      case_={case_}
+                      onView={handleCaseSelect}
+                      onGenerate={handleGenerateEmployeeCase}
+                      onReactions={handleGenerateCase}
+                      onTriaje={handleTriaje}
+                      canRequest={canRequest}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className='text-center py-12'>
                   <div className='text-gray-500 dark:text-gray-400'>
@@ -1873,252 +1762,26 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 </div>
               )}
             </div>
-            {/* Paginación en vista móvil - Siempre visible */}
-            <div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                itemsPerPage={itemsPerPage}
-                pageSizeOptions={pageSizeOptions}
-                onItemsPerPageChange={handleItemsPerPageChange}
-                onGoToPage={goToPage}
-                onNext={goToNextPage}
-                onPrev={goToPreviousPage}
-                totalItems={
-                  pagination?.totalItems ??
-                  filteredAndSortedCases.filtered.length
-                }
-              />
-            </div>
-          </div>
 
-          {/* Desktop View - Table */}
-          <div className='hidden md:block'>
-            <div className='overflow-x-auto responsive-table'>
-              <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto custom-scrollbar'>
-                <table className='w-full min-w-[800px]'>
-                  <thead className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] sticky top-0 z-[1000]'>
-                    <tr>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('code')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Código / Estatus
-                          <SortIcon field='code' />
-                        </button>
-                      </th>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('created_at')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Registro
-                          <SortIcon field='created_at' />
-                        </button>
-                      </th>
-                      <th className='px-4 py-3 text-left'>
-                        <button
-                          onClick={() => handleSort('nombre')}
-                          className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                        >
-                          Paciente
-                          <SortIcon field='nombre' />
-                        </button>
-                      </th>
-                      <th className='px-3 py-3 text-center'>
-                        <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Sede
-                        </span>
-                      </th>
-                      <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center'>
-                        Estudio
-                      </th>
-                      <th className='px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left'>
-                        Médico Tratante
-                      </th>
-                      <FeatureGuard feature='hasPayment'>
-                        {!notShow && (
-                          <th className='px-4 py-3 text-left'>
-                            <button
-                              onClick={() => handleSort('total_amount')}
-                              className='flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 text-left'
-                            >
-                              Monto Total
-                              <SortIcon field='total_amount' />
-                            </button>
-                          </th>
-                        )}
-                      </FeatureGuard>
-                      <th className='px-4 py-3 text-center'>
-                        <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Opciones
-                        </span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
-                    {}
-
-                    {paginatedCases.length > 0 ? (
-                      // Render paginated cases
-                      paginatedCases.map((case_) => {
-                        return (
-                          <tr
-                            key={case_.id}
-                            className='hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                          >
-                            <td className='px-4 py-4'>
-                              <div className='flex flex-col items-start space-y-1 text-left'>
-                                {case_.code && (
-                                  <div className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 mb-1'>
-                                    {case_.code}
-                                  </div>
-                                )}
-                                {(() => {
-                                  const { paymentStatus } =
-                                    getCasePaymentStatus(case_);
-                                  // Ocultar estado "Incompleto" para SPT
-                                  if (isSpt && paymentStatus === 'Incompleto') {
-                                    return null;
-                                  }
-                                  return (
-                                    <span
-                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                                        paymentStatus,
-                                      )}`}
-                                    >
-                                      {paymentStatus}
-                                    </span>
-                                  );
-                                })()}
-                                {case_.email_sent && (
-                                  <span
-                                    className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    title='Email enviado'
-                                  >
-                                    <MailCheck className='w-3 h-3' />
-                                    Enviado
-                                  </span>
-                                )}
-                                {!case_.email_sent && (
-                                  <span
-                                    className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                    title='Email enviado'
-                                  >
-                                    <MailCheck className='w-3 h-3' />
-                                    No enviado
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-left'>
-                              {formatDateFromISO(case_.created_at)}
-                            </td>
-                            <td className='px-4 py-4'>
-                              <div className='text-left'>
-                                <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                  {case_.nombre}
-                                </div>
-                                <div className='flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400'>
-                                  <span>{case_.cedula}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className='text-sm text-gray-900 dark:text-gray-100'>
-                              <BranchBadge branch={case_.branch} />
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100 text-center'>
-                              {case_.exam_type}
-                            </td>
-                            <td className='px-4 py-4 text-sm text-gray-900 dark:text-gray-100'>
-                              {case_.treating_doctor}
-                            </td>
-                            <FeatureGuard feature='hasPayment'>
-                              {!notShow && (
-                                <td className='px-4 py-4'>
-                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                                    {formatCurrency(case_.total_amount)}
-                                  </div>
-                                  {(() => {
-                                    const { missingAmount } =
-                                      getCasePaymentStatus(case_);
-                                    return (
-                                      missingAmount > 0 && (
-                                        <div className='text-xs text-red-600 dark:text-red-400'>
-                                          {formatCurrency(missingAmount)}
-                                        </div>
-                                      )
-                                    );
-                                  })()}
-                                </td>
-                              )}
-                            </FeatureGuard>
-                            <td className='px-4 py-4'>
-                              <div className='flex justify-center mx-5'>
-                                <CaseActionsPopover
-                                  case_={case_}
-                                  onView={handleCaseSelect}
-                                  onGenerate={handleGenerateEmployeeCase}
-                                  onReactions={handleGenerateCase}
-                                  onTriaje={handleTriaje}
-                                  canRequest={canRequest}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : isLoading ? (
-                      <tr>
-                        <td colSpan={8}>
-                          <div className='flex items-center justify-center py-12'>
-                            <div className='flex items-center gap-3'>
-                              <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500'></div>
-                              <span className='text-lg text-gray-700 dark:text-gray-300'>
-                                Cargando casos...
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <td colSpan={8}>
-                          <div className='text-center py-12'>
-                            <div className='text-gray-500 dark:text-gray-400'>
-                              <Search className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                              <p className='text-lg font-medium'>
-                                No se encontraron casos
-                              </p>
-                              <p className='text-sm'>
-                                Intenta ajustar los filtros de búsqueda
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Paginación en vista normal */}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className='flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700'>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  itemsPerPage={itemsPerPage}
+                  pageSizeOptions={pageSizeOptions}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                  onGoToPage={goToPage}
+                  onNext={goToNextPage}
+                  onPrev={goToPreviousPage}
+                  totalItems={
+                    pagination?.totalItems ??
+                    filteredAndSortedCases.filtered.length
+                  }
+                />
               </div>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                itemsPerPage={itemsPerPage}
-                pageSizeOptions={pageSizeOptions}
-                onItemsPerPageChange={handleItemsPerPageChange}
-                onGoToPage={goToPage}
-                onNext={goToNextPage}
-                onPrev={goToPreviousPage}
-                totalItems={
-                  pagination?.totalItems ??
-                  filteredAndSortedCases.filtered.length
-                }
-              />
-            </div>
+            )}
           </div>
         </div>
 

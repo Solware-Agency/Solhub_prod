@@ -19,47 +19,6 @@ interface PatientsListProps {
 	onPageChange: (page: number) => void
 }
 
-// Memoized Patient Row Component for better performance
-const PatientRow = React.memo(({ patient, onClick }: { patient: Patient; onClick: (patient: Patient) => void }) => (
-	<tr
-		key={patient.id}
-		className="hover:bg-gray-200 dark:hover:bg-gray-800 bg-white dark:bg-background transition-transform cursor-pointer"
-		onClick={() => onClick(patient)}
-	>
-		{/* Name Cell */}
-		<td className="w-[20%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3">
-			<div className="flex items-center">
-				<div className="ml-3">
-					<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{patient.nombre}</p>
-				</div>
-			</div>
-		</td>
-
-		{/* ID Number Cell */}
-		<td className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base text-gray-900 dark:text-gray-100">{patient.cedula}</td>
-
-		{/* Age Cell */}
-		<td className="w-[20%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base text-gray-900 dark:text-gray-100">
-			{patient.edad ? (
-				<span>{patient.edad}</span>
-			) : (
-				<span className="text-gray-500 dark:text-gray-400">No disponible</span>
-			)}
-		</td>
-
-		{/* Phone Cell */}
-		<td className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base text-gray-900 dark:text-gray-100">
-			{patient.telefono || <span className="text-gray-500 dark:text-gray-400">No disponible</span>}
-		</td>
-
-		{/* Email Cell */}
-		<td className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base text-gray-900 dark:text-gray-100 truncate">
-			{patient.email || <span className="text-gray-500 dark:text-gray-400">No disponible</span>}
-		</td>
-	</tr>
-))
-
-PatientRow.displayName = 'PatientRow'
 
 // Use React.memo to prevent unnecessary re-renders
 const PatientsList: React.FC<PatientsListProps> = React.memo(
@@ -69,6 +28,28 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 		const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 		const [isModalOpen, setIsModalOpen] = useState(false)
 
+		// Helper function to extract numeric age value from text
+		const extractAgeValue = useCallback((edad: string | null | undefined): number => {
+			if (!edad || edad.trim() === '') return -1 // Put empty ages at the end
+			
+			const edadStr = String(edad).trim().toUpperCase()
+			
+			// Extract number from string (handles "25", "25 AÑOS", "10 MESES", etc.)
+			const match = edadStr.match(/(\d+)/)
+			if (!match) return -1
+			
+			const number = parseInt(match[1], 10)
+			if (isNaN(number)) return -1
+			
+			// Convert months to years for proper comparison (1 year = 12 months)
+			// This ensures "12 MESES" (1 year) is less than "2 AÑOS" (2 years)
+			if (edadStr.includes('MES') || edadStr.includes('MESES')) {
+				return number / 12 // Convert months to years (decimal)
+			}
+			
+			return number
+		}, [])
+
 		// Sort patients - simplificado para la nueva estructura
 		const sortedPatients = useMemo(() => {
 			if (!patientsData || patientsData.length === 0) return []
@@ -77,16 +58,22 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 				let aValue = a[sortField]
 				let bValue = b[sortField]
 
-				// Handle null values
-				if (aValue === null || aValue === undefined) aValue = ''
-				if (bValue === null || bValue === undefined) bValue = ''
-
 				// Special handling for edad - convert to number for proper sorting
 				if (sortField === 'edad') {
-					const aNum = Number(aValue) || 0
-					const bNum = Number(bValue) || 0
+					const aNum = extractAgeValue(aValue)
+					const bNum = extractAgeValue(bValue)
+					
+					// Handle empty values (they go to the end)
+					if (aNum === -1 && bNum === -1) return 0
+					if (aNum === -1) return 1 // a goes after b
+					if (bNum === -1) return -1 // b goes after a
+					
 					return sortDirection === 'asc' ? aNum - bNum : bNum - aNum
 				} else {
+					// Handle null values for other fields
+					if (aValue === null || aValue === undefined) aValue = ''
+					if (bValue === null || bValue === undefined) bValue = ''
+					
 					// String comparison for text fields
 					const aStr = String(aValue).toLowerCase()
 					const bStr = String(bValue).toLowerCase()
@@ -98,7 +85,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 					}
 				}
 			})
-		}, [patientsData, sortField, sortDirection])
+		}, [patientsData, sortField, sortDirection, extractAgeValue])
 
 		// Handle sort
 		const handleSort = useCallback(
@@ -166,150 +153,93 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 		// Render the component
 		return (
 			<div className="">
-				{/* Patients table */}
+				{/* Patients cards - responsive for all screen sizes */}
 				<Card className="overflow-hidden">
-					{/* Desktop view */}
-				<div className="hidden md:block">
-					<div className="max-h-[450px] sm:max-h-[500px] md:max-h-[550px] overflow-auto">
-							<table className="w-full">
-								<thead className="bg-white dark:bg-black/80 backdrop-blur-[10px] sticky top-0 z-10 border-b">
-									<tr>
-									<th className="w-[20%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-left">
-										<button
-											onClick={() => handleSort('nombre')}
-											className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-											>
-												Nombre
-												<SortIcon field="nombre" />
-											</button>
-										</th>
-									<th className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-left">
-										<button
-											onClick={() => handleSort('cedula')}
-											className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-											>
-												Cédula
-												<SortIcon field="cedula" />
-											</button>
-										</th>
-									<th className="w-[20%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-left">
-										<button
-											onClick={() => handleSort('edad')}
-											className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-											>
-												Edad
-												<SortIcon field="edad" />
-											</button>
-										</th>
-									<th className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-left">
-										<button
-											onClick={() => handleSort('telefono')}
-											className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-											>
-												Teléfono
-												<SortIcon field="telefono" />
-											</button>
-										</th>
-									<th className="w-[15%] px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-left">
-										<button
-											onClick={() => handleSort('email')}
-											className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-											>
-												Email
-												<SortIcon field="email" />
-											</button>
-										</th>
-									</tr>
-								</thead>
-								<tbody className="bg-white dark:bg-black divide-y divide-gray-200 dark:divide-gray-700">
-									{sortedPatients.length > 0 ? (
-										sortedPatients.map((patient: Patient) => (
-											<PatientRow key={patient.id} patient={patient} onClick={handlePatientClick} />
-										))
-									) : (
-										<tr>
-											<td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-												<p className="text-lg font-medium">No se encontraron pacientes</p>
-												<p className="text-sm">Aún no hay pacientes registrados</p>
-											</td>
-										</tr>
-									)}
-								</tbody>
-							</table>
+					{/* Sort filters header */}
+					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3">
+						<div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4">
+							<button
+								onClick={() => handleSort('nombre')}
+								className="flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+							>
+								Nombre
+								<SortIcon field="nombre" />
+							</button>
+							<button
+								onClick={() => handleSort('cedula')}
+								className="flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+							>
+								Cédula
+								<SortIcon field="cedula" />
+							</button>
+							<button
+								onClick={() => handleSort('edad')}
+								className="flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+							>
+								Edad
+								<SortIcon field="edad" />
+							</button>
+							<button
+								onClick={() => handleSort('telefono')}
+								className="flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+							>
+								Teléfono
+								<SortIcon field="telefono" />
+							</button>
+							<button
+								onClick={() => handleSort('email')}
+								className="flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+							>
+								Email
+								<SortIcon field="email" />
+							</button>
 						</div>
-
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-								<div className="text-sm text-gray-700 dark:text-gray-300">
-									Página {currentPage} de {totalPages}
-								</div>
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => onPageChange(currentPage - 1)}
-										disabled={currentPage === 1}
-									>
-										<ChevronLeft className="w-4 h-4" />
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => onPageChange(currentPage + 1)}
-										disabled={currentPage === totalPages}
-									>
-										<ChevronRight className="w-4 h-4" />
-									</Button>
-								</div>
-							</div>
-						)}
 					</div>
 
-					{/* Mobile view - cards */}
-					<div className="lg:hidden">
+					{/* Cards grid - responsive */}
+					<div className="max-h-[450px] sm:max-h-[500px] md:max-h-[550px] overflow-auto">
 						{sortedPatients.length > 0 ? (
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4">
 								{sortedPatients.map((patient: Patient) => (
 									<div
 										key={patient.id}
-										className="bg-white dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-transform duration-200 cursor-pointer"
+										className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-primary/50 transition-all duration-200 cursor-pointer"
 										onClick={() => handlePatientClick(patient)}
 									>
-										<div className="flex items-center mb-2">
-											<div className="ml-2 min-w-0">
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-													{patient.nombre}
-												</p>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Cédula: {patient.cedula}</p>
-											</div>
+										<div className="mb-3">
+											<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
+												{patient.nombre}
+											</p>
+											<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+												Cédula: {patient.cedula || 'No disponible'}
+											</p>
 										</div>
 
-										<div className="grid grid-cols-2 gap-2 text-xs">
-											<div className="col-span-2">
-												<div className="flex items-center">
-													<Calendar className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-													<span className="text-gray-600 dark:text-gray-300 text-xs">
-														{patient.edad ? `${patient.edad}` : 'Edad no disponible'}
+										<div className="space-y-2">
+											{patient.edad && (
+												<div className="flex items-center text-xs sm:text-sm">
+													<Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
+													<span className="text-gray-600 dark:text-gray-300">
+														{patient.edad}
 													</span>
 												</div>
-											</div>
+											)}
 
-											<div>
-												<div className="flex items-center">
-													<Phone className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-													<span className="text-gray-600 dark:text-gray-300 text-xs truncate">
-														{patient.telefono || 'No disponible'}
+											{patient.telefono && (
+												<div className="flex items-center text-xs sm:text-sm">
+													<Phone className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
+													<span className="text-gray-600 dark:text-gray-300 truncate">
+														{patient.telefono}
 													</span>
 												</div>
-											</div>
+											)}
 
 											{patient.email && (
-												<div className="col-span-2 mt-1">
-													<div className="flex items-center">
-														<Mail className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-														<span className="text-gray-600 dark:text-gray-300 text-xs truncate">{patient.email}</span>
-													</div>
+												<div className="flex items-center text-xs sm:text-sm">
+													<Mail className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
+													<span className="text-gray-600 dark:text-gray-300 truncate">
+														{patient.email}
+													</span>
 												</div>
 											)}
 										</div>
@@ -322,34 +252,34 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 								<p className="text-sm">Aún no hay pacientes registrados</p>
 							</div>
 						)}
-
-						{/* Mobile Pagination */}
-						{totalPages > 1 && (
-							<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-								<div className="text-sm text-gray-700 dark:text-gray-300">
-									Página {currentPage} de {totalPages}
-								</div>
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => onPageChange(currentPage - 1)}
-										disabled={currentPage === 1}
-									>
-										<ChevronLeft className="w-4 h-4" />
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => onPageChange(currentPage + 1)}
-										disabled={currentPage === totalPages}
-									>
-										<ChevronRight className="w-4 h-4" />
-									</Button>
-								</div>
-							</div>
-						)}
 					</div>
+
+					{/* Pagination */}
+					{totalPages > 1 && (
+						<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+							<div className="text-sm text-gray-700 dark:text-gray-300">
+								Página {currentPage} de {totalPages}
+							</div>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onPageChange(currentPage - 1)}
+									disabled={currentPage === 1}
+								>
+									<ChevronLeft className="w-4 h-4" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onPageChange(currentPage + 1)}
+									disabled={currentPage === totalPages}
+								>
+									<ChevronRight className="w-4 h-4" />
+								</Button>
+							</div>
+						</div>
+					)}
 				</Card>
 
 				{/* Patient History Modal */}

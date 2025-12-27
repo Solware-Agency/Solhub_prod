@@ -33,32 +33,32 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   return (
     <PopoverRoot>
       <PopoverTrigger className='px-3 py-1 text-xs'>Acciones</PopoverTrigger>
-      <PopoverContent className='w-30 h-auto'>
+      <PopoverContent className='w-[180px] min-w-[180px] h-auto'>
         <PopoverBody className='p-1'>
           <PopoverButton onClick={() => onView(case_)}>
-            <Eye className='w-4 h-4' />
-            <span>Ver</span>
+            <Eye className='w-4 h-4 flex-shrink-0' />
+            <span className='truncate'>Ver</span>
           </PopoverButton>
 
           <FeatureGuard feature='hasCaseGenerator'>
             <PopoverButton onClick={() => onGenerate(case_)}>
-              <FileText className='w-4 h-4' />
-              <span>Generar</span>
+              <FileText className='w-4 h-4 flex-shrink-0' />
+              <span className='truncate'>Generar</span>
             </PopoverButton>
           </FeatureGuard>
 
           {canRequest && isRequestableCase && onReactions && (
             <PopoverButton onClick={() => onReactions(case_)}>
-              <FlaskConical className='w-4 h-4' />
-              <span>Reacciones</span>
+              <FlaskConical className='w-4 h-4 flex-shrink-0' />
+              <span className='truncate'>Reacciones</span>
             </PopoverButton>
           )}
 
           {onTriaje && (
             <FeatureGuard feature='hasTriaje'>
               <PopoverButton onClick={() => onTriaje(case_)}>
-                <ClipboardList className='w-4 h-4' />
-                <span>Triaje</span>
+                <ClipboardList className='w-4 h-4 flex-shrink-0' />
+                <span className='truncate'>Triaje</span>
               </PopoverButton>
             </FeatureGuard>
           )}

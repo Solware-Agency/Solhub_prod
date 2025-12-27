@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, Edit, Activity } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
+import { useQuery } from '@tanstack/react-query';
+import { getTriageByCase } from '@/services/supabase/triage/triage-service';
+import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
 
 interface TriajeModalProps {
@@ -28,6 +31,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
 
   const { profile } = useUserProfile();
   const isEnfermero = profile?.role === 'enfermero';
+  const [forceEditMode, setForceEditMode] = useState(false);
 
   // Validar que el usuario tenga permisos para editar triaje
   const canEditTriaje =
@@ -41,6 +45,24 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
       'medico_tratante',
       'enfermero',
     ].includes(profile.role);
+
+  // Query para verificar si existe triaje
+  const { data: existingTriage } = useQuery({
+    queryKey: ['triage-by-case', case_?.id],
+    queryFn: async () => {
+      if (!case_?.id) return null;
+      return await getTriageByCase(case_.id);
+    },
+    enabled: !!case_?.id && isOpen,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Reset forceEditMode when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setForceEditMode(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen || !case_) {
     return null;
@@ -81,7 +103,9 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                     Triaje
                   </h2>
                   <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                    Complete los datos de triaje para el caso seleccionado
+                    {existingTriage && !forceEditMode
+                      ? 'Triaje registrado para el caso seleccionado'
+                      : 'Complete los datos de triaje para el caso seleccionado'}
                   </p>
                 </div>
                 <div className='flex items-center gap-4 flex-shrink-0'>
@@ -93,6 +117,16 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       {case_.cedula}
                     </p>
                   </div>
+                  {existingTriage && canEditTriaje && !forceEditMode && (
+                    <Button
+                      onClick={() => setForceEditMode(true)}
+                      variant='outline'
+                      className='flex items-center gap-2'
+                    >
+                      <Edit className='w-4 h-4' />
+                      Editar Triaje
+                    </Button>
+                  )}
                   <button
                     onClick={onClose}
                     className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
@@ -109,9 +143,13 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                   <TriajeModalForm
                     case_={case_}
                     onClose={onClose}
-                    onSave={onSave}
+                    onSave={() => {
+                      setForceEditMode(false);
+                      onSave?.();
+                    }}
                     showOnlyVitalSigns={isEnfermero}
                     userRole={profile?.role}
+                    forceEditMode={forceEditMode}
                   />
                 ) : (
                   <div className='p-6 text-center'>

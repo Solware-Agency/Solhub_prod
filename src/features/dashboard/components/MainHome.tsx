@@ -300,7 +300,7 @@ function MainHome() {
 					</Card>
 
 					{/* Grid 5 - Médicos Tratantes */}
-					<Card className="col-span-1 sm:col-span-2 lg:col-span-3 row-span-1 lg:row-span-1 dark:bg-background bg-white rounded-xl p-3 sm:p-4 flex flex-col cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
+					<Card className="col-span-1 sm:col-span-1 lg:col-span-3 row-span-1 lg:row-span-1 dark:bg-background bg-white rounded-xl p-3 sm:p-4 flex flex-col cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
 						<div className="h-full flex flex-col" onClick={() => navigate('/dashboard/stats')}>
 							<div className="flex items-center justify-between mb-2 sm:mb-3">
 								<div className="flex items-center gap-1 sm:gap-2">
@@ -363,7 +363,7 @@ function MainHome() {
 
 					{/* Grid 7 - Top Exam Types (Normalized) */}
 					<Card
-						className="col-span-1 sm:col-span-2 lg:col-span-6 row-span-1 lg:row-span-1 dark:bg-background bg-white rounded-xl py-2 sm:py-3 md:py-5 px-2 sm:px-4 md:px-6 cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300"
+						className="col-span-1 sm:col-span-1 lg:col-span-6 row-span-1 lg:row-span-1 dark:bg-background bg-white rounded-xl py-2 sm:py-3 md:py-5 px-2 sm:px-4 md:px-6 cursor-pointer shadow-lg hover:bg-white/90 group h-full hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300"
 						onClick={() => handleStatCardClick('examTypes')}
 					>
 						<div className="h-full flex flex-col">

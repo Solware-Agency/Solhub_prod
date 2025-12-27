@@ -98,7 +98,6 @@ const ChangelogTable: React.FC = () => {
 
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')
-	const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all') // Nuevo filtro
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
@@ -148,14 +147,6 @@ const ChangelogTable: React.FC = () => {
 				matchesAction = log.field_name !== 'created_record' && log.field_name !== 'deleted_record'
 			}
 
-			// Entity type filter (nuevo)
-			let matchesEntityType = true
-			if (entityTypeFilter === 'patient') {
-				matchesEntityType = log.entity_type === 'patient'
-			} else if (entityTypeFilter === 'medical_case') {
-				matchesEntityType = log.entity_type === 'medical_case'
-			}
-
 			// Date range filter
 			let matchesDate = true
 			if (dateRange?.from || dateRange?.to) {
@@ -175,9 +166,9 @@ const ChangelogTable: React.FC = () => {
 				}
 			}
 
-			return matchesSearch && matchesAction && matchesEntityType && matchesDate
+			return matchesSearch && matchesAction && matchesDate
 		})
-	}, [logsData?.data, searchTerm, actionFilter, entityTypeFilter, dateRange])
+	}, [logsData?.data, searchTerm, actionFilter, dateRange])
 
 	// Function to delete a change log entry (only for owners)
 
@@ -245,7 +236,6 @@ const ChangelogTable: React.FC = () => {
 	const clearFilters = () => {
 		setSearchTerm('')
 		setActionFilter('all')
-		setEntityTypeFilter('all') // Nuevo filtro
 		setDateRange(undefined)
 	}
 
@@ -338,23 +328,6 @@ const ChangelogTable: React.FC = () => {
 						</div>
 					</div>
 
-					{/* Entity Type Filter */}
-					<div className="flex items-center gap-2">
-						<FileText className="w-4 h-4 text-gray-400" />
-						<div className="w-40">
-							<CustomDropdown
-								value={entityTypeFilter}
-								onChange={(v) => setEntityTypeFilter(v)}
-								placeholder="Tipo de entidad"
-								options={[
-									{ value: 'all', label: 'Todos los tipos' },
-									{ value: 'patient', label: 'Pacientes' },
-									{ value: 'medical_case', label: 'Casos Médicos' },
-								]}
-							/>
-						</div>
-					</div>
-
 					{/* Date Range Filter */}
 					<div className="flex items-center gap-2">
 						<Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
@@ -391,7 +364,7 @@ const ChangelogTable: React.FC = () => {
 					</div>
 
 					{/* Clear Filters */}
-					{(searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateRange?.from || dateRange?.to) && (
+					{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
 						<Button variant="ghost" onClick={clearFilters} className="text-sm">
 							Limpiar filtros
 						</Button>
@@ -414,7 +387,7 @@ const ChangelogTable: React.FC = () => {
 							<History className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
 							<p className="text-lg font-medium text-gray-500 dark:text-gray-400">No se encontraron registros</p>
 							<p className="text-sm text-gray-400 dark:text-gray-500">
-								{searchTerm || actionFilter !== 'all' || entityTypeFilter !== 'all' || dateRange?.from || dateRange?.to
+								{searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to
 									? 'Intenta ajustar los filtros de búsqueda'
 									: 'Aún no hay registros en el historial de cambios'}
 							</p>
@@ -554,7 +527,7 @@ const ChangelogTable: React.FC = () => {
 
 							{/* Mobile view - Card layout */}
 							<div className="lg:hidden">
-								<div className="space-y-4 p-3">
+								<div className="grid grid-cols-2 gap-3 sm:gap-4 p-3">
 									{filteredLogs.map((log: ChangeLogData) => {
 										const actionInfo = getActionTypeInfo(log)
 										const logDate = format(new Date(log.changed_at), 'dd/MM/yyyy', { locale: es })

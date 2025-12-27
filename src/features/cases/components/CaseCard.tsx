@@ -47,7 +47,8 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 						Enviado
 					</span>
 				)}
-				{!case_.email_sent && (
+				{/* Ocultar estado "No enviado" para SPT */}
+				{!case_.email_sent && !isSpt && (
 					<span
 						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
 						title="Email enviado"

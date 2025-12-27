@@ -75,6 +75,7 @@ interface TriajeModalFormProps {
   onSave?: () => void;
   showOnlyVitalSigns?: boolean;
   userRole?: string;
+  forceEditMode?: boolean;
 }
 
 // Componente para mostrar información del triaje existente
@@ -346,6 +347,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   onSave,
   showOnlyVitalSigns = false,
   userRole,
+  forceEditMode = false,
 }) => {
   const isEnfermero = userRole === 'enfermero';
   const isMedico = userRole === 'medico_tratante' || userRole === 'medicowner';
@@ -848,7 +850,14 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const triageComplete = isTriageComplete(existingTriage ?? null);
   const canEditTriage = (isEnfermero || isMedico) && userRole !== 'employee';
 
-  if (existingTriage && triageComplete && !isEditing) {
+  // Si forceEditMode está activo, forzar el modo de edición
+  React.useEffect(() => {
+    if (forceEditMode && existingTriage) {
+      setIsEditing(true);
+    }
+  }, [forceEditMode, existingTriage]);
+
+  if (existingTriage && triageComplete && !isEditing && !forceEditMode) {
     return (
       <div className='p-4'>
         <TriageInfoDisplay
