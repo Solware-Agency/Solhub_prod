@@ -536,9 +536,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   {pdfStatusFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm rounded-full'>
                       PDF:{' '}
-                      {pdfStatusFilter === 'pendientes'
-                        ? 'Pendientes'
-                        : 'Faltantes'}
+                      {isSpt
+                        ? (pdfStatusFilter === 'faltantes' ? 'Generados' : 'Faltantes')
+                        : (pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes')
+                      }
                       <button
                         onClick={() => onPdfStatusFilterChange('all')}
                         className='ml-1 hover:text-emerald-600 dark:hover:text-emerald-200'
@@ -550,12 +551,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
                   {examTypeFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full'>
-                      Tipo:{' '}
-                      {examTypeFilter === 'biopsia'
-                        ? 'Biopsia'
-                        : examTypeFilter === 'citologia'
-                        ? 'Citología'
-                        : 'Inmunohistoquímica'}
+                      Tipo: {examTypeFilter}
                       <button
                         onClick={() => onExamTypeFilterChange('all')}
                         className='ml-1 hover:text-indigo-600 dark:hover:text-indigo-200'
