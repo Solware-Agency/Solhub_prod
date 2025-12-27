@@ -1044,25 +1044,27 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (pdfStatusFilter !== 'all') {
           const pdfReadyValue = case_.pdf_en_ready;
           
-          // Para SPT: faltantes=false (sin PDF), generados=true (con PDF)
+          // Para SPT: LÓGICA INVERTIDA (faltantes=true, generados=false)
           // Para otros labs: mantener lógica original (pendientes=false, faltantes=true)
           if (isSpt) {
             if (pdfStatusFilter === 'faltantes') {
-              // PDF faltantes = NO tiene PDF = pdf_en_ready es false
-              if (typeof pdfReadyValue === 'string') {
-                matchesPdfStatus = pdfReadyValue === 'FALSE';
-              } else if (typeof pdfReadyValue === 'boolean') {
-                matchesPdfStatus = pdfReadyValue === false;
-              } else {
-                matchesPdfStatus = false;
-              }
-            } else if (pdfStatusFilter === 'generados') {
-              // PDF generados = SÍ tiene PDF = pdf_en_ready es true
+              // PDF faltantes = EN SPT pdf_en_ready es TRUE (lógica invertida en BD)
               if (typeof pdfReadyValue === 'string') {
                 matchesPdfStatus = pdfReadyValue === 'TRUE';
               } else if (typeof pdfReadyValue === 'boolean') {
                 matchesPdfStatus = pdfReadyValue === true;
               } else {
+                // null o undefined = faltante
+                matchesPdfStatus = true;
+              }
+            } else if (pdfStatusFilter === 'generados') {
+              // PDF generados = EN SPT pdf_en_ready es FALSE (lógica invertida en BD)
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'FALSE' || pdfReadyValue === '';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === false;
+              } else {
+                // null o undefined = NO generado
                 matchesPdfStatus = false;
               }
             }
