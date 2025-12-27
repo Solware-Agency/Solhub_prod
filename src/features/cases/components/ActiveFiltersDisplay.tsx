@@ -138,8 +138,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 
         {pdfStatusFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm rounded-full'>
-            PDF:{' '}
-            {isSpt 
+            PDF: {isSpt 
               ? (pdfStatusFilter === 'generados' ? 'Generados' : 'Faltantes')
               : (pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes')
             }
