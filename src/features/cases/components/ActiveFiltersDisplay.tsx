@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 interface ActiveFiltersDisplayProps {
   // Filtros básicos
@@ -42,6 +43,9 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
   emailSentStatusFilter,
   // totalFilteredCases,
 }) => {
+  const { laboratory } = useLaboratory();
+  const isSpt = laboratory?.slug === 'spt';
+
   // Check if there are any active filters
   const hasActiveFilters =
     statusFilter !== 'all' ||
@@ -134,7 +138,10 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 
         {pdfStatusFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm rounded-full'>
-            PDF: {pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes'}
+            PDF: {isSpt 
+              ? (pdfStatusFilter === 'faltantes' ? 'Generados' : 'Faltantes')
+              : (pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes')
+            }
           </span>
         )}
 

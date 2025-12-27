@@ -3,6 +3,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
+  DialogDescription,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
@@ -200,6 +202,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           backdropFilter: 'blur(5px)',
         }}
       >
+        <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
+        <DialogDescription className="sr-only">
+          Configure los filtros para buscar casos específicos
+        </DialogDescription>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger
@@ -250,10 +256,17 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
-                  options={[
-                    { value: 'pendientes', label: 'PDF Pendientes' },
-                    { value: 'faltantes', label: 'PDF Faltantes' },
-                  ]}
+                  options={
+                    isSpt
+                      ? [
+                          { value: 'faltantes', label: 'PDF Generados' },
+                          { value: 'generados', label: 'PDF Faltantes' },
+                        ]
+                      : [
+                          { value: 'pendientes', label: 'PDF Pendientes' },
+                          { value: 'faltantes', label: 'PDF Faltantes' },
+                        ]
+                  }
                   value={pdfStatusFilter}
                   placeholder='Estado de PDF'
                   onChange={onPdfStatusFilterChange}
@@ -523,9 +536,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   {pdfStatusFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm rounded-full'>
                       PDF:{' '}
-                      {pdfStatusFilter === 'pendientes'
-                        ? 'Pendientes'
-                        : 'Faltantes'}
+                      {isSpt
+                        ? (pdfStatusFilter === 'faltantes' ? 'Generados' : 'Faltantes')
+                        : (pdfStatusFilter === 'pendientes' ? 'Pendientes' : 'Faltantes')
+                      }
                       <button
                         onClick={() => onPdfStatusFilterChange('all')}
                         className='ml-1 hover:text-emerald-600 dark:hover:text-emerald-200'
@@ -537,12 +551,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
                   {examTypeFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full'>
-                      Tipo:{' '}
-                      {examTypeFilter === 'biopsia'
-                        ? 'Biopsia'
-                        : examTypeFilter === 'citologia'
-                        ? 'Citología'
-                        : 'Inmunohistoquímica'}
+                      Tipo: {examTypeFilter}
                       <button
                         onClick={() => onExamTypeFilterChange('all')}
                         className='ml-1 hover:text-indigo-600 dark:hover:text-indigo-200'

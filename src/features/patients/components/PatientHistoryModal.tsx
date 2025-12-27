@@ -426,19 +426,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             throw new Error('PDF no disponible');
           }
 
-          // Crear mensaje personalizado con el nombre del laboratorio
-          const laboratoryName = laboratory?.name || 'nuestro laboratorio';
-          const emailSubject = `${laboratoryName} - Caso ${caseItem.code || 'N/A'} - ${patient.nombre}`;
-          const emailBody = `Hola ${patient.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${caseItem.code || 'N/A'}.\n\nSaludos cordiales.`;
-
-          // Usar la misma lógica que UnifiedCaseModal
-          const isDevelopment = import.meta.env.DEV;
-          const apiUrl = isDevelopment
-            ? 'http://localhost:3001/api/send-email'
-            : '/api/send-email';
-
-          // Enviar email
-          const response = await fetch(apiUrl, {
+          // Enviar email usando send-email.js
+          const response = await fetch('/api/send-email', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -449,8 +438,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               caseCode: caseItem.code || 'N/A',
               pdfUrl: caseItem.informepdf_url,
               laboratory_id: caseItem.laboratory_id || laboratory?.id,
-              subject: emailSubject,
-              message: emailBody,
             }),
           });
 
@@ -677,18 +664,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   try {
                                     setEmailProgress({ current: i + 1, total: approvedCases.length });
 
-                                    // Crear mensaje personalizado con el nombre del laboratorio
-                                    const laboratoryName = laboratory?.name || 'nuestro laboratorio';
-                                    const emailSubject = `${laboratoryName} - Caso ${caseItem.code || 'N/A'} - ${patient.nombre}`;
-                                    const emailBody = `Hola ${patient.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${caseItem.code || 'N/A'}.\n\nSaludos cordiales.`;
-
-                                    // Usar la misma lógica que UnifiedCaseModal
-                                    const isDevelopment = import.meta.env.DEV;
-                                    const apiUrl = isDevelopment
-                                      ? 'http://localhost:3001/api/send-email'
-                                      : '/api/send-email';
-
-                                    const response = await fetch(apiUrl, {
+                                    // Enviar email usando send-email.js
+                                    const response = await fetch('/api/send-email', {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
@@ -697,8 +674,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         caseCode: caseItem.code || 'N/A',
                                         pdfUrl: caseItem.informepdf_url,
                                         laboratory_id: caseItem.laboratory_id || laboratory?.id,
-                                        subject: emailSubject,
-                                        message: emailBody,
                                       }),
                                     });
 
