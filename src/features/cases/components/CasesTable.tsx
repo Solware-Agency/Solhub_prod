@@ -1044,24 +1044,24 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (pdfStatusFilter !== 'all') {
           const pdfReadyValue = case_.pdf_en_ready;
           
-          // Para SPT: invertir lógica (faltantes=true, generados=false)
+          // Para SPT: faltantes=false (sin PDF), generados=true (con PDF)
           // Para otros labs: mantener lógica original (pendientes=false, faltantes=true)
           if (isSpt) {
             if (pdfStatusFilter === 'faltantes') {
-              // PDF faltantes = NO tiene PDF = pdf_en_ready es true (lógica invertida en BD)
-              if (typeof pdfReadyValue === 'string') {
-                matchesPdfStatus = pdfReadyValue === 'TRUE';
-              } else if (typeof pdfReadyValue === 'boolean') {
-                matchesPdfStatus = pdfReadyValue === true;
-              } else {
-                matchesPdfStatus = false;
-              }
-            } else if (pdfStatusFilter === 'generados') {
-              // PDF generados = SÍ tiene PDF = pdf_en_ready es false (lógica invertida en BD)
+              // PDF faltantes = NO tiene PDF = pdf_en_ready es false
               if (typeof pdfReadyValue === 'string') {
                 matchesPdfStatus = pdfReadyValue === 'FALSE';
               } else if (typeof pdfReadyValue === 'boolean') {
                 matchesPdfStatus = pdfReadyValue === false;
+              } else {
+                matchesPdfStatus = false;
+              }
+            } else if (pdfStatusFilter === 'generados') {
+              // PDF generados = SÍ tiene PDF = pdf_en_ready es true
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'TRUE';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === true;
               } else {
                 matchesPdfStatus = false;
               }
