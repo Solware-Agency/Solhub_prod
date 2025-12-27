@@ -250,10 +250,17 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
-                  options={[
-                    { value: 'pendientes', label: 'PDF Pendientes' },
-                    { value: 'faltantes', label: 'PDF Faltantes' },
-                  ]}
+                  options={
+                    isSpt
+                      ? [
+                          { value: 'faltantes', label: 'PDF Faltantes' },
+                          { value: 'generados', label: 'PDF Generados' },
+                        ]
+                      : [
+                          { value: 'pendientes', label: 'PDF Pendientes' },
+                          { value: 'faltantes', label: 'PDF Faltantes' },
+                        ]
+                  }
                   value={pdfStatusFilter}
                   placeholder='Estado de PDF'
                   onChange={onPdfStatusFilterChange}

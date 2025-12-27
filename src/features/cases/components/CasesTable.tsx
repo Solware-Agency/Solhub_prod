@@ -1043,23 +1043,49 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         let matchesPdfStatus = true;
         if (pdfStatusFilter !== 'all') {
           const pdfReadyValue = case_.pdf_en_ready;
-          if (pdfStatusFilter === 'pendientes') {
-            // PDF pendientes = pdf_en_ready es false
-            if (typeof pdfReadyValue === 'string') {
-              matchesPdfStatus = pdfReadyValue === 'FALSE';
-            } else if (typeof pdfReadyValue === 'boolean') {
-              matchesPdfStatus = pdfReadyValue === false;
-            } else {
-              matchesPdfStatus = false;
+          
+          // Para SPT: usar lógica corregida (faltantes=false, generados=true)
+          // Para otros labs: mantener lógica original (pendientes=false, faltantes=true)
+          if (isSpt) {
+            if (pdfStatusFilter === 'faltantes') {
+              // PDF faltantes = pdf_en_ready es false (no generado)
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'FALSE';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === false;
+              } else {
+                matchesPdfStatus = false;
+              }
+            } else if (pdfStatusFilter === 'generados') {
+              // PDF generados = pdf_en_ready es true (ya generado)
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'TRUE';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === true;
+              } else {
+                matchesPdfStatus = false;
+              }
             }
-          } else if (pdfStatusFilter === 'faltantes') {
-            // PDF faltantes = pdf_en_ready es true
-            if (typeof pdfReadyValue === 'string') {
-              matchesPdfStatus = pdfReadyValue === 'TRUE';
-            } else if (typeof pdfReadyValue === 'boolean') {
-              matchesPdfStatus = pdfReadyValue === true;
-            } else {
-              matchesPdfStatus = false;
+          } else {
+            // Lógica original para otros labs
+            if (pdfStatusFilter === 'pendientes') {
+              // PDF pendientes = pdf_en_ready es false
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'FALSE';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === false;
+              } else {
+                matchesPdfStatus = false;
+              }
+            } else if (pdfStatusFilter === 'faltantes') {
+              // PDF faltantes = pdf_en_ready es true
+              if (typeof pdfReadyValue === 'string') {
+                matchesPdfStatus = pdfReadyValue === 'TRUE';
+              } else if (typeof pdfReadyValue === 'boolean') {
+                matchesPdfStatus = pdfReadyValue === true;
+              } else {
+                matchesPdfStatus = false;
+              }
             }
           }
         }
