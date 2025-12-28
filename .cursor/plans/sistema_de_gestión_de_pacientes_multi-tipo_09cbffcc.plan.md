@@ -1,95 +1,3 @@
----
-name: Sistema de Gestión de Pacientes Multi-Tipo
-overview: Implementar un sistema robusto de gestión de pacientes que soporte adultos, menores y animales, separando la identificación legal (cédula) del paciente como entidad, y estableciendo relaciones de responsabilidad entre responsables y dependientes.
-todos:
-  - id: create-migration
-    content: Crear migración SQL para nuevas tablas (identificaciones, responsabilidades) y modificar tabla patients
-    status: pending
-  - id: migrate-existing-data
-    content: "Crear script de migración de datos existentes: pacientes con cédula → adultos con identificación, pacientes sin cédula → menores"
-    status: pending
-    dependencies:
-      - create-migration
-  - id: update-types
-    content: Actualizar tipos TypeScript para nuevas tablas y campos modificados
-    status: pending
-    dependencies:
-      - create-migration
-  - id: create-identification-service
-    content: Crear servicio para gestionar identificaciones (crear, buscar, actualizar)
-    status: pending
-    dependencies:
-      - update-types
-  - id: create-responsibility-service
-    content: Crear servicio para gestionar responsabilidades (crear, buscar dependientes, validar)
-    status: pending
-    dependencies:
-      - update-types
-  - id: update-patient-service
-    content: Modificar patients-service.ts para usar identificaciones en lugar de cedula directa
-    status: pending
-    dependencies:
-      - create-identification-service
-  - id: update-registration-service
-    content: Modificar registration-service.ts para trabajar con nuevo sistema de identificaciones y responsabilidades
-    status: pending
-    dependencies:
-      - update-patient-service
-      - create-responsibility-service
-  - id: create-profile-selector
-    content: Crear componente PatientProfileSelector.tsx para mostrar responsable + perfiles asociados
-    status: pending
-    dependencies:
-      - update-patient-service
-  - id: create-relationship-manager
-    content: Crear componente PatientRelationshipManager.tsx para agregar nuevos menores/animales
-    status: pending
-    dependencies:
-      - create-responsibility-service
-  - id: update-patient-data-section
-    content: Modificar PatientDataSection.tsx para usar identificaciones y agregar campos tipo_paciente y fecha_nacimiento
-    status: pending
-    dependencies:
-      - update-registration-service
-  - id: update-autocomplete
-    content: Mejorar autocomplete para buscar por identificaciones y mostrar perfiles asociados
-    status: pending
-    dependencies:
-      - create-profile-selector
-  - id: update-patient-autofill
-    content: Actualizar usePatientAutofill.ts para trabajar con nuevo sistema
-    status: pending
-    dependencies:
-      - update-patient-service
-  - id: add-rls-policies
-    content: Crear RLS policies para nuevas tablas (identificaciones, responsabilidades) con filtrado por laboratory_id
-    status: pending
-    dependencies:
-      - create-migration
-  - id: create-validation-triggers
-    content: Crear triggers PostgreSQL para validar que menores/animales siempre tengan responsable (OBLIGATORIO) antes de crear caso
-    status: pending
-    dependencies:
-      - create-migration
-  - id: remove-sc-option
-    content: Eliminar opción "S/C" del formulario de registro de pacientes
-    status: pending
-    dependencies:
-      - update-patient-data-section
-  - id: test-migration
-    content: Probar migración de datos existentes y validar integridad
-    status: pending
-    dependencies:
-      - migrate-existing-data
-  - id: test-flows
-    content: Probar todos los flujos de usuario (recurrente, menor nuevo, responsable nuevo)
-    status: pending
-    dependencies:
-      - update-patient-data-section
-      - create-profile-selector
-      - create-relationship-manager
----
-
 # Plan de Implementación - Sistema de Gestión de Pacientes Multi-Tipo
 
 ## Objetivo
@@ -109,7 +17,7 @@ Implementar un sistema que permita gestionar pacientes adultos, menores de edad 
 
 Almacena documentos legales (cédulas, pasaportes) separados de los pacientes.
 
-```sql
+````sql
 CREATE TABLE identificaciones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   laboratory_id UUID NOT NULL REFERENCES laboratories(id),
@@ -169,23 +77,23 @@ CREATE INDEX idx_patients_fecha_nacimiento ON patients(fecha_nacimiento);
 
 1. **Pacientes con cédula (NOT NULL):**
 
-   - `tipo_paciente` = NULL (requiere clasificación manual posterior)
-   - Extraer tipo de documento (V, E, J, C) del formato actual de cédula (ej: "V-12345678" → tipo='V', numero='12345678')
-   - Crear registro en `identificaciones` con tipo_documento y número extraídos
-   - Mantener campo `cedula` temporalmente para compatibilidad
+            - `tipo_paciente` = NULL (requiere clasificación manual posterior)
+            - Extraer tipo de documento (V, E, J, C) del formato actual de cédula (ej: "V-12345678" → tipo='V', numero='12345678')
+            - Crear registro en `identificaciones` con tipo_documento y número extraídos
+            - Mantener campo `cedula` temporalmente para compatibilidad
 
 2. **Pacientes sin cédula (NULL):**
 
-   - `tipo_paciente` = 'menor' (según información del usuario: pacientes sin cédula son menores)
-   - No crear identificación (cedula = NULL es válido para menores)
-   - Mantener campo `cedula` como NULL
+            - `tipo_paciente` = 'menor' (según información del usuario: pacientes sin cédula son menores)
+            - No crear identificación (cedula = NULL es válido para menores)
+            - Mantener campo `cedula` como NULL
 
 3. **Compatibilidad temporal:**
 
-   - Mantener campo `cedula` en `patients` durante período de transición
-   - Crear función de migración que sincronice `cedula` → `identificaciones`
-   - Deprecar campo `cedula` gradualmente
-   - Eliminar opción "S/C" del formulario (los menores simplemente no tendrán identificación)
+            - Mantener campo `cedula` en `patients` durante período de transición
+            - Crear función de migración que sincronice `cedula` → `identificaciones`
+            - Deprecar campo `cedula` gradualmente
+            - Eliminar opción "S/C" del formulario (los menores simplemente no tendrán identificación)
 
 ## Implementación Frontend
 
@@ -193,48 +101,48 @@ CREATE INDEX idx_patients_fecha_nacimiento ON patients(fecha_nacimiento);
 
 1. **`PatientProfileSelector.tsx`**
 
-   - Componente de búsqueda que muestra responsable + perfiles asociados
-   - Permite seleccionar perfil antes de crear caso
-   - Muestra iconos diferenciados (👤 adulto, 👶 menor, 🐶 animal)
+            - Componente de búsqueda que muestra responsable + perfiles asociados
+            - Permite seleccionar perfil antes de crear caso
+            - Muestra iconos diferenciados (👤 adulto, 👶 menor, 🐶 animal)
 
 2. **`PatientRelationshipManager.tsx`**
 
-   - UI para agregar nuevos menores/animales a responsables existentes
-   - Wizard para registrar responsable nuevo + dependiente nuevo
+            - UI para agregar nuevos menores/animales a responsables existentes
+            - Wizard para registrar responsable nuevo + dependiente nuevo
 
 3. **`PatientSearchAutocomplete.tsx`**
 
-   - Búsqueda mejorada que busca por:
-     - Cédula del responsable
-     - Nombre del responsable
-     - Teléfono del responsable
-   - Muestra resultados agrupados por responsable con perfiles asociados
+            - Búsqueda mejorada que busca por:
+                    - Cédula del responsable
+                    - Nombre del responsable
+                    - Teléfono del responsable
+            - Muestra resultados agrupados por responsable con perfiles asociados
 
 ### Modificaciones a Componentes Existentes
 
 1. **`PatientDataSection.tsx`**
 
-   - Modificar para trabajar con `identificaciones` en lugar de `cedula` directa
-   - Eliminar opción "S/C" del selector de tipo de cédula
-   - Agregar selector de tipo de paciente (adulto/menor/animal) - puede ser NULL inicialmente
-   - Agregar campo de fecha de nacimiento (opcional, para cálculo automático de edad)
-   - Mantener campo edad manual como alternativa cuando no hay fecha de nacimiento
-   - Validar que menores/animales tengan responsable antes de permitir crear caso
+            - Modificar para trabajar con `identificaciones` en lugar de `cedula` directa
+            - Eliminar opción "S/C" del selector de tipo de cédula
+            - Agregar selector de tipo de paciente (adulto/menor/animal) - puede ser NULL inicialmente
+            - Agregar campo de fecha de nacimiento (opcional, para cálculo automático de edad)
+            - Mantener campo edad manual como alternativa cuando no hay fecha de nacimiento
+            - Validar que menores/animales tengan responsable antes de permitir crear caso
 
 2. **`registration-service.ts`**
 
-   - Modificar `registerMedicalCase` para:
-     - Buscar por identificaciones en lugar de `cedula` directa
-     - Crear identificaciones al registrar pacientes
-     - Manejar relaciones de responsabilidad
+            - Modificar `registerMedicalCase` para:
+                    - Buscar por identificaciones en lugar de `cedula` directa
+                    - Crear identificaciones al registrar pacientes
+                    - Manejar relaciones de responsabilidad
 
 3. **`patients-service.ts`**
 
-   - Nuevas funciones:
-     - `findPatientByIdentification(numero, tipo, laboratoryId)`
-     - `getPatientWithRelationships(patientId)`
-     - `createResponsibility(responsableId, dependienteId, tipo)`
-     - `getDependentsByResponsable(responsableId)`
+            - Nuevas funciones:
+                    - `findPatientByIdentification(numero, tipo, laboratoryId)`
+                    - `getPatientWithRelationships(patientId)`
+                    - `createResponsibility(responsableId, dependienteId, tipo)`
+                    - `getDependentsByResponsable(responsableId)`
 
 ## Flujos de Usuario
 
@@ -268,36 +176,36 @@ CREATE INDEX idx_patients_fecha_nacimiento ON patients(fecha_nacimiento);
 
 1. **Un menor o animal SIEMPRE debe tener responsable (OBLIGATORIO)**
 
-   - Validación en frontend y backend
-   - No permitir crear caso sin responsable asignado
-   - Trigger en PostgreSQL para validar esta regla
+            - Validación en frontend y backend
+            - No permitir crear caso sin responsable asignado
+            - Trigger en PostgreSQL para validar esta regla
 
 2. **No se inventan cédulas**
 
-   - Eliminar lógica de "cedula-1, cedula-2"
-   - Eliminar opción "S/C" del formulario
-   - Los menores simplemente no tendrán identificación (cedula = NULL es válido)
+            - Eliminar lógica de "cedula-1, cedula-2"
+            - Eliminar opción "S/C" del formulario
+            - Los menores simplemente no tendrán identificación (cedula = NULL es válido)
 
 3. **Tipo de paciente puede ser NULL inicialmente**
 
-   - Los pacientes existentes con cédula se migran con tipo_paciente = NULL
-   - Requiere clasificación manual posterior (adulto/menor/animal)
-   - Los pacientes sin cédula se marcan automáticamente como 'menor'
+            - Los pacientes existentes con cédula se migran con tipo_paciente = NULL
+            - Requiere clasificación manual posterior (adulto/menor/animal)
+            - Los pacientes sin cédula se marcan automáticamente como 'menor'
 
 4. **Edad: Fecha de nacimiento O edad manual**
 
-   - Permitir ambos métodos según disponibilidad de datos
-   - Si hay fecha_nacimiento, calcular edad automáticamente
-   - Si no hay fecha_nacimiento, usar campo edad manual
+            - Permitir ambos métodos según disponibilidad de datos
+            - Si hay fecha_nacimiento, calcular edad automáticamente
+            - Si no hay fecha_nacimiento, usar campo edad manual
 
 5. **Aislamiento multi-tenant**
 
-   - Todas las queries filtran por `laboratory_id`
-   - RLS policies en nuevas tablas
+            - Todas las queries filtran por `laboratory_id`
+            - RLS policies en nuevas tablas
 
 6. **Sin perfil seleccionado NO se puede crear caso**
 
-   - Validación obligatoria antes de submit
+            - Validación obligatoria antes de submit
 
 ## Archivos a Modificar
 
@@ -331,23 +239,23 @@ CREATE INDEX idx_patients_fecha_nacimiento ON patients(fecha_nacimiento);
 
 1. **Performance:**
 
-   - Índices en `identificaciones.numero` y `responsabilidades.paciente_id_responsable`
-   - Queries optimizadas con JOINs
+            - Índices en `identificaciones.numero` y `responsabilidades.paciente_id_responsable`
+            - Queries optimizadas con JOINs
 
 2. **Compatibilidad:**
 
-   - Mantener campo `cedula` durante período de transición
-   - Función de sincronización bidireccional temporal
+            - Mantener campo `cedula` durante período de transición
+            - Función de sincronización bidireccional temporal
 
 3. **Validaciones:**
 
-   - Trigger en PostgreSQL para validar relaciones
-   - Validaciones en frontend antes de submit
+            - Trigger en PostgreSQL para validar relaciones
+            - Validaciones en frontend antes de submit
 
 4. **RLS Policies:**
 
-   - Políticas para `identificaciones` y `responsabilidades`
-   - Filtrado automático por `laboratory_id`
+            - Políticas para `identificaciones` y `responsabilidades`
+            - Filtrado automático por `laboratory_id`
 
 ## Fases de Implementación
 
@@ -380,4 +288,6 @@ CREATE INDEX idx_patients_fecha_nacimiento ON patients(fecha_nacimiento);
 
 - Eliminar uso de campo `cedula` directo
 - Migrar completamente a `identificaciones`
-- Remover campo `cedula` en versión futura
+
+
+````
