@@ -38,12 +38,14 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   // Determinar qué acciones están disponibles basado en el rol y laboratorio
   const canShowGenerate = useMemo(() => {
     if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
-    return userRole === 'medico_tratante'; // Para SPT, solo medico_tratante
+    // Para SPT: medico_tratante, owner y prueba pueden generar
+    return userRole === 'medico_tratante' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
   const canShowTriaje = useMemo(() => {
     if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
-    return userRole === 'medico_tratante' || userRole === 'enfermero'; // Para SPT, medico_tratante y enfermero
+    // Para SPT: medico_tratante, enfermero, owner y prueba pueden hacer triaje
+    return userRole === 'medico_tratante' || userRole === 'enfermero' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
   // Contar cuántas acciones están disponibles
