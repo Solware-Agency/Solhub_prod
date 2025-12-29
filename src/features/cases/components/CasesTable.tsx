@@ -1774,6 +1774,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       onReactions={handleGenerateCase}
                       onTriaje={handleTriaje}
                       canRequest={canRequest}
+                      userRole={profile?.role}
                     />
                   ))}
                 </div>
