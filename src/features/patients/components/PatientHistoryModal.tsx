@@ -50,6 +50,7 @@ import type { Patient } from '@/services/supabase/patients/patients-service';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import SendEmailModal from '@features/cases/components/SendEmailModal';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -75,6 +76,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     current: 0,
     total: 0,
   });
+  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+  const [pendingEmailCases, setPendingEmailCases] = useState<MedicalCaseWithPatient[]>([]);
   const [activeTab, setActiveTab] = useState('cases');
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
@@ -397,6 +400,18 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       return;
     }
 
+    // Guardar los casos pendientes y abrir modal
+    setPendingEmailCases(casesToEmail);
+    setIsSendEmailModalOpen(true);
+  };
+
+  const handleConfirmSendMultipleEmails = async (emails: {
+    to: string;
+    cc: string[];
+    bcc: string[];
+  }) => {
+    const casesToEmail = pendingEmailCases;
+
     setIsSendingEmails(true);
     setEmailProgress({ current: 0, total: casesToEmail.length });
 
@@ -434,11 +449,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              patientEmail: patient.email,
-              patientName: patient.nombre,
+              patientEmail: emails.to,
+              patientName: patient?.nombre,
               caseCode: caseItem.code || 'N/A',
               pdfUrl: caseItem.informepdf_url,
               laboratory_id: caseItem.laboratory_id || laboratory?.id,
+              cc: emails.cc,
+              bcc: emails.bcc,
             }),
           });
 
@@ -461,12 +478,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       }
 
       // Mostrar resultado final
+      const recipientCount = 1 + emails.cc.length + emails.bcc.length;
       if (successCount > 0 && errorCount === 0) {
         toast({
           title: '✅ Emails enviados correctamente',
           description: `Se enviaron ${successCount} informe${
             successCount > 1 ? 's' : ''
-          } a ${patient.email}.`,
+          } a ${recipientCount} destinatario${recipientCount > 1 ? 's' : ''}.`,
         });
       } else if (successCount > 0 && errorCount > 0) {
         toast({
@@ -485,6 +503,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         });
       }
 
+      // Cerrar modal
+      setIsSendEmailModalOpen(false);
+      setPendingEmailCases([]);
+
       // Refrescar los datos
       refetch();
     } catch (error) {
@@ -500,6 +522,35 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       setEmailProgress({ current: 0, total: 0 });
       clearSelection();
     }
+  };
+
+  const handleSendAllEmails = () => {
+    // Obtener casos aprobados del paciente
+    const approvedCases = filteredCases?.filter(
+      (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
+    ) || [];
+
+    if (approvedCases.length === 0) {
+      toast({
+        title: '⚠️ Sin casos disponibles',
+        description: 'No hay casos aprobados con PDF disponible para enviar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!patient?.email) {
+      toast({
+        title: '⚠️ Sin email',
+        description: 'El paciente no tiene un email registrado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Guardar los casos pendientes y abrir modal
+    setPendingEmailCases(approvedCases);
+    setIsSendEmailModalOpen(true);
   };
 
   // Limpiar selección cuando se cierra el modal
@@ -632,90 +683,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
                         {patient.email && (
                           <button
-                            onClick={async () => {
-                              // Obtener casos aprobados del paciente
-                              const approvedCases = filteredCases?.filter(
-                                (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
-                              ) || [];
-
-                              if (approvedCases.length === 0) {
-                                toast({
-                                  title: '⚠️ Sin casos disponibles',
-                                  description: 'No hay casos aprobados con PDF disponible para enviar.',
-                                  variant: 'destructive',
-                                });
-                                return;
-                              }
-
-                              setIsSendingEmails(true);
-                              setEmailProgress({ current: 0, total: approvedCases.length });
-
-                              let successCount = 0;
-                              let errorCount = 0;
-
-                              try {
-                                toast({
-                                  title: '📧 Enviando emails...',
-                                  description: `Enviando ${approvedCases.length} informe${approvedCases.length > 1 ? 's' : ''}.`,
-                                });
-
-                                for (let i = 0; i < approvedCases.length; i++) {
-                                  const caseItem = approvedCases[i];
-                                  
-                                  try {
-                                    setEmailProgress({ current: i + 1, total: approvedCases.length });
-
-                                    // Enviar email usando send-email.js
-                                    const response = await fetch('/api/send-email', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        patientEmail: patient.email,
-                                        patientName: patient.nombre,
-                                        caseCode: caseItem.code || 'N/A',
-                                        pdfUrl: caseItem.informepdf_url,
-                                        laboratory_id: caseItem.laboratory_id || laboratory?.id,
-                                      }),
-                                    });
-
-                                    if (!response.ok) throw new Error('Error al enviar email');
-
-                                    await supabase
-                                      .from('medical_records_clean')
-                                      .update({ email_sent: true })
-                                      .eq('id', caseItem.id);
-
-                                    successCount++;
-                                  } catch (error) {
-                                    errorCount++;
-                                  }
-                                }
-
-                                if (successCount > 0 && errorCount === 0) {
-                                  toast({
-                                    title: '✅ Emails enviados',
-                                    description: `Se enviaron ${successCount} informe${successCount > 1 ? 's' : ''} a ${patient.email}.`,
-                                  });
-                                } else if (successCount > 0) {
-                                  toast({
-                                    title: '⚠️ Emails enviados parcialmente',
-                                    description: `${successCount} exitosos, ${errorCount} fallidos.`,
-                                    variant: 'destructive',
-                                  });
-                                }
-
-                                refetch();
-                              } catch (error) {
-                                toast({
-                                  title: '❌ Error',
-                                  description: 'No se pudieron enviar los emails.',
-                                  variant: 'destructive',
-                                });
-                              } finally {
-                                setIsSendingEmails(false);
-                                setEmailProgress({ current: 0, total: 0 });
-                              }
-                            }}
+                            onClick={handleSendAllEmails}
                             disabled={isSendingEmails}
                             className='flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 cursor-pointer group w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed'
                             title='Enviar todos los informes por correo'
@@ -1214,6 +1182,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             </DialogContent>
           </Dialog>
         </>
+      )}
+
+      {/* Send Email Modal */}
+      {patient && (
+        <SendEmailModal
+          isOpen={isSendEmailModalOpen}
+          onClose={() => {
+            setIsSendEmailModalOpen(false);
+            setPendingEmailCases([]);
+          }}
+          onSend={handleConfirmSendMultipleEmails}
+          primaryEmail={patient.email || ''}
+          patientName={patient.nombre || ''}
+          caseCode={pendingEmailCases.length > 1 
+            ? `${pendingEmailCases.length} casos` 
+            : pendingEmailCases[0]?.code || ''}
+          isSending={isSendingEmails}
+        />
       )}
     </AnimatePresence>
   );

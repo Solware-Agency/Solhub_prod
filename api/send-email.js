@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { patientEmail, patientName, caseCode, pdfUrl, laboratory_id, subject, message } = req.body;
+    const { patientEmail, patientName, caseCode, pdfUrl, laboratory_id, subject, message, cc, bcc } = req.body;
 
     console.log("📧 Datos recibidos:", {
       patientEmail,
@@ -21,6 +21,8 @@ export default async function handler(req, res) {
       caseCode,
       pdfUrl: pdfUrl ? "URL presente" : "URL faltante",
       laboratory_id: laboratory_id || null,
+      cc: cc || [],
+      bcc: bcc || [],
     });
 
     // Validar datos requeridos
@@ -188,6 +190,8 @@ export default async function handler(req, res) {
     const emailData = {
       from: `${labName || process.env.RESEND_FROM_NAME || 'Solware Agency'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: [patientEmail],
+      ...(cc && cc.length > 0 && { cc }),
+      ...(bcc && bcc.length > 0 && { bcc }),
       subject: resolvedSubject,
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

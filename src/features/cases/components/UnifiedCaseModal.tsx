@@ -64,6 +64,7 @@ import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
+import SendEmailModal from './SendEmailModal';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -211,6 +212,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false)
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+    const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
     
     // Image URL state for imagenologia role
     const [imageUrl, setImageUrl] = useState('');
@@ -1046,14 +1048,25 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
+      // Abrir modal de envío de email
+      setIsSendEmailModalOpen(true);
+    };
+
+    const handleConfirmSendEmail = async (emails: {
+      to: string;
+      cc: string[];
+      bcc: string[];
+    }) => {
+      const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
+
       setIsSaving(true);
 
       try {
         // Crear el mensaje personalizado con el nombre del laboratorio
         const laboratoryName = laboratory?.name || 'nuestro laboratorio';
         // Asunto: anteponer el nombre del laboratorio
-        const emailSubject = `${laboratoryName} - Caso ${case_.code || case_.id} - ${case_.nombre}`;
-        const emailBody = `Hola ${case_.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_.code || 'N/A'}.\n\nSaludos cordiales.`;
+        const emailSubject = `${laboratoryName} - Caso ${case_?.code || case_?.id} - ${case_?.nombre}`;
+        const emailBody = `Hola ${case_?.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
         
         // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
         const isDevelopment = import.meta.env.DEV;
@@ -1067,13 +1080,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            patientEmail: case_.patient_email,
-            patientName: case_.nombre,
-            caseCode: case_.code || case_.id,
-            pdfUrl: pdfUrl, // Usar la URL determinada anteriormente (informe_qr o attachment_url)
-            laboratory_id: case_.laboratory_id || laboratory?.id,
+            patientEmail: emails.to,
+            patientName: case_?.nombre,
+            caseCode: case_?.code || case_?.id,
+            pdfUrl: pdfUrl,
+            laboratory_id: case_?.laboratory_id || laboratory?.id,
             subject: emailSubject,
             message: emailBody,
+            cc: emails.cc,
+            bcc: emails.bcc,
           }),
         });
 
@@ -1107,11 +1122,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           }
         }
 
+        const recipientCount = 1 + emails.cc.length + emails.bcc.length;
         toast({
           title: '✅ Correo enviado',
-          description: `Se ha enviado el informe al correo ${case_.patient_email}`,
+          description: `Se ha enviado el informe a ${recipientCount} destinatario${recipientCount > 1 ? 's' : ''}`,
           className: 'bg-green-100 border-green-400 text-green-800',
         });
+
+        // Cerrar modal
+        setIsSendEmailModalOpen(false);
 
         // Refrescar el caso para mostrar el estado actualizado
         if (onSave) {
@@ -2639,6 +2658,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         )}
 
         {/* Add Payment Modal removed - not needed in new structure */}
+
+        {/* Send Email Modal */}
+        {case_ && (
+          <SendEmailModal
+            isOpen={isSendEmailModalOpen}
+            onClose={() => setIsSendEmailModalOpen(false)}
+            onSend={handleConfirmSendEmail}
+            primaryEmail={case_.patient_email || ''}
+            patientName={case_.nombre || ''}
+            caseCode={case_.code || case_.id || ''}
+            isSending={isSaving}
+          />
+        )}
       </>
     );
 
