@@ -1835,6 +1835,43 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
+                      {/* Tipo de Consulta - Solo para SPT */}
+                      {moduleConfig?.fields?.consulta?.enabled && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Tipo de consulta:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <AutocompleteInput
+                                id='consulta-input'
+                                name='consulta'
+                                fieldName='consulta'
+                                placeholder='Ej: Cardiología, Medicina General'
+                                value={
+                                  editedCase.consulta ||
+                                  currentCase.consulta ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  const { value } = e.target;
+                                  if (
+                                    /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)
+                                  ) {
+                                    handleInputChange('consulta', value);
+                                  }
+                                }}
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {currentCase.consulta || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {/* Procedencia - Autocompletado - Solo si está habilitado */}
                       {moduleConfig?.fields?.procedencia?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
