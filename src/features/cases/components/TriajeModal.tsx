@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Edit, Activity } from 'lucide-react';
@@ -10,6 +10,74 @@ import { useQuery } from '@tanstack/react-query';
 import { getTriageByCase } from '@/services/supabase/triage/triage-service';
 import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
+
+// Error Boundary para capturar errores en el formulario
+class TriajeFormErrorBoundary extends Component<
+  { children: ReactNode; onClose: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error en TriajeModalForm:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className='p-6 text-center'>
+          <div className='text-red-500 mb-4'>
+            <svg
+              className='w-16 h-16 mx-auto'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+              />
+            </svg>
+          </div>
+          <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>
+            Error al cargar el formulario
+          </h3>
+          <p className='text-gray-600 dark:text-gray-400 mb-4'>
+            {this.state.error?.message || 'Hubo un error inesperado al cargar el formulario de triaje.'}
+          </p>
+          <div className='flex gap-2 justify-center'>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
+            >
+              Recargar página
+            </button>
+            <button
+              onClick={this.props.onClose}
+              className='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600'
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 interface TriajeModalProps {
   case_: MedicalCaseWithPatient | null;
@@ -26,6 +94,16 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   onSave,
   isFullscreen = false,
 }) => {
+  const [error, setError] = useState<string | null>(null);
+
+  // Validar que document.body existe antes de usar hooks
+  React.useEffect(() => {
+    if (!document.body) {
+      setError('Error: document.body no está disponible');
+      return;
+    }
+  }, []);
+
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -47,20 +125,28 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     ].includes(profile.role);
 
   // Query para verificar si existe triaje
-  const { data: existingTriage } = useQuery({
+  const { data: existingTriage, error: queryError } = useQuery({
     queryKey: ['triage-by-case', case_?.id],
     queryFn: async () => {
       if (!case_?.id) return null;
-      return await getTriageByCase(case_.id);
+      try {
+        return await getTriageByCase(case_.id);
+      } catch (err) {
+        console.error('Error obteniendo triaje:', err);
+        setError('Error al cargar el triaje. Por favor, intenta de nuevo.');
+        return null;
+      }
     },
     enabled: !!case_?.id && isOpen,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
   });
 
   // Reset forceEditMode when modal closes
   React.useEffect(() => {
     if (!isOpen) {
       setForceEditMode(false);
+      setError(null);
     }
   }, [isOpen]);
 
@@ -68,8 +154,37 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     return null;
   }
 
+  // Si hay un error crítico, mostrar mensaje de error
+  if (error || queryError) {
+    return ReactDOM.createPortal(
+      <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
+        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+          <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
+            Error
+          </h3>
+          <p className='text-gray-600 dark:text-gray-400 mb-4'>
+            {error || 'Error al cargar el triaje. Por favor, intenta de nuevo.'}
+          </p>
+          <button
+            onClick={onClose}
+            className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  // Verificar que document.body existe antes de crear el portal
+  if (typeof document === 'undefined' || !document.body) {
+    console.error('Error: document.body no está disponible');
+    return null;
+  }
+
   const modalContent = (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
         <>
           {/* Overlay */}
@@ -111,10 +226,10 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                 <div className='flex items-center gap-4 flex-shrink-0'>
                   <div className='text-right'>
                     <p className='text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100'>
-                      {case_.nombre}
+                      {case_.nombre || 'Sin nombre'}
                     </p>
                     <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5'>
-                      {case_.cedula}
+                      {case_.cedula || 'Sin cédula'}
                     </p>
                   </div>
                   {existingTriage && canEditTriaje && !forceEditMode && (
@@ -139,43 +254,45 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
 
               {/* Content - Scrollable */}
               <div className='flex-1 overflow-y-auto'>
-                {canEditTriaje ? (
-                  <TriajeModalForm
-                    case_={case_}
-                    onClose={onClose}
-                    onSave={() => {
-                      setForceEditMode(false);
-                      onSave?.();
-                    }}
-                    showOnlyVitalSigns={isEnfermero}
-                    userRole={profile?.role}
-                    forceEditMode={forceEditMode}
-                  />
-                ) : (
-                  <div className='p-6 text-center'>
-                    <div className='text-red-500 mb-4'>
-                      <svg
-                        className='w-16 h-16 mx-auto'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-                        />
-                      </svg>
+                <TriajeFormErrorBoundary onClose={onClose}>
+                  {canEditTriaje ? (
+                    <TriajeModalForm
+                      case_={case_}
+                      onClose={onClose}
+                      onSave={() => {
+                        setForceEditMode(false);
+                        onSave?.();
+                      }}
+                      showOnlyVitalSigns={isEnfermero}
+                      userRole={profile?.role}
+                      forceEditMode={forceEditMode}
+                    />
+                  ) : (
+                    <div className='p-6 text-center'>
+                      <div className='text-red-500 mb-4'>
+                        <svg
+                          className='w-16 h-16 mx-auto'
+                          fill='none'
+                          stroke='currentColor'
+                          viewBox='0 0 24 24'
+                        >
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+                          />
+                        </svg>
+                      </div>
+                      <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>
+                        Sin permisos
+                      </h3>
+                      <p className='text-gray-600 dark:text-gray-400'>
+                        No tienes permisos para editar el triaje.
+                      </p>
                     </div>
-                    <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>
-                      Sin permisos
-                    </h3>
-                    <p className='text-gray-600 dark:text-gray-400'>
-                      No tienes permisos para editar el triaje.
-                    </p>
-                  </div>
-                )}
+                  )}
+                </TriajeFormErrorBoundary>
               </div>
             </div>
           </motion.div>
@@ -184,7 +301,30 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     </AnimatePresence>
   );
 
-  return ReactDOM.createPortal(modalContent, document.body);
+  try {
+    return ReactDOM.createPortal(modalContent, document.body);
+  } catch (err) {
+    console.error('Error creando portal del modal:', err);
+    // Fallback: renderizar sin portal si hay error
+    return (
+      <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
+        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+          <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
+            Error
+          </h3>
+          <p className='text-gray-600 dark:text-gray-400 mb-4'>
+            Error al mostrar el modal. Por favor, recarga la página.
+          </p>
+          <button
+            onClick={onClose}
+            className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default TriajeModal;

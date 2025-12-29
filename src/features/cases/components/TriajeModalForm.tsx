@@ -84,21 +84,62 @@ const TriageInfoDisplay: React.FC<{
   onEdit?: () => void;
   canEdit?: boolean;
 }> = ({ record, onEdit, canEdit = false }) => {
+  // Validar que el record existe
+  if (!record) {
+    return (
+      <div className='p-4 sm:p-6'>
+        <p className='text-sm text-gray-500 dark:text-gray-400'>
+          No hay información de triaje disponible.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className='p-4 sm:p-6 space-y-6'>
       {/* Header con fecha */}
       <div className='flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-gray-700'>
         <div className='flex items-center gap-2'>
           <Clock className='h-5 w-5 text-primary' />
-          <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-            Triaje registrado el{' '}
-            {format(new Date(record.measurement_date), 'dd/MM/yyyy', {
-              locale: es,
-            })}
-          </span>
-          <span className='text-xs text-gray-500 dark:text-gray-400'>
-            {format(new Date(record.measurement_date), 'HH:mm', { locale: es })}
-          </span>
+          {(() => {
+            if (!record.measurement_date) {
+              return (
+                <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                  Triaje registrado
+                </span>
+              );
+            }
+            try {
+              const date = new Date(record.measurement_date);
+              if (isNaN(date.getTime())) {
+                return (
+                  <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                    Triaje registrado
+                  </span>
+                );
+              }
+              return (
+                <>
+                  <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                    Triaje registrado el{' '}
+                    {format(date, 'dd/MM/yyyy', {
+                      locale: es,
+                    })}
+                  </span>
+                  <span className='text-xs text-gray-500 dark:text-gray-400'>
+                    {format(date, 'HH:mm', { locale: es })}
+                  </span>
+                </>
+              );
+            } catch (error) {
+              console.error('Error formateando fecha de triaje:', error);
+              return (
+                <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                  Triaje registrado
+                </span>
+              );
+            }
+          })()}
         </div>
         {canEdit && onEdit && (
           <Button
@@ -541,6 +582,69 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     }
   }, [existingTriage, isEditing, isMedico, isEnfermero]);
 
+  // Función para determinar si el triaje está completo
+  const isTriageComplete = (triage: TriageRecord | null): boolean => {
+    if (!triage) return false;
+
+    // Para enfermero: solo necesita signos vitales
+    if (isEnfermero) {
+      return !!(
+        triage.heart_rate ||
+        triage.respiratory_rate ||
+        triage.oxygen_saturation ||
+        triage.temperature_celsius ||
+        triage.blood_pressure ||
+        triage.height_cm ||
+        triage.weight_kg
+      );
+    }
+
+    // Para médico: necesita signos vitales + datos clínicos
+    if (isMedico) {
+      const hasVitalSigns = !!(
+        triage.heart_rate ||
+        triage.respiratory_rate ||
+        triage.oxygen_saturation ||
+        triage.temperature_celsius ||
+        triage.blood_pressure ||
+        triage.height_cm ||
+        triage.weight_kg
+      );
+
+      const hasClinicalData = !!(
+        triage.reason ||
+        triage.personal_background ||
+        triage.family_history ||
+        triage.examen_fisico ||
+        triage.psychobiological_habits ||
+        triage.tabaco !== null ||
+        triage.cafe !== null ||
+        triage.alcohol
+      );
+
+      return hasVitalSigns && hasClinicalData;
+    }
+
+    // Para otros usuarios: necesita datos clínicos
+    return !!(
+      triage.reason ||
+      triage.personal_background ||
+      triage.family_history ||
+      triage.examen_fisico
+    );
+  };
+
+  // Si el triaje está completo y no estamos editando, mostrar vista
+  const triageComplete = isTriageComplete(existingTriage ?? null);
+  const canEditTriage = (isEnfermero || isMedico) && userRole !== 'employee';
+
+  // Si forceEditMode está activo, forzar el modo de edición
+  useEffect(() => {
+    if (forceEditMode && existingTriage) {
+      setIsEditing(true);
+    }
+  }, [forceEditMode, existingTriage]);
+
   const handleInputChange = (
     field: keyof TriajeFormData,
     value: string | HabitLevel,
@@ -776,6 +880,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const inputStyles =
     'transition-transform duration-300 focus:border-primary focus:ring-primary';
 
+  // Early returns DESPUÉS de todos los hooks
   if (!case_) {
     return null;
   }
@@ -793,69 +898,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       </div>
     );
   }
-
-  // Función para determinar si el triaje está completo
-  const isTriageComplete = (triage: TriageRecord | null): boolean => {
-    if (!triage) return false;
-
-    // Para enfermero: solo necesita signos vitales
-    if (isEnfermero) {
-      return !!(
-        triage.heart_rate ||
-        triage.respiratory_rate ||
-        triage.oxygen_saturation ||
-        triage.temperature_celsius ||
-        triage.blood_pressure ||
-        triage.height_cm ||
-        triage.weight_kg
-      );
-    }
-
-    // Para médico: necesita signos vitales + datos clínicos
-    if (isMedico) {
-      const hasVitalSigns = !!(
-        triage.heart_rate ||
-        triage.respiratory_rate ||
-        triage.oxygen_saturation ||
-        triage.temperature_celsius ||
-        triage.blood_pressure ||
-        triage.height_cm ||
-        triage.weight_kg
-      );
-
-      const hasClinicalData = !!(
-        triage.reason ||
-        triage.personal_background ||
-        triage.family_history ||
-        triage.examen_fisico ||
-        triage.psychobiological_habits ||
-        triage.tabaco !== null ||
-        triage.cafe !== null ||
-        triage.alcohol
-      );
-
-      return hasVitalSigns && hasClinicalData;
-    }
-
-    // Para otros usuarios: necesita datos clínicos
-    return !!(
-      triage.reason ||
-      triage.personal_background ||
-      triage.family_history ||
-      triage.examen_fisico
-    );
-  };
-
-  // Si el triaje está completo y no estamos editando, mostrar vista
-  const triageComplete = isTriageComplete(existingTriage ?? null);
-  const canEditTriage = (isEnfermero || isMedico) && userRole !== 'employee';
-
-  // Si forceEditMode está activo, forzar el modo de edición
-  React.useEffect(() => {
-    if (forceEditMode && existingTriage) {
-      setIsEditing(true);
-    }
-  }, [forceEditMode, existingTriage]);
 
   if (existingTriage && triageComplete && !isEditing && !forceEditMode) {
     return (
