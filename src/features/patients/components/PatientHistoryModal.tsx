@@ -86,6 +86,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
   const isImagenologia = profile?.role === 'imagenologia';
+  const isSpt = laboratory?.slug === 'spt';
 
   const editPatient = () => {
     setIsEditing(true);
@@ -1024,34 +1025,43 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           </div>
                                         </div>
 
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Monto Total
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {formatCurrency(
-                                              caseItem.total_amount,
-                                            )}
-                                          </p>
-                                        </div>
+                                        {/* Ocultar Monto Total para SPT */}
+                                        {!isSpt && (
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                              Monto Total
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {formatCurrency(
+                                                caseItem.total_amount,
+                                              )}
+                                            </p>
+                                          </div>
+                                        )}
 
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Tipo de Muestra
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.sample_type}
-                                          </p>
-                                        </div>
+                                        {/* Ocultar Tipo de Muestra para SPT */}
+                                        {!isSpt && (
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                              Tipo de Muestra
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {caseItem.sample_type}
+                                            </p>
+                                          </div>
+                                        )}
 
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Procedencia
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.origin}
-                                          </p>
-                                        </div>
+                                        {/* Ocultar Procedencia para SPT */}
+                                        {!isSpt && (
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                              Procedencia
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {caseItem.origin}
+                                            </p>
+                                          </div>
+                                        )}
 
                                         <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
                                           <Button
