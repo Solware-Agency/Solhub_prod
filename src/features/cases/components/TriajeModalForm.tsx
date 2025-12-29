@@ -662,6 +662,83 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     handleInputChange(field, numericValue);
   };
 
+  // Función para validar que el formulario tenga datos antes de guardar
+  const validateFormData = (): { isValid: boolean; errorMessage: string } => {
+    // Helper para verificar si un campo tiene valor real (no vacío ni solo espacios)
+    const hasValue = (value: string | HabitLevel | undefined | null): boolean => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string') {
+        return value.trim().length > 0;
+      }
+      // Para otros tipos (como HabitLevel), verificar si tiene valor
+      return !!value;
+    };
+
+    // Verificar si hay al menos un signo vital con valor real
+    const hasVitalSigns =
+      hasValue(formData.frecuenciaCardiaca) ||
+      hasValue(formData.frecuenciaRespiratoria) ||
+      hasValue(formData.saturacionOxigeno) ||
+      hasValue(formData.temperatura) ||
+      hasValue(formData.presionArterial) ||
+      hasValue(formData.talla) ||
+      hasValue(formData.peso);
+
+    // Si es enfermero, solo necesita signos vitales
+    if (isEnfermero) {
+      if (!hasVitalSigns) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Debe ingresar al menos un signo vital para poder guardar.',
+        };
+      }
+      return { isValid: true, errorMessage: '' };
+    }
+
+    // Si es médico, necesita signos vitales Y datos clínicos
+    if (isMedico) {
+      const hasClinicalData =
+        hasValue(formData.motivoConsulta) ||
+        hasValue(formData.antecedentesPersonales) ||
+        hasValue(formData.antecedentesFamiliares) ||
+        hasValue(formData.habitosPsicobiologicos) ||
+        hasValue(formData.examenFisico) ||
+        hasValue(formData.tabaco) ||
+        hasValue(formData.cafe) ||
+        hasValue(formData.alcohol);
+
+      if (!hasVitalSigns && !hasClinicalData) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Debe ingresar al menos un signo vital y un dato clínico para poder guardar.',
+        };
+      }
+
+      if (!hasVitalSigns) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Debe ingresar al menos un signo vital para poder guardar.',
+        };
+      }
+
+      if (!hasClinicalData) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Debe ingresar al menos un dato clínico (motivo de consulta, antecedentes, examen físico, etc.) para poder guardar.',
+        };
+      }
+
+      return { isValid: true, errorMessage: '' };
+    }
+
+    // Para otros roles, validación básica
+    return { isValid: true, errorMessage: '' };
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -676,6 +753,64 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     if (!case_.patient_id) {
       setError('El caso no tiene un paciente asociado.');
       return;
+    }
+
+    // Validar que el formulario tenga datos antes de guardar
+    const validation = validateFormData();
+    if (!validation.isValid) {
+      setError(validation.errorMessage);
+      toast({
+        title: '⚠️ Formulario incompleto',
+        description: validation.errorMessage,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validación adicional: Si estamos editando un triaje existente, 
+    // verificar que no se esté intentando guardar todo vacío
+    if (existingTriage) {
+      // Helper para verificar si un campo tiene valor real
+      const hasRealValue = (value: string | HabitLevel | undefined | null): boolean => {
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string') {
+          return value.trim().length > 0;
+        }
+        return !!value;
+      };
+
+      // Verificar que al menos haya algún dato válido en el formulario
+      const hasAnyData =
+        hasRealValue(formData.frecuenciaCardiaca) ||
+        hasRealValue(formData.frecuenciaRespiratoria) ||
+        hasRealValue(formData.saturacionOxigeno) ||
+        hasRealValue(formData.temperatura) ||
+        hasRealValue(formData.presionArterial) ||
+        hasRealValue(formData.talla) ||
+        hasRealValue(formData.peso) ||
+        hasRealValue(formData.motivoConsulta) ||
+        hasRealValue(formData.antecedentesPersonales) ||
+        hasRealValue(formData.antecedentesFamiliares) ||
+        hasRealValue(formData.habitosPsicobiologicos) ||
+        hasRealValue(formData.examenFisico) ||
+        hasRealValue(formData.tabaco) ||
+        hasRealValue(formData.cafe) ||
+        hasRealValue(formData.alcohol) ||
+        hasRealValue(formData.comentario);
+
+      if (!hasAnyData) {
+        setError(
+          'No puede guardar un triaje completamente vacío. Debe ingresar al menos un dato.',
+        );
+        toast({
+          title: '⚠️ Formulario vacío',
+          description:
+            'No puede guardar un triaje completamente vacío. Debe ingresar al menos un dato.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     try {

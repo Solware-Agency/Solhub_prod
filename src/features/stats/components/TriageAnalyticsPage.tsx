@@ -6,10 +6,13 @@ import { getTriageStats, getTriageTrends } from '../services/triage-stats-servic
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import TriageDetailPanel, { type TriageStatType } from '@shared/components/ui/triage-detail-panel'
 
 export const TriageAnalyticsPage: React.FC = () => {
 	const { profile } = useUserProfile()
 	const [days, setDays] = useState<number>(30)
+	const [selectedStat, setSelectedStat] = useState<TriageStatType | null>(null)
+	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 
 	// Type assertion para laboratory_id ya que no está en la interfaz generada
 	const laboratoryId = (profile as any)?.laboratory_id as string | undefined
@@ -66,7 +69,18 @@ export const TriageAnalyticsPage: React.FC = () => {
 		return <TrendingDown className='h-4 w-4 text-red-500' />
 	}
 
+	const handleCardClick = (statType: TriageStatType) => {
+		setSelectedStat(statType)
+		setIsDetailPanelOpen(true)
+	}
+
+	const handleDetailPanelClose = () => {
+		setIsDetailPanelOpen(false)
+		setSelectedStat(null)
+	}
+
 	return (
+		<>
 		<div className='container mx-auto p-6 space-y-6'>
 			{/* Header */}
 			<div className='flex items-center justify-between'>
@@ -88,7 +102,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 			</div>
 
 			{/* Total de triajes */}
-			<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+			<Card 
+				className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+				onClick={() => handleCardClick('totalTriages')}
+			>
 				<CardHeader className='pb-3'>
 					<CardTitle className='text-sm font-medium flex items-center gap-2'>
 						<Users className='h-4 w-4' />
@@ -104,7 +121,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 			{/* Promedios de signos vitales con gráficas */}
 			<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
 				{/* Frecuencia cardíaca */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('heartRate')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center justify-between'>
 							<span className='flex items-center gap-2'>
@@ -146,7 +166,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Card>
 
 				{/* Frecuencia respiratoria */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('respiratoryRate')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center justify-between'>
 							<span className='flex items-center gap-2'>
@@ -188,7 +211,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Card>
 
 				{/* Saturación de oxígeno */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('oxygenSaturation')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center justify-between'>
 							<span className='flex items-center gap-2'>
@@ -230,7 +256,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Card>
 
 				{/* Temperatura */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('temperature')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center justify-between'>
 							<span className='flex items-center gap-2'>
@@ -272,7 +301,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Card>
 
 				{/* IMC */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('bmi')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center gap-2'>
 							<Activity className='h-4 w-4 text-green-500' />
@@ -310,7 +342,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Card>
 
 				{/* Presión arterial */}
-				<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('bloodPressure')}
+				>
 					<CardHeader className='pb-3'>
 						<CardTitle className='text-sm font-medium flex items-center gap-2'>
 							<Activity className='h-4 w-4 text-red-500' />
@@ -353,7 +388,10 @@ export const TriageAnalyticsPage: React.FC = () => {
 				{(Object.keys(stats.habits.tabaco).length > 0 ||
 					Object.keys(stats.habits.cafe).length > 0 ||
 					Object.keys(stats.habits.alcohol).length > 0) && (
-					<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
+					<Card 
+						className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+						onClick={() => handleCardClick('habits')}
+					>
 						<CardHeader className='pb-3'>
 							<CardTitle className='text-sm font-medium flex items-center gap-2'>
 								<Activity className='h-4 w-4 text-purple-500' />
@@ -509,5 +547,19 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</CardContent>
 			</Card>
 		</div>
+
+		{/* Modal de detalles */}
+		{selectedStat && (
+			<TriageDetailPanel
+				isOpen={isDetailPanelOpen}
+				onClose={handleDetailPanelClose}
+				statType={selectedStat}
+				stats={stats}
+				trends={trends}
+				days={days}
+				isLoading={loadingStats || loadingTrends}
+			/>
+		)}
+		</>
 	)
 }

@@ -51,6 +51,7 @@ export interface TriageTrend {
 	avgRespiratoryRate: number | null
 	avgOxygenSaturation: number | null
 	avgTemperature: number | null
+	avgSystolicBP: number | null
 	count: number
 }
 
@@ -309,7 +310,7 @@ export async function getTriageTrends(
 
 		const { data: triages, error } = await (supabase as any)
 			.from('triaje_records')
-			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, measurement_date')
+			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, blood_pressure, measurement_date')
 			.eq('laboratory_id', laboratoryId)
 			.gte('measurement_date', startDate.toISOString())
 			.lte('measurement_date', endDate.toISOString())
@@ -334,6 +335,7 @@ export async function getTriageTrends(
 					avgRespiratoryRate: null,
 					avgOxygenSaturation: null,
 					avgTemperature: null,
+					avgSystolicBP: null,
 					count: 0,
 				}
 			}
@@ -353,16 +355,35 @@ export async function getTriageTrends(
 			if (t.temperature_celsius !== null) {
 				day.avgTemperature = (day.avgTemperature || 0) + t.temperature_celsius
 			}
+			if (t.blood_pressure !== null) {
+				day.avgSystolicBP = (day.avgSystolicBP || 0) + t.blood_pressure
+			}
 		})
 
-		// Calcular promedios
-		const trends = Object.values(groupedByDay).map((day) => ({
-			...day,
-			avgHeartRate: day.avgHeartRate ? day.avgHeartRate / day.count : null,
-			avgRespiratoryRate: day.avgRespiratoryRate ? day.avgRespiratoryRate / day.count : null,
-			avgOxygenSaturation: day.avgOxygenSaturation ? day.avgOxygenSaturation / day.count : null,
-			avgTemperature: day.avgTemperature ? day.avgTemperature / day.count : null,
-		}))
+		// Calcular promedios - necesitamos contar cuántos valores no nulos hay por día
+		const trends = Object.values(groupedByDay).map((day) => {
+			// Filtrar registros del día actual
+			const dayRecords = records.filter(r => {
+				const rDate = new Date(r.measurement_date).toISOString().split('T')[0]
+				return rDate === day.date
+			})
+
+			// Contar valores no nulos para cada métrica
+			const heartRateValues = dayRecords.filter(r => r.heart_rate !== null).map(r => r.heart_rate!)
+			const respiratoryRateValues = dayRecords.filter(r => r.respiratory_rate !== null).map(r => r.respiratory_rate!)
+			const oxygenSaturationValues = dayRecords.filter(r => r.oxygen_saturation !== null).map(r => r.oxygen_saturation!)
+			const temperatureValues = dayRecords.filter(r => r.temperature_celsius !== null).map(r => r.temperature_celsius!)
+			const bloodPressureValues = dayRecords.filter(r => r.blood_pressure !== null).map(r => r.blood_pressure!)
+
+			return {
+				...day,
+				avgHeartRate: heartRateValues.length > 0 ? heartRateValues.reduce((a, b) => a + b, 0) / heartRateValues.length : null,
+				avgRespiratoryRate: respiratoryRateValues.length > 0 ? respiratoryRateValues.reduce((a, b) => a + b, 0) / respiratoryRateValues.length : null,
+				avgOxygenSaturation: oxygenSaturationValues.length > 0 ? oxygenSaturationValues.reduce((a, b) => a + b, 0) / oxygenSaturationValues.length : null,
+				avgTemperature: temperatureValues.length > 0 ? temperatureValues.reduce((a, b) => a + b, 0) / temperatureValues.length : null,
+				avgSystolicBP: bloodPressureValues.length > 0 ? bloodPressureValues.reduce((a, b) => a + b, 0) / bloodPressureValues.length : null,
+			}
+		})
 
 		return { success: true, data: trends }
 	} catch (error) {
