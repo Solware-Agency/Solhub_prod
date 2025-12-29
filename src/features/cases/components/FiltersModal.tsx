@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import DoctorFilterPanel from './DoctorFilterPanel';
 import PatientOriginFilterPanel from './PatientOriginFilterPanel';
+import BranchFilterPanel from './BranchFilterPanel';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
@@ -52,8 +53,8 @@ interface FiltersModalProps {
   // Filtros actuales
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
-  branchFilter: string;
-  onBranchFilterChange: (value: string) => void;
+  branchFilter: string[];
+  onBranchFilterChange: (value: string[]) => void;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
   showPdfReadyOnly: boolean;
@@ -150,7 +151,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   // Check if there are any active filters
   const hasActiveFilters =
     statusFilter !== 'all' ||
-    branchFilter !== 'all' ||
+    branchFilter.length > 0 ||
     showPdfReadyOnly ||
     selectedDoctors.length > 0 ||
     (selectedOrigins && selectedOrigins.length > 0) ||
@@ -178,7 +179,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             <span className='bg-white dark:bg-gray-800 text-primary text-xs px-2 py-0.5 rounded-full'>
               {[
                 statusFilter !== 'all' ? 1 : 0,
-                branchFilter !== 'all' ? 1 : 0,
+                branchFilter.length > 0 ? 1 : 0,
                 showPdfReadyOnly ? 1 : 0,
                 selectedDoctors.length,
                 selectedOrigins ? selectedOrigins.length : 0,
@@ -242,12 +243,14 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               )}
 
               <div className='space-y-3'>
-                <CustomDropdown
-                  options={branchOptions}
-                  value={branchFilter}
-                  placeholder='Seleccionar sede'
-                  onChange={onBranchFilterChange}
-                  data-testid='branch-filter'
+                <label className='text-sm font-medium text-gray-700 flex items-center gap-2'>
+                  <MapPin className='w-4 h-4' />
+                  Sede
+                </label>
+                <BranchFilterPanel
+                  branches={branchOptions}
+                  selectedBranches={branchFilter}
+                  onFilterChange={onBranchFilterChange}
                 />
               </div>
             </div>
@@ -435,11 +438,11 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     </span>
                   )}
 
-                  {branchFilter !== 'all' && (
+                  {branchFilter.length > 0 && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm rounded-full'>
-                      Sede: {branchFilter}
+                      Sedes: {branchFilter.length} seleccionada{branchFilter.length !== 1 ? 's' : ''}
                       <button
-                        onClick={() => onBranchFilterChange('all')}
+                        onClick={() => onBranchFilterChange([])}
                         className='ml-1 hover:text-green-600 dark:hover:text-green-200'
                       >
                         <X className='w-3 h-3' />

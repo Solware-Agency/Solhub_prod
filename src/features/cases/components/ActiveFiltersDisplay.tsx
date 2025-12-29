@@ -6,7 +6,7 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 interface ActiveFiltersDisplayProps {
   // Filtros básicos
   statusFilter: string;
-  branchFilter: string;
+  branchFilter: string[];
   dateRange: DateRange | undefined;
   showPdfReadyOnly: boolean;
   selectedDoctors: string[];
@@ -49,7 +49,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
   // Check if there are any active filters
   const hasActiveFilters =
     statusFilter !== 'all' ||
-    branchFilter !== 'all' ||
+    branchFilter.length > 0 ||
     showPdfReadyOnly ||
     selectedDoctors.length > 0 ||
     (selectedOrigins && selectedOrigins.length > 0) ||
@@ -77,9 +77,9 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
           </span>
         )}
 
-        {branchFilter !== 'all' && (
+        {branchFilter.length > 0 && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm rounded-full'>
-            Sede: {branchFilter}
+            Sedes: {branchFilter.length} seleccionada{branchFilter.length !== 1 ? 's' : ''}
           </span>
         )}
 

@@ -50,7 +50,7 @@ interface CasesTableProps {
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
-    branch?: string;
+    branchFilter?: string[];
     paymentStatus?: 'Incompleto' | 'Pagado';
     doctorFilter?: string[];
     originFilter?: string[];
@@ -79,7 +79,7 @@ type ServerFilters = {
   documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
   pdfStatus?: 'pendientes' | 'faltantes';
   citoStatus?: 'positivo' | 'negativo';
-  branch?: string;
+  branchFilter?: string[];
   paymentStatus?: 'Incompleto' | 'Pagado';
   doctorFilter?: string[];
   originFilter?: string[];
@@ -165,7 +165,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     } = useExportToExcel();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [branchFilter, setBranchFilter] = useState<string>('all');
+    const [branchFilter, setBranchFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(
       undefined,
     );
@@ -203,7 +203,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
     // Filtros temporales para el modal (solo se aplican al hacer clic en "Aplicar Filtros")
     const [tempStatusFilter, setTempStatusFilter] = useState<string>('all');
-    const [tempBranchFilter, setTempBranchFilter] = useState<string>('all');
+    const [tempBranchFilter, setTempBranchFilter] = useState<string[]>([]);
     const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
       undefined,
     );
@@ -399,8 +399,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               | 'pendientes'
               | 'faltantes';
           }
-          if (branchFilter !== 'all') {
-            currentFilters.branch = branchFilter;
+          if (branchFilter.length > 0) {
+            currentFilters.branchFilter = branchFilter;
           }
           if (statusFilter !== 'all') {
             currentFilters.paymentStatus = statusFilter as
@@ -532,7 +532,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     // Handle clear all filters
     const handleClearAllFilters = useCallback(() => {
       setStatusFilter('all');
-      setBranchFilter('all');
+      setBranchFilter([]);
       setDateRange(undefined);
       setShowPdfReadyOnly(false);
       setSelectedDoctors([]);
@@ -548,7 +548,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setEmailSentStatusFilter('all');
       // También limpiar los filtros temporales
       setTempStatusFilter('all');
-      setTempBranchFilter('all');
+      setTempBranchFilter([]);
       setTempDateRange(undefined);
       setTempShowPdfReadyOnly(false);
       setTempSelectedDoctors([]);
@@ -607,8 +607,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             | 'pendientes'
             | 'faltantes';
         }
-        if (tempBranchFilter !== 'all') {
-          serverFilters.branch = tempBranchFilter;
+        if (tempBranchFilter.length > 0) {
+          serverFilters.branchFilter = tempBranchFilter;
         }
         if (tempStatusFilter !== 'all') {
           serverFilters.paymentStatus = tempStatusFilter as
@@ -671,7 +671,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempStatusFilter(value);
     }, []);
 
-    const handleTempBranchFilterChange = useCallback((value: string) => {
+    const handleTempBranchFilterChange = useCallback((value: string[]) => {
       setTempBranchFilter(value);
     }, []);
 
@@ -771,8 +771,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       if (pdfStatusFilter !== 'all') {
         serverFilters.pdfStatus = pdfStatusFilter as 'pendientes' | 'faltantes';
       }
-      if (branchFilter !== 'all') {
-        serverFilters.branch = branchFilter;
+      if (branchFilter.length > 0) {
+        serverFilters.branchFilter = branchFilter;
       }
       if (statusFilter !== 'all') {
         serverFilters.paymentStatus = statusFilter as 'Incompleto' | 'Pagado';
@@ -853,7 +853,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       // Check if we have active filters or search terms
       const hasActiveFilters =
         statusFilter !== 'all' ||
-        branchFilter !== 'all' ||
+        branchFilter.length > 0 ||
         showPdfReadyOnly ||
         selectedDoctors.length > 0 ||
         selectedOrigins.length > 0 ||
@@ -916,8 +916,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         const normalize = (str: string | null | undefined) =>
           str ? str.trim().toLowerCase() : '';
         const matchesBranch =
-          branchFilter === 'all' ||
-          normalize(case_.branch) === normalize(branchFilter);
+          branchFilter.length === 0 ||
+          branchFilter.some(branch => normalize(case_.branch) === normalize(branch));
 
         // Exam type filter
         const matchesExamType = true; // No exam type filter active
