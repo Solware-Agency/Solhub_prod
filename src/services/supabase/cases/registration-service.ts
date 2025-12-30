@@ -10,7 +10,8 @@ import { supabase } from '@services/supabase/config/config'
 import { validateFormPayments, calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { prepareDefaultValues, preparePaymentValues } from './registration-helpers'
 import type { ModuleConfig } from '@/shared/types/types'
-import type { FormValues } from '@features/form/lib/form-schema'
+// Nuevo sistema: servicios de identificaciones (dual-write)
+import { createIdentification, parseCedula } from '@services/supabase/patients/identificaciones-service'
 
 // Tipo de formulario (evita importación circular)
 export interface FormValues {
@@ -137,12 +138,15 @@ export const registerMedicalCase = async (
       throw new Error('Usuario no autenticado');
     }
 
-    // Obtener perfil del usuario para acceder a assigned_branch
+    // Obtener perfil del usuario para acceder a assigned_branch y laboratory_id
     const { data: profile } = await supabase
       .from('profiles')
-      .select('assigned_branch')
+      .select('assigned_branch, laboratory_id')
       .eq('id', user.id)
       .single();
+    
+    // Type assertion para laboratory_id (existe en BD pero puede no estar en tipos generados)
+    const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null;
 
     // Preparar datos del paciente y del caso
     const { patientData, caseData } = prepareRegistrationData(
@@ -150,7 +154,7 @@ export const registerMedicalCase = async (
       user,
       exchangeRate,
       moduleConfig,
-      profile?.assigned_branch,
+      profileWithLab?.assigned_branch,
     );
 
     console.log('📊 Datos preparados para inserción:');
@@ -185,6 +189,57 @@ export const registerMedicalCase = async (
       } else {
         console.log('✅ No hay cambios en los datos del paciente');
       }
+    }
+
+    // =====================================================================
+    // DUAL-WRITE: Escribir en sistema nuevo (identificaciones)
+    // =====================================================================
+    // Esto es NO-CRÍTICO: si falla, solo loggear pero no fallar el registro
+    // El sistema antiguo (patients.cedula) ya funcionó correctamente
+    // =====================================================================
+    if (patientData.cedula && patientData.cedula !== 'S/C') {
+      try {
+        console.log('🔄 Dual-write: Creando identificación en sistema nuevo...');
+        
+        // Parsear cédula para obtener tipo y número
+        const { tipo, numero } = parseCedula(patientData.cedula);
+        
+        // Obtener laboratory_id del paciente (ya está disponible después de crear/actualizar)
+        const laboratoryId = (patient as any).laboratory_id || profileWithLab?.laboratory_id;
+        
+        if (!laboratoryId) {
+          console.warn('⚠️ Dual-write: No se pudo obtener laboratory_id, omitiendo identificación');
+        } else {
+          // Verificar si ya existe identificación para este paciente
+          const { data: existingIdentificaciones } = await supabase
+            .from('identificaciones' as any)
+            .select('id')
+            .eq('paciente_id', patient.id)
+            .eq('tipo_documento', tipo)
+            .eq('numero', numero)
+            .eq('laboratory_id', laboratoryId)
+            .maybeSingle();
+
+          // Solo crear si no existe
+          if (!existingIdentificaciones) {
+            await createIdentification({
+              paciente_id: patient.id,
+              tipo_documento: tipo,
+              numero: numero,
+              laboratory_id: laboratoryId, // Pasar explícitamente para evitar doble consulta
+            });
+            console.log('✅ Dual-write: Identificación creada exitosamente');
+          } else {
+            console.log('ℹ️ Dual-write: Identificación ya existe, omitiendo creación');
+          }
+        }
+      } catch (error) {
+        // NO fallar si falla el sistema nuevo, solo loggear
+        console.warn('⚠️ Dual-write: No se pudo crear identificación (no crítico):', error);
+        console.warn('⚠️ El registro del caso se completó exitosamente en el sistema antiguo');
+      }
+    } else {
+      console.log('ℹ️ Dual-write: Paciente sin cédula (S/C), omitiendo identificación');
     }
 
     // PASO 2: Crear caso médico enlazado al paciente
@@ -301,16 +356,16 @@ const prepareRegistrationData = (
     treating_doctor: (defaultValues.treating_doctor || '') as string,
     sample_type: (defaultValues.sample_type || '') as string,
     number_of_samples: defaultValues.number_of_samples || 1,
-    branch: defaultValues.branch,
+    branch: defaultValues.branch ?? null, // Convertir undefined a null
     date: defaultValues.date || new Date().toISOString(),
-    payment_status: defaultValues.payment_status || 'Incompleto',
+    // payment_status se define en paymentValues, no duplicar aquí
 
     // Información del examen (puede ser NULL)
     exam_type: formData.examType || null,
 
     // Campos opcionales
     relationship: formData.relationship || null,
-    consulta: formData.consulta || null, // Especialidad médica (solo para lab SPT)
+    consulta: (formData as any).consulta || null, // Especialidad médica (solo para lab SPT) - usar as any temporalmente
     code: '', // Se generará automáticamente
 
     // Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
@@ -507,7 +562,8 @@ export const validateRegistrationData = (
 
   // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
   const consultaConfig = moduleConfig?.fields?.consulta;
-  if (consultaConfig?.enabled && consultaConfig?.required && !formData.consulta) {
+  const consultaValue = (formData as any).consulta; // Usar as any temporalmente hasta actualizar tipos
+  if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
     errors.push('La consulta (especialidad médica) es obligatoria');
   }
 
@@ -515,7 +571,7 @@ export const validateRegistrationData = (
   // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
   const isSPT = laboratorySlug?.toLowerCase() === 'spt';
   if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
-    if (!formData.examType && !formData.consulta) {
+    if (!formData.examType && !consultaValue) {
       errors.push('Debe seleccionar al menos un Tipo de Examen o una Consulta');
     }
   }
