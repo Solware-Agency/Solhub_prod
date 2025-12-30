@@ -179,7 +179,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    if ((isCitotecno && isCitology) || isOwner || isMedicowner) {
+    // Paso de Aprobar: NO disponible para medico_tratante en SPT (flujo directo)
+    const shouldShowApproveStep = isSpt
+      ? ((isCitotecno && isCitology) || isOwner || isMedicowner)
+      : ((isCitotecno && isCitology) || isOwner || isMedicowner || isMedicoTratante);
+    
+    if (shouldShowApproveStep) {
       stepsList.push({
         id: 'approve',
         title: 'Autorizar',
@@ -216,6 +221,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const getInitialStep = () => {
     if (!isMedicowner && docAprobado === 'aprobado') {
       return computedSteps.length - 1;
+    }
+
+    // En SPT, médico tratante con documento aprobado va directo al PDF
+    if (isSpt && isMedicoTratante && docAprobado === 'aprobado') {
+      return computedSteps.findIndex((step) => step.id === 'pdf');
     }
 
     if (isOwner && docAprobado === 'pendiente' && !isCitology) {
@@ -553,13 +563,36 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
     try {
       setIsSaving(true);
-      const { error } = await markCaseAsPending(case_.id);
-      if (error) throw error;
-      setDocAprobado('pendiente');
-      toast({
-        title: '✅ Marcado como completado',
-        description: 'Documento listo para revisión.',
-      });
+      
+      // En SPT, si es médico tratante, aprobar directamente sin requerir validación del owner
+      if (isSpt && isMedicoTratante) {
+        // Primero marcar como pendiente (transición válida según el trigger)
+        const { error: pendingError } = await markCaseAsPending(case_.id);
+        if (pendingError) throw pendingError;
+        
+        // Luego aprobar inmediatamente
+        const { error: approveError } = await approveCaseDocument(case_.id);
+        if (approveError) throw approveError;
+        
+        setDocAprobado('aprobado');
+        toast({
+          title: '✅ Documento completado y aprobado',
+          description: 'Ya puedes generar el PDF.',
+        });
+        // Avanzar automáticamente al siguiente paso (PDF)
+        setTimeout(() => {
+          handleNext();
+        }, 500);
+      } else {
+        // Flujo normal: marcar como pendiente para revisión del owner
+        const { error } = await markCaseAsPending(case_.id);
+        if (error) throw error;
+        setDocAprobado('pendiente');
+        toast({
+          title: '✅ Marcado como completado',
+          description: 'Documento listo para revisión.',
+        });
+      }
     } catch (err) {
       console.error('Error marcando como completado:', err);
       toast({
@@ -1176,9 +1209,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               </div>
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 <p className='text-teal-400 text-sm'>
-                  Para completar este paso, haz clic en el botón de arriba para
-                  marcar el documento como completado y espera por la aprobacion
-                  para continuar con el siguiente paso.
+                  {isSpt && isMedicoTratante
+                    ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
+                    : 'Para completar este paso, haz clic en el botón de arriba para marcar el documento como completado y espera por la aprobacion para continuar con el siguiente paso.'}
                 </p>
               </div>
             </div>
