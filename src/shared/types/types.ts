@@ -721,6 +721,7 @@ export interface LaboratoryFeatures {
   hasTriaje: boolean
   hasEvaluateCitology: boolean
   hasReports: boolean
+  hasNewPatientSystem?: boolean // NUEVO: Sistema de pacientes multi-tipo (FASE 7)
 }
 
 export interface LaboratoryBranding {

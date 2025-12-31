@@ -18,6 +18,8 @@ import { Calendar } from '@shared/components/ui/calendar'
 import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import { NewPatientDataSection } from './NewPatientDataSection'
 
 interface PatientDataSectionProps {
 	control: Control<FormValues>
@@ -25,6 +27,15 @@ interface PatientDataSectionProps {
 }
 
 export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSectionProps) => {
+	const { laboratory } = useLaboratory()
+	const useNewPatientSystem = laboratory?.features?.hasNewPatientSystem || false
+
+	// Si el feature flag está activo, usar el nuevo sistema
+	if (useNewPatientSystem) {
+		return <NewPatientDataSection control={control} inputStyles={inputStyles} />
+	}
+
+	// Sistema antiguo (comportamiento actual)
 	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
 	const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValue)
 	const [isRegistrationDateCalendarOpen, setIsRegistrationDateCalendarOpen] = useState(false)

@@ -7,45 +7,48 @@ import { supabase } from '@services/supabase/config/config'
 
 // Tipos específicos para pacientes (simplificados para evitar problemas de importación)
 export interface Patient {
-  id: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
-  cedula: string;
-  nombre: string;
-  edad: string | null;
-  telefono: string | null;
-  email: string | null;
-  gender: 'Masculino' | 'Femenino' | null;
-  created_at: string | null;
-  updated_at: string | null;
-  version: number | null;
+	id: string
+	laboratory_id: string // NUEVO: Multi-tenant
+	cedula: string
+	nombre: string
+	edad: string | null
+	telefono: string | null
+	email: string | null
+	gender: 'Masculino' | 'Femenino' | null
+	fecha_nacimiento?: string | null
+	tipo_paciente?: 'adulto' | 'menor' | 'animal' | null
+	especie?: string | null
+	created_at: string | null
+	updated_at: string | null
+	version: number | null
 }
 
 export interface PatientInsert {
-  id?: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
-  cedula: string;
-  nombre: string;
-  edad?: string | null;
-  telefono?: string | null;
-  email?: string | null;
-  gender?: 'Masculino' | 'Femenino' | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  version?: number | null;
+	id?: string
+	laboratory_id: string // NUEVO: Multi-tenant
+	cedula: string
+	nombre: string
+	edad?: string | null
+	telefono?: string | null
+	email?: string | null
+	gender?: 'Masculino' | 'Femenino' | null
+	created_at?: string | null
+	updated_at?: string | null
+	version?: number | null
 }
 
 export interface PatientUpdate {
-  id?: string;
-  laboratory_id?: string; // NUEVO: Multi-tenant
-  cedula?: string;
-  nombre?: string;
-  edad?: string | null;
-  telefono?: string | null;
-  email?: string | null;
-  gender?: 'Masculino' | 'Femenino' | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  version?: number | null;
+	id?: string
+	laboratory_id?: string // NUEVO: Multi-tenant
+	cedula?: string
+	nombre?: string
+	edad?: string | null
+	telefono?: string | null
+	email?: string | null
+	gender?: 'Masculino' | 'Femenino' | null
+	created_at?: string | null
+	updated_at?: string | null
+	version?: number | null
 }
 
 // =====================================================================
@@ -57,410 +60,375 @@ export interface PatientUpdate {
  * Helper function para multi-tenant
  */
 const getUserLaboratoryId = async (): Promise<string> => {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuario no autenticado');
+	try {
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) throw new Error('Usuario no autenticado')
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('laboratory_id')
-      .eq('id', user.id)
-      .single();
+		const { data: profile, error } = await supabase.from('profiles').select('laboratory_id').eq('id', user.id).single()
 
-    if (error || !profile) {
-      throw new Error('Usuario no tiene laboratorio asignado');
-    }
+		if (error || !profile) {
+			throw new Error('Usuario no tiene laboratorio asignado')
+		}
 
-    // Type assertion porque sabemos que laboratory_id existe en la BD
-    const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id;
-    
-    if (!laboratoryId) {
-      throw new Error('Usuario no tiene laboratorio asignado');
-    }
+		// Type assertion porque sabemos que laboratory_id existe en la BD
+		const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id
 
-    return laboratoryId;
-  } catch (error) {
-    console.error('Error obteniendo laboratory_id:', error);
-    throw error;
-  }
-};
+		if (!laboratoryId) {
+			throw new Error('Usuario no tiene laboratorio asignado')
+		}
+
+		return laboratoryId
+	} catch (error) {
+		console.error('Error obteniendo laboratory_id:', error)
+		throw error
+	}
+}
 
 /**
  * Buscar paciente por cédula (único) - MULTI-TENANT
  * Busca tanto por formato completo como solo por número para evitar duplicados
  * SOLO busca en el laboratorio del usuario autenticado
  */
-export const findPatientByCedula = async (
-  cedula: string,
-): Promise<Patient | null> => {
-  try {
-    const laboratoryId = await getUserLaboratoryId();
+export const findPatientByCedula = async (cedula: string): Promise<Patient | null> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
 
-    // Primero intentar búsqueda exacta
-    const { data: exactMatch, error: exactError } = await supabase
-      .from('patients')
-      .select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
-      .eq('cedula', cedula)
-      .eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
-      .single();
+		// Primero intentar búsqueda exacta
+		const { data: exactMatch, error: exactError } = await supabase
+			.from('patients')
+			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
+			.eq('cedula', cedula)
+			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.single()
 
-    if (exactMatch && !exactError) {
-      return exactMatch as unknown as Patient;
-    }
+		if (exactMatch && !exactError) {
+			return exactMatch as unknown as Patient
+		}
 
-    // Si no hay coincidencia exacta, buscar por número de cédula (sin prefijo)
-    const cedulaNumber = cedula.replace(/^[VEJC]-/, '');
+		// Si no hay coincidencia exacta, buscar por número de cédula (sin prefijo)
+		const cedulaNumber = cedula.replace(/^[VEJC]-/, '')
 
-    // Buscar pacientes que tengan el mismo número pero diferente prefijo
-    const { data: numberMatch, error: numberError } = await supabase
-      .from('patients')
-      .select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
-      .like('cedula', `%-${cedulaNumber}`)
-      .eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
-      .single();
+		// Buscar pacientes que tengan el mismo número pero diferente prefijo
+		const { data: numberMatch, error: numberError } = await supabase
+			.from('patients')
+			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
+			.like('cedula', `%-${cedulaNumber}`)
+			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.single()
 
-    if (numberMatch && !numberError) {
-      const patient = numberMatch as unknown as Patient;
-      console.log(
-        `⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${patient.cedula} (buscando: ${cedula})`,
-      );
-      return patient;
-    }
+		if (numberMatch && !numberError) {
+			const patient = numberMatch as unknown as Patient
+			console.log(
+				`⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${patient.cedula} (buscando: ${cedula})`,
+			)
+			return patient
+		}
 
-    // Si no encuentra nada, retornar null
-    if (exactError?.code === 'PGRST116' || numberError?.code === 'PGRST116') {
-      return null;
-    }
+		// Si no encuentra nada, retornar null
+		if (exactError?.code === 'PGRST116' || numberError?.code === 'PGRST116') {
+			return null
+		}
 
-    // Si hay otro tipo de error, lanzarlo
-    if (exactError) throw exactError;
-    if (numberError) throw numberError;
+		// Si hay otro tipo de error, lanzarlo
+		if (exactError) throw exactError
+		if (numberError) throw numberError
 
-    return null;
-  } catch (error) {
-    console.error('Error buscando paciente por cédula:', error);
-    throw error;
-  }
-};
+		return null
+	} catch (error) {
+		console.error('Error buscando paciente por cédula:', error)
+		throw error
+	}
+}
 
 /**
  * Buscar paciente por ID - MULTI-TENANT
  * SOLO busca en el laboratorio del usuario autenticado
  */
 export const findPatientById = async (id: string): Promise<Patient | null> => {
-  try {
-    const laboratoryId = await getUserLaboratoryId();
+	try {
+		const laboratoryId = await getUserLaboratoryId()
 
-    const { data, error } = await supabase
-      .from('patients')
-      .select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
-      .eq('id', id)
-      .eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
-      .single();
+		const { data, error } = await supabase
+			.from('patients')
+			.select(
+				'id, laboratory_id, cedula, nombre, edad, telefono, email, gender, fecha_nacimiento, tipo_paciente, especie, created_at, updated_at, version',
+			)
+			.eq('id', id)
+			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw error;
-    }
+		if (error) {
+			if (error.code === 'PGRST116') {
+				return null
+			}
+			throw error
+		}
 
-    return data as unknown as Patient;
-  } catch (error) {
-    console.error('Error buscando paciente por ID:', error);
-    throw error;
-  }
-};
+		return data as unknown as Patient
+	} catch (error) {
+		console.error('Error buscando paciente por ID:', error)
+		throw error
+	}
+}
 
 /**
  * Crear nuevo paciente - MULTI-TENANT
  * Automáticamente asigna laboratory_id del usuario autenticado
  */
-export const createPatient = async (
-  patientData: Omit<PatientInsert, 'laboratory_id'>,
-): Promise<Patient> => {
-  try {
-    const laboratoryId = await getUserLaboratoryId();
+export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory_id'>): Promise<Patient> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
 
-    // SIEMPRE incluir laboratory_id al insertar
-    const { data, error } = await supabase
-      .from('patients')
-      .insert({
-        ...patientData,
-        laboratory_id: laboratoryId, // CRÍTICO: Multi-tenant
-      })
-      .select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
-      .single();
+		// SIEMPRE incluir laboratory_id al insertar
+		const { data, error } = await supabase
+			.from('patients')
+			.insert({
+				...patientData,
+				laboratory_id: laboratoryId, // CRÍTICO: Multi-tenant
+			})
+			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
+			.single()
 
-    if (error) {
-      throw error;
-    }
+		if (error) {
+			throw error
+		}
 
-    console.log('✅ Paciente creado exitosamente:', data);
-    return data as unknown as Patient;
-  } catch (error) {
-    console.error('❌ Error creando paciente:', error);
-    throw error;
-  }
-};
+		console.log('✅ Paciente creado exitosamente:', data)
+		return data as unknown as Patient
+	} catch (error) {
+		console.error('❌ Error creando paciente:', error)
+		throw error
+	}
+}
 
 /**
  * Actualizar paciente existente
  */
-export const updatePatient = async (
-  id: string,
-  updates: PatientUpdate,
-  userId?: string,
-): Promise<Patient> => {
-  try {
-    // Obtener datos actuales para detectar cambios
-    const currentPatient = await findPatientById(id);
-    if (!currentPatient) {
-      throw new Error('Paciente no encontrado');
-    }
+export const updatePatient = async (id: string, updates: PatientUpdate, userId?: string): Promise<Patient> => {
+	try {
+		// Obtener datos actuales para detectar cambios
+		const currentPatient = await findPatientById(id)
+		if (!currentPatient) {
+			throw new Error('Paciente no encontrado')
+		}
 
-    // Si se está actualizando la cédula, verificar si ya existe otro paciente con esa cédula
-    if (updates.cedula && updates.cedula !== currentPatient.cedula) {
-      const existingPatient = await findPatientByCedula(updates.cedula);
-      if (existingPatient && existingPatient.id !== id) {
-        throw new Error(
-          `Ya existe un paciente con la cédula ${updates.cedula}`,
-        );
-      }
-    }
+		// Si se está actualizando la cédula, verificar si ya existe otro paciente con esa cédula
+		if (updates.cedula && updates.cedula !== currentPatient.cedula) {
+			const existingPatient = await findPatientByCedula(updates.cedula)
+			if (existingPatient && existingPatient.id !== id) {
+				throw new Error(`Ya existe un paciente con la cédula ${updates.cedula}`)
+			}
+		}
 
-    // Preparar datos de actualización
-    const updateData: PatientUpdate = {
-      ...updates,
-      updated_at: new Date().toISOString(),
-      version: (currentPatient.version || 1) + 1,
-    };
+		// Preparar datos de actualización
+		const updateData: PatientUpdate = {
+			...updates,
+			updated_at: new Date().toISOString(),
+			version: (currentPatient.version || 1) + 1,
+		}
 
-    // Actualizar paciente
-    const { data, error } = await supabase
-      .from('patients')
-      .update(updateData)
-      .eq('id', id)
-      .select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
-      .single();
+		// Actualizar paciente
+		const { data, error } = await supabase
+			.from('patients')
+			.update(updateData)
+			.eq('id', id)
+			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
+			.single()
 
-    if (error) {
-      throw error;
-    }
+		if (error) {
+			throw error
+		}
 
-    // Registrar cambios en change_logs si hay userId
-    if (userId) {
-      await logPatientChanges(id, currentPatient, updates, userId);
-    }
+		// Registrar cambios en change_logs si hay userId
+		if (userId) {
+			await logPatientChanges(id, currentPatient, updates, userId)
+		}
 
-    console.log('✅ Paciente actualizado exitosamente:', data);
-    return data as unknown as Patient;
-  } catch (error) {
-    console.error('❌ Error actualizando paciente:', error);
-    throw error;
-  }
-};
+		console.log('✅ Paciente actualizado exitosamente:', data)
+		return data as unknown as Patient
+	} catch (error) {
+		console.error('❌ Error actualizando paciente:', error)
+		throw error
+	}
+}
 
 /**
  * Registrar cambios de paciente en change_logs
  */
-const logPatientChanges = async (
-  patientId: string,
-  oldData: Patient,
-  newData: PatientUpdate,
-  userId: string,
-) => {
-  try {
-    // Obtener información del usuario
-    const { data: user } = await supabase.auth.getUser();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name, email')
-      .eq('id', userId)
-      .single();
+const logPatientChanges = async (patientId: string, oldData: Patient, newData: PatientUpdate, userId: string) => {
+	try {
+		// Obtener información del usuario
+		const { data: user } = await supabase.auth.getUser()
+		const { data: profile } = await supabase.from('profiles').select('display_name, email').eq('id', userId).single()
 
-    const userEmail = profile?.email || user.user?.email || 'unknown';
-    const userDisplayName = profile?.display_name || 'Usuario';
+		const userEmail = profile?.email || user.user?.email || 'unknown'
+		const userDisplayName = profile?.display_name || 'Usuario'
 
-    // Crear logs para cada campo que cambió
-    const changes = [];
+		// Crear logs para cada campo que cambió
+		const changes = []
 
-    // Mapeo de campos para nombres legibles
-    const fieldLabels: Record<string, string> = {
-      cedula: 'Cédula',
-      nombre: 'Nombre',
-      edad: 'Edad',
-      telefono: 'Teléfono',
-      email: 'Email',
-      gender: 'Género',
-    };
+		// Mapeo de campos para nombres legibles
+		const fieldLabels: Record<string, string> = {
+			cedula: 'Cédula',
+			nombre: 'Nombre',
+			edad: 'Edad',
+			telefono: 'Teléfono',
+			email: 'Email',
+			gender: 'Género',
+		}
 
-    // Detectar cambios
-    for (const [field, newValue] of Object.entries(newData)) {
-      if (field === 'updated_at' || field === 'version') continue;
+		// Detectar cambios
+		for (const [field, newValue] of Object.entries(newData)) {
+			if (field === 'updated_at' || field === 'version') continue
 
-      const oldValue = oldData[field as keyof Patient];
+			const oldValue = oldData[field as keyof Patient]
 
-      if (oldValue !== newValue) {
-        changes.push({
-          patient_id: patientId,
-          entity_type: 'patient',
-          field_name: field,
-          field_label: fieldLabels[field] || field,
-          old_value: String(oldValue || ''),
-          new_value: String(newValue || ''),
-          user_id: userId,
-          user_email: userEmail,
-          user_display_name: userDisplayName,
-        });
-      }
-    }
+			if (oldValue !== newValue) {
+				changes.push({
+					patient_id: patientId,
+					entity_type: 'patient',
+					field_name: field,
+					field_label: fieldLabels[field] || field,
+					old_value: String(oldValue || ''),
+					new_value: String(newValue || ''),
+					user_id: userId,
+					user_email: userEmail,
+					user_display_name: userDisplayName,
+				})
+			}
+		}
 
-    // Insertar cambios si hay alguno
-    if (changes.length > 0) {
-      const { error } = await supabase.from('change_logs').insert(changes);
+		// Insertar cambios si hay alguno
+		if (changes.length > 0) {
+			const { error } = await supabase.from('change_logs').insert(changes)
 
-      if (error) {
-        console.error('Error registrando cambios del paciente:', error);
-      } else {
-        console.log(
-          `✅ ${changes.length} cambios registrados para el paciente`,
-        );
-      }
-    }
-  } catch (error) {
-    console.error('Error en logPatientChanges:', error);
-  }
-};
+			if (error) {
+				console.error('Error registrando cambios del paciente:', error)
+			} else {
+				console.log(`✅ ${changes.length} cambios registrados para el paciente`)
+			}
+		}
+	} catch (error) {
+		console.error('Error en logPatientChanges:', error)
+	}
+}
 
 /**
  * Obtener todos los pacientes con paginación - MULTI-TENANT
  * SOLO muestra pacientes del laboratorio del usuario autenticado
  */
-export const getPatients = async (
-  page = 1,
-  limit = 50,
-  searchTerm?: string,
-) => {
-  try {
-    const laboratoryId = await getUserLaboratoryId();
+export const getPatients = async (page = 1, limit = 50, searchTerm?: string) => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
 
-    let query = supabase
-      .from('patients')
-      .select('*', { count: 'exact' })
-      .eq('laboratory_id', laboratoryId); // FILTRO MULTI-TENANT
+		let query = supabase.from('patients').select('*', { count: 'exact' }).eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
 
-    // Filtro de búsqueda
-    if (searchTerm) {
-      query = query.or(
-        `cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`,
-      );
-    }
+		// Filtro de búsqueda
+		if (searchTerm) {
+			query = query.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
+		}
 
-    // Paginación
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+		// Paginación
+		const from = (page - 1) * limit
+		const to = from + limit - 1
 
-    const { data, error, count } = await query
-      .range(from, to)
-      .order('created_at', { ascending: false });
+		const { data, error, count } = await query.range(from, to).order('created_at', { ascending: false })
 
-    if (error) {
-      throw error;
-    }
+		if (error) {
+			throw error
+		}
 
-    return {
-      data: data || [],
-      count: count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit),
-    };
-  } catch (error) {
-    console.error('Error obteniendo pacientes:', error);
-    throw error;
-  }
-};
+		return {
+			data: data || [],
+			count: count || 0,
+			page,
+			limit,
+			totalPages: Math.ceil((count || 0) / limit),
+		}
+	} catch (error) {
+		console.error('Error obteniendo pacientes:', error)
+		throw error
+	}
+}
 
 /**
  * Obtener estadísticas de un paciente usando consultas directas
  */
 export const getPatientStatistics = async (patientId: string) => {
-  try {
-    // Obtener información del paciente
-    const { data: patient, error: patientError } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('id', patientId)
-      .single();
+	try {
+		// Obtener información del paciente
+		const { data: patient, error: patientError } = await supabase
+			.from('patients')
+			.select('*')
+			.eq('id', patientId)
+			.single()
 
-    if (patientError) {
-      throw patientError;
-    }
+		if (patientError) {
+			throw patientError
+		}
 
-    // Obtener casos médicos del paciente
-    const { data: cases, error: casesError } = await supabase
-      .from('medical_records_clean')
-      .select('total_amount, date')
-      .eq('patient_id', patientId)
-      .order('date', { ascending: false });
+		// Obtener casos médicos del paciente
+		const { data: cases, error: casesError } = await supabase
+			.from('medical_records_clean')
+			.select('total_amount, date')
+			.eq('patient_id', patientId)
+			.order('date', { ascending: false })
 
-    if (casesError) {
-      throw casesError;
-    }
+		if (casesError) {
+			throw casesError
+		}
 
-    // Calcular estadísticas
-    const totalCases = cases?.length || 0;
-    const totalSpent =
-      cases?.reduce((sum, case_) => sum + (case_.total_amount || 0), 0) || 0;
-    const lastVisit = cases?.[0]?.date || null;
+		// Calcular estadísticas
+		const totalCases = cases?.length || 0
+		const totalSpent = cases?.reduce((sum, case_) => sum + (case_.total_amount || 0), 0) || 0
+		const lastVisit = cases?.[0]?.date || null
 
-    return {
-      id: patient.id,
-      cedula: patient.cedula,
-      nombre: patient.nombre,
-      edad: patient.edad,
-      telefono: patient.telefono,
-      email: patient.email,
-      gender: patient.gender,
-      total_cases: totalCases,
-      total_spent: totalSpent,
-      last_visit: lastVisit,
-    };
-  } catch (error) {
-    console.error('Error obteniendo estadísticas del paciente:', error);
-    throw error;
-  }
-};
+		return {
+			id: patient.id,
+			cedula: patient.cedula,
+			nombre: patient.nombre,
+			edad: patient.edad,
+			telefono: patient.telefono,
+			email: patient.email,
+			gender: patient.gender,
+			total_cases: totalCases,
+			total_spent: totalSpent,
+			last_visit: lastVisit,
+		}
+	} catch (error) {
+		console.error('Error obteniendo estadísticas del paciente:', error)
+		throw error
+	}
+}
 
 /**
  * Buscar pacientes por nombre o cédula (para autocomplete) - MULTI-TENANT
  * SOLO busca en el laboratorio del usuario autenticado
  */
 export const searchPatients = async (searchTerm: string, limit = 10) => {
-  try {
-    const laboratoryId = await getUserLaboratoryId();
+	try {
+		const laboratoryId = await getUserLaboratoryId()
 
-    const { data, error } = await supabase
-      .from('patients')
-      .select('id, cedula, nombre, telefono, gender')
-      .eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
-      .or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
-      .limit(limit)
-      .order('nombre');
+		const { data, error } = await supabase
+			.from('patients')
+			.select('id, cedula, nombre, telefono, gender')
+			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
+			.limit(limit)
+			.order('nombre')
 
-    if (error) {
-      throw error;
-    }
+		if (error) {
+			throw error
+		}
 
-    return data || [];
-  } catch (error) {
-    console.error('Error buscando pacientes:', error);
-    throw error;
-  }
-};
+		return data || []
+	} catch (error) {
+		console.error('Error buscando pacientes:', error)
+		throw error
+	}
+}
 
 /**
  * Encontrar pacientes duplicados por número de cédula
@@ -559,6 +527,77 @@ export const consolidateDuplicatePatients = async (
 		return results
 	} catch (error) {
 		console.error('Error consolidando pacientes duplicados:', error)
+		throw error
+	}
+}
+
+/**
+ * Eliminar paciente - MULTI-TENANT
+ * Verifica casos médicos y dependientes antes de eliminar
+ * Retorna información sobre qué se eliminará
+ */
+export const deletePatient = async (
+	patientId: string,
+): Promise<{
+	deleted: boolean
+	casesCount: number
+	dependentsCount: number
+}> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Verificar casos médicos del paciente
+		const { count: casesCount } = await supabase
+			.from('medical_records_clean')
+			.select('*', { count: 'exact', head: true })
+			.eq('patient_id', patientId)
+			.eq('laboratory_id', laboratoryId)
+
+		// Verificar si es responsable (tiene dependientes)
+		const { count: dependentsCount } = await supabase
+			.from('responsabilidades' as any)
+			.select('*', { count: 'exact', head: true })
+			.eq('paciente_id_responsable', patientId)
+			.eq('laboratory_id', laboratoryId)
+
+		// Eliminar responsabilidades donde este paciente es dependiente
+		await supabase
+			.from('responsabilidades' as any)
+			.delete()
+			.eq('paciente_id_dependiente', patientId)
+			.eq('laboratory_id', laboratoryId)
+
+		// Eliminar responsabilidades donde este paciente es responsable (cascada)
+		if (dependentsCount && dependentsCount > 0) {
+			await supabase
+				.from('responsabilidades' as any)
+				.delete()
+				.eq('paciente_id_responsable', patientId)
+				.eq('laboratory_id', laboratoryId)
+		}
+
+		// Eliminar identificaciones del paciente
+		await supabase
+			.from('identificaciones' as any)
+			.delete()
+			.eq('paciente_id', patientId)
+			.eq('laboratory_id', laboratoryId)
+
+		// Eliminar el paciente (los casos se eliminan en cascada si hay FK constraint)
+		const { error } = await supabase.from('patients').delete().eq('id', patientId).eq('laboratory_id', laboratoryId)
+
+		if (error) {
+			throw error
+		}
+
+		console.log('✅ Paciente eliminado exitosamente')
+		return {
+			deleted: true,
+			casesCount: casesCount || 0,
+			dependentsCount: dependentsCount || 0,
+		}
+	} catch (error) {
+		console.error('❌ Error eliminando paciente:', error)
 		throw error
 	}
 }

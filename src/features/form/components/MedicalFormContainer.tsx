@@ -58,350 +58,327 @@ export function MedicalFormContainer() {
   const [usdFromVes, setUsdFromVes] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Verificar configuración del módulo para médico tratante
-  const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante');
-  
-  // Obtener configuración completa del módulo para pasar a registerMedicalCase
-  const moduleConfig = useModuleConfig('registrationForm');
-  
-  // Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
-  const { laboratory } = useLaboratory();
+  const [patientSectionResetKey, setPatientSectionResetKey] = useState(0)
 
-  // Crear schema dinámico basado en la configuración del módulo
-  const dynamicFormSchema = useMemo(() => {
-    return createFormSchema(moduleConfig);
-  }, [moduleConfig]);
+	// Verificar configuración del módulo para médico tratante
+	const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante')
 
-  // Crear resolver dinámico que se actualiza cuando cambia el schema
-  const dynamicResolver = useMemo(() => {
-    return zodResolver(dynamicFormSchema);
-  }, [dynamicFormSchema]);
+	// Obtener configuración completa del módulo para pasar a registerMedicalCase
+	const moduleConfig = useModuleConfig('registrationForm')
 
-  const form = useForm<FormValues>({
-    resolver: dynamicResolver,
-    defaultValues: getInitialFormValues(),
-    mode: 'onChange', // Validate on change instead of on blur
-    shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
-  });
+	// Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
+	const { laboratory } = useLaboratory()
 
-  // Actualizar el resolver cuando cambie el schema dinámico
-  // Esto es necesario porque react-hook-form no actualiza el resolver automáticamente
-  useEffect(() => {
-    // Limpiar solo errores de campos que ya no son requeridos
-    // No limpiar TODOS los errores para evitar perder validaciones en curso
-    const currentErrors = form.formState.errors;
-    
-    // Solo re-trigger si hay errores existentes, para evitar validaciones innecesarias
-    if (Object.keys(currentErrors).length > 0) {
-      form.trigger();
-    }
-  }, [dynamicFormSchema]);
+	// Crear schema dinámico basado en la configuración del módulo
+	const dynamicFormSchema = useMemo(() => {
+		return createFormSchema(moduleConfig)
+	}, [moduleConfig])
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'payments',
-  });
+	// Crear resolver dinámico que se actualiza cuando cambia el schema
+	const dynamicResolver = useMemo(() => {
+		return zodResolver(dynamicFormSchema)
+	}, [dynamicFormSchema])
 
-  // Memoize the form control to prevent unnecessary re-renders
-  const formControl = useMemo(() => form.control, [form.control]);
+	const form = useForm<FormValues>({
+		resolver: dynamicResolver,
+		defaultValues: getInitialFormValues(),
+		mode: 'onChange', // Validate on change instead of on blur
+		shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
+	})
 
-  // Sync VES with USD input - memoized to prevent unnecessary re-renders
-  useEffect(() => {
-    if (exchangeRate && usdValue) {
-      const usd = parseFloat(usdValue);
-      if (!isNaN(usd)) {
-        setVesValue((usd * exchangeRate).toFixed(2));
-      }
-    } else {
-      setVesValue('');
-    }
-  }, [usdValue, exchangeRate]);
+	// Actualizar el resolver cuando cambie el schema dinámico
+	// Esto es necesario porque react-hook-form no actualiza el resolver automáticamente
+	useEffect(() => {
+		// Limpiar solo errores de campos que ya no son requeridos
+		// No limpiar TODOS los errores para evitar perder validaciones en curso
+		const currentErrors = form.formState.errors
 
-  // Sync USD with VES input - memoized to prevent unnecessary re-renders
-  useEffect(() => {
-    if (exchangeRate && vesInputValue && exchangeRate > 0) {
-      const ves = parseFloat(vesInputValue);
-      if (!isNaN(ves)) {
-        setUsdFromVes((ves / exchangeRate).toFixed(2));
-      }
-    } else {
-      setUsdFromVes('');
-    }
-  }, [vesInputValue, exchangeRate]);
+		// Solo re-trigger si hay errores existentes, para evitar validaciones innecesarias
+		if (Object.keys(currentErrors).length > 0) {
+			form.trigger()
+		}
+	}, [dynamicFormSchema])
 
-  useResetForm(form, getInitialFormValues, setUsdValue, setIsSubmitted, toast);
+	const { fields, append, remove } = useFieldArray({
+		control: form.control,
+		name: 'payments',
+	})
 
-  // Memoize the append handler to prevent unnecessary re-renders
-  const handleAppend = useCallback(() => {
-    append({ method: '', amount: 0, reference: '' });
-  }, [append]);
+	// Memoize the form control to prevent unnecessary re-renders
+	const formControl = useMemo(() => form.control, [form.control])
 
-  // Memoize the submit handler to prevent unnecessary re-renders
-  const onSubmit = useCallback(
-    async (data: FormValues) => {
-      console.log('🚀 onSubmit ejecutándose con datos:', data);
-      setIsSubmitting(true);
+	// Sync VES with USD input - memoized to prevent unnecessary re-renders
+	useEffect(() => {
+		if (exchangeRate && usdValue) {
+			const usd = parseFloat(usdValue)
+			if (!isNaN(usd)) {
+				setVesValue((usd * exchangeRate).toFixed(2))
+			}
+		} else {
+			setVesValue('')
+		}
+	}, [usdValue, exchangeRate])
 
-      try {
-        console.log(
-          'Enviando datos del formulario con nueva estructura:',
-          data,
-        );
-        console.log('Datos de pagos:', data.payments);
-        console.log('Tasa de cambio:', exchangeRate);
+	// Sync USD with VES input - memoized to prevent unnecessary re-renders
+	useEffect(() => {
+		if (exchangeRate && vesInputValue && exchangeRate > 0) {
+			const ves = parseFloat(vesInputValue)
+			if (!isNaN(ves)) {
+				setUsdFromVes((ves / exchangeRate).toFixed(2))
+			}
+		} else {
+			setUsdFromVes('')
+		}
+	}, [vesInputValue, exchangeRate])
 
-        // Validar datos antes del envío
-        // Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-        const validationErrors = validateRegistrationData(
-          data,
-          exchangeRate,
-          moduleConfig,
-          laboratory?.slug
-        );
-        if (validationErrors.length > 0) {
-          toast({
-            title: '❌ Error de validación',
-            description: validationErrors.join(', '),
-            variant: 'destructive',
-          });
-          return;
-        }
+	useResetForm(form, getInitialFormValues, setUsdValue, setIsSubmitted, toast)
 
-        // Registrar caso médico con nueva estructura
-        // Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
-        const result = await registerMedicalCase(data, exchangeRate, moduleConfig);
+	// Memoize the append handler to prevent unnecessary re-renders
+	const handleAppend = useCallback(() => {
+		append({ method: '', amount: 0, reference: '' })
+	}, [append])
 
-        if (result.error) {
-          console.error('Error al guardar con nueva estructura:', result.error);
-          toast({
-            title: '❌ Error al guardar',
-            description: result.error,
-            variant: 'destructive',
-          });
-          return;
-        }
+	// Memoize the submit handler to prevent unnecessary re-renders
+	const onSubmit = useCallback(
+		async (data: FormValues) => {
+			console.log('🚀 onSubmit ejecutándose con datos:', data)
+			setIsSubmitting(true)
 
-        console.log('Registro guardado exitosamente con nueva estructura:', {
-          patient: result.patient,
-          medicalCase: result.medicalCase,
-          isNewPatient: result.isNewPatient,
-          patientUpdated: result.patientUpdated,
-        });
+			try {
+				console.log('Enviando datos del formulario con nueva estructura:', data)
+				console.log('Datos de pagos:', data.payments)
+				console.log('Tasa de cambio:', exchangeRate)
 
-        // Mensaje de éxito personalizado
-        let successMessage = 'El caso médico se ha registrado correctamente.';
-        if (result.isNewPatient) {
-          successMessage += ' Se creó un nuevo paciente.';
-        } else if (result.patientUpdated) {
-          successMessage += ' Se actualizaron los datos del paciente.';
-        } else {
-          successMessage += ' Se agregó a un paciente existente.';
-        }
+				// Validar datos antes del envío
+				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
+				const validationErrors = validateRegistrationData(data, exchangeRate, moduleConfig, laboratory?.slug)
+				if (validationErrors.length > 0) {
+					toast({
+						title: '❌ Error de validación',
+						description: validationErrors.join(', '),
+						variant: 'destructive',
+					})
+					return
+				}
 
-        toast({
-          title: '✅ Registro guardado',
-          description: successMessage,
-        });
+				// Registrar caso médico con nueva estructura
+				// Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
+				const result = await registerMedicalCase(data, exchangeRate, moduleConfig)
 
-        // Reset form and show new record button
-        setIsSubmitted(true);
-        setUsdValue('');
-        setVesValue('');
-        setVesInputValue('');
-        setUsdFromVes('');
+				if (result.error) {
+					console.error('Error al guardar con nueva estructura:', result.error)
+					toast({
+						title: '❌ Error al guardar',
+						description: result.error,
+						variant: 'destructive',
+					})
+					return
+				}
 
-        // Reset form to initial values
-        form.reset(getInitialFormValues());
-      } catch (error) {
-        console.error('Error inesperado:', error);
-        toast({
-          title: '❌ Error inesperado',
-          description: 'Ocurrió un error inesperado. Intenta nuevamente.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [
-      exchangeRate,
-      form,
-      toast,
-      setUsdValue,
-      setVesValue,
-      setVesInputValue,
-      setUsdFromVes,
-    ],
-  );
+				console.log('Registro guardado exitosamente con nueva estructura:', {
+					patient: result.patient,
+					medicalCase: result.medicalCase,
+					isNewPatient: result.isNewPatient,
+					patientUpdated: result.patientUpdated,
+				})
 
-  // Handler para errores de validación del formulario
-  const onError = useCallback(
-    (errors: any) => {
-      console.log('❌ Errores de validación del formulario:', errors);
-      toast({
-        title: '❌ Error de validación',
-        description:
-          'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
-        variant: 'destructive',
-      });
-    },
-    [toast],
-  );
+				// Mensaje de éxito personalizado
+				let successMessage = 'El caso médico se ha registrado correctamente.'
+				if (result.isNewPatient) {
+					successMessage += ' Se creó un nuevo paciente.'
+				} else if (result.patientUpdated) {
+					successMessage += ' Se actualizaron los datos del paciente.'
+				} else {
+					successMessage += ' Se agregó a un paciente existente.'
+				}
 
-  // Handler directo para debuggear el botón
-  const handleButtonClick = useCallback(
-    (e: React.MouseEvent) => {
-      console.log('🖱️ Botón clickeado!', e);
-      console.log('📊 Estado del formulario:', {
-        isSubmitting,
-        isSubmitted,
-        formErrors: form.formState.errors,
-        isValid: form.formState.isValid,
-        isDirty: form.formState.isDirty,
-      });
+				toast({
+					title: '✅ Registro guardado',
+					description: successMessage,
+				})
 
-      // Forzar el submit del formulario
-      form.handleSubmit(onSubmit, onError)();
-    },
-    [form, onSubmit, onError, isSubmitting, isSubmitted],
-  );
+				// Reset form and show new record button
+				setIsSubmitted(true)
+				setUsdValue('')
+				setVesValue('')
+				setVesInputValue('')
+				setUsdFromVes('')
 
-  // Memoize the clear form handler to prevent unnecessary re-renders
-  const handleClearForm = useCallback(() => {
-    form.reset(getInitialFormValues());
-    setUsdValue('');
-    setVesValue('');
-    setVesInputValue('');
-    setUsdFromVes('');
-    setIsSubmitted(false);
-    toast({
-      title: ' Formulario Limpio',
-      description: 'Todos los campos han sido reiniciados.',
-    });
-  }, [form, toast]);
+				// Reset form to initial values
+				form.reset(getInitialFormValues())
+			} catch (error) {
+				console.error('Error inesperado:', error)
+				toast({
+					title: '❌ Error inesperado',
+					description: 'Ocurrió un error inesperado. Intenta nuevamente.',
+					variant: 'destructive',
+				})
+			} finally {
+				setIsSubmitting(false)
+			}
+		},
+		[exchangeRate, form, toast, setUsdValue, setVesValue, setVesInputValue, setUsdFromVes],
+	)
 
-  // Memoize the new record handler to prevent unnecessary re-renders
-  const handleNewRecord = useCallback(() => {
-    form.reset(getInitialFormValues());
-    setUsdValue('');
-    setVesValue('');
-    setVesInputValue('');
-    setUsdFromVes('');
-    setIsSubmitted(false);
-    toast({
-      title: ' Nuevo Registro',
-      description: 'Formulario listo para un nuevo registro.',
-    });
-  }, [form, toast]);
+	// Handler para errores de validación del formulario
+	const onError = useCallback(
+		(errors: any) => {
+			console.log('❌ Errores de validación del formulario:', errors)
+			toast({
+				title: '❌ Error de validación',
+				description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
+				variant: 'destructive',
+			})
+		},
+		[toast],
+	)
 
-  // Listen for clear form events from parent components
-  useEffect(() => {
-    const handleClearFormEvent = () => {
-      handleClearForm();
-    };
+	// Handler directo para debuggear el botón
+	const handleButtonClick = useCallback(
+		(e: React.MouseEvent) => {
+			console.log('🖱️ Botón clickeado!', e)
+			console.log('📊 Estado del formulario:', {
+				isSubmitting,
+				isSubmitted,
+				formErrors: form.formState.errors,
+				isValid: form.formState.isValid,
+				isDirty: form.formState.isDirty,
+			})
 
-    window.addEventListener('clearForm', handleClearFormEvent);
+			// Forzar el submit del formulario
+			form.handleSubmit(onSubmit, onError)()
+		},
+		[form, onSubmit, onError, isSubmitting, isSubmitted],
+	)
 
-    return () => {
-      window.removeEventListener('clearForm', handleClearFormEvent);
-    };
-  }, [handleClearForm]);
+	// Memoize the clear form handler to prevent unnecessary re-renders
+	const handleClearForm = useCallback(() => {
+		form.reset(getInitialFormValues())
+		setUsdValue('')
+		setVesValue('')
+		setVesInputValue('')
+		setUsdFromVes('')
+		setIsSubmitted(false)
+		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
+		setPatientSectionResetKey((prev) => prev + 1)
+		toast({
+			title: ' Formulario Limpio',
+			description: 'Todos los campos han sido reiniciados.',
+		})
+	}, [form, toast])
 
-  const inputStyles =
-    'transition-transform duration-300 focus:border-primary focus:ring-primary';
-  const { profile } = useUserProfile();
+	// Memoize the new record handler to prevent unnecessary re-renders
+	const handleNewRecord = useCallback(() => {
+		form.reset(getInitialFormValues())
+		setUsdValue('')
+		setVesValue('')
+		setVesInputValue('')
+		setUsdFromVes('')
+		setIsSubmitted(false)
+		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
+		setPatientSectionResetKey((prev) => prev + 1)
+		toast({
+			title: ' Nuevo Registro',
+			description: 'Formulario listo para un nuevo registro.',
+		})
+	}, [form, toast])
 
-  return (
-    <>
-      {/* Bot�n sticky fuera del contenedor principal */}
-      <div className='hidden lg:block fixed top-4 right-4 z-50'>
-        <Button
-          type='button'
-          onClick={handleClearForm}
-          variant='outline'
-          className='flex items-center gap-1 text-xs py-1 px-2 sm:py-1.5 sm:px-2.5 bg-background/95 backdrop-blur-sm border-2 hover:border-primary shadow-lg hover:shadow-xl'
-        >
-          <Trash2 className='h-4 w-4' />
-          Limpiar
-        </Button>
-      </div>
+	// Listen for clear form events from parent components
+	useEffect(() => {
+		const handleClearFormEvent = () => {
+			handleClearForm()
+		}
 
-      <div className=''>
-        <div className='flex justify-between mb-3 sm:mb-4 md:mb-6'>
-          <div>
-            <div className='flex items-center justify-between'>
-              <div>
-                <h2 className='text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2'>
-                  Formulario de Registro
-                </h2>
-                <div className='w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full'></div>
-              </div>
-            </div>
-            <h3 className='text-sm text-primary font-semibold mt-2 sm:mt-3'>
-              Bienvenido, {profile?.display_name}
-            </h3>
-          </div>
-        </div>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit, onError)}
-            className='space-y-3 sm:space-y-4 md:space-y-6'
-          >
-            <PatientDataSection
-              control={formControl}
-              inputStyles={inputStyles}
-            />
-            <ServiceSection control={formControl} inputStyles={inputStyles} />
-            <FeatureGuard feature='hasPayment'>
-              <PaymentSection
-                control={formControl}
-                fields={fields}
-                append={fields.length < 4 ? handleAppend : undefined}
-                remove={remove}
-                inputStyles={inputStyles}
-                usdValue={usdValue}
-                setUsdValue={setUsdValue}
-                vesValue={vesValue}
-                vesInputValue={vesInputValue}
-                setVesInputValue={setVesInputValue}
-                usdFromVes={usdFromVes}
-                exchangeRate={exchangeRate}
-                isLoadingRate={isLoadingRate}
-              />
-            </FeatureGuard>
-            <CommentsSection control={formControl} inputStyles={inputStyles} />
-            {isSubmitted ? (
-              <Button
-                type='button'
-                onClick={handleNewRecord}
-                className='w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white transition-transform duration-300 transform hover:-translate-y-1'
-              >
-                <FilePlus2 />
-                Nuevo Registro
-              </Button>
-            ) : (
-              <Button
-                type='button'
-                onClick={handleButtonClick}
-                className='w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1'
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Guardando...
-                  </>
-                ) : (
-                  'Enviar'
-                )}
-              </Button>
-            )}
-          </form>
-        </Form>
-      </div>
-    </>
-  );
+		window.addEventListener('clearForm', handleClearFormEvent)
+
+		return () => {
+			window.removeEventListener('clearForm', handleClearFormEvent)
+		}
+	}, [handleClearForm])
+
+	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
+	const { profile } = useUserProfile()
+
+	return (
+		<>
+			{/* Boton sticky fuera del contenedor principal */}
+			<div className="hidden lg:block fixed top-4 right-4 z-50">
+				<Button
+					type="button"
+					onClick={handleClearForm}
+					variant="outline"
+					className="flex items-center gap-1 text-xs py-1 px-2 sm:py-1.5 sm:px-2.5 bg-background/95 backdrop-blur-sm border-2 hover:border-primary shadow-lg hover:shadow-xl"
+				>
+					<Trash2 className="h-4 w-4" />
+					Limpiar
+				</Button>
+			</div>
+
+			<div className="">
+				<div className="flex justify-between mb-3 sm:mb-4 md:mb-6">
+					<div>
+						<div className="flex items-center justify-between">
+							<div>
+								<h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Formulario de Registro</h2>
+								<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
+							</div>
+						</div>
+						<h3 className="text-sm text-primary font-semibold mt-2 sm:mt-3">Bienvenido, {profile?.display_name}</h3>
+					</div>
+				</div>
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-3 sm:space-y-4 md:space-y-6">
+						<PatientDataSection key={patientSectionResetKey} control={formControl} inputStyles={inputStyles} />
+						<ServiceSection control={formControl} inputStyles={inputStyles} />
+						<FeatureGuard feature="hasPayment">
+							<PaymentSection
+								control={formControl}
+								fields={fields}
+								append={fields.length < 4 ? handleAppend : undefined}
+								remove={remove}
+								inputStyles={inputStyles}
+								usdValue={usdValue}
+								setUsdValue={setUsdValue}
+								vesValue={vesValue}
+								vesInputValue={vesInputValue}
+								setVesInputValue={setVesInputValue}
+								usdFromVes={usdFromVes}
+								exchangeRate={exchangeRate}
+								isLoadingRate={isLoadingRate}
+							/>
+						</FeatureGuard>
+						<CommentsSection control={formControl} inputStyles={inputStyles} />
+						{isSubmitted ? (
+							<Button
+								type="button"
+								onClick={handleNewRecord}
+								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
+							>
+								<FilePlus2 />
+								Nuevo Registro
+							</Button>
+						) : (
+							<Button
+								type="button"
+								onClick={handleButtonClick}
+								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
+								disabled={isSubmitting}
+							>
+								{isSubmitting ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Guardando...
+									</>
+								) : (
+									'Enviar'
+								)}
+							</Button>
+						)}
+					</form>
+				</Form>
+			</div>
+		</>
+	)
 }
 
 export default MedicalFormContainer;

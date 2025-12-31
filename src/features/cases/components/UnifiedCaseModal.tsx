@@ -65,6 +65,7 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
+import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -365,6 +366,34 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+    
+    // Query to get responsable if patient is a minor/animal
+    const { data: responsableData } = useQuery({
+      queryKey: ['patient-responsable', currentCase?.patient_id],
+      queryFn: async () => {
+        if (!currentCase?.patient_id) return null;
+        
+        try {
+          // Verificar si el paciente es menor o animal
+          const { data: patient } = await supabase
+            .from('patients')
+            .select('tipo_paciente')
+            .eq('id', currentCase.patient_id)
+            .single();
+          
+          if (patient && (patient.tipo_paciente === 'menor' || patient.tipo_paciente === 'animal')) {
+            const responsable = await getResponsableByDependiente(currentCase.patient_id);
+            return responsable;
+          }
+          
+          return null;
+        } catch (error) {
+          console.error('Error obteniendo responsable:', error);
+          return null;
+        }
+      },
+      enabled: !!currentCase?.patient_id && isOpen,
+    });
     
     // Load patient data for EditPatientInfoModal - COMMENTED OUT (not needed, using inline image_url field)
     /*
@@ -1628,11 +1657,37 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.nombre ?? null}
                         onChange={handleInputChange}
                       />
-                      <InfoRow
-                        label='Cédula'
-                        value={currentCase.cedula}
-                        editable={false}
-                      />
+                      {/* Cédula - Mostrar información del responsable si es menor */}
+                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          Cédula:
+                        </span>
+                        <div className='sm:w-1/2 sm:text-right'>
+                          {currentCase.cedula === 'S/C' || !currentCase.cedula ? (
+                            responsableData?.responsable ? (
+                              <div className='text-sm'>
+                                <p className='text-gray-900 dark:text-gray-100 font-medium'>
+                                  Menor de edad
+                                </p>
+                                <p className='text-xs text-gray-600 dark:text-gray-400 mt-1'>
+                                  Representado por: <span className='font-medium'>{responsableData.responsable.nombre}</span>
+                                </p>
+                                <p className='text-xs text-gray-600 dark:text-gray-400'>
+                                  Cédula: <span className='font-medium'>{responsableData.responsable.cedula}</span>
+                                </p>
+                              </div>
+                            ) : (
+                              <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                                {currentCase.cedula || 'Sin cédula'}
+                              </span>
+                            )
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                              {currentCase.cedula}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
                       <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                         <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>

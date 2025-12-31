@@ -250,14 +250,78 @@ export const deleteIdentification = async (id: string): Promise<void> => {
 }
 
 /**
+ * Buscar paciente por número de identificación (sin importar el tipo) - MULTI-TENANT
+ * Busca en todos los tipos de documento (V, E, J, C) usando índices para eficiencia
+ * Útil cuando el usuario solo ingresa el número sin el prefijo
+ * 
+ * OPTIMIZACIÓN: Usa el índice compuesto (laboratory_id, numero) para búsqueda rápida
+ */
+export const findPatientByNumberOnly = async (
+	numero: string,
+): Promise<{ paciente: any; identificacion: Identificacion } | null> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Buscar usando el índice compuesto (laboratory_id, numero)
+		// Esto es más eficiente que filtrar por tipo_documento
+		// El índice idx_identificaciones_lab_numero optimiza esta query
+		const { data, error } = await supabase
+			.from('identificaciones' as any)
+			.select('*')
+			.eq('laboratory_id', laboratoryId)
+			.eq('numero', numero.trim())
+			.in('tipo_documento', ['V', 'E', 'J', 'C'])
+			.limit(1) // Solo necesitamos el primero (debería ser único por lab)
+
+		if (error) {
+			if (error.code === 'PGRST116') {
+				return null // No encontrado
+			}
+			throw error
+		}
+
+		if (!data || data.length === 0) {
+			return null
+		}
+
+		const identificacion = data[0] as unknown as Identificacion
+
+		// Obtener el paciente asociado usando índice en patients.id
+		const { data: paciente, error: pacienteError } = await supabase
+			.from('patients')
+			.select('*')
+			.eq('id', identificacion.paciente_id)
+			.single()
+
+		if (pacienteError || !paciente) {
+			throw new Error('Paciente no encontrado')
+		}
+
+		return {
+			paciente,
+			identificacion,
+		}
+	} catch (error) {
+		console.error('Error buscando paciente por número:', error)
+		throw error
+	}
+}
+
+/**
  * Buscar paciente por identificación (devuelve el paciente completo)
  * Útil para autocomplete y búsquedas
+ * Si no se especifica tipo, busca en todos los tipos
  */
 export const findPatientByIdentificationNumber = async (
 	numero: string,
-	tipo: 'V' | 'E' | 'J' | 'C' | 'pasaporte',
+	tipo?: 'V' | 'E' | 'J' | 'C' | 'pasaporte',
 ): Promise<{ paciente: any; identificacion: Identificacion } | null> => {
 	try {
+		// Si no se especifica tipo, buscar en todos los tipos
+		if (!tipo) {
+			return await findPatientByNumberOnly(numero)
+		}
+
 		const identificacion = await findPatientByIdentification(numero, tipo)
 
 		if (!identificacion) {

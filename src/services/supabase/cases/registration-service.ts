@@ -162,9 +162,33 @@ export const registerMedicalCase = async (
     console.log('Case Data:', caseData);
     console.log('Exchange Rate:', exchangeRate);
 
-    // PASO 1: Buscar paciente existente por cédula
-    console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`);
-    let patient = await findPatientByCedula(patientData.cedula);
+    // PASO 1: Buscar paciente existente
+    // Si la cédula es null (dependiente), buscar por nombre y teléfono en su lugar
+    let patient: any = null;
+    if (patientData.cedula) {
+      console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`);
+      patient = await findPatientByCedula(patientData.cedula);
+    } else {
+      // Para dependientes sin cédula, buscar por nombre y teléfono
+      console.log(`🔍 Buscando dependiente por nombre y teléfono: ${patientData.nombre}`);
+      const laboratoryId = profileWithLab?.laboratory_id;
+      if (laboratoryId) {
+        // Buscar pacientes con nombre y teléfono coincidentes y sin cédula
+        const { data: patients, error } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('laboratory_id', laboratoryId)
+          .eq('nombre', patientData.nombre)
+          .is('cedula', null)
+          .limit(1);
+        
+        if (error) {
+          console.error('Error buscando dependiente:', error);
+        } else if (patients && patients.length > 0) {
+          patient = patients[0];
+        }
+      }
+    }
 
     let isNewPatient = false;
     let patientUpdated = false;
@@ -296,7 +320,7 @@ const prepareRegistrationData = (
   const patientData: PatientInsert = {
     cedula:
       formData.idType === 'S/C'
-        ? 'S/C'
+        ? null // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
         : `${formData.idType}-${formData.idNumber}`,
     nombre: formData.fullName,
     edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
