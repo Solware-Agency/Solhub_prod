@@ -130,6 +130,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [showDoctorFilter, setShowDoctorFilter] = useState(false);
   const [showOriginFilter, setShowOriginFilter] = useState(false);
+  const [showBranchFilter, setShowBranchFilter] = useState(false);
   
   // Obtener tipos de examen del laboratorio
   const examTypeOptions = useMemo(() => {
@@ -197,11 +198,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className='max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-full'
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(5px)',
-        }}
+        className='max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-full bg-background'
       >
         <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
         <DialogDescription className="sr-only">
@@ -228,7 +225,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           </TabsList>
 
           <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden'>
-            {/* Status and Branch Filters */}
+            {/* Status and Document Status Filters */}
             <div className={`grid grid-cols-1 ${isSpt ? '' : 'md:grid-cols-2'} gap-4 w-full`}>
               {!isSpt && (
                 <div className='space-y-3'>
@@ -242,17 +239,23 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 </div>
               )}
 
-              <div className='space-y-3'>
-                <label className='text-sm font-medium text-gray-700 flex items-center gap-2'>
-                  <MapPin className='w-4 h-4' />
-                  Sede
-                </label>
-                <BranchFilterPanel
-                  branches={branchOptions}
-                  selectedBranches={branchFilter}
-                  onFilterChange={onBranchFilterChange}
-                />
-              </div>
+              {/* Ocultar Estatus de Documento solo para SPT */}
+              {!isSpt && (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'faltante', label: 'Faltante' },
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'aprobado', label: 'Aprobado' },
+                      { value: 'rechazado', label: 'Rechazado' },
+                    ]}
+                    value={documentStatusFilter}
+                    placeholder='Estatus de Documento'
+                    onChange={onDocumentStatusFilterChange}
+                    data-testid='document-status-filter'
+                  />
+                </div>
+              )}
             </div>
 
             {/* New Filters Row 1: PDF Status and Date Range */}
@@ -333,7 +336,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               </div>
             </div>
 
-            {/* New Filters Row 2: Exam Type and Document Status */}
+            {/* New Filters Row 2: Exam Type and Email Status */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
@@ -344,24 +347,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   data-testid='exam-type-filter'
                 />
               </div>
-
-              {/* Ocultar Estatus de Documento solo para SPT */}
-              {!isSpt && (
-                <div className='space-y-3'>
-                  <CustomDropdown
-                    options={[
-                      { value: 'faltante', label: 'Faltante' },
-                      { value: 'pendiente', label: 'Pendiente' },
-                      { value: 'aprobado', label: 'Aprobado' },
-                      { value: 'rechazado', label: 'Rechazado' },
-                    ]}
-                    value={documentStatusFilter}
-                    placeholder='Estatus de Documento'
-                    onChange={onDocumentStatusFilterChange}
-                    data-testid='document-status-filter'
-                  />
-                </div>
-              )}
 
               <div className='space-y-3'>
                 <CustomDropdown
@@ -377,29 +362,72 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               </div>
             </div>
 
-            {/* Doctor and Origin Filters - Same line */}
-            <div className={`grid grid-cols-1 ${isSpt ? '' : 'md:grid-cols-2'} gap-4 w-full`}>
-              {/* Doctor Filter */}
+            {/* Branch Filter Row - For SPT, includes Doctor Filter */}
+            <div className={`grid grid-cols-1 ${isSpt ? 'md:grid-cols-2' : ''} gap-4 w-full`}>
               <div className='space-y-3'>
                 <Button
-                  onClick={() => setShowDoctorFilter(!showDoctorFilter)}
-                  variant={showDoctorFilter ? 'default' : 'outline'}
+                  onClick={() => setShowBranchFilter(!showBranchFilter)}
+                  variant={showBranchFilter ? 'default' : 'outline'}
                   className='w-full justify-start font-bold'
                 >
-                  <Stethoscope className='w-4 h-4 mr-2' />
-                  Filtrar por Médico
+                  <MapPin className='w-4 h-4 mr-2' />
+                  Filtrar por Sede
                 </Button>
 
-                {showDoctorFilter && (
-                  <DoctorFilterPanel
-                    cases={cases}
-                    onFilterChange={onDoctorFilterChange}
+                {showBranchFilter && (
+                  <BranchFilterPanel
+                    branches={branchOptions}
+                    selectedBranches={branchFilter}
+                    onFilterChange={onBranchFilterChange}
                   />
                 )}
               </div>
 
-              {/* Origin Filter - Oculto para SPT */}
-              {!isSpt && (
+              {/* Doctor Filter - Only for SPT, in same row as Branch */}
+              {isSpt && (
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => setShowDoctorFilter(!showDoctorFilter)}
+                    variant={showDoctorFilter ? 'default' : 'outline'}
+                    className='w-full justify-start font-bold'
+                  >
+                    <Stethoscope className='w-4 h-4 mr-2' />
+                    Filtrar por Médico
+                  </Button>
+
+                  {showDoctorFilter && (
+                    <DoctorFilterPanel
+                      cases={cases}
+                      onFilterChange={onDoctorFilterChange}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Doctor and Origin Filters - Same line - Only for non-SPT */}
+            {!isSpt && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                {/* Doctor Filter */}
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => setShowDoctorFilter(!showDoctorFilter)}
+                    variant={showDoctorFilter ? 'default' : 'outline'}
+                    className='w-full justify-start font-bold'
+                  >
+                    <Stethoscope className='w-4 h-4 mr-2' />
+                    Filtrar por Médico
+                  </Button>
+
+                  {showDoctorFilter && (
+                    <DoctorFilterPanel
+                      cases={cases}
+                      onFilterChange={onDoctorFilterChange}
+                    />
+                  )}
+                </div>
+
+                {/* Origin Filter - Oculto para SPT */}
                 <div className='space-y-3'>
                   <Button
                     onClick={() => setShowOriginFilter(!showOriginFilter)}
@@ -418,8 +446,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     />
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Active Filters Summary */}
             {hasActiveFilters && (
