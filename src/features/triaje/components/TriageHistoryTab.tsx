@@ -97,15 +97,9 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         isLatest ? 'border-primary border-2 shadow-lg' : 'border-input'
       }`}
     >
-      {/* Header con fecha */}
+      {/* Header con fecha y código del caso */}
       <div className='flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-gray-700'>
         <div className='flex items-center gap-2'>
-          {isLatest && (
-            <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20'>
-              <Clock className='h-3 w-3 mr-1' />
-              Último Triaje
-            </span>
-          )}
           <Calendar className='h-4 w-4 text-gray-500 dark:text-gray-400' />
           <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
             {format(new Date(record.measurement_date), 'dd/MM/yyyy', { locale: es })}
@@ -113,6 +107,14 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           <span className='text-xs text-gray-500 dark:text-gray-400'>
             {format(new Date(record.measurement_date), 'HH:mm', { locale: es })}
           </span>
+          {record.case_code && (
+            <>
+              <span className='text-xs text-gray-400 dark:text-gray-500 mx-1'>•</span>
+              <span className='text-xs font-medium text-primary dark:text-primary'>
+                {record.case_code}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -298,10 +300,6 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
       {/* Historial Completo */}
       {historyWithoutLatest.length > 0 && (
         <div>
-          <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2'>
-            <Activity className='h-5 w-5 text-gray-500 dark:text-gray-400' />
-            Historial de Triajes
-          </h3>
           <div className='space-y-4'>
             {historyWithoutLatest.map((record: TriageRecord) =>
               renderTriageRecord(record, false),

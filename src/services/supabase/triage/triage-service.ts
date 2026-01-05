@@ -13,6 +13,7 @@ export interface TriageRecord {
   id: string;
   patient_id: string;
   case_id: string | null; // Referencia al caso médico (opcional para compatibilidad)
+  case_code?: string | null; // Código del caso médico (obtenido mediante JOIN)
   laboratory_id: string; // Multi-tenant
   measurement_date: string;
   reason: string | null;
@@ -355,7 +356,12 @@ export const getTriageHistoryByPatient = async (
 
     const { data: records, error } = await supabase
       .from('triaje_records')
-      .select('*')
+      .select(`
+        *,
+        medical_records_clean(
+          code
+        )
+      `)
       .eq('patient_id', patient_id)
       .eq('laboratory_id', laboratoryId)
       .order('measurement_date', { ascending: false });
@@ -365,7 +371,11 @@ export const getTriageHistoryByPatient = async (
       throw new Error(`Error al obtener historial: ${error.message}`);
     }
 
-    return (records || []) as TriageRecord[];
+    // Transformar los datos para incluir el código del caso
+    return (records || []).map((record: any) => ({
+      ...record,
+      case_code: record.medical_records_clean?.code || null,
+    })) as TriageRecord[];
   } catch (error) {
     console.error('Error en getTriageHistoryByPatient:', error);
     throw error;
@@ -384,7 +394,12 @@ export const getLatestTriageRecord = async (
 
     const { data: record, error } = await supabase
       .from('triaje_records')
-      .select('*')
+      .select(`
+        *,
+        medical_records_clean(
+          code
+        )
+      `)
       .eq('patient_id', patient_id)
       .eq('laboratory_id', laboratoryId)
       .order('measurement_date', { ascending: false })
@@ -400,7 +415,11 @@ export const getLatestTriageRecord = async (
       throw new Error(`Error al obtener último triaje: ${error.message}`);
     }
 
-    return record as TriageRecord;
+    // Transformar los datos para incluir el código del caso
+    return {
+      ...record,
+      case_code: (record as any).medical_records_clean?.code || null,
+    } as TriageRecord;
   } catch (error) {
     console.error('Error en getLatestTriageRecord:', error);
     throw error;

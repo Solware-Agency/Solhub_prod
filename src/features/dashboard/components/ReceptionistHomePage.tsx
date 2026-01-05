@@ -35,7 +35,7 @@ const ReceptionistHomePage: React.FC = () => {
 			description: 'Crear nuevo registro',
 		},
 		{
-			title: 'Registros',
+			title: 'Casos',
 			icon: FolderInput,
 			path: '/employee/records',
 			description: 'Ver todos los casos',

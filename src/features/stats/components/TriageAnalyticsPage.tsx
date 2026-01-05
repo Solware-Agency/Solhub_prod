@@ -383,23 +383,24 @@ export const TriageAnalyticsPage: React.FC = () => {
 						</div>
 					</CardContent>
 				</Card>
+			</div>
 
-				{/* Hábitos psicobiológicos */}
-				{(Object.keys(stats.habits.tabaco).length > 0 ||
-					Object.keys(stats.habits.cafe).length > 0 ||
-					Object.keys(stats.habits.alcohol).length > 0) && (
-					<Card 
-						className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
-						onClick={() => handleCardClick('habits')}
-					>
-						<CardHeader className='pb-3'>
-							<CardTitle className='text-sm font-medium flex items-center gap-2'>
-								<Activity className='h-4 w-4 text-purple-500' />
-								Hábitos Psicobiológicos
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className='grid grid-cols-3 gap-4'>
+			{/* Hábitos psicobiológicos - Full width */}
+			{(Object.keys(stats.habits.tabaco).length > 0 ||
+				Object.keys(stats.habits.cafe).length > 0 ||
+				Object.keys(stats.habits.alcohol).length > 0) && (
+				<Card 
+					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
+					onClick={() => handleCardClick('habits')}
+				>
+					<CardHeader className='pb-3'>
+						<CardTitle className='text-sm font-medium flex items-center gap-2'>
+							<Activity className='h-4 w-4 text-purple-500' />
+							Hábitos Psicobiológicos
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
 								{/* Tabaco */}
 								{Object.keys(stats.habits.tabaco).length > 0 && (
 									<div>
@@ -535,7 +536,6 @@ export const TriageAnalyticsPage: React.FC = () => {
 						</CardContent>
 					</Card>
 				)}
-			</div>
 
 			{/* Nota de privacidad */}
 			<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>

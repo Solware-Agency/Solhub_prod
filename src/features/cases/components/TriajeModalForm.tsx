@@ -81,9 +81,7 @@ interface TriajeModalFormProps {
 // Componente para mostrar información del triaje existente
 const TriageInfoDisplay: React.FC<{
   record: TriageRecord;
-  onEdit?: () => void;
-  canEdit?: boolean;
-}> = ({ record, onEdit, canEdit = false }) => {
+}> = ({ record }) => {
   // Validar que el record existe
   if (!record) {
     return (
@@ -141,16 +139,6 @@ const TriageInfoDisplay: React.FC<{
             }
           })()}
         </div>
-        {canEdit && onEdit && (
-          <Button
-            onClick={onEdit}
-            variant='outline'
-            className='flex items-center gap-2'
-          >
-            <Edit className='h-4 w-4' />
-            Editar
-          </Button>
-        )}
       </div>
 
       {/* Grid de signos vitales */}
@@ -1039,8 +1027,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       <div className='p-4'>
         <TriageInfoDisplay
           record={existingTriage}
-          onEdit={canEditTriage ? () => setIsEditing(true) : undefined}
-          canEdit={canEditTriage}
         />
       </div>
     );
@@ -1165,20 +1151,20 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         <h4 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
                           Índice Tabáquico
                         </h4>
-                        <Tooltip delayDuration={0}>
+                        <TooltipPrimitive.Root delayDuration={0}>
                           <TooltipTrigger asChild>
                             <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
                           </TooltipTrigger>
                           <TooltipContent
                             side='top'
                             sideOffset={5}
-                            className='!z-40 max-w-xs'
+                            className='!z-[1000001] max-w-xs'
                           >
                             <p className='text-sm'>
                               Fórmula: (Cigarrillos al día × Años) / 20
                             </p>
                           </TooltipContent>
-                        </Tooltip>
+                        </TooltipPrimitive.Root>
                       </div>
                       <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
                         <div>
@@ -1362,7 +1348,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-40'
+                      className='!z-[1000001]'
                     >
                       <p>Frecuencia cardíaca</p>
                     </TooltipContent>
@@ -1389,7 +1375,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-40'
+                      className='!z-[1000001]'
                     >
                       <p>Frecuencia respiratoria</p>
                     </TooltipContent>
@@ -1416,7 +1402,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-40'
+                      className='!z-[1000001]'
                     >
                       <p>Saturación de oxígeno</p>
                     </TooltipContent>
@@ -1497,7 +1483,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     <TooltipContent
                       side='top'
                       sideOffset={5}
-                      className='!z-40'
+                      className='!z-[1000001]'
                     >
                       <p>Índice de masa corporal</p>
                     </TooltipContent>

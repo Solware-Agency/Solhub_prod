@@ -10,7 +10,7 @@ const CasesPage: React.FC = () => {
 	const [isFullscreen, setIsFullscreen] = useState(false)
 	const [searchTerm, setSearchTerm] = useState('')
 	const [currentPage, setCurrentPage] = useState(1)
-	const [itemsPerPage, setItemsPerPage] = useState(50)
+	const [itemsPerPage, setItemsPerPage] = useState(52)
 	// Nuevos estados para filtros del servidor
 	const [serverFilters, setServerFilters] = useState<{
     examType?: string;

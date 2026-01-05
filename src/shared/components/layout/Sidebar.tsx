@@ -553,7 +553,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/employee/records'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Registros'
+                  label='Casos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

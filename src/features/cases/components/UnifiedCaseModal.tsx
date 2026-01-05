@@ -1430,12 +1430,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       <div className='flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2'>
                         {currentCase.code && (
                           <Tooltip>
-                            <TooltipTrigger>
-                              <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                            <TooltipTrigger asChild>
+                              <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help'>
                                 {currentCase.code}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent 
+                              style={{ zIndex: 2147483647 }}
+                            >
                               {getCodeLegend(currentCase.code, laboratory)}
                             </TooltipContent>
                           </Tooltip>

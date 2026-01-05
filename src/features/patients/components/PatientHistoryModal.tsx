@@ -743,7 +743,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               className='flex items-center gap-2'
                             >
                               <Activity className='h-4 w-4' />
-                              Datos de Triaje
+                              Historial de Triaje
                             </TabsTrigger>
                           </TabsList>
                         </div>
@@ -1136,23 +1136,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
           >
             <DialogContent className='max-w-5xl w-full h-[90vh] p-0'>
               <DialogHeader className='p-4 border-b'>
-                <div className='flex items-center justify-between'>
-                  <DialogTitle className='flex items-center gap-2'>
-                    <FileText className='w-5 h-5' />
-                    Vista previa del documento -{' '}
-                    {filteredCases?.find((c) => c.id === previewingCaseId)
-                      ?.code || 'Sin código'}
-                  </DialogTitle>
-                  <div className='flex gap-2'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => setPreviewingCaseId(null)}
-                    >
-                      <X className='w-4 h-4' />
-                    </Button>
-                  </div>
-                </div>
+                <DialogTitle className='flex items-center gap-2'>
+                  <FileText className='w-5 h-5' />
+                  Vista previa del documento -{' '}
+                  {filteredCases?.find((c) => c.id === previewingCaseId)
+                    ?.code || 'Sin código'}
+                </DialogTitle>
               </DialogHeader>
               <div className='flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900'>
                 {filteredCases?.find((c) => c.id === previewingCaseId)

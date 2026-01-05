@@ -274,6 +274,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         { value: '10', label: '10' },
         { value: '20', label: '20' },
         { value: '50', label: '50' },
+        { value: '52', label: '52' },
         { value: '100', label: '100' },
       ],
       [],
