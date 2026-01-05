@@ -60,6 +60,7 @@ interface MedicalRecord {
   doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'];
   cito_status?: Database['public']['Enums']['cito_status_type'];
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  laboratory_id?: string; // ID del laboratorio
 }
 
 interface StepsCaseModalProps {
@@ -1076,6 +1077,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     setIsSending(true);
 
     try {
+      // Preparar subject y message personalizados
+      const laboratoryName = laboratory?.name || 'Laboratorio';
+      const emailSubject = `${laboratoryName} - Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
+      const emailBody = `Hola ${case_?.full_name},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
+
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
       const isDevelopment = import.meta.env.DEV;
       const apiUrl = isDevelopment
@@ -1088,11 +1094,14 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         },
         body: JSON.stringify({
           patientEmail: emails.to,
-          ccEmails: emails.cc,
-          bccEmails: emails.bcc,
           patientName: case_.full_name,
           caseCode: case_.code || case_.id,
           pdfUrl: case_.informe_qr,
+          laboratory_id: case_.laboratory_id || laboratory?.id,
+          subject: emailSubject,
+          message: emailBody,
+          cc: emails.cc,
+          bcc: emails.bcc,
         }),
       });
 
