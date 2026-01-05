@@ -381,7 +381,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             .eq('id', currentCase.patient_id)
             .single();
           
-          if (patient && (patient.tipo_paciente === 'menor' || patient.tipo_paciente === 'animal')) {
+          if (patient && ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal')) {
             const responsable = await getResponsableByDependiente(currentCase.patient_id);
             return responsable;
           }
@@ -1788,57 +1788,77 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         onChange={handleInputChange}
                       />
                       
-                      {/* Image URL field - Only visible for imagenologia role */}
-                      {profile?.role === 'imagenologia' && (
+                      {/* Image URL field - Visible for all, editable only for imagenologia and owner */}
+                      {(currentCase as any).image_url && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             URL de Imagen:
                           </span>
-                          <div className='sm:w-1/2 space-y-2'>
-                            <Input
-                              id='image-url-input'
-                              name='image_url'
-                              type='url'
-                              placeholder='https://ejemplo.com/imagen.jpg'
-                              value={imageUrl}
-                              onChange={(e) => setImageUrl(e.target.value)}
-                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
-                            />
-                            <div className='flex gap-2'>
-                              <Button
-                                size='sm'
-                                onClick={async () => {
-                                  if (!imageUrl) {
+                          {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
+                            <div className='sm:w-1/2 space-y-2'>
+                              <Input
+                                id='image-url-input'
+                                name='image_url'
+                                type='url'
+                                placeholder='https://ejemplo.com/imagen.jpg'
+                                value={imageUrl}
+                                onChange={(e) => setImageUrl(e.target.value)}
+                                className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
+                              />
+                              <div className='flex gap-2'>
+                                <Button
+                                  size='sm'
+                                  onClick={async () => {
+                                    if (!imageUrl) {
+                                      toast({
+                                        title: '⚠️ Campo vacío',
+                                        description: 'Por favor ingresa una URL válida',
+                                        variant: 'default',
+                                      });
+                                      return;
+                                    }
+                                    // TODO: Implementar guardado cuando se defina la columna
                                     toast({
-                                      title: '⚠️ Campo vacío',
-                                      description: 'Por favor ingresa una URL válida',
+                                      title: '⏳ Pendiente',
+                                      description: 'La funcionalidad de guardado se implementará cuando se defina la columna en la BD',
                                       variant: 'default',
                                     });
-                                    return;
-                                  }
-                                  // TODO: Implementar guardado cuando se defina la columna
-                                  toast({
-                                    title: '⏳ Pendiente',
-                                    description: 'La funcionalidad de guardado se implementará cuando se defina la columna en la BD',
-                                    variant: 'default',
-                                  });
-                                }}
-                              >
-                                <Save className='w-3 h-3 mr-1' />
-                                Guardar URL
-                              </Button>
-                              {imageUrl && (
+                                  }}
+                                >
+                                  <Save className='w-3 h-3 mr-1' />
+                                  Guardar URL
+                                </Button>
+                                {imageUrl && (
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                  >
+                                    <Eye className='w-3 h-3 mr-1' />
+                                    Ver
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className='sm:w-1/2'>
+                              {imageUrl ? (
                                 <Button
                                   size='sm'
                                   variant='outline'
                                   onClick={() => window.open(imageUrl, '_blank')}
+                                  className='w-full'
                                 >
                                   <Eye className='w-3 h-3 mr-1' />
-                                  Ver
+                                  Ver Imagen
                                 </Button>
+                              ) : (
+                                <span className='text-sm text-gray-500 dark:text-gray-400'>
+                                  Sin imagen
+                                </span>
                               )}
                             </div>
-                          </div>
+                          )}
                         </div>
                       )}
                       
