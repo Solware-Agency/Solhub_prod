@@ -1894,9 +1894,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                 fieldName='treatingDoctor'
                                 placeholder='Nombre del Médico'
                                 value={
-                                  editedCase.treating_doctor ||
-                                  currentCase.treating_doctor ||
-                                  ''
+                                  editedCase.treating_doctor !== undefined
+                                    ? editedCase.treating_doctor
+                                    : currentCase.treating_doctor || ''
                                 }
                                 onChange={(e) => {
                                   const { value } = e.target;
