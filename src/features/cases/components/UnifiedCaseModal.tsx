@@ -1919,10 +1919,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </span>
                           {isEditing ? (
                             <div className='sm:w-1/2'>
-                              <AutocompleteInput
+                              <Input
                                 id='consulta-input'
                                 name='consulta'
-                                fieldName='consulta'
                                 placeholder='Ej: Cardiología, Medicina General'
                                 value={
                                   editedCase.consulta ||
@@ -1931,11 +1930,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                 }
                                 onChange={(e) => {
                                   const { value } = e.target;
-                                  if (
-                                    /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)
-                                  ) {
-                                    handleInputChange('consulta', value);
-                                  }
+                                  // Permitir letras, números, espacios y caracteres comunes
+                                  handleInputChange('consulta', value);
                                 }}
                                 className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
                               />
