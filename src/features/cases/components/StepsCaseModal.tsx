@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@shared/components/ui/dialog';
+import SendEmailModal from './SendEmailModal';
 
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
@@ -89,6 +90,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const { toast } = useToast();
   const { profile } = useUserProfile();
   useBodyScrollLock(isOpen);
@@ -1043,28 +1045,37 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   };
 
   const handleSendCase = async () => {
+    // Verificar que tenemos los datos necesarios
+    if (!case_?.email) {
+      toast({
+        title: '❌ Error',
+        description: 'Este caso no tiene un correo electrónico asociado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!case_?.informe_qr) {
+      toast({
+        title: '❌ Error',
+        description: 'El PDF del caso aún no está disponible.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Abrir modal de envío de email
+    setIsSendEmailModalOpen(true);
+  };
+
+  const handleConfirmSendEmail = async (emails: {
+    to: string;
+    cc: string[];
+    bcc: string[];
+  }) => {
     setIsSending(true);
 
     try {
-      // Verificar que tenemos los datos necesarios
-      if (!case_?.email) {
-        toast({
-          title: '❌ Error',
-          description: 'Este caso no tiene un correo electrónico asociado.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!case_?.informe_qr) {
-        toast({
-          title: '❌ Error',
-          description: 'El PDF del caso aún no está disponible.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
       const isDevelopment = import.meta.env.DEV;
       const apiUrl = isDevelopment
@@ -1076,7 +1087,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patientEmail: case_.email,
+          patientEmail: emails.to,
+          ccEmails: emails.cc,
+          bccEmails: emails.bcc,
           patientName: case_.full_name,
           caseCode: case_.code || case_.id,
           pdfUrl: case_.informe_qr,
@@ -1113,9 +1126,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         }
       }
 
+      // Cerrar el modal de envío
+      setIsSendEmailModalOpen(false);
+
       toast({
         title: '✅ Correo enviado',
-        description: `Se ha enviado el informe al correo ${case_.email}`,
+        description: `Se ha enviado el informe al correo ${emails.to}`,
         className: 'bg-green-100 border-green-400 text-green-800',
       });
 
@@ -1635,6 +1651,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           </>
         )}
       </AnimatePresence>
+
+      {/* Send Email Modal */}
+      {case_?.email && case_?.informe_qr && (
+        <SendEmailModal
+          isOpen={isSendEmailModalOpen}
+          onClose={() => setIsSendEmailModalOpen(false)}
+          onSend={handleConfirmSendEmail}
+          primaryEmail={case_.email}
+          patientName={case_.full_name || 'Paciente'}
+          caseCode={case_.code || case_.id || 'N/A'}
+          isSending={isSending}
+        />
+      )}
+
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className={isFullscreen ? 'z-[999999999999999999]' : ''}>
           <DialogHeader>
