@@ -71,8 +71,8 @@ export function MedicalFormContainer() {
 
 	// Crear schema dinámico basado en la configuración del módulo
 	const dynamicFormSchema = useMemo(() => {
-		return createFormSchema(moduleConfig)
-	}, [moduleConfig])
+		return createFormSchema(moduleConfig, laboratory?.slug)
+	}, [moduleConfig, laboratory?.slug])
 
 	// Crear resolver dinámico que se actualiza cuando cambia el schema
 	const dynamicResolver = useMemo(() => {
