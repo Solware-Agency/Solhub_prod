@@ -494,7 +494,13 @@ function RegisterForm() {
                       name='phone'
                       placeholder='04121234567'
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Solo permitir números
+                        if (/^[0-9]*$/.test(value)) {
+                          setPhone(value);
+                        }
+                      }}
                       required
                       disabled={loading || rateLimitError}
                       className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200'
