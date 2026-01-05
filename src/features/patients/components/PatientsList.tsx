@@ -203,7 +203,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 								{sortedPatients.map((patient: Patient) => (
 									<div
 										key={patient.id}
-										className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-primary/50 transition-all duration-200 cursor-pointer"
+										className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-1 transition-all duration-300 ease-in-out cursor-pointer"
 										onClick={() => handlePatientClick(patient)}
 									>
 										<div className="mb-3">
