@@ -198,13 +198,13 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className='max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-full bg-background'
+        className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-background'
       >
         <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
         <DialogDescription className="sr-only">
           Configure los filtros para buscar casos específicos
         </DialogDescription>
-        <Tabs defaultValue='general' className='w-full overflow-x-hidden'>
+        <Tabs defaultValue='general' className='w-full overflow-x-hidden flex flex-col flex-1 min-h-0'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger
               value='general'
@@ -224,7 +224,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             )}
           </TabsList>
 
-          <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden'>
+          <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden overflow-y-auto flex-1 pb-4'>
             {/* Status and Document Status Filters */}
             <div className={`grid grid-cols-1 ${isSpt ? '' : 'md:grid-cols-2'} gap-4 w-full`}>
               {!isSpt && (
@@ -363,7 +363,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             </div>
 
             {/* Branch Filter Row - For SPT, includes Doctor Filter */}
-            <div className={`grid grid-cols-1 ${isSpt ? 'md:grid-cols-2' : ''} gap-4 w-full`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 w-full`}>
               <div className='space-y-3'>
                 <Button
                   onClick={() => setShowBranchFilter(!showBranchFilter)}
@@ -630,7 +630,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             )}
           </TabsContent>
 
-          <TabsContent value='role-specific' className='space-y-6 mt-6 overflow-x-hidden'>
+          <TabsContent value='role-specific' className='space-y-6 mt-6 overflow-x-hidden overflow-y-auto flex-1 pb-4'>
             <div className='space-y-4 w-full'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
                 {/* Filtro Citología Positiva */}
@@ -727,30 +727,30 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               </div>
             </div>
           </TabsContent>
-
-          {/* Action Buttons */}
-          <div className='flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 pt-4 border-t mt-6 w-full'>
-            <Button
-              onClick={onClearAllFilters}
-              variant='outline'
-              disabled={!hasActiveFilters}
-              className='font-bold'
-            >
-              <X className='w-4 h-4 mr-2' />
-              Limpiar Todos los Filtros
-            </Button>
-
-            <Button
-              onClick={() => {
-                onApplyFilters();
-                onOpenChange(false);
-              }}
-              className='px-6 font-bold'
-            >
-              Aplicar Filtros
-            </Button>
-          </div>
         </Tabs>
+
+        {/* Action Buttons - Fixed at bottom */}
+        <div className='flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 pt-4 border-t mt-auto w-full bg-background shrink-0'>
+          <Button
+            onClick={onClearAllFilters}
+            variant='outline'
+            disabled={!hasActiveFilters}
+            className='font-bold'
+          >
+            <X className='w-4 h-4 mr-2' />
+            Limpiar Todos los Filtros
+          </Button>
+
+          <Button
+            onClick={() => {
+              onApplyFilters();
+              onOpenChange(false);
+            }}
+            className='px-6 font-bold'
+          >
+            Aplicar Filtros
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

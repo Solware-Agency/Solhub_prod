@@ -93,7 +93,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
   const renderTriageRecord = (record: TriageRecord, isLatest: boolean = false) => (
     <div
       key={record.id}
-      className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 hover:shadow-md transition-shadow ${
+      className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 transition-all duration-200 cursor-pointer hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/20 hover:border-primary/50 hover:bg-white/80 dark:hover:bg-background/50 hover:scale-[1.01] ${
         isLatest ? 'border-primary border-2 shadow-lg' : 'border-input'
       }`}
     >

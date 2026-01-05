@@ -1450,7 +1450,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 </div>
 
                 {/* Cards grid - responsive */}
-                <div className='flex-1 overflow-y-auto px-3 py-4 custom-scrollbar'>
+                <div className='flex-1 overflow-y-auto px-3 py-4'>
                   {isLoading ? (
                     <div className='flex items-center justify-center py-12'>
                       <div className='flex items-center gap-3'>
@@ -1754,7 +1754,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
 
             {/* Cards grid - responsive */}
-            <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto custom-scrollbar p-3 sm:p-4'>
+            <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto p-3 sm:p-4'>
               {isLoading ? (
                 <div className='flex items-center justify-center py-12'>
                   <div className='flex items-center gap-3'>
