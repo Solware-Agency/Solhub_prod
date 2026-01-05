@@ -685,6 +685,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'origin',
           'branch',
           'comments',
+          'consulta',
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -735,6 +736,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               caseChanges.branch = newValue as string;
             } else if (field === 'comments') {
               caseChanges.comments = newValue as string | null;
+            } else if (field === 'consulta') {
+              caseChanges.consulta = newValue as string | null;
             }
             caseChangeLogs.push({
               field,
@@ -1226,6 +1229,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         payment_status: 'Estado de Pago',
         status: 'Estado',
         comments: 'Comentarios',
+        consulta: 'Tipo de Consulta',
         // Legacy fields (for backward compatibility)
         full_name: 'Nombre Completo',
         id_number: 'Cédula',
