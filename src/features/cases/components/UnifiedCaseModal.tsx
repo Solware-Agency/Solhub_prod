@@ -1817,12 +1817,31 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                       });
                                       return;
                                     }
-                                    // TODO: Implementar guardado cuando se defina la columna
-                                    toast({
-                                      title: '⏳ Pendiente',
-                                      description: 'La funcionalidad de guardado se implementará cuando se defina la columna en la BD',
-                                      variant: 'default',
-                                    });
+                                    
+                                    try {
+                                      const { error } = await supabase
+                                        .from('medical_records_clean')
+                                        .update({ image_url: imageUrl })
+                                        .eq('id', currentCase.id);
+                                      
+                                      if (error) throw error;
+                                      
+                                      // Update currentCase to reflect the change immediately
+                                      (currentCase as any).image_url = imageUrl;
+                                      
+                                      toast({
+                                        title: '✅ URL guardada',
+                                        description: 'La URL de la imagen se ha guardado correctamente.',
+                                        className: 'bg-green-100 border-green-400 text-green-800',
+                                      });
+                                    } catch (error) {
+                                      console.error('Error saving image URL:', error);
+                                      toast({
+                                        title: '❌ Error',
+                                        description: 'No se pudo guardar la URL de la imagen.',
+                                        variant: 'destructive',
+                                      });
+                                    }
                                   }}
                                 >
                                   <Save className='w-3 h-3 mr-1' />
