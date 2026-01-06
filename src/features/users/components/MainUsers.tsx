@@ -75,6 +75,7 @@ const MainUsers: React.FC = () => {
 	const [approvalFilter, setApprovalFilter] = useState<string>('')
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 	const [availableRoles, setAvailableRoles] = useState<Array<{value: string; label: string}>>([])
+	const [showAllRoles, setShowAllRoles] = useState(false)
 
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
@@ -218,21 +219,30 @@ const MainUsers: React.FC = () => {
 	})
 
 	const getRoleIcon = (role: string) => {
+		const colors = getRoleCardColor(role)
 		switch (role) {
 			case 'owner':
-				return <Crown className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+				return <Crown className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'employee':
-				return <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+				return <Briefcase className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'residente':
-				return <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+				return <ShieldCheck className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'citotecno':
-				return <Wand className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+				return <Wand className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'patologo':
-				return <Microscope className="w-4 h-4 text-green-600 dark:text-green-400" />
+				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'medicowner':
-				return <Shield className="w-4 h-4 text-red-600 dark:text-red-400" />
+				return <Shield className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'medico_tratante':
+				return <Shield className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'enfermero':
+				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'imagenologia':
+				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'call_center':
+				return <Phone className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			default:
-				return <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 		}
 	}
 
@@ -250,8 +260,121 @@ const MainUsers: React.FC = () => {
 				return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
 			case 'medicowner':
 				return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+			case 'medico_tratante':
+				return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
+			case 'enfermero':
+				return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+			case 'imagenologia':
+				return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+			case 'call_center':
+				return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
 			default:
 				return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+		}
+	}
+
+	// Función para obtener el color de la card por rol
+	const getRoleCardColor = (role: string) => {
+		switch (role) {
+			case 'owner':
+				return {
+					bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+					bgActive: 'bg-yellow-200 dark:bg-yellow-800',
+					border: 'border-yellow-400 dark:border-yellow-600',
+					hover: 'hover:bg-yellow-100 dark:hover:bg-yellow-900/30',
+					icon: 'text-yellow-600 dark:text-yellow-400',
+					text: 'text-yellow-700 dark:text-yellow-300',
+				}
+			case 'employee':
+				return {
+					bg: 'bg-blue-50 dark:bg-blue-900/20',
+					bgActive: 'bg-blue-200 dark:bg-blue-800',
+					border: 'border-blue-400 dark:border-blue-600',
+					hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/30',
+					icon: 'text-blue-600 dark:text-blue-400',
+					text: 'text-blue-700 dark:text-blue-300',
+				}
+			case 'residente':
+				return {
+					bg: 'bg-purple-50 dark:bg-purple-900/20',
+					bgActive: 'bg-purple-200 dark:bg-purple-800',
+					border: 'border-purple-400 dark:border-purple-600',
+					hover: 'hover:bg-purple-100 dark:hover:bg-purple-900/30',
+					icon: 'text-purple-600 dark:text-purple-400',
+					text: 'text-purple-700 dark:text-purple-300',
+				}
+			case 'citotecno':
+				return {
+					bg: 'bg-pink-50 dark:bg-pink-900/20',
+					bgActive: 'bg-pink-200 dark:bg-pink-800',
+					border: 'border-pink-400 dark:border-pink-600',
+					hover: 'hover:bg-pink-100 dark:hover:bg-pink-900/30',
+					icon: 'text-pink-600 dark:text-pink-400',
+					text: 'text-pink-700 dark:text-pink-300',
+				}
+			case 'patologo':
+				return {
+					bg: 'bg-green-50 dark:bg-green-900/20',
+					bgActive: 'bg-green-200 dark:bg-green-800',
+					border: 'border-green-400 dark:border-green-600',
+					hover: 'hover:bg-green-100 dark:hover:bg-green-900/30',
+					icon: 'text-green-600 dark:text-green-400',
+					text: 'text-green-700 dark:text-green-300',
+				}
+			case 'medicowner':
+				return {
+					bg: 'bg-red-50 dark:bg-red-900/20',
+					bgActive: 'bg-red-200 dark:bg-red-800',
+					border: 'border-red-400 dark:border-red-600',
+					hover: 'hover:bg-red-100 dark:hover:bg-red-900/30',
+					icon: 'text-red-600 dark:text-red-400',
+					text: 'text-red-700 dark:text-red-300',
+				}
+			case 'medico_tratante':
+				return {
+					bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+					bgActive: 'bg-indigo-200 dark:bg-indigo-800',
+					border: 'border-indigo-400 dark:border-indigo-600',
+					hover: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30',
+					icon: 'text-indigo-600 dark:text-indigo-400',
+					text: 'text-indigo-700 dark:text-indigo-300',
+				}
+			case 'enfermero':
+				return {
+					bg: 'bg-teal-50 dark:bg-teal-900/20',
+					bgActive: 'bg-teal-200 dark:bg-teal-800',
+					border: 'border-teal-400 dark:border-teal-600',
+					hover: 'hover:bg-teal-100 dark:hover:bg-teal-900/30',
+					icon: 'text-teal-600 dark:text-teal-400',
+					text: 'text-teal-700 dark:text-teal-300',
+				}
+			case 'imagenologia':
+				return {
+					bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+					bgActive: 'bg-cyan-200 dark:bg-cyan-800',
+					border: 'border-cyan-400 dark:border-cyan-600',
+					hover: 'hover:bg-cyan-100 dark:hover:bg-cyan-900/30',
+					icon: 'text-cyan-600 dark:text-cyan-400',
+					text: 'text-cyan-700 dark:text-cyan-300',
+				}
+			case 'call_center':
+				return {
+					bg: 'bg-orange-50 dark:bg-orange-900/20',
+					bgActive: 'bg-orange-200 dark:bg-orange-800',
+					border: 'border-orange-400 dark:border-orange-600',
+					hover: 'hover:bg-orange-100 dark:hover:bg-orange-900/30',
+					icon: 'text-orange-600 dark:text-orange-400',
+					text: 'text-orange-700 dark:text-orange-300',
+				}
+			default:
+				return {
+					bg: 'bg-gray-50 dark:bg-gray-900/20',
+					bgActive: 'bg-gray-200 dark:bg-gray-800',
+					border: 'border-gray-400 dark:border-gray-600',
+					hover: 'hover:bg-gray-100 dark:hover:bg-gray-900/30',
+					icon: 'text-gray-600 dark:text-gray-400',
+					text: 'text-gray-700 dark:text-gray-300',
+				}
 		}
 	}
 
@@ -556,20 +679,29 @@ const MainUsers: React.FC = () => {
 			return matchesSearch && matchesRole && matchesStatus && matchesBranch && matchesApproval
 		}) || []
 
-	// Estadí­sticas
-	const stats = {
-		total: users?.length || 0,
-		owners: users?.filter((u) => u.role === 'owner').length || 0,
-		medicowners: users?.filter((u) => u.role === 'medicowner').length || 0,
-		employees: users?.filter((u) => u.role === 'employee').length || 0,
-		admins: users?.filter((u) => u.role === 'residente').length || 0,
-		citotecnos: users?.filter((u) => u.role === 'citotecno').length || 0,
-		patologos: users?.filter((u) => u.role === 'patologo').length || 0,
-		verified: users?.filter((u) => u.email_confirmed_at).length || 0,
-		withBranch: users?.filter((u) => u.assigned_branch).length || 0,
-		approved: users?.filter((u) => u.estado === 'aprobado').length || 0,
-		pending: users?.filter((u) => u.estado === 'pendiente').length || 0,
-	}
+	// Estadísticas dinámicas basadas en roles disponibles
+	const stats = useMemo(() => {
+		const baseStats = {
+			total: users?.length || 0,
+			verified: users?.filter((u) => u.email_confirmed_at).length || 0,
+			withBranch: users?.filter((u) => u.assigned_branch).length || 0,
+			approved: users?.filter((u) => u.estado === 'aprobado').length || 0,
+			pending: users?.filter((u) => u.estado === 'pendiente').length || 0,
+		}
+
+		// Calcular estadísticas por rol dinámicamente
+		const roleStats: Record<string, number> = {}
+		availableRoles.forEach((role) => {
+			roleStats[role.value] = users?.filter((u) => u.role === role.value).length || 0
+		})
+
+		// Asegurar que "owner" siempre tenga estadística calculada, incluso si no está en availableRoles
+		if (!roleStats.owner) {
+			roleStats.owner = users?.filter((u) => u.role === 'owner').length || 0
+		}
+
+		return { ...baseStats, ...roleStats }
+	}, [users, availableRoles])
 
 	if (isLoading) {
 		return (
@@ -713,83 +845,159 @@ const MainUsers: React.FC = () => {
 							</div>
 						</div>
 
-						{/* Lado derecho: Estadí­sticas compactas como filtros */}
-						<div className="flex items-center gap-2 flex-shrink-0">
-							{/* Total Usuarios */}
-							<div
-								onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
-								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'residente'
-										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-										: 'cursor-pointer'
-								} ${
-									roleFilter === '' || roleFilter === 'all'
-										? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
-										: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
-								}`}
-							>
-								<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
-									<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
+						{/* Lado derecho: Estadísticas compactas como filtros */}
+						<div className="flex flex-col gap-2">
+							<div className="flex items-center gap-2 flex-wrap">
+								{/* Total Usuarios */}
+								<div
+									onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
+									className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
+										profile?.role === 'residente'
+											? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+											: 'cursor-pointer'
+									} ${
+										roleFilter === '' || roleFilter === 'all'
+											? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
+											: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
+									}`}
+								>
+									<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+									<div className="flex flex-col min-w-0">
+										<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
+										<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
+									</div>
 								</div>
+
+								{/* Cards dinámicas por rol disponible - Mostrar solo los primeros 4 */}
+								{(() => {
+									// Asegurar que "owner" siempre esté incluido
+									const rolesToShow = [...availableRoles]
+									const hasOwner = rolesToShow.some(r => r.value === 'owner')
+									if (!hasOwner) {
+										rolesToShow.unshift({
+											value: 'owner',
+											label: 'Propietario'
+										})
+									}
+
+									// Mostrar solo los primeros 4 roles inicialmente
+									const initialRoles = rolesToShow.slice(0, 4)
+									const remainingRoles = rolesToShow.slice(4)
+
+									return (
+										<>
+											{initialRoles.map((role) => {
+												const colors = getRoleCardColor(role.value)
+												const IconComponent = getRoleIcon(role.value)
+												const isActive = roleFilter === role.value
+												const count = stats[role.value] || 0
+
+												return (
+													<div
+														key={role.value}
+														onClick={() => {
+															if (profile?.role === 'residente' && role.value !== 'residente') return
+															setRoleFilter(isActive ? '' : role.value)
+														}}
+														className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
+															profile?.role === 'residente' && role.value !== 'residente'
+																? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+																: 'cursor-pointer'
+														} ${
+															isActive
+																? `${colors.bgActive} border-2 ${colors.border}`
+																: `${colors.bg} ${colors.hover}`
+														}`}
+													>
+														{IconComponent}
+														<div className="flex flex-col min-w-0">
+															<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+																{role.label}
+															</span>
+															<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
+														</div>
+													</div>
+												)
+											})}
+
+											{/* Botón Ver más / Ver menos */}
+											{remainingRoles.length > 0 && (
+												<button
+													onClick={() => setShowAllRoles(!showAllRoles)}
+													className="flex items-center gap-1.5 rounded px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+												>
+													{showAllRoles ? (
+														<>
+															<span>Ver menos</span>
+															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+															</svg>
+														</>
+													) : (
+														<>
+															<span>Ver más ({remainingRoles.length})</span>
+															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+															</svg>
+														</>
+													)}
+												</button>
+											)}
+										</>
+									)
+								})()}
 							</div>
 
-							{/* Propietarios */}
-							<div
-								onClick={() => profile?.role !== 'residente' && setRoleFilter('owner')}
-								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'residente'
-										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-										: 'cursor-pointer'
-								} ${
-									roleFilter === 'owner'
-										? 'bg-yellow-200 dark:bg-yellow-800 border-2 border-yellow-400 dark:border-yellow-600'
-										: 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
-								}`}
-							>
-								<Crown className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Propietarios</span>
-									<span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">{stats.owners}</span>
-								</div>
-							</div>
+							{/* Roles adicionales - Mostrar abajo cuando showAllRoles es true */}
+							{showAllRoles && (() => {
+								const rolesToShow = [...availableRoles]
+								const hasOwner = rolesToShow.some(r => r.value === 'owner')
+								if (!hasOwner) {
+									rolesToShow.unshift({
+										value: 'owner',
+										label: 'Propietario'
+									})
+								}
+								const remainingRoles = rolesToShow.slice(4)
 
-							{/* Recepcionistas */}
-							<div
-								onClick={() => profile?.role !== 'residente' && setRoleFilter('employee')}
-								className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-									profile?.role === 'residente'
-										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-										: 'cursor-pointer'
-								} ${
-									roleFilter === 'employee'
-										? 'bg-blue-200 dark:bg-blue-800 border-2 border-blue-400 dark:border-blue-600'
-										: 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-								}`}
-							>
-								<Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Recepcionistas</span>
-									<span className="text-sm font-bold text-blue-700 dark:text-blue-300">{stats.employees}</span>
-								</div>
-							</div>
+								return (
+									<div className="flex items-center gap-2 flex-wrap">
+										{remainingRoles.map((role) => {
+											const colors = getRoleCardColor(role.value)
+											const IconComponent = getRoleIcon(role.value)
+											const isActive = roleFilter === role.value
+											const count = stats[role.value] || 0
 
-							{/* Residentes */}
-							<div
-								onClick={() => setRoleFilter('residente')}
-								className={`flex items-center gap-2 rounded px-3 py-2 cursor-pointer w-32 ${
-									roleFilter === 'residente'
-										? 'bg-purple-200 dark:bg-purple-800 border-2 border-purple-400 dark:border-purple-600'
-										: 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-								}`}
-							>
-								<ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Residentes</span>
-									<span className="text-sm font-bold text-purple-700 dark:text-purple-300">{stats.admins}</span>
-								</div>
-							</div>
+											return (
+												<div
+													key={role.value}
+													onClick={() => {
+														if (profile?.role === 'residente' && role.value !== 'residente') return
+														setRoleFilter(isActive ? '' : role.value)
+													}}
+													className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
+														profile?.role === 'residente' && role.value !== 'residente'
+															? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+															: 'cursor-pointer'
+													} ${
+														isActive
+															? `${colors.bgActive} border-2 ${colors.border}`
+															: `${colors.bg} ${colors.hover}`
+													}`}
+												>
+													{IconComponent}
+													<div className="flex flex-col min-w-0">
+														<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+															{role.label}
+														</span>
+														<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
+													</div>
+												</div>
+											)
+										})}
+									</div>
+								)
+							})()}
 						</div>
 					</div>
 				</div>

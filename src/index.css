@@ -674,4 +674,13 @@ div[class*="max-h"].overflow-x-auto::-webkit-scrollbar-thumb:active {
 /* Tooltip z-index máximo para estar por encima de todos los modales */
 [data-slot="tooltip-content"] {
   z-index: 2147483647 !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: auto !important;
+  line-height: 1.5 !important;
 }
