@@ -18,7 +18,7 @@ export const paymentSchema = z.object({
  * Nota: Algunos campos como 'consulta' tienen validaciones específicas por laboratorio
  * que se manejan en validateRegistrationData (ej: consulta es requerido solo para lab SPT)
  */
-export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
+export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratorySlug?: string | null) => {
 	// Obtener configuraciones de campos
 	const examTypeConfig = moduleConfig?.fields?.examType
 	const originConfig = moduleConfig?.fields?.procedencia
@@ -26,6 +26,7 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
 	const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples
 	const branchConfig = moduleConfig?.fields?.branch
 	const consultaConfig = moduleConfig?.fields?.consulta
+	const isSPT = laboratorySlug?.toLowerCase() === 'spt'
 
 	// Definir schemas condicionales para cada campo
 	const examTypeSchema = examTypeConfig?.enabled && examTypeConfig?.required
@@ -67,7 +68,9 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
 			.optional()
 			.or(z.literal(1))
 
-	const branchSchema = branchConfig?.enabled && branchConfig?.required
+	// Para SPT, si el campo está habilitado, siempre es requerido
+	// Para otros labs, solo es requerido si branchConfig.required es true
+	const branchSchema = branchConfig?.enabled && (branchConfig?.required || isSPT)
 		? z.string().min(1, 'La sede es requerida')
 		: z.string().optional().or(z.literal(''))
 

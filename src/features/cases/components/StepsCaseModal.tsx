@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@shared/components/ui/dialog';
+import SendEmailModal from './SendEmailModal';
 
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
@@ -59,6 +60,7 @@ interface MedicalRecord {
   doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'];
   cito_status?: Database['public']['Enums']['cito_status_type'];
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  laboratory_id?: string; // ID del laboratorio
 }
 
 interface StepsCaseModalProps {
@@ -89,6 +91,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const { toast } = useToast();
   const { profile } = useUserProfile();
   useBodyScrollLock(isOpen);
@@ -179,9 +182,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    // Paso de Aprobar: Owner, Citotecno, Medicowner pueden aprobar
-    // En Conspat también medico_tratante (pero el trigger no lo permite)
-    if ((isCitotecno && isCitology) || isOwner || isMedicowner) {
+    // Paso de Aprobar: NO mostrar para medico_tratante en SPT (auto-aprueba)
+    const shouldShowApproveStep = isSpt && isMedicoTratante
+      ? false
+      : ((isCitotecno && isCitology) || isOwner || isMedicowner);
+    
+    if (shouldShowApproveStep) {
       stepsList.push({
         id: 'approve',
         title: 'Autorizar',
@@ -218,6 +224,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const getInitialStep = () => {
     if (!isMedicowner && docAprobado === 'aprobado') {
       return computedSteps.length - 1;
+    }
+
+    // Médico tratante en SPT con documento aprobado va directo a PDF
+    if (isSpt && isMedicoTratante && docAprobado === 'aprobado') {
+      return computedSteps.findIndex((step) => step.id === 'pdf');
     }
 
     if (isOwner && docAprobado === 'pendiente' && !isCitology) {
@@ -556,15 +567,35 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     try {
       setIsSaving(true);
       
-      // Flujo único: marcar como pendiente para todos los roles
-      // La aprobación sigue siendo responsabilidad del owner/residente/citotecno
-      const { error } = await markCaseAsPending(case_.id);
-      if (error) throw error;
-      setDocAprobado('pendiente');
-      toast({
-        title: '✅ Marcado como completado',
-        description: 'Documento listo para revisión.',
-      });
+      // En SPT, médico_tratante puede aprobar directamente
+      if (isSpt && isMedicoTratante) {
+        // Primero marcar como pendiente
+        const { error: pendingError } = await markCaseAsPending(case_.id);
+        if (pendingError) throw pendingError;
+        
+        // Luego aprobar inmediatamente
+        const { error: approveError } = await approveCaseDocument(case_.id);
+        if (approveError) throw approveError;
+        
+        setDocAprobado('aprobado');
+        toast({
+          title: '✅ Documento completado y aprobado',
+          description: 'Ya puedes generar el PDF.',
+        });
+        // Avanzar automáticamente al siguiente paso
+        setTimeout(() => {
+          handleNext();
+        }, 500);
+      } else {
+        // Flujo normal: marcar como pendiente para revisión
+        const { error } = await markCaseAsPending(case_.id);
+        if (error) throw error;
+        setDocAprobado('pendiente');
+        toast({
+          title: '✅ Marcado como completado',
+          description: 'Documento listo para revisión.',
+        });
+      }
     } catch (err) {
       console.error('Error marcando como completado:', err);
       toast({
@@ -1015,27 +1046,41 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   };
 
   const handleSendCase = async () => {
+    // Verificar que tenemos los datos necesarios
+    if (!case_?.email) {
+      toast({
+        title: '❌ Error',
+        description: 'Este caso no tiene un correo electrónico asociado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!case_?.informe_qr) {
+      toast({
+        title: '❌ Error',
+        description: 'El PDF del caso aún no está disponible.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Abrir modal de envío de email
+    setIsSendEmailModalOpen(true);
+  };
+
+  const handleConfirmSendEmail = async (emails: {
+    to: string;
+    cc: string[];
+    bcc: string[];
+  }) => {
     setIsSending(true);
 
     try {
-      // Verificar que tenemos los datos necesarios
-      if (!case_?.email) {
-        toast({
-          title: '❌ Error',
-          description: 'Este caso no tiene un correo electrónico asociado.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!case_?.informe_qr) {
-        toast({
-          title: '❌ Error',
-          description: 'El PDF del caso aún no está disponible.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // Preparar subject y message personalizados
+      const laboratoryName = laboratory?.name || 'Laboratorio';
+      const emailSubject = `${laboratoryName} - Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
+      const emailBody = `Hola ${case_?.full_name},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
 
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
       const isDevelopment = import.meta.env.DEV;
@@ -1048,10 +1093,15 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patientEmail: case_.email,
+          patientEmail: emails.to,
           patientName: case_.full_name,
           caseCode: case_.code || case_.id,
           pdfUrl: case_.informe_qr,
+          laboratory_id: case_.laboratory_id || laboratory?.id,
+          subject: emailSubject,
+          message: emailBody,
+          cc: emails.cc,
+          bcc: emails.bcc,
         }),
       });
 
@@ -1085,9 +1135,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         }
       }
 
+      // Cerrar el modal de envío
+      setIsSendEmailModalOpen(false);
+
       toast({
         title: '✅ Correo enviado',
-        description: `Se ha enviado el informe al correo ${case_.email}`,
+        description: `Se ha enviado el informe al correo ${emails.to}`,
         className: 'bg-green-100 border-green-400 text-green-800',
       });
 
@@ -1169,8 +1222,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                     onClick={handleMarkAsCompleted}
                     disabled={
                       isSaving ||
-                      (docAprobado != 'faltante' &&
-                        docAprobado !== 'rechazado') ||
+                      // En SPT médico_tratante siempre puede marcar (sin validación owner)
+                      (isSpt && isMedicoTratante
+                        ? false
+                        : (docAprobado != 'faltante' &&
+                            docAprobado !== 'rechazado')) ||
                       !docUrl
                     }
                   >
@@ -1181,9 +1237,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               </div>
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 <p className='text-teal-400 text-sm'>
-                  Para completar este paso, haz clic en el botón de arriba para
-                  marcar el documento como completado y espera por la aprobacion
-                  para continuar con el siguiente paso.
+                  {isSpt && isMedicoTratante
+                    ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
+                    : 'Para completar este paso, haz clic en el botón de arriba para marcar el documento como completado y espera por la aprobacion para continuar con el siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1604,6 +1660,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           </>
         )}
       </AnimatePresence>
+
+      {/* Send Email Modal */}
+      {case_?.email && case_?.informe_qr && (
+        <SendEmailModal
+          isOpen={isSendEmailModalOpen}
+          onClose={() => setIsSendEmailModalOpen(false)}
+          onSend={handleConfirmSendEmail}
+          primaryEmail={case_.email}
+          patientName={case_.full_name || 'Paciente'}
+          caseCode={case_.code || case_.id || 'N/A'}
+          isSending={isSending}
+        />
+      )}
+
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className={isFullscreen ? 'z-[999999999999999999]' : ''}>
           <DialogHeader>
