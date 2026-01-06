@@ -1829,6 +1829,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                       // Update currentCase to reflect the change immediately
                                       (currentCase as any).image_url = imageUrl;
                                       
+                                      // Trigger parent refresh to update the case list
+                                      if (onSave) {
+                                        await onSave();
+                                      }
+                                      
                                       toast({
                                         title: '✅ URL guardada',
                                         description: 'La URL de la imagen se ha guardado correctamente.',
@@ -1861,16 +1866,26 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <div className='sm:w-1/2'>
-                              {imageUrl ? (
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  onClick={() => window.open(imageUrl, '_blank')}
-                                  className='w-full'
-                                >
-                                  <Eye className='w-3 h-3 mr-1' />
-                                  Ver Imagen
-                                </Button>
+                              {(currentCase as any).image_url ? (
+                                <div className='flex gap-2'>
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    onClick={() => window.open((currentCase as any).image_url, '_blank')}
+                                    className='flex-1'
+                                  >
+                                    <Eye className='w-3 h-3 mr-1' />
+                                    Ver Imagen
+                                  </Button>
+                                  <a
+                                    href={(currentCase as any).image_url}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[200px] flex items-center'
+                                  >
+                                    {(currentCase as any).image_url}
+                                  </a>
+                                </div>
                               ) : (
                                 <span className='text-sm text-gray-500 dark:text-gray-400'>
                                   Sin imagen
