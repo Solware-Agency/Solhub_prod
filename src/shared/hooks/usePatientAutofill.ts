@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { supabase } from '@/services/supabase/config/config'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import {
+	findPatientByNumberOnly,
+	findPatientByIdentificationNumber,
+} from '@services/supabase/patients/identificaciones-service'
 
 export const usePatientAutofill = (setValue: any) => {
 	const [isLoading, setIsLoading] = useState(false)
 	const [lastFilledPatient, setLastFilledPatient] = useState<string | null>(null)
+	const { laboratory } = useLaboratory()
+	const useNewSystem = laboratory?.features?.hasNewPatientSystem === true
 
 	const fillPatientData = async (idNumber: string, silent: boolean = false) => {
 		if (!idNumber || idNumber.length < 6) return // Mínimo 6 dígitos para buscar
@@ -11,37 +18,84 @@ export const usePatientAutofill = (setValue: any) => {
 		setIsLoading(true)
 
 		try {
-			// Buscar el paciente en la nueva tabla patients
-			// La cédula ahora viene en formato V-12345678, E-12345678, etc.
-			const { data, error } = await supabase
-				.from('patients')
-				.select('nombre, telefono, edad, email, cedula, gender')
-				.eq('cedula', idNumber)
-				.single()
+			let data: any = null
+			let cedulaFormatted: string | null = null
 
-			if (error) {
-				// Si no se encuentra, no hacer nada (no es un error crítico)
-				if (error.code === 'PGRST116') {
-					console.log('No se encontraron registros previos para esta cédula')
+			// =====================================================================
+			// FASE 8: Búsqueda con feature flag - Dual-read
+			// =====================================================================
+			if (useNewSystem) {
+				// NUEVO SISTEMA: Buscar en identificaciones
+				try {
+					// Detectar si tiene prefijo (V-, E-, J-, C-) o solo número
+					const numeroMatch = idNumber.trim().match(/^([VEJC])[-]?([0-9]+)$/i)
+
+					let result: { paciente: any; identificacion: any } | null = null
+
+					if (numeroMatch) {
+						// Tiene prefijo: buscar específicamente por tipo
+						const tipoPrefijo = numeroMatch[1].toUpperCase() as 'V' | 'E' | 'J' | 'C'
+						const numero = numeroMatch[2]
+						result = await findPatientByIdentificationNumber(numero, tipoPrefijo)
+					} else {
+						// Solo número: buscar en todos los tipos
+						result = await findPatientByNumberOnly(idNumber.trim())
+					}
+
+					if (result && result.paciente) {
+						data = result.paciente
+						// Construir cédula en formato completo para compatibilidad
+						cedulaFormatted = `${result.identificacion.tipo_documento}-${result.identificacion.numero}`
+					}
+				} catch (newSystemError) {
+					// FALLBACK: Si falla el nuevo sistema, usar el antiguo
+					console.warn('⚠️ Nuevo sistema falló, usando fallback:', newSystemError)
 				}
-				return
 			}
 
-			if (data) {
+			// SISTEMA ANTIGUO: Buscar en patients.cedula (siempre disponible como fallback)
+			if (!data) {
+				// Construir cédula completa si solo tenemos el número
+				const cedulaToSearch = cedulaFormatted || (idNumber.includes('-') ? idNumber : `V-${idNumber}`)
+
+				const { data: oldData, error } = await supabase
+					.from('patients')
+					.select('nombre, telefono, edad, email, cedula, gender')
+					.eq('cedula', cedulaToSearch)
+					.single()
+
+				if (error) {
+					// Si no se encuentra, no hacer nada (no es un error crítico)
+					if (error.code === 'PGRST116') {
+						if (!silent) {
+							console.log('No se encontraron registros previos para esta cédula')
+						}
+					}
+					return
+				}
+
+				if (oldData) {
+					data = oldData
+					cedulaFormatted = oldData.cedula
+				}
+			}
+
+			// Si encontramos datos (de cualquier sistema), llenar el formulario
+			if (data && cedulaFormatted) {
 				// Primero, ocultar todas las sugerencias de autocompletado
 				window.dispatchEvent(new CustomEvent('hideAllAutocompleteSuggestions'))
 
 				// Pequeño delay para asegurar que las sugerencias se oculten antes de llenar
 				setTimeout(() => {
 					// Parsear la cédula para extraer tipo y número
-					const cedulaMatch = data.cedula.match(/^([VEJC])-(.+)$/)
+					const cedulaMatch = cedulaFormatted.match(/^([VEJC])-(.+)$/)
 					if (cedulaMatch) {
 						setValue('idType', cedulaMatch[1] as 'V' | 'E' | 'J' | 'C')
 						setValue('idNumber', cedulaMatch[2])
 					} else {
 						// Si no tiene formato, asumir V- y usar toda la cédula como número
 						setValue('idType', 'V')
-						setValue('idNumber', data.cedula)
+						setValue('idNumber', cedulaFormatted)
 					}
 
 					// Llenar automáticamente los campos del paciente

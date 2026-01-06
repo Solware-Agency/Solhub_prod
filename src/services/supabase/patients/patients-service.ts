@@ -4,6 +4,7 @@
 // Servicios para manejar la tabla patients de forma independiente
 
 import { supabase } from '@services/supabase/config/config'
+import { findPatientByIdentificationNumber, parseCedula } from './identificaciones-service'
 
 // Tipos específicos para pacientes (simplificados para evitar problemas de importación)
 export interface Patient {
@@ -26,7 +27,7 @@ export interface Patient {
 export interface PatientInsert {
 	id?: string
 	laboratory_id: string // NUEVO: Multi-tenant
-	cedula: string
+	cedula: string | null // Puede ser null para dependientes (menores/animales)
 	nombre: string
 	edad?: string | null
 	telefono?: string | null
@@ -40,7 +41,7 @@ export interface PatientInsert {
 export interface PatientUpdate {
 	id?: string
 	laboratory_id?: string // NUEVO: Multi-tenant
-	cedula?: string
+	cedula?: string | null // Puede ser null para dependientes (menores/animales)
 	nombre?: string
 	edad?: string | null
 	telefono?: string | null
@@ -143,6 +144,81 @@ export const findPatientByCedula = async (cedula: string): Promise<Patient | nul
 }
 
 /**
+ * Función unificada para buscar paciente por cédula - FASE 8
+ * Usa feature flag para decidir entre sistema nuevo (identificaciones) o antiguo (patients.cedula)
+ * Implementa dual-read: intenta ambos sistemas y combina resultados
+ */
+export const findPatientUnified = async (cedula: string): Promise<Patient | null> => {
+	try {
+		// Obtener laboratory_id y verificar feature flag
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Obtener configuración del laboratorio para verificar feature flag
+		// Usar 'as any' porque 'laboratories' puede no estar en tipos generados de Supabase
+		let useNewSystem = false
+		try {
+			const result = await supabase
+				.from('laboratories' as any)
+				.select('features')
+				.eq('id', laboratoryId)
+				.single()
+
+			const laboratory = result.data as any
+			useNewSystem = (laboratory?.features as any)?.hasNewPatientSystem === true
+		} catch (error) {
+			// Si falla al obtener el laboratorio, asumir que no hay feature flag (sistema antiguo)
+			console.warn('⚠️ No se pudo obtener configuración del laboratorio, usando sistema antiguo:', error)
+		}
+
+		// =====================================================================
+		// NUEVO SISTEMA: Buscar en identificaciones (si feature flag activo)
+		// =====================================================================
+		if (useNewSystem) {
+			try {
+				// Parsear cédula para obtener tipo y número
+				const { tipo, numero } = parseCedula(cedula)
+
+				// Buscar en identificaciones
+				const result = await findPatientByIdentificationNumber(numero, tipo)
+
+				if (result && result.paciente) {
+					// Convertir a formato Patient
+					const patient: Patient = {
+						id: result.paciente.id,
+						laboratory_id: result.paciente.laboratory_id,
+						cedula: `${result.identificacion.tipo_documento}-${result.identificacion.numero}`,
+						nombre: result.paciente.nombre,
+						edad: result.paciente.edad,
+						telefono: result.paciente.telefono,
+						email: result.paciente.email,
+						gender: result.paciente.gender,
+						fecha_nacimiento: result.paciente.fecha_nacimiento,
+						tipo_paciente: result.paciente.tipo_paciente,
+						especie: result.paciente.especie,
+						created_at: result.paciente.created_at,
+						updated_at: result.paciente.updated_at,
+						version: result.paciente.version,
+					}
+					return patient
+				}
+			} catch (newSystemError) {
+				// FALLBACK: Si falla el nuevo sistema, usar el antiguo
+				console.warn('⚠️ Nuevo sistema falló, usando fallback:', newSystemError)
+			}
+		}
+
+		// =====================================================================
+		// SISTEMA ANTIGUO: Buscar en patients.cedula (siempre disponible como fallback)
+		// =====================================================================
+		return await findPatientByCedula(cedula)
+	} catch (error) {
+		console.error('Error en findPatientUnified:', error)
+		// Último fallback: intentar sistema antiguo directamente
+		return await findPatientByCedula(cedula)
+	}
+}
+
+/**
  * Buscar paciente por ID - MULTI-TENANT
  * SOLO busca en el laboratorio del usuario autenticado
  */
@@ -182,12 +258,13 @@ export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory
 		const laboratoryId = await getUserLaboratoryId()
 
 		// SIEMPRE incluir laboratory_id al insertar
+		// Usar 'as any' porque los tipos generados pueden no incluir laboratory_id
 		const { data, error } = await supabase
 			.from('patients')
 			.insert({
 				...patientData,
 				laboratory_id: laboratoryId, // CRÍTICO: Multi-tenant
-			})
+			} as any)
 			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
 			.single()
 
@@ -230,9 +307,10 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 		}
 
 		// Actualizar paciente
+		// Usar 'as any' porque los tipos generados pueden no permitir null en cedula
 		const { data, error } = await supabase
 			.from('patients')
-			.update(updateData)
+			.update(updateData as any)
 			.eq('id', id)
 			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
 			.single()

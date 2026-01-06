@@ -4,7 +4,12 @@
 // Servicio principal para registrar casos médicos con la nueva estructura
 // Maneja la lógica de buscar/crear pacientes y crear casos médicos
 
-import { findPatientByCedula, createPatient, updatePatient } from '@services/supabase/patients/patients-service'
+import {
+	findPatientByCedula,
+	findPatientUnified,
+	createPatient,
+	updatePatient,
+} from '@services/supabase/patients/patients-service'
 import { createMedicalCase } from '@services/supabase/cases/medical-cases-service'
 import { supabase } from '@services/supabase/config/config'
 import { validateFormPayments, calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
@@ -47,7 +52,7 @@ export interface FormValues {
 // Tipo para insertar pacientes (local para evitar problemas de importación)
 export interface PatientInsert {
 	id?: string
-	cedula: string
+	cedula: string | null // Puede ser null para dependientes (menores/animales)
 	nombre: string
 	edad?: string | null
 	telefono?: string | null
@@ -62,17 +67,17 @@ export interface PatientInsert {
 export interface MedicalCaseInsert {
 	id?: string
 	patient_id?: string | null
-	exam_type: string | null  // NULL permitido si no está configurado
+	exam_type: string | null // NULL permitido si no está configurado
 	origin: string
 	treating_doctor: string
 	sample_type: string
 	number_of_samples: number
 	relationship?: string | null
-	branch: string | null  // Nullable en BD
-	consulta?: string | null  // Especialidad médica (solo para lab SPT)
+	branch: string | null // Nullable en BD
+	consulta?: string | null // Especialidad médica (solo para lab SPT)
 	date: string
 	code?: string
-	total_amount: number | null  // NULL permitido para labs sin módulo de pagos
+	total_amount: number | null // NULL permitido para labs sin módulo de pagos
 	payment_status: 'Incompleto' | 'Pagado'
 	remaining?: number | null
 	payment_method_1?: string | null
@@ -117,184 +122,184 @@ export interface RegistrationResult {
  * 2. Si no existe, crea nuevo paciente
  * 3. Si existe, verifica si hay cambios en datos del paciente
  * 4. Crea el caso médico enlazado al paciente
- * 
+ *
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
  */
 export const registerMedicalCase = async (
-  formData: FormValues,
-  exchangeRate?: number,
-  moduleConfig?: ModuleConfig | null,
+	formData: FormValues,
+	exchangeRate?: number,
+	moduleConfig?: ModuleConfig | null,
 ): Promise<RegistrationResult> => {
-  try {
-    console.log('🚀 Iniciando registro con nueva estructura...');
+	try {
+		console.log('🚀 Iniciando registro con nueva estructura...')
 
-    // Obtener información del usuario actual
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('Usuario no autenticado');
-    }
+		// Obtener información del usuario actual
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) {
+			throw new Error('Usuario no autenticado')
+		}
 
-    // Obtener perfil del usuario para acceder a assigned_branch y laboratory_id
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('assigned_branch, laboratory_id')
-      .eq('id', user.id)
-      .single();
-    
-    // Type assertion para laboratory_id (existe en BD pero puede no estar en tipos generados)
-    const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null;
+		// Obtener perfil del usuario para acceder a assigned_branch y laboratory_id
+		const { data: profile } = await supabase
+			.from('profiles')
+			.select('assigned_branch, laboratory_id')
+			.eq('id', user.id)
+			.single()
 
-    // Preparar datos del paciente y del caso
-    const { patientData, caseData } = prepareRegistrationData(
-      formData,
-      user,
-      exchangeRate,
-      moduleConfig,
-      profileWithLab?.assigned_branch,
-    );
+		// Type assertion para laboratory_id (existe en BD pero puede no estar en tipos generados)
+		const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null
 
-    console.log('📊 Datos preparados para inserción:');
-    console.log('Patient Data:', patientData);
-    console.log('Case Data:', caseData);
-    console.log('Exchange Rate:', exchangeRate);
+		// Preparar datos del paciente y del caso
+		const { patientData, caseData } = prepareRegistrationData(
+			formData,
+			user,
+			exchangeRate,
+			moduleConfig,
+			profileWithLab?.assigned_branch,
+		)
 
-    // PASO 1: Buscar paciente existente
-    // Si la cédula es null (dependiente), buscar por nombre y teléfono en su lugar
-    let patient: any = null;
-    if (patientData.cedula) {
-      console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`);
-      patient = await findPatientByCedula(patientData.cedula);
-    } else {
-      // Para dependientes sin cédula, buscar por nombre y teléfono
-      console.log(`🔍 Buscando dependiente por nombre y teléfono: ${patientData.nombre}`);
-      const laboratoryId = profileWithLab?.laboratory_id;
-      if (laboratoryId) {
-        // Buscar pacientes con nombre y teléfono coincidentes y sin cédula
-        const { data: patients, error } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('laboratory_id', laboratoryId)
-          .eq('nombre', patientData.nombre)
-          .is('cedula', null)
-          .limit(1);
-        
-        if (error) {
-          console.error('Error buscando dependiente:', error);
-        } else if (patients && patients.length > 0) {
-          patient = patients[0];
-        }
-      }
-    }
+		console.log('📊 Datos preparados para inserción:')
+		console.log('Patient Data:', patientData)
+		console.log('Case Data:', caseData)
+		console.log('Exchange Rate:', exchangeRate)
 
-    let isNewPatient = false;
-    let patientUpdated = false;
+		// PASO 1: Buscar paciente existente
+		// FASE 8: Usar función unificada que decide entre sistema nuevo/antiguo según feature flag
+		// Si la cédula es null (dependiente), buscar por nombre y teléfono en su lugar
+		let patient: any = null
+		if (patientData.cedula) {
+			console.log(`🔍 Buscando paciente con cédula: ${patientData.cedula}`)
+			// FASE 8: Usar función unificada (usa feature flag internamente)
+			patient = await findPatientUnified(patientData.cedula)
+		} else {
+			// Para dependientes sin cédula, buscar por nombre y teléfono
+			console.log(`🔍 Buscando dependiente por nombre y teléfono: ${patientData.nombre}`)
+			const laboratoryId = profileWithLab?.laboratory_id
+			if (laboratoryId) {
+				// Buscar pacientes con nombre y teléfono coincidentes y sin cédula
+				const { data: patients, error } = await supabase
+					.from('patients')
+					.select('*')
+					.eq('laboratory_id', laboratoryId)
+					.eq('nombre', patientData.nombre)
+					.is('cedula', null)
+					.limit(1)
 
-    if (!patient) {
-      // CASO A: Paciente nuevo - crear registro
-      console.log('👤 Paciente no existe, creando nuevo...');
-      patient = await createPatient(patientData);
-      isNewPatient = true;
-    } else {
-      // CASO B: Paciente existente - verificar si hay cambios
-      console.log(
-        `👤 Paciente existe (${patient.cedula}), verificando cambios...`,
-      );
-      const hasChanges = detectPatientChanges(patient, patientData);
+				if (error) {
+					console.error('Error buscando dependiente:', error)
+				} else if (patients && patients.length > 0) {
+					patient = patients[0]
+				}
+			}
+		}
 
-      if (hasChanges) {
-        console.log('📝 Cambios detectados en el paciente, actualizando...');
-        // Si la cédula cambió, actualizar el registro existente
-        patient = await updatePatient(patient.id, patientData, user.id);
-        patientUpdated = true;
-      } else {
-        console.log('✅ No hay cambios en los datos del paciente');
-      }
-    }
+		let isNewPatient = false
+		let patientUpdated = false
 
-    // =====================================================================
-    // DUAL-WRITE: Escribir en sistema nuevo (identificaciones)
-    // =====================================================================
-    // Esto es NO-CRÍTICO: si falla, solo loggear pero no fallar el registro
-    // El sistema antiguo (patients.cedula) ya funcionó correctamente
-    // =====================================================================
-    if (patientData.cedula && patientData.cedula !== 'S/C') {
-      try {
-        console.log('🔄 Dual-write: Creando identificación en sistema nuevo...');
-        
-        // Parsear cédula para obtener tipo y número
-        const { tipo, numero } = parseCedula(patientData.cedula);
-        
-        // Obtener laboratory_id del paciente (ya está disponible después de crear/actualizar)
-        const laboratoryId = (patient as any).laboratory_id || profileWithLab?.laboratory_id;
-        
-        if (!laboratoryId) {
-          console.warn('⚠️ Dual-write: No se pudo obtener laboratory_id, omitiendo identificación');
-        } else {
-          // Verificar si ya existe identificación para este paciente
-          const { data: existingIdentificaciones } = await supabase
-            .from('identificaciones' as any)
-            .select('id')
-            .eq('paciente_id', patient.id)
-            .eq('tipo_documento', tipo)
-            .eq('numero', numero)
-            .eq('laboratory_id', laboratoryId)
-            .maybeSingle();
+		if (!patient) {
+			// CASO A: Paciente nuevo - crear registro
+			console.log('👤 Paciente no existe, creando nuevo...')
+			patient = await createPatient(patientData)
+			isNewPatient = true
+		} else {
+			// CASO B: Paciente existente - verificar si hay cambios
+			console.log(`👤 Paciente existe (${patient.cedula}), verificando cambios...`)
+			const hasChanges = detectPatientChanges(patient, patientData)
 
-          // Solo crear si no existe
-          if (!existingIdentificaciones) {
-            await createIdentification({
-              paciente_id: patient.id,
-              tipo_documento: tipo,
-              numero: numero,
-              laboratory_id: laboratoryId, // Pasar explícitamente para evitar doble consulta
-            });
-            console.log('✅ Dual-write: Identificación creada exitosamente');
-          } else {
-            console.log('ℹ️ Dual-write: Identificación ya existe, omitiendo creación');
-          }
-        }
-      } catch (error) {
-        // NO fallar si falla el sistema nuevo, solo loggear
-        console.warn('⚠️ Dual-write: No se pudo crear identificación (no crítico):', error);
-        console.warn('⚠️ El registro del caso se completó exitosamente en el sistema antiguo');
-      }
-    } else {
-      console.log('ℹ️ Dual-write: Paciente sin cédula (S/C), omitiendo identificación');
-    }
+			if (hasChanges) {
+				console.log('📝 Cambios detectados en el paciente, actualizando...')
+				// Si la cédula cambió, actualizar el registro existente
+				patient = await updatePatient(patient.id, patientData, user.id)
+				patientUpdated = true
+			} else {
+				console.log('✅ No hay cambios en los datos del paciente')
+			}
+		}
 
-    // PASO 2: Crear caso médico enlazado al paciente
-    console.log('📋 Creando caso médico...');
-    // Remove auto-generated fields before passing to createMedicalCase
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { created_at, updated_at, ...cleanCaseData } = caseData;
-    const medicalCase = await createMedicalCase({
-      ...cleanCaseData,
-      patient_id: patient.id,
-    });
+		// =====================================================================
+		// DUAL-WRITE: Escribir en sistema nuevo (identificaciones)
+		// =====================================================================
+		// Esto es NO-CRÍTICO: si falla, solo loggear pero no fallar el registro
+		// El sistema antiguo (patients.cedula) ya funcionó correctamente
+		// =====================================================================
+		if (patientData.cedula && patientData.cedula !== 'S/C') {
+			try {
+				console.log('🔄 Dual-write: Creando identificación en sistema nuevo...')
 
-    console.log('✅ Registro completado exitosamente');
+				// Parsear cédula para obtener tipo y número
+				const { tipo, numero } = parseCedula(patientData.cedula)
 
-    return {
-      patient,
-      medicalCase,
-      isNewPatient,
-      patientUpdated,
-    };
-  } catch (error) {
-    console.error('❌ Error en registro:', error);
-    return {
-      patient: null,
-      medicalCase: null,
-      isNewPatient: false,
-      patientUpdated: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
-    };
-  }
-};
+				// Obtener laboratory_id del paciente (ya está disponible después de crear/actualizar)
+				const laboratoryId = (patient as any).laboratory_id || profileWithLab?.laboratory_id
+
+				if (!laboratoryId) {
+					console.warn('⚠️ Dual-write: No se pudo obtener laboratory_id, omitiendo identificación')
+				} else {
+					// Verificar si ya existe identificación para este paciente
+					const { data: existingIdentificaciones } = await supabase
+						.from('identificaciones' as any)
+						.select('id')
+						.eq('paciente_id', patient.id)
+						.eq('tipo_documento', tipo)
+						.eq('numero', numero)
+						.eq('laboratory_id', laboratoryId)
+						.maybeSingle()
+
+					// Solo crear si no existe
+					if (!existingIdentificaciones) {
+						await createIdentification({
+							paciente_id: patient.id,
+							tipo_documento: tipo,
+							numero: numero,
+							laboratory_id: laboratoryId, // Pasar explícitamente para evitar doble consulta
+						})
+						console.log('✅ Dual-write: Identificación creada exitosamente')
+					} else {
+						console.log('ℹ️ Dual-write: Identificación ya existe, omitiendo creación')
+					}
+				}
+			} catch (error) {
+				// NO fallar si falla el sistema nuevo, solo loggear
+				console.warn('⚠️ Dual-write: No se pudo crear identificación (no crítico):', error)
+				console.warn('⚠️ El registro del caso se completó exitosamente en el sistema antiguo')
+			}
+		} else {
+			console.log('ℹ️ Dual-write: Paciente sin cédula (S/C), omitiendo identificación')
+		}
+
+		// PASO 2: Crear caso médico enlazado al paciente
+		console.log('📋 Creando caso médico...')
+		// Remove auto-generated fields before passing to createMedicalCase
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { created_at, updated_at, ...cleanCaseData } = caseData
+		const medicalCase = await createMedicalCase({
+			...cleanCaseData,
+			patient_id: patient.id,
+		})
+
+		console.log('✅ Registro completado exitosamente')
+
+		return {
+			patient,
+			medicalCase,
+			isNewPatient,
+			patientUpdated,
+		}
+	} catch (error) {
+		console.error('❌ Error en registro:', error)
+		return {
+			patient: null,
+			medicalCase: null,
+			isNewPatient: false,
+			patientUpdated: false,
+			error: error instanceof Error ? error.message : 'Error desconocido',
+		}
+	}
+}
 
 // =====================================================================
 // FUNCIONES AUXILIARES
