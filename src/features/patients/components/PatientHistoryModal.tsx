@@ -834,14 +834,16 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             className='flex items-center gap-2'
                           >
                             <FileText className='h-4 w-4' />
-                            Historial de Casos
+                            <span className='hidden md:inline'>Historial de Casos</span>
+                            <span className='md:hidden'>Casos</span>
                           </TabsTrigger>
                           <TabsTrigger
                             value='representados'
                             className='flex items-center gap-2'
                           >
                             <Users className='h-4 w-4' />
-                            Casos de Representados
+                            <span className='hidden md:inline'>Casos de Representados</span>
+                            <span className='md:hidden'>Representados</span>
                           </TabsTrigger>
                           {laboratory?.features?.hasTriaje && (
                             <TabsTrigger
@@ -849,7 +851,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               className='flex items-center gap-2'
                             >
                               <Activity className='h-4 w-4' />
-                              Historial de Triaje
+                              <span className='hidden md:inline'>Historial de Triaje</span>
+                              <span className='md:hidden'>Triajes</span>
                             </TabsTrigger>
                           )}
                         </TabsList>

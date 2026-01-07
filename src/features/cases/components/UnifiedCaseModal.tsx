@@ -1425,123 +1425,125 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               >
                 <div className='sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10'>
                   <div className='flex items-center justify-between'>
-                    <div>
-                      <div>
+                    <div className='flex items-center gap-2 sm:gap-3 flex-1 min-w-0'>
+                      <div className='flex-1 min-w-0'>
                         <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100'>
                           {modalTitle}
                         </h2>
                       </div>
-                      <div className='flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2'>
-                        {currentCase.code && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help'>
-                                {currentCase.code}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent 
-                              style={{ zIndex: 2147483647 }}
-                            >
-                              {getCodeLegend(currentCase.code, laboratory)}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {!notShow && !isSpt && (
-                          <span
-                            className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                              currentCase.payment_status,
-                            )}`}
-                          >
-                            {currentCase.payment_status}
-                          </span>
-                        )}
-                        {/* PDF download temporarily disabled in new structure */}
-                      </div>
-                      {/* Action Buttons */}
-                      {!notShow && (
-                        <div className='flex gap-2 mt-4'>
-                          {isEditing ? (
-                            <>
-                              <button
-                                onClick={handleSaveChanges}
-                                disabled={isSaving}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer'
-                              >
-                                {isSaving ? (
-                                  <>
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                    Guardando...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Save className='w-4 h-4' />
-                                    Guardar Cambios
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer'
-                                disabled={isSaving}
-                              >
-                                <XCircle className='w-4 h-4' />
-                                Cancelar
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={handleEditClick}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 hover:scale-105 transition-all duration-200'
-                              >
-                                <Edit className='w-4 h-4' />
-                                Editar
-                              </button>
-                              <button
-                                onClick={toggleChangelog}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 hover:scale-105 transition-all duration-200'
-                              >
-                                <History className='w-4 h-4' />
-                                {isChangelogOpen ? 'Ocultar' : 'Historial'}
-                              </button>
-                              <button
-                                onClick={handleSendEmail}
-                                disabled={isSaving}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
-                              >
-                                {isSaving ? (
-                                  <>
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                    Enviando...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Send className='w-4 h-4' />
-                                    Correo
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                onClick={handleSendWhatsApp}
-                                className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
-                              >
-                                <WhatsAppIcon className='w-4 h-4' />
-                                WhatsApp
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
                     </div>
-                    <div className='flex items-center gap-2'>
+                    {/* Botón X (derecha) */}
+                    <div className='flex items-center gap-2 flex-shrink-0'>
                       <button
                         onClick={onClose}
                         className='p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none'
+                        aria-label='Cerrar'
                       >
                         <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
                       </button>
                     </div>
                   </div>
+                  <div className='flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2'>
+                    {currentCase.code && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help'>
+                            {currentCase.code}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent 
+                          style={{ zIndex: 2147483647 }}
+                        >
+                          {getCodeLegend(currentCase.code, laboratory)}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {!notShow && !isSpt && (
+                      <span
+                        className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          currentCase.payment_status,
+                        )}`}
+                      >
+                        {currentCase.payment_status}
+                      </span>
+                    )}
+                    {/* PDF download temporarily disabled in new structure */}
+                  </div>
+                  {/* Action Buttons */}
+                  {!notShow && (
+                    <div className='flex gap-2 mt-4'>
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={handleSaveChanges}
+                            disabled={isSaving}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer'
+                          >
+                            {isSaving ? (
+                              <>
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                                Guardando...
+                              </>
+                            ) : (
+                              <>
+                                <Save className='w-4 h-4' />
+                                Guardar Cambios
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer'
+                            disabled={isSaving}
+                          >
+                            <XCircle className='w-4 h-4' />
+                            Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={handleEditClick}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 hover:scale-105 transition-all duration-200'
+                          >
+                            <Edit className='w-4 h-4' />
+                            Editar
+                          </button>
+                          <button
+                            onClick={toggleChangelog}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 hover:scale-105 transition-all duration-200'
+                          >
+                            <History className='w-4 h-4' />
+                            {isChangelogOpen ? 'Ocultar' : 'Historial'}
+                          </button>
+                          <button
+                            onClick={handleSendEmail}
+                            disabled={isSaving}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                          >
+                            {isSaving ? (
+                              <>
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                <Send className='w-4 h-4' />
+                                Correo
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={handleSendWhatsApp}
+                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
+                          >
+                            <WhatsAppIcon className='w-4 h-4' />
+                            WhatsApp
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { Eye, FileText, FlaskConical, ClipboardList, MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
@@ -26,6 +26,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   userRole,
   isSpt = false,
 }) => {
+  const [open, setOpen] = useState(false);
   const examType = case_.exam_type?.toLowerCase().trim() || '';
   const isRequestableCase = examType.includes('inmuno');
 
@@ -42,9 +43,15 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
     return userRole === 'medico_tratante' || userRole === 'enfermero' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
+  // Función helper para cerrar el popover después de ejecutar una acción
+  const handleAction = (action: () => void) => {
+    action();
+    setOpen(false);
+  };
+
   // Mostrar siempre el popover con menú de tres puntos
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           className='p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
@@ -60,7 +67,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
         sideOffset={8}
       >
         <button
-          onClick={() => onView(case_)}
+          onClick={() => handleAction(() => onView(case_))}
           className={cn(
             'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
           )}
@@ -72,7 +79,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
         {canShowGenerate && (
           <FeatureGuard feature='hasCaseGenerator'>
             <button
-              onClick={() => onGenerate(case_)}
+              onClick={() => handleAction(() => onGenerate(case_))}
               className={cn(
                 'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
               )}
@@ -85,7 +92,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
 
         {canRequest && isRequestableCase && onReactions && (
           <button
-            onClick={() => onReactions(case_)}
+            onClick={() => handleAction(() => onReactions(case_))}
             className={cn(
               'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
             )}
@@ -98,7 +105,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
         {canShowTriaje && onTriaje && (
           <FeatureGuard feature='hasTriaje'>
             <button
-              onClick={() => onTriaje(case_)}
+              onClick={() => handleAction(() => onTriaje(case_))}
               className={cn(
                 'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
               )}

@@ -370,7 +370,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 						</div>
 
 						<div className="space-y-2">
-							<Label>O Edad Manual</Label>
+							<Label>Edad</Label>
 							<div className="flex gap-2">
 								<Input
 									type="number"
