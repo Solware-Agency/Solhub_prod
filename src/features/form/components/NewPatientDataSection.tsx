@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Trash2, Baby, Dog } from 'lucide-react'
+import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog } from 'lucide-react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { cn } from '@shared/lib/cn'
 import { format } from 'date-fns'
@@ -443,15 +443,6 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 												>
 													<Edit className="w-4 h-4" />
 												</Button>
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-													onClick={handleDeleteResponsable}
-												>
-													<Trash2 className="w-4 h-4" />
-												</Button>
 											</div>
 										</div>
 										<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
@@ -572,18 +563,6 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 														}}
 													>
 														<Edit className="w-4 h-4" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-														onClick={(e) => {
-															e.stopPropagation()
-															setDependentToEdit(dep)
-															handleDeleteDependent()
-														}}
-													>
-														<Trash2 className="w-4 h-4" />
 													</Button>
 												</div>
 											</div>

@@ -305,14 +305,17 @@ export const PatientRelationshipManager = ({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				{trigger || (
-					<Button variant="outline" size="sm">
-						<Plus className="w-4 h-4 mr-2" />
-						Agregar Dependiente
-					</Button>
-				)}
-			</DialogTrigger>
+			{/* Solo renderizar el trigger si NO está en modo edición */}
+			{!dependentToEdit && (
+				<DialogTrigger asChild>
+					{trigger || (
+						<Button variant="outline" size="sm">
+							<Plus className="w-4 h-4 mr-2" />
+							Agregar Dependiente
+						</Button>
+					)}
+				</DialogTrigger>
+			)}
 			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>

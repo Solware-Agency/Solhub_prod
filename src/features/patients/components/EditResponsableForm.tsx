@@ -11,7 +11,6 @@ import { Label } from '@shared/components/ui/label'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -243,69 +242,99 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Editar Responsable</DialogTitle>
-					<DialogDescription>
-						Modifica los datos del responsable {responsable.nombre}. Los cambios se reflejarán en todos los casos
-						médicos asociados.
-					</DialogDescription>
+					<DialogTitle>Editar Paciente</DialogTitle>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
-					{/* Nombre */}
-					<div className="space-y-2">
-						<Label htmlFor="nombre">Nombre Completo *</Label>
-						<Input
-							id="nombre"
-							value={nombre}
-							onChange={(e) => {
-								const { value } = e.target
-								if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
-									setNombre(value)
-								}
-							}}
-							placeholder="Nombre completo del responsable"
-						/>
+					{/* Primera línea: Nombre Completo y Teléfono */}
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label htmlFor="nombre">Nombre Completo *</Label>
+							<Input
+								id="nombre"
+								value={nombre}
+								onChange={(e) => {
+									const { value } = e.target
+									if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+										setNombre(value)
+									}
+								}}
+								placeholder="Nombre completo"
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="telefono">Teléfono</Label>
+							<Input
+								id="telefono"
+								value={telefono}
+								onChange={(e) => {
+									const { value } = e.target
+									// Permitir números, guiones, espacios, paréntesis y el símbolo +
+									if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
+										setTelefono(value)
+									}
+								}}
+								placeholder="Teléfono de contacto"
+								maxLength={15}
+							/>
+						</div>
 					</div>
 
-					{/* Cédula */}
-					<div className="space-y-2">
-						<Label>Cédula *</Label>
-						<div className="grid grid-cols-5 gap-2">
-							<div className="col-span-1">
-								<FormDropdown
-									options={createDropdownOptions([
-										{ value: 'V', label: 'V -' },
-										{ value: 'E', label: 'E -' },
-										{ value: 'J', label: 'J -' },
-										{ value: 'C', label: 'C -' },
-									])}
-									value={cedulaTipo}
-									onChange={(value) => setCedulaTipo(value as 'V' | 'E' | 'J' | 'C')}
-									placeholder="Tipo"
-									className="transition-none"
-									id="cedula-tipo"
-								/>
-							</div>
-							<div className="col-span-4">
-								<Input
-									id="cedula-numero"
-									value={cedulaNumero}
-									onChange={(e) => {
-										const { value } = e.target
-										// Solo permitir números
-										if (/^[0-9]*$/.test(value)) {
-											setCedulaNumero(value)
-										}
-									}}
-									placeholder="12345678"
-									maxLength={10}
-								/>
+					{/* Segunda línea: Cédula y Género */}
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label>Cédula *</Label>
+							<div className="grid grid-cols-5 gap-2">
+								<div className="col-span-1">
+									<FormDropdown
+										options={createDropdownOptions([
+											{ value: 'V', label: 'V -' },
+											{ value: 'E', label: 'E -' },
+											{ value: 'J', label: 'J -' },
+											{ value: 'C', label: 'C -' },
+										])}
+										value={cedulaTipo}
+										onChange={(value) => setCedulaTipo(value as 'V' | 'E' | 'J' | 'C')}
+										placeholder="Tipo"
+										className="transition-none"
+										id="cedula-tipo"
+									/>
+								</div>
+								<div className="col-span-4">
+									<Input
+										id="cedula-numero"
+										value={cedulaNumero}
+										onChange={(e) => {
+											const { value } = e.target
+											// Solo permitir números
+											if (/^[0-9]*$/.test(value)) {
+												setCedulaNumero(value)
+											}
+										}}
+										placeholder="12345678"
+										maxLength={10}
+									/>
+								</div>
 							</div>
 						</div>
-						<p className="text-xs text-gray-500">Seleccione el tipo de documento y ingrese el número de cédula</p>
+
+						<div className="space-y-2">
+							<Label>Género</Label>
+							<FormDropdown
+								options={createDropdownOptions(['Masculino', 'Femenino'])}
+								value={gender || undefined}
+								onChange={(value) => {
+									setGender(value as 'Masculino' | 'Femenino')
+								}}
+								placeholder="Seleccionar género"
+								className="transition-none"
+								id="responsable-gender"
+							/>
+						</div>
 					</div>
 
-					{/* Fecha de nacimiento o Edad */}
+					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Fecha de Nacimiento</Label>
@@ -381,40 +410,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 						</div>
 					</div>
 
-					{/* Género */}
-					<div className="space-y-2">
-						<Label>Género</Label>
-						<FormDropdown
-							options={createDropdownOptions(['Masculino', 'Femenino'])}
-							value={gender || undefined}
-							onChange={(value) => {
-								setGender(value as 'Masculino' | 'Femenino')
-							}}
-							placeholder="Seleccionar género"
-							className="transition-none"
-							id="responsable-gender"
-						/>
-					</div>
-
-					{/* Teléfono */}
-					<div className="space-y-2">
-						<Label htmlFor="telefono">Teléfono</Label>
-						<Input
-							id="telefono"
-							value={telefono}
-							onChange={(e) => {
-								const { value } = e.target
-								// Permitir números, guiones, espacios, paréntesis y el símbolo +
-								if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
-									setTelefono(value)
-								}
-							}}
-							placeholder="Teléfono de contacto"
-							maxLength={15}
-						/>
-					</div>
-
-					{/* Email */}
+					{/* Última línea: Email (opcional) */}
 					<div className="space-y-2">
 						<Label htmlFor="email">Email</Label>
 						<Input
