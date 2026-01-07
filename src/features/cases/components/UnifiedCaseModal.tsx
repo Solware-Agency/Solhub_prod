@@ -1446,7 +1446,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {!notShow && !(isSpt && currentCase.payment_status === 'Incompleto') && (
+                        {!notShow && !isSpt && (
                           <span
                             className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
                               currentCase.payment_status,

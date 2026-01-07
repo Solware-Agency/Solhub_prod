@@ -424,10 +424,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 
 			{/* Seleccionar Perfil */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
-				<CardHeader className="p-4 sm:p-6">
-					<CardTitle className="text-base sm:text-lg">¿Para quién es el caso?</CardTitle>
-				</CardHeader>
-				<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+				<CardContent className="p-3 sm:p-4">
 					{selectedResponsable && selectedResponsableData ? (
 						<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 							{/* Card del Responsable - Izquierda */}
@@ -616,12 +613,6 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 							onDependentUpdated={handleDependentUpdated}
 							dependentToEdit={dependentToEdit}
 						/>
-					)}
-					{selectedProfile && (
-						<div className="mt-4 flex items-center gap-2 text-green-600 text-sm">
-							<CheckCircle className="h-4 w-4" />
-							<span>{selectedProfile.nombre}</span>
-						</div>
 					)}
 				</CardContent>
 			</Card>

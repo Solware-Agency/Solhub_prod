@@ -1047,13 +1047,15 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               {caseItem.code}
                                             </span>
                                           )}
-                                          <span
-                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                              caseItem.payment_status,
-                                            )}`}
-                                          >
-                                            {caseItem.payment_status}
-                                          </span>
+                                          {!isSpt && (
+                                            <span
+                                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                                caseItem.payment_status,
+                                              )}`}
+                                            >
+                                              {caseItem.payment_status}
+                                            </span>
+                                          )}
                                         </div>
 
                                         <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
@@ -1314,20 +1316,22 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     </div>
 
                                     {/* Estado de Pago */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Estado de Pago
-                                      </p>
-                                      <span
-                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                          caseItem.payment_status === 'Pagado'
-                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                        }`}
-                                      >
-                                        {caseItem.payment_status}
-                                      </span>
-                                    </div>
+                                    {!isSpt && (
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Estado de Pago
+                                        </p>
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            caseItem.payment_status === 'Pagado'
+                                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                          }`}
+                                        >
+                                          {caseItem.payment_status}
+                                        </span>
+                                      </div>
+                                    )}
 
                                     {/* Monto (si no es SPT) */}
                                     {!isSpt && (

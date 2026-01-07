@@ -64,8 +64,8 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 			</div>
 
 			<div className="flex flex-wrap gap-1.5 mb-1.5 pr-8">
-				{/* Ocultar estado "Incompleto" para SPT */}
-				{!(isSpt && case_.payment_status === 'Incompleto') && (
+				{/* Ocultar estado de pago para SPT */}
+				{!isSpt && (
 					<span
 						className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.payment_status)}`}
 					>
