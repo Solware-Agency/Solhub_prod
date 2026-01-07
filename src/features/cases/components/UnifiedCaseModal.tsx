@@ -1867,24 +1867,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           ) : (
                             <div className='sm:w-1/2'>
                               {(currentCase as any).image_url ? (
-                                <div className='flex gap-2'>
+                                <div className='flex'>
                                   <Button
                                     size='sm'
                                     variant='outline'
                                     onClick={() => window.open((currentCase as any).image_url, '_blank')}
-                                    className='flex-1'
+                                    className='w-full'
                                   >
                                     <Eye className='w-3 h-3 mr-1' />
                                     Ver Imagen
                                   </Button>
-                                  <a
-                                    href={(currentCase as any).image_url}
-                                    target='_blank'
-                                    rel='noopener noreferrer'
-                                    className='text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[200px] flex items-center'
-                                  >
-                                    {(currentCase as any).image_url}
-                                  </a>
                                 </div>
                               ) : (
                                 <span className='text-sm text-gray-500 dark:text-gray-400'>
