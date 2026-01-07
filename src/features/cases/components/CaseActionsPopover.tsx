@@ -1,15 +1,9 @@
 import React, { useMemo } from 'react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
-import { Eye, FileText, FlaskConical, ClipboardList } from 'lucide-react';
-import {
-  PopoverBody,
-  PopoverButton,
-  PopoverContent,
-  PopoverRoot,
-  PopoverTrigger,
-} from '@shared/components/ui/PopoverInput';
+import { Eye, FileText, FlaskConical, ClipboardList, MoreVertical } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
-import { Button } from '@shared/components/ui/button';
+import { cn } from '@shared/lib/utils';
 
 interface CaseActionsPopoverProps {
   case_: MedicalCaseWithPatient;
@@ -48,84 +42,74 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
     return userRole === 'medico_tratante' || userRole === 'enfermero' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
-  // Contar cuántas acciones están disponibles
-  const availableActions = useMemo(() => {
-    const actions = [];
-    // Ver siempre está disponible
-    actions.push({ name: 'ver', icon: Eye, label: 'Ver', onClick: () => onView(case_) });
-    
-    // Generar
-    if (canShowGenerate) {
-      actions.push({ name: 'generar', icon: FileText, label: 'Generar', onClick: () => onGenerate(case_) });
-    }
-    
-    // Reacciones
-    if (canRequest && isRequestableCase && onReactions) {
-      actions.push({ name: 'reacciones', icon: FlaskConical, label: 'Reacciones', onClick: () => onReactions(case_) });
-    }
-    
-    // Triaje
-    if (canShowTriaje && onTriaje) {
-      actions.push({ name: 'triaje', icon: ClipboardList, label: 'Triaje', onClick: () => onTriaje(case_) });
-    }
-    
-    return actions;
-  }, [case_, onView, onGenerate, onReactions, onTriaje, canShowGenerate, canShowTriaje, canRequest, isRequestableCase]);
-
-  // Si solo hay una acción, mostrar botón directo
-  if (availableActions.length === 1) {
-    const action = availableActions[0];
-    const Icon = action.icon;
-    return (
-      <Button
-        variant='outline'
-        className='flex items-center gap-2 cursor-pointer'
-        onClick={action.onClick}
-      >
-        <Icon className="w-4 h-4" />
-        {action.label}
-      </Button>
-    );
-  }
-
-  // Si hay múltiples acciones, mostrar el popover
+  // Mostrar siempre el popover con menú de tres puntos
   return (
-    <PopoverRoot>
-      <PopoverTrigger className='px-3 py-1 text-xs'>Acciones</PopoverTrigger>
-      <PopoverContent className='w-[180px] min-w-[180px] h-auto'>
-        <PopoverBody className='p-1'>
-          <PopoverButton onClick={() => onView(case_)}>
-            <Eye className='w-4 h-4 flex-shrink-0' />
-            <span className='truncate'>Ver</span>
-          </PopoverButton>
-
-          {canShowGenerate && (
-            <FeatureGuard feature='hasCaseGenerator'>
-              <PopoverButton onClick={() => onGenerate(case_)}>
-                <FileText className='w-4 h-4 flex-shrink-0' />
-                <span className='truncate'>Generar</span>
-              </PopoverButton>
-            </FeatureGuard>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className='p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+          aria-label="Menú de acciones"
+        >
+          <MoreVertical className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className='w-[180px] min-w-[180px] h-auto p-1 !z-[9999]' 
+        side="bottom"
+        align="end"
+        sideOffset={8}
+      >
+        <button
+          onClick={() => onView(case_)}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
           )}
+        >
+          <Eye className='w-4 h-4 flex-shrink-0' />
+          <span className='truncate'>Ver</span>
+        </button>
 
-          {canRequest && isRequestableCase && onReactions && (
-            <PopoverButton onClick={() => onReactions(case_)}>
-              <FlaskConical className='w-4 h-4 flex-shrink-0' />
-              <span className='truncate'>Reacciones</span>
-            </PopoverButton>
-          )}
+        {canShowGenerate && (
+          <FeatureGuard feature='hasCaseGenerator'>
+            <button
+              onClick={() => onGenerate(case_)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
+              )}
+            >
+              <FileText className='w-4 h-4 flex-shrink-0' />
+              <span className='truncate'>Generar</span>
+            </button>
+          </FeatureGuard>
+        )}
 
-          {canShowTriaje && onTriaje && (
-            <FeatureGuard feature='hasTriaje'>
-              <PopoverButton onClick={() => onTriaje(case_)}>
-                <ClipboardList className='w-4 h-4 flex-shrink-0' />
-                <span className='truncate'>Triaje</span>
-              </PopoverButton>
-            </FeatureGuard>
-          )}
-        </PopoverBody>
+        {canRequest && isRequestableCase && onReactions && (
+          <button
+            onClick={() => onReactions(case_)}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
+            )}
+          >
+            <FlaskConical className='w-4 h-4 flex-shrink-0' />
+            <span className='truncate'>Reacciones</span>
+          </button>
+        )}
+
+        {canShowTriaje && onTriaje && (
+          <FeatureGuard feature='hasTriaje'>
+            <button
+              onClick={() => onTriaje(case_)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
+              )}
+            >
+              <ClipboardList className='w-4 h-4 flex-shrink-0' />
+              <span className='truncate'>Triaje</span>
+            </button>
+          </FeatureGuard>
+        )}
       </PopoverContent>
-    </PopoverRoot>
+    </Popover>
   );
 };
 

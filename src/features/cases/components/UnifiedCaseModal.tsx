@@ -1663,33 +1663,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.nombre ?? null}
                         onChange={handleInputChange}
                       />
-                      {/* Cédula - Mostrar información del responsable si es menor */}
+                      {/* Cédula - Mostrar información del responsable si es menor o animal */}
                       <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                         <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Cédula:
+                          {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
                         </span>
                         <div className='sm:w-1/2 sm:text-right'>
-                          {currentCase.cedula === 'S/C' || !currentCase.cedula ? (
-                            responsableData?.responsable ? (
-                              <div className='text-sm'>
-                                <p className='text-gray-900 dark:text-gray-100 font-medium'>
-                                  Menor de edad
-                                </p>
-                                <p className='text-xs text-gray-600 dark:text-gray-400 mt-1'>
-                                  Representado por: <span className='font-medium'>{responsableData.responsable.nombre}</span>
-                                </p>
-                                <p className='text-xs text-gray-600 dark:text-gray-400'>
-                                  Cédula: <span className='font-medium'>{responsableData.responsable.cedula}</span>
-                                </p>
-                              </div>
-                            ) : (
-                              <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                                {currentCase.cedula || 'Sin cédula'}
-                              </span>
-                            )
+                          {responsableData?.responsable ? (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                              {responsableData.responsable.nombre} - {responsableData.responsable.cedula}
+                            </span>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                              {currentCase.cedula}
+                              {currentCase.cedula || 'Sin cédula'}
                             </span>
                           )}
                         </div>

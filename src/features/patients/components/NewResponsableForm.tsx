@@ -122,7 +122,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 
 			// 5. Notificar éxito
 			toast({
-				title: '✅ Responsable registrado',
+				title: '✅ Paciente registrado',
 				description: `${nombre.trim()} ha sido registrado correctamente`,
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
@@ -149,7 +149,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			console.error('Error creando responsable:', error)
 			toast({
 				title: '❌ Error',
-				description: error instanceof Error ? error.message : 'Error al registrar responsable',
+				description: error instanceof Error ? error.message : 'Error al registrar paciente',
 				variant: 'destructive',
 			})
 		} finally {
@@ -185,69 +185,97 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			</DialogTrigger>
 			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Registrar Nuevo Responsable</DialogTitle>
-					<DialogDescription>
-						Registra un nuevo responsable (adulto con cédula) en el sistema. Luego podrás agregar menores o animales
-						bajo su responsabilidad.
-					</DialogDescription>
+					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
-					{/* Nombre */}
-					<div className="space-y-2">
-						<Label htmlFor="nombre">Nombre Completo *</Label>
-						<Input
-							id="nombre"
-							value={nombre}
-							onChange={(e) => {
-								const { value } = e.target
-								if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
-									setNombre(value)
-								}
-							}}
-							placeholder="Nombre completo del responsable"
-						/>
+					{/* Primera línea: Nombre Completo y Teléfono */}
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label htmlFor="nombre">Nombre Completo *</Label>
+							<Input
+								id="nombre"
+								value={nombre}
+								onChange={(e) => {
+									const { value } = e.target
+									if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+										setNombre(value)
+									}
+								}}
+								placeholder="Nombre completo"
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="telefono">Teléfono</Label>
+							<Input
+								id="telefono"
+								value={telefono}
+								onChange={(e) => {
+									const { value } = e.target
+									// Permitir números, guiones, espacios, paréntesis y el símbolo +
+									if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
+										setTelefono(value)
+									}
+								}}
+								placeholder="Teléfono de contacto"
+								maxLength={15}
+							/>
+						</div>
 					</div>
 
-					{/* Cédula */}
-					<div className="space-y-2">
-						<Label>Cédula *</Label>
-						<div className="grid grid-cols-5 gap-2">
-							<div className="col-span-1">
-								<FormDropdown
-									options={createDropdownOptions([
-										{ value: 'V', label: 'V -' },
-										{ value: 'E', label: 'E -' },
-										{ value: 'J', label: 'J -' },
-										{ value: 'C', label: 'C -' },
-									])}
-									value={cedulaTipo}
-									onChange={(value) => setCedulaTipo(value as 'V' | 'E' | 'J' | 'C')}
-									placeholder="Tipo"
-									className="transition-none"
-									id="cedula-tipo"
-								/>
-							</div>
-							<div className="col-span-4">
-								<Input
-									id="cedula-numero"
-									value={cedulaNumero}
-									onChange={(e) => {
-										const { value } = e.target
-										// Solo permitir números
-										if (/^[0-9]*$/.test(value)) {
-											setCedulaNumero(value)
-										}
-									}}
-									placeholder="12345678"
-									maxLength={10}
-								/>
+					{/* Segunda línea: Cédula y Género */}
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label>Cédula *</Label>
+							<div className="grid grid-cols-5 gap-2">
+								<div className="col-span-1">
+									<FormDropdown
+										options={createDropdownOptions([
+											{ value: 'V', label: 'V -' },
+											{ value: 'E', label: 'E -' },
+											{ value: 'J', label: 'J -' },
+											{ value: 'C', label: 'C -' },
+										])}
+										value={cedulaTipo}
+										onChange={(value) => setCedulaTipo(value as 'V' | 'E' | 'J' | 'C')}
+										placeholder="Tipo"
+										className="transition-none"
+										id="cedula-tipo"
+									/>
+								</div>
+								<div className="col-span-4">
+									<Input
+										id="cedula-numero"
+										value={cedulaNumero}
+										onChange={(e) => {
+											const { value } = e.target
+											// Solo permitir números
+											if (/^[0-9]*$/.test(value)) {
+												setCedulaNumero(value)
+											}
+										}}
+										placeholder="12345678"
+										maxLength={10}
+									/>
+								</div>
 							</div>
 						</div>
-						<p className="text-xs text-gray-500">Seleccione el tipo de documento y ingrese el número de cédula</p>
+
+						<div className="space-y-2">
+							<Label>Género</Label>
+							<FormDropdown
+								options={createDropdownOptions(['Masculino', 'Femenino'])}
+								value={gender}
+								onChange={(value) => setGender(value as 'Masculino' | 'Femenino' | '')}
+								placeholder="Seleccionar género"
+								className="transition-none"
+								id="responsable-gender"
+							/>
+						</div>
 					</div>
 
-					{/* Fecha de nacimiento o Edad */}
+					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Fecha de Nacimiento</Label>
@@ -323,38 +351,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 						</div>
 					</div>
 
-					{/* Género */}
-					<div className="space-y-2">
-						<Label>Género</Label>
-						<FormDropdown
-							options={createDropdownOptions(['Masculino', 'Femenino'])}
-							value={gender}
-							onChange={(value) => setGender(value as 'Masculino' | 'Femenino' | '')}
-							placeholder="Seleccionar género"
-							className="transition-none"
-							id="responsable-gender"
-						/>
-					</div>
-
-					{/* Teléfono */}
-					<div className="space-y-2">
-						<Label htmlFor="telefono">Teléfono</Label>
-						<Input
-							id="telefono"
-							value={telefono}
-							onChange={(e) => {
-								const { value } = e.target
-								// Permitir números, guiones, espacios, paréntesis y el símbolo +
-								if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
-									setTelefono(value)
-								}
-							}}
-							placeholder="Teléfono de contacto"
-							maxLength={15}
-						/>
-					</div>
-
-					{/* Email */}
+					{/* Última línea: Email (opcional) */}
 					<div className="space-y-2">
 						<Label htmlFor="email">Email</Label>
 						<Input
@@ -372,7 +369,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 						Cancelar
 					</Button>
 					<Button onClick={handleSubmit} disabled={isSubmitting}>
-						{isSubmitting ? 'Registrando...' : 'Registrar Responsable'}
+						{isSubmitting ? 'Registrando...' : 'Registrar Paciente'}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

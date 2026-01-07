@@ -1,11 +1,13 @@
 import React from 'react'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
-import { User, MailCheck } from 'lucide-react'
+import { User, MailCheck, Baby, Dog } from 'lucide-react'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import CaseActionsPopover from './CaseActionsPopover'
 import { getStatusColor } from './status'
 import { formatCurrency } from '@shared/utils/number-utils'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/services/supabase/config/config'
 
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
@@ -20,10 +22,48 @@ interface CaseCardProps {
 const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest, userRole }) => {
 	const { laboratory } = useLaboratory()
 	const isSpt = laboratory?.slug === 'spt'
+
+	// Obtener tipo de paciente para mostrar badge si es menor o animal
+	const { data: patientType } = useQuery({
+		queryKey: ['patient-type', case_?.patient_id],
+		queryFn: async () => {
+			if (!case_?.patient_id) return null
+			try {
+				const { data: patient } = await supabase
+					.from('patients')
+					.select('tipo_paciente')
+					.eq('id', case_.patient_id)
+					.single()
+				return (patient as any)?.tipo_paciente || null
+			} catch (error) {
+				console.error('Error obteniendo tipo de paciente:', error)
+				return null
+			}
+		},
+		enabled: !!case_?.patient_id,
+		staleTime: 1000 * 60 * 5, // 5 minutes
+	})
+
+	const isMenor = patientType === 'menor'
+	const isAnimal = patientType === 'animal'
 	
 	return (
-		<div className="bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
-			<div className="flex flex-wrap gap-1.5 mb-1.5">
+		<div className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
+			{/* Menú de tres puntos en la esquina superior derecha */}
+			<div className="absolute top-2 right-2 z-10">
+				<CaseActionsPopover
+					case_={case_}
+					onView={onView}
+					onGenerate={onGenerate}
+					onReactions={onReactions}
+					onTriaje={onTriaje}
+					canRequest={canRequest}
+					userRole={userRole}
+					isSpt={isSpt}
+				/>
+			</div>
+
+			<div className="flex flex-wrap gap-1.5 mb-1.5 pr-8">
 				{/* Ocultar estado "Incompleto" para SPT */}
 				{!(isSpt && case_.payment_status === 'Incompleto') && (
 					<span
@@ -39,6 +79,20 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 						</span>
 					)}
 				</div>
+				{/* Badge para menores */}
+				{isMenor && (
+					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+						<Baby className="w-3 h-3" />
+						Menor
+					</span>
+				)}
+				{/* Badge para animales */}
+				{isAnimal && (
+					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+						<Dog className="w-3 h-3" />
+						Animal
+					</span>
+				)}
 				{case_.email_sent && (
 					<span
 						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
@@ -88,19 +142,6 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 						<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(case_.total_amount)}</p>
 					</div>
 				)}
-			</div>
-
-			<div className="flex justify-center mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
-				<CaseActionsPopover
-					case_={case_}
-					onView={onView}
-					onGenerate={onGenerate}
-					onReactions={onReactions}
-					onTriaje={onTriaje}
-					canRequest={canRequest}
-					userRole={userRole}
-					isSpt={isSpt}
-				/>
 			</div>
 		</div>
 	)

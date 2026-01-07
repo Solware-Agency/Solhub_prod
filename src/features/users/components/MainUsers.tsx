@@ -75,7 +75,6 @@ const MainUsers: React.FC = () => {
 	const [approvalFilter, setApprovalFilter] = useState<string>('')
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 	const [availableRoles, setAvailableRoles] = useState<Array<{value: string; label: string}>>([])
-	const [showAllRoles, setShowAllRoles] = useState(false)
 
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
@@ -800,156 +799,74 @@ const MainUsers: React.FC = () => {
 			{/* Filtros, bóºsqueda y estadó­sticas */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg mb-3 sm:mb-5">
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-6">
-					{/* Todo en una sola ló­nea horizontal */}
-					<div className="flex items-center justify-between gap-2 overflow-x-auto" style={{ overflowY: 'visible' }}>
-						{/* Lado izquierdo: Bóºsqueda y filtros */}
-						<div className="flex items-center gap-3 flex-shrink-0">
-							{/* Bóºsqueda */}
-							<div className="relative w-56">
-								<Input
-									type="text"
-									placeholder="Buscar usuarios"
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
-								/>
-							</div>
-
-							{/* Filtros */}
-							<div className="flex items-center gap-2">
-								{/* Filtro por aprobación */}
-								<CustomDropdown
-									value={approvalFilter}
-									onChange={setApprovalFilter}
-									options={[
-										{ value: 'all', label: 'Todos' },
-										{ value: 'aprobado', label: 'Aprobados' },
-										{ value: 'pendiente', label: 'Pendientes' },
-									]}
-									placeholder="Estado"
-									className="w-32 text-sm"
-								/>
-
-								{/* Filtro por sede */}
-								<CustomDropdown
-									value={branchFilter}
-									onChange={setbranchFilter}
-									options={[
-										{ value: 'all', label: 'Todas' },
-										{ value: 'assigned', label: 'Asignada' },
-										{ value: 'unassigned', label: 'Sin sede' },
-										...branchOptions,
-									]}
-									placeholder="Sede"
-									className="w-32 text-sm"
-								/>
-							</div>
+					{/* Primera línea: Búsqueda y filtros */}
+					<div className="flex items-center gap-3 mb-4">
+						{/* Búsqueda */}
+						<div className="relative w-56 flex-shrink-0">
+							<Input
+								type="text"
+								placeholder="Buscar usuarios"
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+							/>
 						</div>
 
-						{/* Lado derecho: Estadísticas compactas como filtros */}
-						<div className="flex flex-col gap-2">
-							<div className="flex items-center gap-2 flex-wrap">
-								{/* Total Usuarios */}
-								<div
-									onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
-									className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-										profile?.role === 'residente'
-											? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-											: 'cursor-pointer'
-									} ${
-										roleFilter === '' || roleFilter === 'all'
-											? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
-											: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
-									}`}
-								>
-									<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-									<div className="flex flex-col min-w-0">
-										<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
-										<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
-									</div>
+						{/* Filtros */}
+						<div className="flex items-center gap-2 flex-shrink-0">
+							{/* Filtro por aprobación */}
+							<CustomDropdown
+								value={approvalFilter}
+								onChange={setApprovalFilter}
+								options={[
+									{ value: 'all', label: 'Todos' },
+									{ value: 'aprobado', label: 'Aprobados' },
+									{ value: 'pendiente', label: 'Pendientes' },
+								]}
+								placeholder="Estado"
+								className="w-32 text-sm"
+							/>
+
+							{/* Filtro por sede */}
+							<CustomDropdown
+								value={branchFilter}
+								onChange={setbranchFilter}
+								options={[
+									{ value: 'all', label: 'Todas' },
+									{ value: 'assigned', label: 'Asignada' },
+									{ value: 'unassigned', label: 'Sin sede' },
+									...branchOptions,
+								]}
+								placeholder="Sede"
+								className="w-32 text-sm"
+							/>
+						</div>
+					</div>
+
+					{/* Segunda línea: Todos los botones de tipos de usuarios */}
+					<div className="flex items-center gap-2 flex-wrap overflow-x-auto">
+							{/* Total Usuarios */}
+							<div
+								onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
+								className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${
+									profile?.role === 'residente'
+										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+										: 'cursor-pointer'
+								} ${
+									roleFilter === '' || roleFilter === 'all'
+										? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
+										: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
+								}`}
+							>
+								<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+								<div className="flex flex-col min-w-0">
+									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
+									<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
 								</div>
-
-								{/* Cards dinámicas por rol disponible - Mostrar solo los primeros 4 */}
-								{(() => {
-									// Asegurar que "owner" siempre esté incluido
-									const rolesToShow = [...availableRoles]
-									const hasOwner = rolesToShow.some(r => r.value === 'owner')
-									if (!hasOwner) {
-										rolesToShow.unshift({
-											value: 'owner',
-											label: 'Propietario'
-										})
-									}
-
-									// Mostrar solo los primeros 4 roles inicialmente
-									const initialRoles = rolesToShow.slice(0, 4)
-									const remainingRoles = rolesToShow.slice(4)
-
-									return (
-										<>
-											{initialRoles.map((role) => {
-												const colors = getRoleCardColor(role.value)
-												const IconComponent = getRoleIcon(role.value)
-												const isActive = roleFilter === role.value
-												const count = stats[role.value] || 0
-
-												return (
-													<div
-														key={role.value}
-														onClick={() => {
-															if (profile?.role === 'residente' && role.value !== 'residente') return
-															setRoleFilter(isActive ? '' : role.value)
-														}}
-														className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-															profile?.role === 'residente' && role.value !== 'residente'
-																? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-																: 'cursor-pointer'
-														} ${
-															isActive
-																? `${colors.bgActive} border-2 ${colors.border}`
-																: `${colors.bg} ${colors.hover}`
-														}`}
-													>
-														{IconComponent}
-														<div className="flex flex-col min-w-0">
-															<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
-																{role.label}
-															</span>
-															<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
-														</div>
-													</div>
-												)
-											})}
-
-											{/* Botón Ver más / Ver menos */}
-											{remainingRoles.length > 0 && (
-												<button
-													onClick={() => setShowAllRoles(!showAllRoles)}
-													className="flex items-center gap-1.5 rounded px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-												>
-													{showAllRoles ? (
-														<>
-															<span>Ver menos</span>
-															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-															</svg>
-														</>
-													) : (
-														<>
-															<span>Ver más ({remainingRoles.length})</span>
-															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-															</svg>
-														</>
-													)}
-												</button>
-											)}
-										</>
-									)
-								})()}
 							</div>
 
-							{/* Roles adicionales - Mostrar abajo cuando showAllRoles es true */}
-							{showAllRoles && (() => {
+							{/* Todos los roles disponibles */}
+							{(() => {
+								// Asegurar que "owner" siempre esté incluido
 								const rolesToShow = [...availableRoles]
 								const hasOwner = rolesToShow.some(r => r.value === 'owner')
 								if (!hasOwner) {
@@ -958,47 +875,41 @@ const MainUsers: React.FC = () => {
 										label: 'Propietario'
 									})
 								}
-								const remainingRoles = rolesToShow.slice(4)
 
-								return (
-									<div className="flex items-center gap-2 flex-wrap">
-										{remainingRoles.map((role) => {
-											const colors = getRoleCardColor(role.value)
-											const IconComponent = getRoleIcon(role.value)
-											const isActive = roleFilter === role.value
-											const count = stats[role.value] || 0
+								return rolesToShow.map((role) => {
+									const colors = getRoleCardColor(role.value)
+									const IconComponent = getRoleIcon(role.value)
+									const isActive = roleFilter === role.value
+									const count = stats[role.value] || 0
 
-											return (
-												<div
-													key={role.value}
-													onClick={() => {
-														if (profile?.role === 'residente' && role.value !== 'residente') return
-														setRoleFilter(isActive ? '' : role.value)
-													}}
-													className={`flex items-center gap-2 rounded px-3 py-2 w-32 ${
-														profile?.role === 'residente' && role.value !== 'residente'
-															? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-															: 'cursor-pointer'
-													} ${
-														isActive
-															? `${colors.bgActive} border-2 ${colors.border}`
-															: `${colors.bg} ${colors.hover}`
-													}`}
-												>
-													{IconComponent}
-													<div className="flex flex-col min-w-0">
-														<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
-															{role.label}
-														</span>
-														<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
-													</div>
-												</div>
-											)
-										})}
-									</div>
-								)
+									return (
+										<div
+											key={role.value}
+											onClick={() => {
+												if (profile?.role === 'residente' && role.value !== 'residente') return
+												setRoleFilter(isActive ? '' : role.value)
+											}}
+											className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${
+												profile?.role === 'residente' && role.value !== 'residente'
+													? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+													: 'cursor-pointer'
+											} ${
+												isActive
+													? `${colors.bgActive} border-2 ${colors.border}`
+													: `${colors.bg} ${colors.hover}`
+											}`}
+										>
+											{IconComponent}
+											<div className="flex flex-col min-w-0">
+												<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+													{role.label}
+												</span>
+												<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
+											</div>
+										</div>
+									)
+								})
 							})()}
-						</div>
 					</div>
 				</div>
 			</Card>

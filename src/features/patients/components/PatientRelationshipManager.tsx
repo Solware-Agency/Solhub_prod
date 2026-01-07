@@ -316,16 +316,8 @@ export const PatientRelationshipManager = ({
 			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>
-						{dependentToEdit ? 'Editar' : 'Agregar'} {tipoDependiente === 'menor' ? 'Menor' : 'Animal'}
+						{dependentToEdit ? 'Editar' : 'Agregar'} Dependiente
 					</DialogTitle>
-					<DialogDescription>
-						{dependentToEdit
-							? `Editar datos del ${tipoDependiente === 'menor' ? 'menor de edad' : 'animal'}`
-							: `Registrar un nuevo ${
-									tipoDependiente === 'menor' ? 'menor de edad' : 'animal'
-							  } bajo la responsabilidad de`}{' '}
-						{!dependentToEdit && <strong>{responsable.nombre}</strong>}
-					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
@@ -353,15 +345,49 @@ export const PatientRelationshipManager = ({
 						</Select>
 					</div>
 
-					{/* Nombre */}
-					<div className="space-y-2">
-						<Label htmlFor="nombre">Nombre Completo *</Label>
-						<Input
-							id="nombre"
-							value={nombre}
-							onChange={(e) => setNombre(e.target.value)}
-							placeholder="Nombre completo"
-						/>
+					{/* Primera línea: Nombre Completo y Género/Especie */}
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label htmlFor="nombre">Nombre Completo *</Label>
+							<Input
+								id="nombre"
+								value={nombre}
+								onChange={(e) => setNombre(e.target.value)}
+								placeholder="Nombre completo"
+							/>
+						</div>
+
+						<div className="space-y-2">
+							{tipoDependiente === 'menor' ? (
+								<>
+									<Label>Género</Label>
+									<Select
+										value={gender || undefined}
+										onValueChange={(value) => {
+											setGender(value as 'Masculino' | 'Femenino')
+										}}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Seleccionar género" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="Masculino">Masculino</SelectItem>
+											<SelectItem value="Femenino">Femenino</SelectItem>
+										</SelectContent>
+									</Select>
+								</>
+							) : (
+								<>
+									<Label htmlFor="especie">Especie *</Label>
+									<Input
+										id="especie"
+										value={especie}
+										onChange={(e) => setEspecie(e.target.value)}
+										placeholder="Ej: Perro, Gato, etc."
+									/>
+								</>
+							)}
+						</div>
 					</div>
 
 					{/* Fecha de nacimiento o Edad */}
@@ -416,61 +442,36 @@ export const PatientRelationshipManager = ({
 						</div>
 					</div>
 
-					{/* Especie (solo para animales) */}
-					{tipoDependiente === 'animal' && (
+
+					{/* Última línea: Teléfono y Email */}
+					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label htmlFor="especie">Especie *</Label>
+							<Label htmlFor="telefono">Teléfono</Label>
 							<Input
-								id="especie"
-								value={especie}
-								onChange={(e) => setEspecie(e.target.value)}
-								placeholder="Ej: Perro, Gato, etc."
+								id="telefono"
+								value={telefono}
+								onChange={(e) => {
+									const { value } = e.target
+									// Permitir números, guiones, espacios, paréntesis y el símbolo +
+									if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
+										setTelefono(value)
+									}
+								}}
+								placeholder="Teléfono de contacto"
+								maxLength={15}
 							/>
 						</div>
-					)}
 
-					{/* Género (solo para menores) */}
-					{tipoDependiente === 'menor' && (
 						<div className="space-y-2">
-							<Label>Género</Label>
-							<Select
-								value={gender || undefined}
-								onValueChange={(value) => {
-									setGender(value as 'Masculino' | 'Femenino')
-								}}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Seleccionar género" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="Masculino">Masculino</SelectItem>
-									<SelectItem value="Femenino">Femenino</SelectItem>
-								</SelectContent>
-							</Select>
+							<Label htmlFor="email">Email</Label>
+							<Input
+								id="email"
+								type="email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								placeholder="Email (opcional)"
+							/>
 						</div>
-					)}
-
-					{/* Teléfono */}
-					<div className="space-y-2">
-						<Label htmlFor="telefono">Teléfono</Label>
-						<Input
-							id="telefono"
-							value={telefono}
-							onChange={(e) => setTelefono(e.target.value)}
-							placeholder="Teléfono de contacto"
-						/>
-					</div>
-
-					{/* Email */}
-					<div className="space-y-2">
-						<Label htmlFor="email">Email</Label>
-						<Input
-							id="email"
-							type="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							placeholder="Email (opcional)"
-						/>
 					</div>
 				</div>
 

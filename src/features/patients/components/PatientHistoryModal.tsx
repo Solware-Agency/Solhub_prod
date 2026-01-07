@@ -13,6 +13,7 @@ import {
   Square,
   Eye,
   Activity,
+  Users,
 } from 'lucide-react';
 import {
   Dialog,
@@ -51,6 +52,7 @@ import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
+import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -79,6 +81,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const [pendingEmailCases, setPendingEmailCases] = useState<MedicalCaseWithPatient[]>([]);
   const [activeTab, setActiveTab] = useState('cases');
+  const [searchTermRepresentados, setSearchTermRepresentados] = useState('');
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -105,6 +108,26 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
   const [previewingCaseId, setPreviewingCaseId] = useState<string | null>(null);
 
+  // Verificar si el paciente es un representado (menor o animal)
+  const isRepresentado = patient ? ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal') : false;
+
+  // Obtener información del responsable si es representado
+  const { data: responsableData } = useQuery({
+    queryKey: ['patient-responsable-modal', patient?.id],
+    queryFn: async () => {
+      if (!patient?.id || !isRepresentado) return null;
+      try {
+        const responsable = await getResponsableByDependiente(patient.id);
+        return responsable;
+      } catch (error) {
+        console.error('Error obteniendo responsable:', error);
+        return null;
+      }
+    },
+    enabled: isOpen && !!patient?.id && isRepresentado,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   // Fetch patient's medical records - usando nueva estructura
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['patient-history', patient?.id],
@@ -118,6 +141,51 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         return cases;
       } catch (error) {
         throw error;
+      }
+    },
+    enabled: isOpen && !!patient?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch casos de representados (dependientes)
+  const { data: dependentsCases, isLoading: isLoadingDependentsCases, refetch: refetchDependentsCases } = useQuery({
+    queryKey: ['dependents-cases', patient?.id],
+    queryFn: async () => {
+      if (!patient?.id) return [];
+      
+      try {
+        // Obtener todos los dependientes del paciente responsable
+        const dependents = await getDependentsByResponsable(patient.id);
+        
+        if (!dependents || dependents.length === 0) {
+          return [];
+        }
+
+        // Obtener casos de todos los dependientes
+        const allCases: (MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string })[] = [];
+        
+        for (const dep of dependents) {
+          if (dep.dependiente?.id) {
+            const cases = await getCasesByPatientIdWithInfo(dep.dependiente.id);
+            // Agregar información del dependiente a cada caso
+            const casesWithDependent = cases.map(case_ => ({
+              ...case_,
+              dependienteNombre: dep.dependiente?.nombre || 'Desconocido',
+              dependienteId: dep.dependiente.id,
+            }));
+            allCases.push(...casesWithDependent);
+          }
+        }
+
+        // Ordenar por fecha más reciente
+        return allCases.sort((a, b) => {
+          const dateA = new Date(a.created_at || a.date).getTime();
+          const dateB = new Date(b.created_at || b.date).getTime();
+          return dateB - dateA;
+        });
+      } catch (error) {
+        console.error('Error obteniendo casos de dependientes:', error);
+        return [];
       }
     },
     enabled: isOpen && !!patient?.id,
@@ -165,6 +233,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         (caseItem.payment_status?.toLowerCase() || '').includes(searchLower),
     );
   }, [data, searchTerm]);
+
+  // Filter casos de representados based on search term
+  const filteredDependentsCases = React.useMemo(() => {
+    if (!dependentsCases) return [];
+
+    if (!searchTermRepresentados) return dependentsCases;
+
+    const searchLower = searchTermRepresentados.toLowerCase();
+    return dependentsCases.filter(
+      (caseItem: MedicalCaseWithPatient & { dependienteNombre: string }) =>
+        (caseItem.code?.toLowerCase() || '').includes(searchLower) ||
+        (caseItem.exam_type?.toLowerCase() || '').includes(searchLower) ||
+        (caseItem.treating_doctor?.toLowerCase() || '').includes(searchLower) ||
+        (caseItem.branch?.toLowerCase() || '').includes(searchLower) ||
+        (caseItem.payment_status?.toLowerCase() || '').includes(searchLower) ||
+        (caseItem.dependienteNombre?.toLowerCase() || '').includes(searchLower),
+    );
+  }, [dependentsCases, searchTermRepresentados]);
 
   // Funciones para manejar selección de casos (después de filteredCases)
   const toggleCaseSelection = (caseId: string) => {
@@ -647,11 +733,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             </button>
                           </h3>
                           <p className='text-sm text-gray-600 dark:text-gray-400'>
-                            Cédula: {patient.cedula}
-                            {patient.gender && (
-                              <span className='ml-3'>
-                                • Género: {patient.gender}
-                              </span>
+                            {isRepresentado && responsableData?.responsable ? (
+                              <>
+                                Representado por: {responsableData.responsable.nombre} - {responsableData.responsable.cedula || 'Sin cédula'}
+                                {patient.gender && (
+                                  <span className='ml-3'>
+                                    • Género: {patient.gender}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                Cédula: {patient.cedula || 'No disponible'}
+                                {patient.gender && (
+                                  <span className='ml-3'>
+                                    • Género: {patient.gender}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </p>
                         </div>
@@ -728,16 +827,23 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       onValueChange={setActiveTab}
                       className='w-full h-full flex flex-col overflow-hidden'
                     >
-                      <FeatureGuard feature='hasTriaje'>
-                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-                          <TabsList className='grid w-full grid-cols-2 gap-5'>
-                            <TabsTrigger
-                              value='cases'
-                              className='flex items-center gap-2'
-                            >
-                              <FileText className='h-4 w-4' />
-                              Historial de Casos
-                            </TabsTrigger>
+                      <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                        <TabsList className={`grid w-full gap-5 ${laboratory?.features?.hasTriaje ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                          <TabsTrigger
+                            value='cases'
+                            className='flex items-center gap-2'
+                          >
+                            <FileText className='h-4 w-4' />
+                            Historial de Casos
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value='representados'
+                            className='flex items-center gap-2'
+                          >
+                            <Users className='h-4 w-4' />
+                            Casos de Representados
+                          </TabsTrigger>
+                          {laboratory?.features?.hasTriaje && (
                             <TabsTrigger
                               value='triage'
                               className='flex items-center gap-2'
@@ -745,9 +851,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               <Activity className='h-4 w-4' />
                               Historial de Triaje
                             </TabsTrigger>
-                          </TabsList>
-                        </div>
-                      </FeatureGuard>
+                          )}
+                        </TabsList>
+                      </div>
 
                       {/* Tab: Historial de Casos */}
                       <TabsContent
@@ -1099,6 +1205,203 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
                       </TabsContent>
 
+                      {/* Tab: Casos de Representados */}
+                      <TabsContent
+                        value='representados'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                      >
+                        {/* Search */}
+                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                          <div className='relative flex-1'>
+                            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+                            <Input
+                              type='text'
+                              placeholder='Buscar por código, tipo, médico, representado...'
+                              value={searchTermRepresentados}
+                              onChange={(e) => setSearchTermRepresentados(e.target.value)}
+                              className='pl-10'
+                            />
+                          </div>
+                        </div>
+
+                        {/* Cases List */}
+                        <div className='flex-1 overflow-y-auto p-4'>
+                          {isLoadingDependentsCases ? (
+                            <div className='flex items-center justify-center py-12'>
+                              <div className='flex items-center gap-3'>
+                                <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
+                                <span className='text-lg text-gray-700 dark:text-gray-300'>
+                                  Cargando casos de representados...
+                                </span>
+                              </div>
+                            </div>
+                          ) : error ? (
+                            <div className='text-center py-12'>
+                              <p className='text-red-500 dark:text-red-400'>
+                                Error al cargar casos de representados
+                              </p>
+                            </div>
+                          ) : !filteredDependentsCases || filteredDependentsCases.length === 0 ? (
+                            <div className='text-center py-12'>
+                              <Users className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                              <p className='text-gray-500 dark:text-gray-400'>
+                                {dependentsCases && dependentsCases.length === 0
+                                  ? 'Este paciente no tiene representados o no hay casos registrados para sus representados.'
+                                  : 'No se encontraron casos que coincidan con la búsqueda.'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className='space-y-4'>
+                              {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
+                                <div
+                                  key={caseItem.id}
+                                  className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow'
+                                >
+                                  <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+                                    {/* Representado */}
+                                    <div className='md:col-span-1'>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Representado
+                                      </p>
+                                      <p className='text-sm font-medium text-blue-600 dark:text-blue-400'>
+                                        {caseItem.dependienteNombre}
+                                      </p>
+                                    </div>
+
+                                    {/* Código y Tipo */}
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Código
+                                      </p>
+                                      <p className='text-sm font-medium'>
+                                        {caseItem.code || 'Sin código'}
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Tipo de Examen
+                                      </p>
+                                      <p className='text-sm font-medium'>
+                                        {caseItem.exam_type}
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Fecha
+                                      </p>
+                                      <p className='text-sm font-medium'>
+                                        {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
+                                      </p>
+                                    </div>
+
+                                    {/* Médico y Sede */}
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Médico Tratante
+                                      </p>
+                                      <p className='text-sm font-medium truncate'>
+                                        {caseItem.treating_doctor}
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Sede
+                                      </p>
+                                      <BranchBadge branch={caseItem.branch} className='text-xs' />
+                                    </div>
+
+                                    {/* Estado de Pago */}
+                                    <div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                        Estado de Pago
+                                      </p>
+                                      <span
+                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                          caseItem.payment_status === 'Pagado'
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                        }`}
+                                      >
+                                        {caseItem.payment_status}
+                                      </span>
+                                    </div>
+
+                                    {/* Monto (si no es SPT) */}
+                                    {!isSpt && (
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Monto Total
+                                        </p>
+                                        <p className='text-sm font-medium'>
+                                          {formatCurrency(caseItem.total_amount)}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Acciones */}
+                                    <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
+                                      <Button
+                                        onClick={() =>
+                                          handleCheckAndDownloadPDF(caseItem)
+                                        }
+                                        disabled={
+                                          isGeneratingPDF ||
+                                          isSaving ||
+                                          caseItem.doc_aprobado !== 'aprobado'
+                                        }
+                                      >
+                                        {isGeneratingPDF || isSaving ? (
+                                          <>
+                                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                            Generando...
+                                          </>
+                                        ) : caseItem.doc_aprobado !== 'aprobado' ? (
+                                          <>
+                                            <Download className='h-4 w-4 mr-2' />
+                                            No tiene PDF
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Download className='h-4 w-4 mr-2' />
+                                            Descargar PDF
+                                          </>
+                                        )}
+                                      </Button>
+                                      <Button
+                                        onClick={() =>
+                                          setPreviewingCaseId(caseItem.id)
+                                        }
+                                        disabled={
+                                          isSaving ||
+                                          !caseItem.informepdf_url ||
+                                          caseItem.doc_aprobado !== 'aprobado'
+                                        }
+                                      >
+                                        <Eye className='w-4 h-4' />
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  {caseItem.diagnostico && (
+                                    <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                        Diagnóstico
+                                      </p>
+                                      <p className='text-sm mt-1'>
+                                        {caseItem.diagnostico}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+
                       {/* Tab: Datos de Triaje */}
                       <TabsContent
                         value='triage'
@@ -1139,34 +1442,37 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 <DialogTitle className='flex items-center gap-2'>
                   <FileText className='w-5 h-5' />
                   Vista previa del documento -{' '}
-                  {filteredCases?.find((c) => c.id === previewingCaseId)
-                    ?.code || 'Sin código'}
+                  {(() => {
+                    const case_ = filteredCases?.find((c) => c.id === previewingCaseId) ||
+                                  filteredDependentsCases?.find((c) => c.id === previewingCaseId);
+                    return case_?.code || 'Sin código';
+                  })()}
                 </DialogTitle>
               </DialogHeader>
               <div className='flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900'>
-                {filteredCases?.find((c) => c.id === previewingCaseId)
-                  ?.informepdf_url ? (
-                  <iframe
-                    src={
-                      filteredCases.find((c) => c.id === previewingCaseId)
-                        ?.informepdf_url || ''
-                    }
-                    className='w-full h-full border-0'
-                    title='Vista previa del PDF'
-                    style={{
-                      minHeight: 'calc(90vh - 80px)',
-                    }}
-                  />
-                ) : (
-                  <div className='flex items-center justify-center h-full'>
-                    <div className='text-center'>
-                      <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
-                      <p className='text-gray-500 dark:text-gray-400'>
-                        No hay PDF disponible para previsualizar
-                      </p>
+                {(() => {
+                  const case_ = filteredCases?.find((c) => c.id === previewingCaseId) ||
+                                filteredDependentsCases?.find((c) => c.id === previewingCaseId);
+                  return case_?.informepdf_url ? (
+                    <iframe
+                      src={case_.informepdf_url}
+                      className='w-full h-full border-0'
+                      title='Vista previa del PDF'
+                      style={{
+                        minHeight: 'calc(90vh - 80px)',
+                      }}
+                    />
+                  ) : (
+                    <div className='flex items-center justify-center h-full'>
+                      <div className='text-center'>
+                        <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                        <p className='text-gray-500 dark:text-gray-400'>
+                          No hay PDF disponible para previsualizar
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </DialogContent>
           </Dialog>

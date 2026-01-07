@@ -10,6 +10,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getTriageByCase } from '@/services/supabase/triage/triage-service';
 import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
+import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
+import { supabase } from '@/services/supabase/config/config';
 
 // Error Boundary para capturar errores en el formulario
 class TriajeFormErrorBoundary extends Component<
@@ -142,6 +144,34 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     retry: 1,
   });
 
+  // Verificar si el paciente es un representado (menor o animal) y obtener responsable
+  const { data: responsableData } = useQuery({
+    queryKey: ['patient-responsable-triaje', case_?.patient_id],
+    queryFn: async () => {
+      if (!case_?.patient_id) return null;
+      try {
+        // Verificar si el paciente es menor o animal
+        const { data: patient } = await supabase
+          .from('patients')
+          .select('tipo_paciente')
+          .eq('id', case_.patient_id)
+          .single();
+        
+        if (patient && ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal')) {
+          const responsable = await getResponsableByDependiente(case_.patient_id);
+          return responsable;
+        }
+        
+        return null;
+      } catch (error) {
+        console.error('Error obteniendo responsable:', error);
+        return null;
+      }
+    },
+    enabled: !!case_?.patient_id && isOpen,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   // Reset forceEditMode when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -229,7 +259,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       {case_.nombre || 'Sin nombre'}
                     </p>
                     <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5'>
-                      {case_.cedula || 'Sin cédula'}
+                      {responsableData?.responsable ? (
+                        `Representado por: ${responsableData.responsable.nombre}`
+                      ) : (
+                        case_.cedula || 'Sin cédula'
+                      )}
                     </p>
                   </div>
                   {existingTriage && canEditTriaje && !forceEditMode && (
