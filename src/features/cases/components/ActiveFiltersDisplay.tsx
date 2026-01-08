@@ -147,12 +147,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 
         {examTypeFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full'>
-            Tipo:{' '}
-            {examTypeFilter === 'biopsia'
-              ? 'Biopsia'
-              : examTypeFilter === 'citologia'
-              ? 'Citología'
-              : 'Inmunohistoquímica'}
+            Tipo: {examTypeFilter}
           </span>
         )}
 
