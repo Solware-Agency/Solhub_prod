@@ -75,6 +75,8 @@ interface FiltersModalProps {
   onPdfStatusFilterChange: (value: string) => void;
   examTypeFilter: string;
   onExamTypeFilterChange: (value: string) => void;
+  consultaFilter: string;
+  onConsultaFilterChange: (value: string) => void;
   documentStatusFilter: string;
   onDocumentStatusFilterChange: (value: string) => void;
   emailSentStatusFilter: string;
@@ -114,6 +116,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   onPdfStatusFilterChange,
   examTypeFilter,
   onExamTypeFilterChange,
+  consultaFilter,
+  onConsultaFilterChange,
   documentStatusFilter,
   onDocumentStatusFilterChange,
   emailSentStatusFilter,
@@ -149,6 +153,36 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     ];
   }, [laboratory?.config?.examTypes]);
 
+  // Opciones de consulta (especialidades) para SPT
+  const consultaOptions = useMemo(() => {
+    return [
+      { value: 'Cardiología', label: 'Cardiología' },
+      { value: 'Cirugía General', label: 'Cirugía General' },
+      { value: 'Dermatología', label: 'Dermatología' },
+      { value: 'Endocrinología', label: 'Endocrinología' },
+      { value: 'Gastroenterología', label: 'Gastroenterología' },
+      { value: 'Geriatría', label: 'Geriatría' },
+      { value: 'Ginecología', label: 'Ginecología' },
+      { value: 'Hematología', label: 'Hematología' },
+      { value: 'Infectología', label: 'Infectología' },
+      { value: 'Medicina Familiar', label: 'Medicina Familiar' },
+      { value: 'Medicina Interna', label: 'Medicina Interna' },
+      { value: 'Nefrología', label: 'Nefrología' },
+      { value: 'Neumología', label: 'Neumología' },
+      { value: 'Neurología', label: 'Neurología' },
+      { value: 'Nutrición', label: 'Nutrición' },
+      { value: 'Oftalmología', label: 'Oftalmología' },
+      { value: 'Oncología', label: 'Oncología' },
+      { value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
+      { value: 'Pediatría', label: 'Pediatría' },
+      { value: 'Psiquiatría', label: 'Psiquiatría' },
+      { value: 'Reumatología', label: 'Reumatología' },
+      { value: 'Traumatología', label: 'Traumatología' },
+      { value: 'Urología', label: 'Urología' },
+      { value: 'Otra', label: 'Otra' },
+    ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }, []);
+
   // Check if there are any active filters
   const hasActiveFilters =
     statusFilter !== 'all' ||
@@ -163,6 +197,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     pendingCasesFilter !== 'all' ||
     pdfStatusFilter !== 'all' ||
     examTypeFilter !== 'all' ||
+    consultaFilter !== 'all' ||
     documentStatusFilter !== 'all' ||
     emailSentStatusFilter !== 'all';
 
@@ -190,6 +225,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 pendingCasesFilter !== 'all' ? 1 : 0,
                 pdfStatusFilter !== 'all' ? 1 : 0,
                 examTypeFilter !== 'all' ? 1 : 0,
+                consultaFilter !== 'all' ? 1 : 0,
                 documentStatusFilter !== 'all' ? 1 : 0,
                 emailSentStatusFilter !== 'all' ? 1 : 0,
               ].reduce((a, b) => a + b, 0)}
@@ -336,7 +372,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               </div>
             </div>
 
-            {/* New Filters Row 2: Exam Type and Email Status */}
+            {/* New Filters Row 2: Exam Type and Consulta/Email Status */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
               <div className='space-y-3'>
                 <CustomDropdown
@@ -348,19 +384,52 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 />
               </div>
 
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={[
-                    { value: 'true', label: 'Enviado' },
-                    { value: 'false', label: 'No Enviado' },
-                  ]}
-                  value={emailSentStatusFilter}
-                  placeholder='Estatus de Email'
-                  onChange={onEmailSentStatusFilterChange}
-                  data-testid='email-sent-status-filter'
-                />
-              </div>
+              {isSpt ? (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={consultaOptions}
+                    value={consultaFilter}
+                    placeholder='Tipo de Consulta'
+                    onChange={onConsultaFilterChange}
+                    data-testid='consulta-filter'
+                  />
+                </div>
+              ) : (
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'true', label: 'Enviado' },
+                      { value: 'false', label: 'No Enviado' },
+                    ]}
+                    value={emailSentStatusFilter}
+                    placeholder='Estatus de Email'
+                    onChange={onEmailSentStatusFilterChange}
+                    data-testid='email-sent-status-filter'
+                  />
+                </div>
+              )}
             </div>
+
+            {/* New Filters Row 3: Email Status for SPT */}
+            {isSpt && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'true', label: 'Enviado' },
+                      { value: 'false', label: 'No Enviado' },
+                    ]}
+                    value={emailSentStatusFilter}
+                    placeholder='Estatus de Email'
+                    onChange={onEmailSentStatusFilterChange}
+                    data-testid='email-sent-status-filter'
+                  />
+                </div>
+                <div className='space-y-3'>
+                  {/* Espacio vacío para mantener el grid */}
+                </div>
+              </div>
+            )}
 
             {/* Branch Filter Row - For SPT, includes Doctor Filter */}
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 w-full`}>

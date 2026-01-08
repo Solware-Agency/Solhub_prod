@@ -20,6 +20,7 @@ interface ActiveFiltersDisplayProps {
   pendingCasesFilter: string;
   pdfStatusFilter: string;
   examTypeFilter: string;
+  consultaFilter: string;
   documentStatusFilter: string;
   emailSentStatusFilter?: string;
 
@@ -39,6 +40,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
   pendingCasesFilter,
   pdfStatusFilter,
   examTypeFilter,
+  consultaFilter,
   documentStatusFilter,
   emailSentStatusFilter,
   // totalFilteredCases,
@@ -60,6 +62,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
     pendingCasesFilter !== 'all' ||
     pdfStatusFilter !== 'all' ||
     examTypeFilter !== 'all' ||
+    consultaFilter !== 'all' ||
     documentStatusFilter !== 'all' ||
     (emailSentStatusFilter && emailSentStatusFilter !== 'all');
 
@@ -148,6 +151,12 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
         {examTypeFilter !== 'all' && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full'>
             Tipo: {examTypeFilter}
+          </span>
+        )}
+
+        {consultaFilter !== 'all' && (
+          <span className='inline-flex items-center gap-1 px-3 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300 text-sm rounded-full'>
+            Consulta: {consultaFilter}
           </span>
         )}
 

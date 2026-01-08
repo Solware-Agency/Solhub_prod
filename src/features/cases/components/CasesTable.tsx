@@ -76,6 +76,7 @@ type SortDirection = 'asc' | 'desc';
 type ServerFilters = {
   searchTerm?: string;
   examType?: string;
+  consulta?: string;
   documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
   pdfStatus?: 'pendientes' | 'faltantes';
   citoStatus?: 'positivo' | 'negativo';
@@ -177,6 +178,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       useState<string>('all');
     const [emailSentStatusFilter, setEmailSentStatusFilter] =
       useState<string>('all');
+    const [consultaFilter, setConsultaFilter] = useState<string>('all');
     const [sortField, setSortField] = useState<SortField>('created_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedCaseForGenerate, setSelectedCaseForGenerate] =
@@ -228,6 +230,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [tempExamTypeFilter, setTempExamTypeFilter] = useState<string>('all');
     const [tempDocumentStatusFilter, setTempDocumentStatusFilter] =
       useState<string>('all');
+    const [tempConsultaFilter, setTempConsultaFilter] = useState<string>('all');
 
     // Paginación local (solo se usa si no hay paginación del servidor)
     const [localCurrentPage, setLocalCurrentPage] = useState(1);
@@ -314,6 +317,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       pendingCasesFilter,
       pdfStatusFilter,
       examTypeFilter,
+      consultaFilter,
       documentStatusFilter,
       emailSentStatusFilter,
       setCurrentPage,
@@ -333,6 +337,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         setTempPendingCasesFilter(pendingCasesFilter);
         setTempPdfStatusFilter(pdfStatusFilter);
         setTempExamTypeFilter(examTypeFilter);
+        setTempConsultaFilter(consultaFilter);
         setTempDocumentStatusFilter(documentStatusFilter);
         setTempEmailSentStatusFilter(emailSentStatusFilter);
       }
@@ -349,6 +354,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       pendingCasesFilter,
       pdfStatusFilter,
       examTypeFilter,
+      consultaFilter,
       documentStatusFilter,
       emailSentStatusFilter,
     ]);
@@ -387,6 +393,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           // Agregar filtros actuales
           if (examTypeFilter !== 'all') {
             currentFilters.examType = examTypeFilter;
+          }
+          if (consultaFilter !== 'all') {
+            currentFilters.consulta = consultaFilter;
           }
           if (documentStatusFilter !== 'all') {
             currentFilters.documentStatus = documentStatusFilter as
@@ -443,6 +452,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         pagination,
         onFiltersChange,
         examTypeFilter,
+        consultaFilter,
         documentStatusFilter,
         pdfStatusFilter,
         branchFilter,
@@ -561,6 +571,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempPdfStatusFilter('all');
       setTempExamTypeFilter('all');
       setTempDocumentStatusFilter('all');
+      setTempConsultaFilter('all');
       setTempEmailSentStatusFilter('all');
       // Si tenemos paginación del servidor, limpiar filtros del servidor también
       // pero mantener el orden actual
@@ -587,6 +598,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setPdfStatusFilter(tempPdfStatusFilter);
       setExamTypeFilter(tempExamTypeFilter);
       setDocumentStatusFilter(tempDocumentStatusFilter);
+      setConsultaFilter(tempConsultaFilter);
       setEmailSentStatusFilter(tempEmailSentStatusFilter);
       // Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
       if (pagination && onFiltersChange) {
@@ -595,6 +607,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         // Solo enviar filtros que no sean 'all'
         if (tempExamTypeFilter !== 'all') {
           serverFilters.examType = tempExamTypeFilter;
+        }
+        if (tempConsultaFilter !== 'all') {
+          serverFilters.consulta = tempConsultaFilter;
         }
         if (tempDocumentStatusFilter !== 'all') {
           serverFilters.documentStatus = tempDocumentStatusFilter as
@@ -716,6 +731,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempExamTypeFilter(value);
     }, []);
 
+    const handleTempConsultaFilterChange = useCallback((value: string) => {
+      setTempConsultaFilter(value);
+    }, []);
+
     const handleTempDocumentStatusFilterChange = useCallback(
       (value: string) => {
         setTempDocumentStatusFilter(value);
@@ -761,6 +780,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       // Agregar filtros activos
       if (examTypeFilter !== 'all') {
         serverFilters.examType = examTypeFilter;
+      }
+      if (consultaFilter !== 'all') {
+        serverFilters.consulta = consultaFilter;
       }
       if (documentStatusFilter !== 'all') {
         serverFilters.documentStatus = documentStatusFilter as
@@ -827,6 +849,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     }, [
       searchTerm,
       examTypeFilter,
+      consultaFilter,
       documentStatusFilter,
       pdfStatusFilter,
       branchFilter,
@@ -1117,6 +1140,16 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           }
         }
 
+        // Consulta Filter (for SPT)
+        let matchesConsulta = true;
+        if (consultaFilter !== 'all') {
+          if (!case_.consulta) {
+            matchesConsulta = false;
+          } else {
+            matchesConsulta = case_.consulta === consultaFilter;
+          }
+        }
+
         // Document Status Filter
         let matchesDocumentStatus = true;
         if (documentStatusFilter !== 'all') {
@@ -1155,6 +1188,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           matchesPendingCases &&
           matchesPdfStatus &&
           matchesExamTypeNew &&
+          matchesConsulta &&
           matchesDocumentStatus &&
           matchesEmailStatus
         );
@@ -1208,6 +1242,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       pendingCasesFilter,
       pdfStatusFilter,
       examTypeFilter,
+      consultaFilter,
       documentStatusFilter,
       emailSentStatusFilter,
       pagination,
@@ -1312,6 +1347,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 pendingCasesFilter={pendingCasesFilter}
                 pdfStatusFilter={pdfStatusFilter}
                 examTypeFilter={examTypeFilter}
+                consultaFilter={consultaFilter}
                 documentStatusFilter={documentStatusFilter}
                 emailSentStatusFilter={emailSentStatusFilter}
                 // totalFilteredCases={pagination?.totalItems}
@@ -1382,6 +1418,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
                       examTypeFilter={tempExamTypeFilter}
                       onExamTypeFilterChange={handleTempExamTypeFilterChange}
+                      consultaFilter={tempConsultaFilter}
+                      onConsultaFilterChange={handleTempConsultaFilterChange}
                       documentStatusFilter={tempDocumentStatusFilter}
                       onDocumentStatusFilterChange={
                         handleTempDocumentStatusFilterChange
@@ -1628,6 +1666,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             pendingCasesFilter={pendingCasesFilter}
             pdfStatusFilter={pdfStatusFilter}
             examTypeFilter={examTypeFilter}
+            consultaFilter={consultaFilter}
             documentStatusFilter={documentStatusFilter}
             emailSentStatusFilter={emailSentStatusFilter}
             // totalFilteredCases={pagination?.totalItems}
@@ -1687,6 +1726,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
                   examTypeFilter={tempExamTypeFilter}
                   onExamTypeFilterChange={handleTempExamTypeFilterChange}
+                  consultaFilter={tempConsultaFilter}
+                  onConsultaFilterChange={handleTempConsultaFilterChange}
                   documentStatusFilter={tempDocumentStatusFilter}
                   onDocumentStatusFilterChange={
                     handleTempDocumentStatusFilterChange
