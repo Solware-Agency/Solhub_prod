@@ -51,8 +51,9 @@ const DialogContent = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
 		overlayClassName?: string;
+		onOpenAutoFocus?: (event: Event) => void;
 	}
->(({ className, children, overlayClassName, ...props }, ref) => {
+>(({ className, children, overlayClassName, onOpenAutoFocus, ...props }, ref) => {
 	// Detectar si se necesita un z-index alto (para modales en pantalla completa)
 	// Buscar el patrón z-[número] con muchos dígitos (z-index alto)
 	const hasHighZIndex = className?.includes('z-[999999999999999999]') || 
@@ -70,6 +71,7 @@ const DialogContent = React.forwardRef<
 					'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background p-6 shadow-lg duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4 sm:rounded-lg',
 					className,
 				)}
+				onOpenAutoFocus={onOpenAutoFocus}
 				{...props}
 			>
 				{children}

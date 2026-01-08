@@ -173,6 +173,14 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 	// RENDER
 	// =====================================================================
 
+	// Prevenir auto-focus en responsive (mobile)
+	const handleOpenAutoFocus = (e: Event) => {
+		// Detectar si es mobile (ancho menor a 640px - breakpoint sm de Tailwind)
+		if (window.innerWidth < 640) {
+			e.preventDefault()
+		}
+	}
+
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
@@ -183,7 +191,10 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+			<DialogContent 
+				className="max-w-2xl max-h-[90vh] overflow-y-auto"
+				onOpenAutoFocus={handleOpenAutoFocus}
+			>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
@@ -228,8 +239,8 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Cédula *</Label>
-							<div className="grid grid-cols-5 gap-2">
-								<div className="col-span-1">
+							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
+								<div className="col-span-2 sm:col-span-1 min-w-[60px]">
 									<FormDropdown
 										options={createDropdownOptions([
 											{ value: 'V', label: 'V -' },
@@ -240,11 +251,11 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										value={cedulaTipo}
 										onChange={(value) => setCedulaTipo(value as 'V' | 'E' | 'J' | 'C')}
 										placeholder="Tipo"
-										className="transition-none"
+										className="transition-none text-xs sm:text-sm"
 										id="cedula-tipo"
 									/>
 								</div>
-								<div className="col-span-4">
+								<div className="col-span-4 sm:col-span-4">
 									<Input
 										id="cedula-numero"
 										value={cedulaNumero}
