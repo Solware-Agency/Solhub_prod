@@ -492,6 +492,7 @@ export const getCasesWithPatientInfo = async (
   filters?: {
     searchTerm?: string;
     branch?: string;
+    branchFilter?: string[]; // Filtro de múltiples sedes
     dateFrom?: string;
     dateTo?: string;
     examType?: string;
@@ -637,6 +638,17 @@ export const getCasesWithPatientInfo = async (
       if (filters?.branch) {
         combinedResults = combinedResults.filter(
           (item: any) => item.branch === filters.branch,
+        );
+      }
+
+      // Filtro por sedes (array)
+      if (filters?.branchFilter && filters.branchFilter.length > 0) {
+        const normalize = (str: string | null | undefined) =>
+          str ? str.trim().toLowerCase() : '';
+        combinedResults = combinedResults.filter((item: any) =>
+          filters.branchFilter!.some(
+            (branch) => normalize(item.branch) === normalize(branch),
+          ),
         );
       }
 
