@@ -598,9 +598,13 @@ export const validateRegistrationData = (
 
   // Validación especial para SPT: al menos uno de examType o consulta debe estar presente
   // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
+  // IMPORTANTE: Esta validación solo se ejecuta en onSubmit, no durante el llenado del formulario
   const isSPT = laboratorySlug?.toLowerCase() === 'spt';
   if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
-    if (!formData.examType && !consultaValue) {
+    // Solo validar si el formulario tiene datos básicos completos (indicando que el usuario está listo para enviar)
+    // Si falta información básica del paciente, no validar examType/consulta aún
+    const hasBasicPatientData = formData.fullName && formData.idNumber && formData.phone;
+    if (hasBasicPatientData && !formData.examType && !consultaValue) {
       errors.push('Debe seleccionar al menos un Tipo de Examen o una Consulta');
     }
   }

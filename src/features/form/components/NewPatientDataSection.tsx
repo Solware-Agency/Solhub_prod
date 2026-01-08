@@ -413,7 +413,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 						<NewResponsableForm
 							onResponsableCreated={handleSelectResponsable}
 							trigger={
-								<Button variant="outline" size="sm" className="w-full">
+								<Button type="button" variant="outline" size="sm" className="w-full">
 									Registrar Nuevo Paciente
 								</Button>
 							}
@@ -481,6 +481,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 
 									{/* Botón para seleccionar responsable */}
 									<Button
+										type="button"
 										variant={selectedProfile?.id === selectedResponsable.id ? 'default' : 'outline'}
 										size="sm"
 										className="w-full mt-4"
@@ -554,6 +555,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 												<div className="flex items-center gap-2">
 													{selectedProfile?.id === dep.id && <CheckCircle className="w-5 h-5 text-primary" />}
 													<Button
+														type="button"
 														variant="ghost"
 														size="sm"
 														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"

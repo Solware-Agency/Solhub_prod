@@ -82,7 +82,8 @@ export function MedicalFormContainer() {
 	const form = useForm<FormValues>({
 		resolver: dynamicResolver,
 		defaultValues: getInitialFormValues(),
-		mode: 'onChange', // Validate on change instead of on blur
+		mode: 'onSubmit', // Solo validar cuando se envía el formulario
+		reValidateMode: 'onChange', // Re-validar en onChange solo después del primer submit
 		shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
 	})
 
