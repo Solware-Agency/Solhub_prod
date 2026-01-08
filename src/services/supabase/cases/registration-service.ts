@@ -389,8 +389,9 @@ const prepareRegistrationData = (
     date: defaultValues.date || new Date().toISOString(),
     // payment_status se define en paymentValues, no duplicar aquí
 
-    // Información del examen (puede ser NULL)
-    exam_type: formData.examType || null,
+    // Información del examen (puede ser NULL en BD, pero el trigger de código lo requiere)
+    // Si no hay exam_type pero sí consulta, usar "Consulta" como exam_type para el trigger
+    exam_type: formData.examType || ((formData as any).consulta ? 'Consulta' : null),
 
     // Campos opcionales
     relationship: formData.relationship || null,
