@@ -29,7 +29,8 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 	const isSPT = laboratorySlug?.toLowerCase() === 'spt'
 
 	// Definir schemas condicionales para cada campo
-	const examTypeSchema = examTypeConfig?.enabled && examTypeConfig?.required
+	// Para SPT: Solo sede es obligatorio, los demás campos son opcionales
+	const examTypeSchema = examTypeConfig?.enabled && examTypeConfig?.required && !isSPT
 		? z.string().min(1, 'El tipo de examen es requerido')
 		: z.string().optional().or(z.literal(''))
 
@@ -68,13 +69,14 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 			.optional()
 			.or(z.literal(1))
 
-	// Para SPT, si el campo está habilitado, siempre es requerido
-	// Para otros labs, solo es requerido si branchConfig.required es true
+	// Para SPT: sede es obligatorio si está habilitado
+	// Para otros labs: solo es requerido si branchConfig.required es true
 	const branchSchema = branchConfig?.enabled && (branchConfig?.required || isSPT)
 		? z.string().min(1, 'La sede es requerida')
 		: z.string().optional().or(z.literal(''))
 
-	const consultaSchema = consultaConfig?.enabled && consultaConfig?.required
+	// Para SPT: consulta es opcional aunque esté habilitado y marcado como requerido
+	const consultaSchema = consultaConfig?.enabled && consultaConfig?.required && !isSPT
 		? z.string().min(1, 'La consulta (especialidad médica) es requerida')
 		: z.string().optional().or(z.literal(''))
 
