@@ -34,6 +34,7 @@ export const ServiceSection = memo(
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
     const branch = useWatch({ control, name: 'branch' });
+    const isSPT = laboratory?.slug?.toLowerCase() === 'spt';
     
     // Obtener setValue del contexto del formulario de forma segura
     const formContext = useFormContext<FormValues>();
@@ -158,7 +159,7 @@ export const ServiceSection = memo(
               name='examType'
               render={({ field }) => (
                 <FormItem className='min-w-[180px] flex-1'>
-                  <FormLabel>Tipo de Examen *</FormLabel>
+                  <FormLabel>Tipo de Examen{!isSPT && ' *'}</FormLabel>
                   <FormControl>
                     <FormDropdown
                       options={examTypesOptions}
