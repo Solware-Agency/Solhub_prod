@@ -687,6 +687,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'branch',
           'comments',
           'consulta',
+          'image_url',
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -739,6 +740,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               caseChanges.comments = newValue as string | null;
             } else if (field === 'consulta') {
               caseChanges.consulta = newValue as string | null;
+            } else if (field === 'image_url') {
+              caseChanges.image_url = newValue as string | null;
             }
             caseChangeLogs.push({
               field,
@@ -1784,74 +1787,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             URL de Imagen:
                           </span>
                           {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
-                            <div className='sm:w-1/2 space-y-2'>
+                            <div className='sm:w-1/2'>
                               <Input
                                 id='image-url-input'
                                 name='image_url'
                                 type='url'
                                 placeholder='https://ejemplo.com/imagen.jpg'
                                 value={imageUrl}
-                                onChange={(e) => setImageUrl(e.target.value)}
+                                onChange={(e) => {
+                                  setImageUrl(e.target.value);
+                                  setEditedCase({ ...editedCase, image_url: e.target.value });
+                                }}
                                 className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
                               />
-                              <div className='flex gap-2'>
-                                <Button
-                                  size='sm'
-                                  onClick={async () => {
-                                    if (!imageUrl) {
-                                      toast({
-                                        title: '⚠️ Campo vacío',
-                                        description: 'Por favor ingresa una URL válida',
-                                        variant: 'default',
-                                      });
-                                      return;
-                                    }
-                                    
-                                    try {
-                                      const { error } = await supabase
-                                        .from('medical_records_clean')
-                                        .update({ image_url: imageUrl })
-                                        .eq('id', currentCase.id);
-                                      
-                                      if (error) throw error;
-                                      
-                                      // Update currentCase to reflect the change immediately
-                                      (currentCase as any).image_url = imageUrl;
-                                      
-                                      // Trigger parent refresh to update the case list
-                                      if (onSave) {
-                                        await onSave();
-                                      }
-                                      
-                                      toast({
-                                        title: '✅ URL guardada',
-                                        description: 'La URL de la imagen se ha guardado correctamente.',
-                                        className: 'bg-green-100 border-green-400 text-green-800',
-                                      });
-                                    } catch (error) {
-                                      console.error('Error saving image URL:', error);
-                                      toast({
-                                        title: '❌ Error',
-                                        description: 'No se pudo guardar la URL de la imagen.',
-                                        variant: 'destructive',
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Save className='w-3 h-3 mr-1' />
-                                  Guardar URL
-                                </Button>
-                                {imageUrl && (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    onClick={() => window.open(imageUrl, '_blank')}
-                                  >
-                                    <Eye className='w-3 h-3 mr-1' />
-                                    Ver
-                                  </Button>
-                                )}
-                              </div>
                             </div>
                           ) : (
                             <div className='sm:w-1/2'>
