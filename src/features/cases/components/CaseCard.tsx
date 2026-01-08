@@ -48,7 +48,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 	const isAnimal = patientType === 'animal'
 	
 	return (
-		<div className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md">
+		<div className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200">
 			{/* Menú de tres puntos en la esquina superior derecha */}
 			<div className="absolute top-2 right-2 z-10">
 				<CaseActionsPopover

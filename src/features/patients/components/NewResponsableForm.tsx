@@ -354,11 +354,6 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 									</SelectContent>
 								</Select>
 							</div>
-							{fechaNacimiento && (
-								<p className="text-xs text-gray-500">
-									La edad se calculará automáticamente desde la fecha de nacimiento
-								</p>
-							)}
 						</div>
 					</div>
 
