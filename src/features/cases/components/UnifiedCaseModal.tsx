@@ -1890,20 +1890,37 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </span>
                           {isEditing ? (
                             <div className='sm:w-1/2'>
-                              <Input
+                              <FormDropdown
                                 id='consulta-input'
-                                name='consulta'
-                                placeholder='Ej: Cardiología, Medicina General'
-                                value={
-                                  editedCase.consulta ||
-                                  currentCase.consulta ||
-                                  ''
-                                }
-                                onChange={(e) => {
-                                  const { value } = e.target;
-                                  // Permitir letras, números, espacios y caracteres comunes
-                                  handleInputChange('consulta', value);
-                                }}
+                                options={createDropdownOptions([
+                                  { value: 'Cardiología', label: 'Cardiología' },
+                                  { value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
+                                  { value: 'Dermatología', label: 'Dermatología' },
+                                  { value: 'Endocrinología', label: 'Endocrinología' },
+                                  { value: 'Fisioterapia', label: 'Fisioterapia' },
+                                  { value: 'Gastroenterología', label: 'Gastroenterología' },
+                                  { value: 'Ginecología', label: 'Ginecología' },
+                                  { value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+                                  { value: 'Medicina General', label: 'Medicina General' },
+                                  { value: 'Medicina Interna', label: 'Medicina Interna' },
+                                  { value: 'Nefrología', label: 'Nefrología' },
+                                  { value: 'Neumonología', label: 'Neumonología' },
+                                  { value: 'Neurocirugía', label: 'Neurocirugía' },
+                                  { value: 'Neurología', label: 'Neurología' },
+                                  { value: 'Odontología', label: 'Odontología' },
+                                  { value: 'Oftalmología', label: 'Oftalmología' },
+                                  { value: 'Optometría', label: 'Optometría' },
+                                  { value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
+                                  { value: 'Pediatría', label: 'Pediatría' },
+                                  { value: 'Psicología', label: 'Psicología' },
+                                  { value: 'Psiquiatría', label: 'Psiquiatría' },
+                                  { value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+                                  { value: 'Traumatología', label: 'Traumatología' },
+                                  { value: 'Urología', label: 'Urología' },
+                                ].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })))}
+                                value={editedCase.consulta || currentCase.consulta || ''}
+                                onChange={(value) => handleInputChange('consulta', value)}
+                                placeholder='Seleccione una especialidad'
                                 className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
                               />
                             </div>
