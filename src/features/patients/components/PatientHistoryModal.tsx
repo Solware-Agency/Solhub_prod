@@ -53,6 +53,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
+import { ImageButton } from '@shared/components/ui/ImageButton';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -1141,6 +1142,16 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             </p>
                                           </div>
                                         )}
+
+                                        {/* Imagen del caso */}
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Imagen
+                                          </p>
+                                          <div className='mt-1'>
+                                            <ImageButton imageUrl={(caseItem as any).image_url} />
+                                          </div>
+                                        </div>
 
                                         <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
                                           <Button

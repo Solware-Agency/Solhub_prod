@@ -66,6 +66,7 @@ import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
+import { ImageButton } from '@shared/components/ui/ImageButton';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -1854,23 +1855,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <div className='sm:w-1/2'>
-                              {(currentCase as any).image_url ? (
-                                <div className='flex'>
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    onClick={() => window.open((currentCase as any).image_url, '_blank')}
-                                    className='w-full'
-                                  >
-                                    <Eye className='w-3 h-3 mr-1' />
-                                    Ver Imagen
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span className='text-sm text-gray-500 dark:text-gray-400'>
-                                  Sin imagen
-                                </span>
-                              )}
+                              <ImageButton imageUrl={(currentCase as any).image_url} className='w-full' />
                             </div>
                           )}
                         </div>
