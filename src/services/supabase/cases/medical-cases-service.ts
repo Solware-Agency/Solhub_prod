@@ -645,6 +645,7 @@ export const getCasesWithPatientInfo = async (
       if (filters?.branchFilter && filters.branchFilter.length > 0) {
         const normalize = (str: string | null | undefined) =>
           str ? str.trim().toLowerCase() : '';
+        
         combinedResults = combinedResults.filter((item: any) =>
           filters.branchFilter!.some(
             (branch) => normalize(item.branch) === normalize(branch),
@@ -831,7 +832,9 @@ export const getCasesWithPatientInfo = async (
     query = query.eq('laboratory_id', profile.laboratory_id);
 
     // Aplicar filtros
-    if (filters?.branch) {
+    if (filters?.branchFilter && filters.branchFilter.length > 0) {
+      query = query.in('branch', filters.branchFilter);
+    } else if (filters?.branch) {
       query = query.eq('branch', filters.branch);
     }
 
