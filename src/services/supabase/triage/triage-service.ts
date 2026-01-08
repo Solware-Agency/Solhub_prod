@@ -288,6 +288,165 @@ const parseBloodPressure = (value: string | number | null | undefined): number |
   return isNaN(parsed) ? null : Math.round(parsed);
 };
 
+/**
+ * Traducir errores de constraints de PostgreSQL a mensajes amigables
+ */
+const getTriageErrorMessage = (error: any): string => {
+  const message = error.message || '';
+  const code = error.code || '';
+
+  // Errores de constraints de validación en orden lógico del formulario
+  // Primero: datos antropométricos básicos que ingresa el usuario
+  if (message.includes('valid_height')) {
+    return 'Altura inválida. Debe estar entre 20 y 300 cm.';
+  }
+  if (message.includes('valid_weight')) {
+    return 'Peso inválido. Debe estar entre 0.5 y 500 kg.';
+  }
+  
+  // Segundo: signos vitales
+  if (message.includes('valid_heart_rate')) {
+    return 'Frecuencia cardíaca inválida. Debe estar entre 30 y 220 latidos por minuto.';
+  }
+  if (message.includes('valid_respiratory_rate')) {
+    return 'Frecuencia respiratoria inválida. Debe estar entre 8 y 60 respiraciones por minuto.';
+  }
+  if (message.includes('valid_oxygen_saturation')) {
+    return 'Saturación de oxígeno inválida. Debe estar entre 0 y 100%.';
+  }
+  if (message.includes('valid_temperature')) {
+    return 'Temperatura inválida. Debe estar entre 30°C y 45°C.';
+  }
+  if (message.includes('valid_blood_pressure')) {
+    return 'Presión arterial inválida. Debe estar entre 40 y 300 mmHg.';
+  }
+  
+  // Tercero: hábitos
+  if (message.includes('valid_tabaco')) {
+    return 'Índice tabáquico inválido. Debe ser un valor positivo.';
+  }
+  if (message.includes('valid_cafe')) {
+    return 'Consumo de café inválido. Debe ser un valor positivo.';
+  }
+  
+  // Último: IMC (es calculado automáticamente, no lo ingresa el usuario)
+  if (message.includes('valid_bmi')) {
+    return 'La combinación de talla y peso genera un IMC fuera del rango válido (5-100). Verifique los valores ingresados.';
+  }
+
+  // Error de overflow numérico
+  if (code === '22003' || message.includes('numeric field overflow')) {
+    if (message.includes('heart_rate') || message.includes('FC')) {
+      return 'Frecuencia cardíaca demasiado alta. Verifique el valor ingresado.';
+    }
+    if (message.includes('respiratory_rate') || message.includes('FR')) {
+      return 'Frecuencia respiratoria demasiado alta. Verifique el valor ingresado.';
+    }
+    if (message.includes('oxygen_saturation') || message.includes('SpO')) {
+      return 'Saturación de oxígeno inválida. Verifique el valor ingresado.';
+    }
+    if (message.includes('temperature') || message.includes('Temperatura')) {
+      return 'Temperatura demasiado alta. Verifique el valor ingresado.';
+    }
+    if (message.includes('blood_pressure') || message.includes('Presión')) {
+      return 'Presión arterial demasiado alta. Verifique el valor ingresado.';
+    }
+    if (message.includes('height') || message.includes('Talla')) {
+      return 'Altura demasiado alta. Verifique el valor ingresado.';
+    }
+    if (message.includes('weight') || message.includes('Peso')) {
+      return 'Peso demasiado alto. Verifique el valor ingresado.';
+    }
+    return 'Uno de los valores ingresados es demasiado alto. Verifique los datos.';
+  }
+
+  // Error de clave foránea
+  if (code === '23503' || message.includes('foreign key')) {
+    if (message.includes('patient_id')) {
+      return 'El paciente especificado no existe.';
+    }
+    if (message.includes('case_id')) {
+      return 'El caso médico especificado no existe.';
+    }
+    if (message.includes('laboratory_id')) {
+      return 'El laboratorio especificado no existe.';
+    }
+    return 'Referencia inválida en el registro.';
+  }
+
+  // Error de duplicado
+  if (code === '23505' || message.includes('duplicate key')) {
+    return 'Ya existe un registro de triaje con estos datos.';
+  }
+
+  // Error de not null
+  if (code === '23502' || message.includes('null value')) {
+    if (message.includes('patient_id')) {
+      return 'El ID del paciente es obligatorio.';
+    }
+    if (message.includes('laboratory_id')) {
+      return 'El ID del laboratorio es obligatorio.';
+    }
+    return 'Falta un campo obligatorio en el registro.';
+  }
+
+  // Error genérico
+  return message || 'Error desconocido al procesar el triaje.';
+};
+
+/**
+ * Validar que el triaje tenga datos mínimos necesarios
+ */
+const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>): void => {
+  const missingFields: string[] = [];
+  
+  // Validar datos antropométricos obligatorios
+  if (!data.height_cm || data.height_cm <= 0) {
+    missingFields.push('Talla');
+  }
+  if (!data.weight_kg || data.weight_kg <= 0) {
+    missingFields.push('Peso');
+  }
+  
+  // Validar signos vitales obligatorios
+  if (!data.heart_rate || data.heart_rate <= 0) {
+    missingFields.push('FC (Frecuencia Cardíaca)');
+  }
+  if (!data.respiratory_rate || data.respiratory_rate <= 0) {
+    missingFields.push('FR (Frecuencia Respiratoria)');
+  }
+  if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0) {
+    missingFields.push('SpO₂ (Saturación de Oxígeno)');
+  }
+  if (!data.temperature_celsius || data.temperature_celsius <= 0) {
+    missingFields.push('Temperatura');
+  }
+  
+  // Validar presión arterial (puede ser string o number)
+  const bloodPressureValue = typeof data.blood_pressure === 'string' 
+    ? parseBloodPressure(data.blood_pressure)
+    : data.blood_pressure;
+  if (!bloodPressureValue || bloodPressureValue <= 0) {
+    missingFields.push('Presión Arterial');
+  }
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Debe completar todos los signos vitales. Faltantes: ${missingFields.join(', ')}`);
+  }
+  
+  // Validar que el IMC calculado esté en rango válido (5-100)
+  // Esto previene errores de constraint en la base de datos
+  if (data.height_cm && data.weight_kg && data.height_cm > 0 && data.weight_kg > 0) {
+    const calculatedBMI = calculateBMI(data.height_cm, data.weight_kg);
+    if (calculatedBMI !== null && (calculatedBMI < 5 || calculatedBMI > 100)) {
+      throw new Error(
+        `La combinación de talla (${data.height_cm} cm) y peso (${data.weight_kg} kg) genera un IMC de ${calculatedBMI.toFixed(2)}, ` +
+        `que está fuera del rango válido (5-100). Verifique que los valores sean correctos.`
+      );
+    }
+  }
+};
+
 // =====================================================================
 // FUNCIONES DEL SERVICIO DE TRIAGE
 // =====================================================================
@@ -300,6 +459,9 @@ export const createTriageRecord = async (
   data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>
 ): Promise<TriageRecord> => {
   try {
+    // Validar datos mínimos antes de continuar
+    validateTriageData(data);
+    
     const laboratoryId = await getUserLaboratoryId();
     const userId = await getCurrentUserId();
 
@@ -326,7 +488,7 @@ export const createTriageRecord = async (
 
     if (error) {
       console.error('Error creando registro de triaje:', error);
-      throw new Error(`Error al crear registro de triaje: ${error.message}`);
+      throw new Error(getTriageErrorMessage(error));
     }
 
     if (!record) {
@@ -350,6 +512,27 @@ export const updateTriageRecord = async (
 ): Promise<TriageRecord> => {
   try {
     const laboratoryId = await getUserLaboratoryId();
+
+    // Obtener el registro actual para validar con los datos completos
+    const { data: currentRecord, error: fetchError } = await (supabase as any as { from(table: 'triaje_records'): any })
+      .from('triaje_records')
+      .select('*')
+      .eq('id', triage_id)
+      .eq('laboratory_id', laboratoryId)
+      .single();
+
+    if (fetchError || !currentRecord) {
+      throw new Error('No se encontró el registro de triaje para actualizar');
+    }
+
+    // Combinar datos actuales con los nuevos para validación
+    const mergedData = {
+      ...currentRecord,
+      ...data,
+    };
+
+    // Validar que los datos completos cumplan con los requisitos
+    validateTriageData(mergedData);
 
     // Calcular BMI si hay altura y peso
     const bmi = calculateBMI(data.height_cm || null, data.weight_kg || null);
@@ -390,7 +573,7 @@ export const updateTriageRecord = async (
 
     if (error) {
       console.error('Error actualizando registro de triaje:', error);
-      throw new Error(`Error al actualizar registro de triaje: ${error.message}`);
+      throw new Error(getTriageErrorMessage(error));
     }
 
     if (!record) {
@@ -427,7 +610,7 @@ export const getTriageByCase = async (
         return null;
       }
       console.error('Error obteniendo triaje del caso:', error);
-      throw new Error(`Error al obtener triaje del caso: ${error.message}`);
+      throw new Error('Error al obtener el triaje del caso médico.');
     }
 
     return record as TriageRecord;
@@ -461,7 +644,7 @@ export const getTriageHistoryByPatient = async (
 
     if (error) {
       console.error('Error obteniendo historial de triaje:', error);
-      throw new Error(`Error al obtener historial: ${error.message}`);
+      throw new Error('Error al obtener el historial de triaje del paciente.');
     }
 
     // Transformar los datos para incluir el código del caso
@@ -505,7 +688,7 @@ export const getLatestTriageRecord = async (
         return null;
       }
       console.error('Error obteniendo último triaje:', error);
-      throw new Error(`Error al obtener último triaje: ${error.message}`);
+      throw new Error('Error al obtener el último registro de triaje.');
     }
 
     // Transformar los datos para incluir el código del caso
