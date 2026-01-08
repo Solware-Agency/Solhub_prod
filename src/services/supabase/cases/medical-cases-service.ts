@@ -173,6 +173,7 @@ export interface MedicalCaseUpdate {
   created_at?: string;
   updated_at?: string;
   // Campos adicionales que existen en la tabla
+  image_url?: string | null; // URL de imagen para imagenologia
   exchange_rate?: number | null;
   created_by?: string | null;
   created_by_display_name?: string | null;
