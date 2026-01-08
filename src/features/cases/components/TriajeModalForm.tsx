@@ -15,7 +15,6 @@ import {
   Ruler,
   FileText,
   Clock,
-  Edit,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -30,7 +29,6 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import {
-  Tooltip,
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
@@ -624,7 +622,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
   // Si el triaje está completo y no estamos editando, mostrar vista
   const triageComplete = isTriageComplete(existingTriage ?? null);
-  const canEditTriage = (isEnfermero || isMedico) && userRole !== 'employee';
 
   // Si forceEditMode está activo, forzar el modo de edición
   useEffect(() => {

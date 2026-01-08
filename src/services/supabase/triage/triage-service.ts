@@ -4,6 +4,99 @@
 // Servicios para manejar la tabla triaje_records con referencia a patients
 
 import { supabase } from '@services/supabase/config/config';
+import type { Database } from '@shared/types/types';
+
+// Extender los tipos de Supabase para incluir triaje_records
+type SupabaseClient = typeof supabase;
+type ExtendedDatabase = Database & {
+  public: Database['public'] & {
+    Tables: Database['public']['Tables'] & {
+      triaje_records: {
+        Row: {
+          id: string;
+          patient_id: string;
+          case_id: string | null;
+          laboratory_id: string;
+          measurement_date: string;
+          height_cm: string | null;
+          weight_kg: string | null;
+          bmi: string | null;
+          heart_rate: number | null;
+          respiratory_rate: number | null;
+          oxygen_saturation: number | null;
+          temperature_celsius: string | null;
+          blood_pressure: number | null;
+          reason: string | null;
+          personal_background: string | null;
+          family_history: string | null;
+          psychobiological_habits: string | null;
+          examen_fisico: string | null;
+          alcohol: string | null;
+          tabaco: number | null;
+          cafe: number | null;
+          comment: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          patient_id: string;
+          case_id?: string | null;
+          laboratory_id: string;
+          measurement_date?: string;
+          height_cm?: string | null;
+          weight_kg?: string | null;
+          bmi?: string | null;
+          heart_rate?: number | null;
+          respiratory_rate?: number | null;
+          oxygen_saturation?: number | null;
+          temperature_celsius?: string | null;
+          blood_pressure?: number | null;
+          reason?: string | null;
+          personal_background?: string | null;
+          family_history?: string | null;
+          psychobiological_habits?: string | null;
+          examen_fisico?: string | null;
+          alcohol?: string | null;
+          tabaco?: number | null;
+          cafe?: number | null;
+          comment?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          patient_id?: string;
+          case_id?: string | null;
+          laboratory_id?: string;
+          measurement_date?: string;
+          height_cm?: string | null;
+          weight_kg?: string | null;
+          bmi?: string | null;
+          heart_rate?: number | null;
+          respiratory_rate?: number | null;
+          oxygen_saturation?: number | null;
+          temperature_celsius?: string | null;
+          blood_pressure?: number | null;
+          reason?: string | null;
+          personal_background?: string | null;
+          family_history?: string | null;
+          psychobiological_habits?: string | null;
+          examen_fisico?: string | null;
+          alcohol?: string | null;
+          tabaco?: number | null;
+          cafe?: number | null;
+          comment?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+  };
+};
 
 // Tipo para niveles de hábitos
 export type HabitLevel = 'muy alta' | 'alta' | 'media' | 'baja' | 'muy baja' | 'No' | '';
@@ -225,7 +318,7 @@ export const createTriageRecord = async (
       measurement_date: data.measurement_date || new Date().toISOString(),
     };
 
-    const { data: record, error } = await supabase
+    const { data: record, error } = await (supabase as any as { from(table: 'triaje_records'): any })
       .from('triaje_records')
       .insert(recordData)
       .select()
@@ -287,7 +380,7 @@ export const updateTriageRecord = async (
       }
     });
 
-    const { data: record, error } = await supabase
+    const { data: record, error } = await (supabase as any as { from(table: 'triaje_records'): any })
       .from('triaje_records')
       .update(updateData)
       .eq('id', triage_id)
@@ -321,7 +414,7 @@ export const getTriageByCase = async (
   try {
     const laboratoryId = await getUserLaboratoryId();
 
-    const { data: record, error } = await supabase
+    const { data: record, error } = await (supabase as any as { from(table: 'triaje_records'): any })
       .from('triaje_records')
       .select('*')
       .eq('case_id', case_id)
@@ -354,7 +447,7 @@ export const getTriageHistoryByPatient = async (
   try {
     const laboratoryId = await getUserLaboratoryId();
 
-    const { data: records, error } = await supabase
+    const { data: records, error } = await (supabase as any as { from(table: 'triaje_records'): any })
       .from('triaje_records')
       .select(`
         *,
@@ -392,7 +485,7 @@ export const getLatestTriageRecord = async (
   try {
     const laboratoryId = await getUserLaboratoryId();
 
-    const { data: record, error } = await supabase
+    const { data: record, error } = await (supabase as any as { from(table: 'triaje_records'): any })
       .from('triaje_records')
       .select(`
         *,
@@ -461,7 +554,6 @@ export const getTriageStatistics = async (
     const latest = records[0];
 
     // Calcular promedios
-    const validRecords = records.filter(r => r.measurement_date);
     const averages = {
       height_cm: calculateAverage(records.map(r => r.height_cm)),
       weight_kg: calculateAverage(records.map(r => r.weight_kg)),
