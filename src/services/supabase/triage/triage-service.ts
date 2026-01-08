@@ -415,7 +415,7 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
   if (!data.respiratory_rate || data.respiratory_rate <= 0) {
     missingFields.push('FR (Frecuencia Respiratoria)');
   }
-  if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0) {
+  if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0 || data.oxygen_saturation > 100) {
     missingFields.push('SpO₂ (Saturación de Oxígeno)');
   }
   if (!data.temperature_celsius || data.temperature_celsius <= 0) {
