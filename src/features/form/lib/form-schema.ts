@@ -69,9 +69,9 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 			.optional()
 			.or(z.literal(1))
 
-	// Para SPT: sede es obligatorio si está habilitado
+	// Para SPT: sede es 100% obligatoria si está habilitado
 	// Para otros labs: solo es requerido si branchConfig.required es true
-	const branchSchema = branchConfig?.enabled && (branchConfig?.required || isSPT)
+	const branchSchema = branchConfig?.enabled && (isSPT || branchConfig?.required)
 		? z.string().min(1, 'La sede es requerida')
 		: z.string().optional().or(z.literal(''))
 
