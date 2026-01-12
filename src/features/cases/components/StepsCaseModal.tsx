@@ -1079,7 +1079,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     try {
       // Preparar subject y message personalizados
       const laboratoryName = laboratory?.name || 'Laboratorio';
-      const emailSubject = `${laboratoryName} - Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
+      // El backend agregará el nombre del laboratorio automáticamente
+      const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
       const emailBody = `Hola ${case_?.full_name},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
 
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
