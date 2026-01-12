@@ -1195,11 +1195,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
 
       // Create WhatsApp message with case information
-      const message = `Hola ${
-        case_.nombre
-      }, le escribimos desde el laboratorio conspat por su caso ${
-        case_.code || 'N/A'
-      }.`;
+      // Para SPT, usar formato específico: "le escribimos desde Salud para todos"
+      const message = isSpt
+        ? `Hola ${case_.nombre}, le escribimos desde Salud para todos por su caso ${case_.code || 'N/A'}.`
+        : `Hola ${case_.nombre}, le escribimos desde el laboratorio ${laboratory?.name || 'nuestro laboratorio'} por su caso ${case_.code || 'N/A'}.`;
 
       // Format phone number (remove spaces, dashes, etc.)
       const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || '';
@@ -1585,17 +1584,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </p>
                         </div>
                       ) : (
-                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-80 overflow-y-auto'>
+                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-80 overflow-y-auto overflow-x-hidden'>
                           {changelogsData.data.map((log) => {
                             const actionInfo = getActionTypeInfo(log);
                             return (
                               <div
                                 key={log.id}
-                                className='border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors'
+                                className='border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors overflow-hidden min-w-0'
                               >
-                                <div className='flex justify-between items-start mb-2'>
+                                <div className='flex justify-between items-start mb-2 gap-2 min-w-0'>
                                   <div
-                                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
+                                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${actionInfo.bgColor} ${actionInfo.textColor}`}
                                   >
                                     {actionInfo.icon}
                     {/* Render EditPatientInfoModal outside the panel to avoid z-index issues - COMMENTED OUT (not needed) */}
@@ -1611,9 +1610,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       }}
                     />
                     */}
-                                    <span>{actionInfo.text}</span>
+                                    <span className='whitespace-nowrap'>{actionInfo.text}</span>
                                   </div>
-                                  <div className='text-xs text-gray-500 dark:text-gray-400'>
+                                  <div className='text-xs text-gray-500 dark:text-gray-400 flex-shrink-0'>
                                     {format(
                                       new Date(log.changed_at),
                                       'dd/MM/yyyy HH:mm',
@@ -1621,30 +1620,30 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                     )}
                                   </div>
                                 </div>
-                                <div className='flex items-center gap-2 mb-2'>
-                                  <span className='text-sm'>
+                                <div className='flex items-center gap-2 mb-2 min-w-0'>
+                                  <span className='text-sm break-words overflow-wrap-anywhere'>
                                     {log.user_email}
                                   </span>
                                 </div>
                                 {log.field_name === 'created_record' ? (
-                                  <p className='text-sm'>
+                                  <p className='text-sm break-words overflow-wrap-anywhere'>
                                     Creación de nuevo registro médico
                                   </p>
                                 ) : log.field_name === 'deleted_record' ? (
-                                  <p className='text-sm'>
+                                  <p className='text-sm break-words overflow-wrap-anywhere'>
                                     Eliminación del registro: {log.old_value}
                                   </p>
                                 ) : (
-                                  <div>
-                                    <p className='text-sm font-medium'>
+                                  <div className='min-w-0'>
+                                    <p className='text-sm font-medium break-words overflow-wrap-anywhere'>
                                       {log.field_label}
                                     </p>
-                                    <div className='flex items-center gap-2 mt-1 text-sm'>
-                                      <span className='line-through text-gray-500 dark:text-gray-400'>
+                                    <div className='flex flex-wrap items-center gap-2 mt-1 text-sm min-w-0'>
+                                      <span className='line-through text-gray-500 dark:text-gray-400 break-words overflow-wrap-anywhere max-w-full'>
                                         {log.old_value || '(vacío)'}
                                       </span>
-                                      <span className='text-xs'>→</span>
-                                      <span className='text-green-600 dark:text-green-400'>
+                                      <span className='text-xs flex-shrink-0'>→</span>
+                                      <span className='text-green-600 dark:text-green-400 break-words overflow-wrap-anywhere max-w-full'>
                                         {log.new_value || '(vacío)'}
                                       </span>
                                     </div>

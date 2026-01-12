@@ -20,7 +20,6 @@ import {
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { UserPlus, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -192,14 +191,14 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 				)}
 			</DialogTrigger>
 			<DialogContent 
-				className="max-w-2xl max-h-[90vh] overflow-y-auto"
+				className="max-w-2xl max-h-[90vh] overflow-visible"
 				onOpenAutoFocus={handleOpenAutoFocus}
 			>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4 py-4">
+				<div className="space-y-4 py-4 overflow-y-auto max-h-[calc(90vh-180px)]">
 					{/* Primera línea: Nombre Completo y Teléfono */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
@@ -323,7 +322,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 
 						<div className="space-y-2">
 							<Label>Edad</Label>
-							<div className="flex gap-2">
+							<div className="flex gap-2 relative">
 								<Input
 									type="number"
 									value={edad}
@@ -336,23 +335,20 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 									className={cn('flex-1', fechaNacimiento && 'opacity-50 cursor-not-allowed')}
 									disabled={!!fechaNacimiento}
 								/>
-								<Select
+								<FormDropdown
+									options={createDropdownOptions(['Años', 'Meses'])}
 									value={edadUnidad}
-									onValueChange={(value) => {
+									onChange={(value) => {
 										if (!fechaNacimiento) {
 											setEdadUnidad(value as 'Años' | 'Meses')
 										}
 									}}
+									placeholder="Unidad"
+									className="w-24 transition-none"
 									disabled={!!fechaNacimiento}
-								>
-									<SelectTrigger className="w-24">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="Años">Años</SelectItem>
-										<SelectItem value="Meses">Meses</SelectItem>
-									</SelectContent>
-								</Select>
+									direction="auto"
+									id="edad-unidad"
+								/>
 							</div>
 						</div>
 					</div>

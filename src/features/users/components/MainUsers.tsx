@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
 	Users,
 	Mail,
@@ -800,19 +800,20 @@ const MainUsers: React.FC = () => {
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg mb-3 sm:mb-5">
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-6">
 					{/* Primera línea: Búsqueda y filtros */}
-					<div className="flex items-center gap-3 mb-4">
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
 						{/* Búsqueda */}
-						<div className="relative w-56 flex-shrink-0">
+						<div className="relative w-full sm:w-56 flex-shrink-0">
 							<Input
 								type="text"
 								placeholder="Buscar usuarios"
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
+								className="w-full"
 							/>
 						</div>
 
 						{/* Filtros */}
-						<div className="flex items-center gap-2 flex-shrink-0">
+						<div className="flex items-center gap-2 flex-1 min-w-0">
 							{/* Filtro por aprobación */}
 							<CustomDropdown
 								value={approvalFilter}
@@ -823,7 +824,7 @@ const MainUsers: React.FC = () => {
 									{ value: 'pendiente', label: 'Pendientes' },
 								]}
 								placeholder="Estado"
-								className="w-32 text-sm"
+								className="flex-1 min-w-0 text-sm"
 							/>
 
 							{/* Filtro por sede */}
@@ -837,7 +838,7 @@ const MainUsers: React.FC = () => {
 									...branchOptions,
 								]}
 								placeholder="Sede"
-								className="w-32 text-sm"
+								className="flex-1 min-w-0 text-sm"
 							/>
 						</div>
 					</div>
