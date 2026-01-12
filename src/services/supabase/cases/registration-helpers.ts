@@ -42,8 +42,10 @@ export function getDefaultFieldValue(
 export function prepareDefaultValues(
 	formData: FormValues,
 	moduleConfig: ModuleConfig | null | undefined,
-	userAssignedBranch?: string | null
+	userAssignedBranch?: string | null,
+	laboratorySlug?: string | null
 ): Partial<MedicalCaseInsert> {
+	const isSPT = laboratorySlug?.toLowerCase() === 'spt'
 	const defaults: Partial<MedicalCaseInsert> = {}
 
 	// origin (NOT NULL) - string vacío si deshabilitado
@@ -86,16 +88,22 @@ export function prepareDefaultValues(
 	)
 
 	// branch (nullable en BD)
-	// Si está deshabilitado, usar null
-	// Si está habilitado, usar valor del formulario, luego patientBranch, luego assigned_branch del usuario, o null
+	// IMPORTANTE: Para SPT la sede es 100% OBLIGATORIA - lanzar error si está vacía
+	// Para otros labs: si está deshabilitado usar null, si está habilitado usar valor o null
 	const branchConfig = moduleConfig?.fields?.branch
+	const branchValue = formData.branch || formData.patientBranch || userAssignedBranch || null
+	
+	if (isSPT && !branchValue) {
+		// SPT SIEMPRE requiere sede - esto NO debería pasar por validación de Zod, pero es una protección adicional
+		throw new Error('La sede es obligatoria para SPT y no puede estar vacía')
+	}
+	
 	if (branchConfig && !branchConfig.enabled) {
 		// Campo deshabilitado: usar null (campo es nullable en BD)
 		defaults.branch = null
 	} else {
-		// Campo habilitado: usar valor del formulario, luego patientBranch, luego assigned_branch del usuario, o null
-		// Prioridad: formData.branch > formData.patientBranch > userAssignedBranch > null
-		defaults.branch = formData.branch || formData.patientBranch || userAssignedBranch || null
+		// Campo habilitado: usar valor calculado
+		defaults.branch = branchValue
 	}
 
 	// date (NOT NULL) - fecha actual si no hay valor

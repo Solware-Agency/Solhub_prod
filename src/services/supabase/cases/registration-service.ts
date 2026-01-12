@@ -361,10 +361,12 @@ const prepareRegistrationData = (
   // Obtener valores por defecto basados en configuración del módulo
   // Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
   // Pasar userAssignedBranch para que se use como fallback si no hay branch en el formulario
+  // Pasar laboratorySlug para validar que SPT siempre tenga sede
   const defaultValues = prepareDefaultValues(
     formData,
     moduleConfig,
     userAssignedBranch,
+    currentLaboratory?.slug,
   );
 
   // Preparar valores de pago (maneja labs sin módulo de pagos)
