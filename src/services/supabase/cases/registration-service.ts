@@ -25,7 +25,7 @@ export interface FormValues {
 	idNumber: string
 	phone: string
 	ageValue: number
-	ageUnit: 'Años' | 'Meses'
+	ageUnit: 'Años' | 'Meses' | 'Días'
 	email?: string
 	gender: 'Masculino' | 'Femenino' | ''
 	examType: string

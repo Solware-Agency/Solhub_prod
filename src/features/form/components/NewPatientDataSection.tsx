@@ -230,10 +230,17 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 				} else if (patientData.edad) {
 					// Si no hay fecha de nacimiento, usar edad manual
 					setEditableFechaNacimiento(undefined) // Limpiar fecha editable
-					const edadMatch = patientData.edad.match(/^(\d+)\s*(AÑOS|MESES|Años|Meses)$/i)
+					const edadMatch = patientData.edad.match(/^(\d+)\s*(AÑOS|MESES|DÍAS|Años|Meses|Días)$/i)
 					if (edadMatch) {
 						setValue('ageValue', Number(edadMatch[1]))
-						setValue('ageUnit', edadMatch[2].toUpperCase() === 'AÑOS' || edadMatch[2] === 'Años' ? 'Años' : 'Meses')
+						const unidadUpper = edadMatch[2].toUpperCase()
+						if (unidadUpper === 'AÑOS' || edadMatch[2] === 'Años') {
+							setValue('ageUnit', 'Años')
+						} else if (unidadUpper === 'DÍAS' || edadMatch[2] === 'Días') {
+							setValue('ageUnit', 'Días')
+						} else {
+							setValue('ageUnit', 'Meses')
+						}
 					}
 				} else {
 					setEditableFechaNacimiento(undefined) // Limpiar si no hay fecha ni edad

@@ -111,7 +111,7 @@ export const usePatientAutofill = (setValue: any) => {
 
 					// Parsear la edad del paciente para extraer valor y unidad
 					if (data.edad) {
-						const match = data.edad.match(/^(\d+)\s*(AÑOS|MESES)$/i)
+						const match = data.edad.match(/^(\d+)\s*(AÑOS|MESES|DÍAS)$/i)
 						if (match) {
 							const ageValue = Number(match[1])
 							setValue('ageValue', ageValue)
