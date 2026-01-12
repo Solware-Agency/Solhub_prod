@@ -153,6 +153,18 @@ export const registerMedicalCase = async (
 		// Type assertion para laboratory_id (existe en BD pero puede no estar en tipos generados)
 		const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null
 
+		// Obtener el slug del laboratorio actual
+		let laboratorySlug: string | null = null
+		if (profileWithLab?.laboratory_id) {
+			const { data: labData } = await supabase
+				.from('laboratories')
+				.select('slug')
+				.eq('id', profileWithLab.laboratory_id)
+				.single()
+			
+			laboratorySlug = labData?.slug || null
+		}
+
 		// Preparar datos del paciente y del caso
 		const { patientData, caseData } = prepareRegistrationData(
 			formData,
@@ -160,6 +172,7 @@ export const registerMedicalCase = async (
 			exchangeRate,
 			moduleConfig,
 			profileWithLab?.assigned_branch,
+			laboratorySlug,
 		)
 
 		console.log('📊 Datos preparados para inserción:')
@@ -320,6 +333,7 @@ const prepareRegistrationData = (
   exchangeRate?: number,
   moduleConfig?: ModuleConfig | null,
   userAssignedBranch?: string | null,
+  laboratorySlug?: string | null,
 ) => {
   // Datos del paciente (tabla patients)
   const patientData: PatientInsert = {
@@ -366,7 +380,7 @@ const prepareRegistrationData = (
     formData,
     moduleConfig,
     userAssignedBranch,
-    currentLaboratory?.slug,
+    laboratorySlug,
   );
 
   // Preparar valores de pago (maneja labs sin módulo de pagos)
