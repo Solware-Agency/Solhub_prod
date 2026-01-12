@@ -58,7 +58,7 @@ export const PatientRelationshipManager = ({
 	const [nombre, setNombre] = useState('')
 	const [fechaNacimiento, setFechaNacimiento] = useState<Date | undefined>(undefined)
 	const [edad, setEdad] = useState('')
-	const [edadUnidad, setEdadUnidad] = useState<'Años' | 'Meses'>('Años')
+	const [edadUnidad, setEdadUnidad] = useState<'Años' | 'Meses' | 'Días'>('Años')
 	const [especie, setEspecie] = useState('')
 	const [telefono, setTelefono] = useState('')
 	const [email, setEmail] = useState('')
@@ -257,11 +257,18 @@ export const PatientRelationshipManager = ({
 							setFechaNacimiento(undefined)
 						}
 					} else if (patientData.edad) {
-						// Parsear edad manual (formato: "5 Años" o "3 Meses")
-						const edadMatch = patientData.edad.match(/(\d+)\s+(Años|Meses|AÑOS|MESES)/i)
+						// Parsear edad manual (formato: "5 Años", "3 Meses" o "10 Días")
+						const edadMatch = patientData.edad.match(/(\d+)\s+(Años|Meses|Días|AÑOS|MESES|DÍAS)/i)
 						if (edadMatch) {
 							setEdad(edadMatch[1])
-							setEdadUnidad(edadMatch[2].toUpperCase() === 'AÑOS' || edadMatch[2] === 'Años' ? 'Años' : 'Meses')
+							const unidad = edadMatch[2].toUpperCase()
+							if (unidad === 'AÑOS' || edadMatch[2] === 'Años') {
+								setEdadUnidad('Años')
+							} else if (unidad === 'DÍAS' || edadMatch[2] === 'Días') {
+								setEdadUnidad('Días')
+							} else {
+								setEdadUnidad('Meses')
+							}
 							setFechaNacimiento(undefined) // Limpiar fecha si hay edad manual
 						} else {
 							setFechaNacimiento(undefined)
@@ -432,13 +439,14 @@ export const PatientRelationshipManager = ({
 									placeholder="Edad"
 									className="flex-1"
 								/>
-								<Select value={edadUnidad} onValueChange={(value) => setEdadUnidad(value as 'Años' | 'Meses')}>
-									<SelectTrigger className="w-24">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="Años">Años</SelectItem>
-										<SelectItem value="Meses">Meses</SelectItem>
+							<Select value={edadUnidad} onValueChange={(value) => setEdadUnidad(value as 'Años' | 'Meses' | 'Días')}>
+								<SelectTrigger className="w-24">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Años">Años</SelectItem>
+									<SelectItem value="Meses">Meses</SelectItem>
+									<SelectItem value="Días">Días</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>
