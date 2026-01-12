@@ -731,7 +731,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             if (field === 'exam_type') {
               caseChanges.exam_type = newValue as string;
             } else if (field === 'treating_doctor') {
-              caseChanges.treating_doctor = newValue as string;
+              // Si está vacío, guardar como 'No especificado' (igual que en el registro)
+              caseChanges.treating_doctor = (newValue as string) || 'No especificado';
             } else if (field === 'origin') {
               caseChanges.origin = newValue as string;
             } else if (field === 'branch') {
