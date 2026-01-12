@@ -201,8 +201,9 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 				}
 
 				setValue('fullName', patientData.nombre)
-				setValue('phone', patientData.telefono || '')
-				setValue('email', patientData.email || '')
+			// Si el dependiente no tiene teléfono, usar el del responsable
+			const phoneToUse = patientData.telefono || selectedResponsableData?.telefono || ''
+			setValue('phone', phoneToUse)
 
 				// Calcular edad desde fecha de nacimiento si está disponible
 				if (patientData.fecha_nacimiento) {
