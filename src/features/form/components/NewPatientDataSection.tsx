@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog } from 'lucide-react'
+import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog, Trash } from 'lucide-react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { cn } from '@shared/lib/cn'
 import { format } from 'date-fns'
@@ -26,7 +26,8 @@ import { PatientRelationshipManager } from '@features/patients/components/Patien
 import { NewResponsableForm } from '@features/patients/components/NewResponsableForm'
 import { EditResponsableForm } from '@features/patients/components/EditResponsableForm'
 import { findPatientById, type Patient } from '@services/supabase/patients/patients-service'
-import { getDependentsByResponsable } from '@services/supabase/patients/responsabilidades-service'
+import { getDependentsByResponsable, deleteResponsibility } from '@services/supabase/patients/responsabilidades-service'
+import { supabase } from '@services/supabase/config/config'
 
 interface NewPatientDataSectionProps {
 	control: Control<FormValues>
@@ -204,18 +205,27 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 			
 			// Si el dependiente no tiene teléfono, buscar el del responsable
 			let phoneToUse = patientData.telefono || ''
+			console.log('📱 Teléfono del dependiente:', phoneToUse)
+			console.log('👤 Responsable disponible:', selectedResponsable ? 'SÍ' : 'NO', selectedResponsable?.id)
+			
 			if (!phoneToUse && selectedResponsable) {
 				// Si no hay teléfono en el dependiente, buscar el del responsable directamente
+				console.log('🔍 Buscando teléfono del responsable...')
 				try {
 					const responsableData = await findPatientById(selectedResponsable.id)
+					console.log('📞 Datos del responsable:', responsableData)
 					if (responsableData?.telefono) {
 						phoneToUse = responsableData.telefono
-						console.log('📞 Usando teléfono del responsable:', phoneToUse)
+						console.log('✅ Usando teléfono del responsable:', phoneToUse)
+					} else {
+						console.warn('⚠️ El responsable no tiene teléfono registrado')
 					}
 				} catch (error) {
-					console.error('Error obteniendo teléfono del responsable:', error)
+					console.error('❌ Error obteniendo teléfono del responsable:', error)
 				}
 			}
+			
+			console.log('📲 Teléfono final a usar:', phoneToUse)
 			setValue('phone', phoneToUse)
 
 				// Calcular edad desde fecha de nacimiento si está disponible
@@ -389,24 +399,42 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 		setEditableFechaNacimiento(undefined)
 	}, [setValue])
 
-	const handleDeleteDependent = useCallback(async () => {
-		if (!dependentToEdit) return
+	const handleDeleteDependent = useCallback(
+		async (dependent: PatientProfile) => {
+			try {
+				if (!selectedResponsable) return
 
-		// Si el dependiente eliminado estaba seleccionado, limpiar selección
-		if (selectedProfile && selectedProfile.id === dependentToEdit.id) {
-			setSelectedProfile(null)
-			setValue('fullName', '')
-			setValue('idType', 'V')
-			setValue('idNumber', '')
-			setValue('phone', '')
-			setValue('email', '')
-			setValue('gender', '')
-			setEditableFechaNacimiento(undefined)
-		}
-		// Incrementar refreshKey para forzar recarga de dependientes
-		setDependentsRefreshKey((prev) => prev + 1)
-		setDependentToEdit(null)
-	}, [selectedProfile, dependentToEdit, setValue])
+				// Buscar la relación entre responsable y dependiente
+				const { data: relaciones } = await supabase
+					.from('responsabilidades' as any)
+					.select('id')
+					.eq('paciente_id_responsable', selectedResponsable.id)
+					.eq('paciente_id_dependiente', dependent.id)
+
+				if (relaciones && relaciones.length > 0) {
+					await deleteResponsibility(relaciones[0].id)
+
+					// Si el dependiente eliminado estaba seleccionado, limpiar selección
+					if (selectedProfile && selectedProfile.id === dependent.id) {
+						setSelectedProfile(null)
+						setValue('fullName', '')
+						setValue('idType', 'V')
+						setValue('idNumber', '')
+						setValue('phone', '')
+						setValue('email', '')
+						setValue('gender', '')
+						setEditableFechaNacimiento(undefined)
+					}
+
+					// Incrementar refreshKey para forzar recarga de dependientes
+					setDependentsRefreshKey((prev) => prev + 1)
+				}
+			} catch (error) {
+				console.error('Error eliminando dependiente:', error)
+			}
+		},
+		[selectedProfile, selectedResponsable, setValue],
+	)
 
 	// =====================================================================
 	// RENDER
@@ -582,8 +610,20 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 														}}
 													>
 														<Edit className="w-4 h-4" />
-													</Button>
-												</div>
+													</Button>												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+													onClick={(e) => {
+														e.stopPropagation()
+														if (confirm(`¿Estás seguro de eliminar a ${dep.nombre}?`)) {
+															handleDeleteDependent(dep)
+														}
+													}}
+												>
+													<Trash className="w-4 h-4" />
+												</Button>												</div>
 											</div>
 										))}
 									</div>
