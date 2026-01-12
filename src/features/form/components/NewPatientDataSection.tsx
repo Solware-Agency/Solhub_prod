@@ -283,7 +283,11 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 				setValue('phone', profile.telefono || '')
 			}
 		},
-	[setValue, selectedResponsable],
+		[setValue, selectedResponsable],
+	)
+
+	const handleDependentAdded = useCallback(
+		async (dependent: PatientProfile) => {
 			// Incrementar refreshKey para forzar recarga de dependientes
 			setDependentsRefreshKey((prev) => prev + 1)
 			// Recargar dependientes
@@ -603,27 +607,27 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 														type="button"
 														variant="ghost"
 														size="sm"
-														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+														className="h-8 w-8 p-0"
 														onClick={(e) => {
 															e.stopPropagation()
 															handleEditDependent(dep)
 														}}
 													>
 														<Edit className="w-4 h-4" />
-													</Button>												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-													onClick={(e) => {
-														e.stopPropagation()
-														if (confirm(`¿Estás seguro de eliminar a ${dep.nombre}?`)) {
-															handleDeleteDependent(dep)
-														}
-													}}
-												>
-													<Trash className="w-4 h-4" />
-												</Button>												</div>
+													</Button>													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+														onClick={(e) => {
+															e.stopPropagation()
+															if (confirm(`¿Estás seguro de eliminar a ${dep.nombre}?`)) {
+																handleDeleteDependent(dep)
+															}
+														}}
+													>
+														<Trash className="w-4 h-4" />
+													</Button>												</div>
 											</div>
 										))}
 									</div>
