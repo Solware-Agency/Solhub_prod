@@ -122,7 +122,7 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 			})
 			.min(0, 'La edad debe ser un número positivo')
 			.max(150, 'La edad no puede ser mayor a 150'),
-		ageUnit: z.enum(['Meses', 'Años'], {
+		ageUnit: z.enum(['Meses', 'Años', 'Días'], {
 			required_error: 'Debe seleccionar la unidad de edad.',
 		}),
 		email: z
