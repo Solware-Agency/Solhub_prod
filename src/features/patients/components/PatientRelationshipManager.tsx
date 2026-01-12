@@ -146,20 +146,12 @@ export const PatientRelationshipManager = ({
 				// Para dependientes (menores/animales), usar NULL en lugar de 'S/C'
 				// El constraint unique_cedula_per_laboratory solo aplica cuando cedula IS NOT NULL
 				// Esto permite múltiples dependientes sin cédula en el mismo laboratorio
-				
-				// Si no se especifica teléfono, usar el del responsable
-				const telefonoFinal = telefono && telefono.trim() !== '' ? telefono : responsable.telefono || null
-				
-				// Si no se especifica cédula propia, usar la del responsable
-				// Esto permite generar casos con la cédula del responsable
-				const cedulaFinal = responsable.cedula || null
-				
 				// Usar as any temporalmente hasta que se actualicen los tipos de PatientInsert
 				const nuevoPaciente = await createPatient({
-					cedula: cedulaFinal, // Usar cédula del responsable para poder generar casos
+					cedula: null, // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
 					nombre: nombre.trim(),
 					edad: edadFormatted,
-					telefono: telefonoFinal, // Usar teléfono del responsable si no se especifica uno
+					telefono: telefono || null,
 					email: email || null,
 					gender: gender && gender.trim() !== '' ? gender : null, // Asegurar que no se guarde cadena vacía
 					tipo_paciente: tipoDependiente,
