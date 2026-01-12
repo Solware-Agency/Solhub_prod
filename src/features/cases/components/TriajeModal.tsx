@@ -54,7 +54,7 @@ class TriajeFormErrorBoundary extends Component<
             Error al cargar el formulario
           </h3>
           <p className='text-gray-600 dark:text-gray-400 mb-4'>
-            {this.state.error?.message || 'Hubo un error inesperado al cargar el formulario de triaje.'}
+            {this.state.error?.message || 'Hubo un error inesperado al cargar el formulario de historia clínica.'}
           </p>
           <div className='flex gap-2 justify-center'>
             <button
@@ -113,7 +113,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   const isEnfermero = profile?.role === 'enfermero';
   const [forceEditMode, setForceEditMode] = useState(false);
 
-  // Validar que el usuario tenga permisos para editar triaje
+  // Validar que el usuario tenga permisos para editar historia clínica
   const canEditTriaje =
     profile?.role &&
     [
@@ -134,8 +134,8 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
       try {
         return await getTriageByCase(case_.id);
       } catch (err) {
-        console.error('Error obteniendo triaje:', err);
-        setError('Error al cargar el triaje. Por favor, intenta de nuevo.');
+        console.error('Error obteniendo historia clínica:', err);
+        setError('Error al cargar la historia clínica. Por favor, intenta de nuevo.');
         return null;
       }
     },
@@ -245,12 +245,12 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
               <div className='flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
                 <div className='flex-1'>
                   <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100'>
-                    Triaje
+                    Historia Clínica
                   </h2>
                   <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
                     {existingTriage && !forceEditMode
-                      ? 'Triaje registrado para el caso seleccionado'
-                      : 'Complete los datos de triaje para el caso seleccionado'}
+                      ? 'Historia clínica registrada para el caso seleccionado'
+                      : 'Complete los datos de historia clínica para el caso seleccionado'}
                   </p>
                 </div>
                 <div className='flex items-center gap-4 flex-shrink-0'>
@@ -273,7 +273,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       className='flex items-center gap-2'
                     >
                       <Edit className='w-4 h-4' />
-                      Editar Triaje
+                      Editar Historia Clínica
                     </Button>
                   )}
                   <button
@@ -322,7 +322,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                         Sin permisos
                       </h3>
                       <p className='text-gray-600 dark:text-gray-400'>
-                        No tienes permisos para editar el triaje.
+                        No tienes permisos para editar la historia clínica.
                       </p>
                     </div>
                   )}

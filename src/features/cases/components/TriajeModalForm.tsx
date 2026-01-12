@@ -76,7 +76,7 @@ interface TriajeModalFormProps {
   forceEditMode?: boolean;
 }
 
-// Componente para mostrar información del triaje existente
+// Componente para mostrar información de la historia clínica existente
 const TriageInfoDisplay: React.FC<{
   record: TriageRecord;
 }> = ({ record }) => {
@@ -85,7 +85,7 @@ const TriageInfoDisplay: React.FC<{
     return (
       <div className='p-4 sm:p-6'>
         <p className='text-sm text-gray-500 dark:text-gray-400'>
-          No hay información de triaje disponible.
+          No hay información de historia clínica disponible.
         </p>
       </div>
     );
@@ -101,7 +101,7 @@ const TriageInfoDisplay: React.FC<{
             if (!record.measurement_date) {
               return (
                 <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                  Triaje registrado
+                  Historia clínica registrada
                 </span>
               );
             }
@@ -110,14 +110,14 @@ const TriageInfoDisplay: React.FC<{
               if (isNaN(date.getTime())) {
                 return (
                   <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                    Triaje registrado
+                    Historia clínica registrada
                   </span>
                 );
               }
               return (
                 <>
                   <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                    Triaje registrado el{' '}
+                    Historia clínica registrada el{' '}
                     {format(date, 'dd/MM/yyyy', {
                       locale: es,
                     })}
@@ -131,7 +131,7 @@ const TriageInfoDisplay: React.FC<{
               console.error('Error formateando fecha de triaje:', error);
               return (
                 <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                  Triaje registrado
+                  Historia clínica registrada
                 </span>
               );
             }
@@ -407,7 +407,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const [message, setMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  // Verificar si existe triaje para este caso
+  // Verificar si existe historia clínica para este caso
   const {
     data: existingTriage,
     isLoading: isLoadingTriage,
@@ -568,7 +568,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     }
   }, [existingTriage, isEditing, isMedico, isEnfermero]);
 
-  // Función para determinar si el triaje está completo
+  // Función para determinar si la historia clínica está completa
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) return false;
 
@@ -753,7 +753,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return;
     }
 
-    // Validación adicional: Si estamos editando un triaje existente, 
+    // Validación adicional: Si estamos editando una historia clínica existente, 
     // verificar que no se esté intentando guardar todo vacío
     if (existingTriage) {
       // Helper para verificar si un campo tiene valor real
@@ -823,7 +823,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       // Si es enfermero, solo guardar signos vitales
       if (isEnfermero) {
         if (existingTriage) {
-          // Si ya existe triaje, actualizar solo los signos vitales
+          // Si ya existe historia clínica, actualizar solo los signos vitales
           await updateTriageRecord(existingTriage.id, vitalSignsData);
           toast({
             title: '✅ Signos vitales actualizados exitosamente',
@@ -847,7 +847,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         }
         setMessage('Signos vitales guardados exitosamente.');
       } else {
-        // Si es médico, guardar/actualizar todo el triaje
+        // Si es médico, guardar/actualizar toda la historia clínica
         const fullTriageData = {
           patient_id: case_.patient_id,
           case_id: case_.id,
@@ -876,33 +876,33 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           // Si ya existe triaje, actualizarlo
           await updateTriageRecord(existingTriage.id, fullTriageData);
           toast({
-            title: '✅ Triaje actualizado exitosamente',
-            description: `Los datos de triaje han sido actualizados para el caso ${
+            title: '✅ Historia clínica actualizada exitosamente',
+            description: `Los datos de historia clínica han sido actualizados para el caso ${
               case_.code || case_.id
             }.`,
           });
-          setMessage('Triaje actualizado exitosamente.');
+          setMessage('Historia clínica actualizada exitosamente.');
         } else {
           // Si no existe triaje, crear uno nuevo
           await createTriageRecord(fullTriageData);
           toast({
-            title: '✅ Triaje registrado exitosamente',
-            description: `Los datos de triaje han sido guardados para el caso ${
+            title: '✅ Historia clínica registrada exitosamente',
+            description: `Los datos de historia clínica han sido guardados para el caso ${
               case_.code || case_.id
             }.`,
           });
-          setMessage('Triaje registrado exitosamente.');
+          setMessage('Historia clínica registrada exitosamente.');
         }
       }
 
-      // Refrescar el triaje
+      // Refrescar la historia clínica
       await refetchTriage();
 
-      // Verificar si el triaje quedó completo después de guardar
+      // Verificar si la historia clínica quedó completa después de guardar
       const updatedTriage = await getTriageByCase(case_.id);
       const isComplete = isTriageComplete(updatedTriage || null);
 
-      // Si el triaje está completo, volver al modo vista
+      // Si la historia clínica está completa, volver al modo vista
       if (isComplete) {
         setIsEditing(false);
         // Cargar los datos actualizados en el formulario por si acaso
@@ -984,12 +984,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         }, 1000);
       }
     } catch (err: unknown) {
-      console.error('Error al registrar triaje:', err);
+      console.error('Error al registrar historia clínica:', err);
       const msg = err instanceof Error ? err.message : '';
-      setError('Error al registrar el triaje. Inténtalo de nuevo.');
+      setError('Error al registrar la historia clínica. Inténtalo de nuevo.');
       toast({
-        title: '❌ Error al registrar triaje',
-        description: msg || 'Hubo un problema al guardar los datos de triaje.',
+        title: '❌ Error al registrar historia clínica',
+        description: msg || 'Hubo un problema al guardar los datos de historia clínica.',
         variant: 'destructive',
       });
     } finally {
@@ -1012,7 +1012,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         <div className='flex items-center gap-3'>
           <Loader2 className='h-6 w-6 animate-spin text-primary' />
           <span className='text-lg text-gray-700 dark:text-gray-300'>
-            Cargando información de triaje...
+            Cargando información de historia clínica...
           </span>
         </div>
       </div>
@@ -1571,8 +1571,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   {isEnfermero
                     ? 'Enviar signos vitales'
                     : isMedico
-                    ? 'Completar triaje'
-                    : 'Registrar Triaje'}
+                    ? 'Completar historia clínica'
+                    : 'Registrar Historia Clínica'}
                 </>
               )}
             </Button>
@@ -1627,7 +1627,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     }));
                   }
                 } else {
-                  // Si no estamos editando o el triaje no está completo, cerrar modal
+                  // Si no estamos editando o la historia clínica no está completa, cerrar modal
                   onClose();
                 }
               }}

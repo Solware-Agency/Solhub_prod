@@ -5,7 +5,7 @@ import type { HabitLevel } from '@/services/supabase/triage/triage-service'
 // Ejecutar: npx supabase gen types typescript --local > src/types/supabase.ts
 // para actualizar los tipos después de migrar la BD
 
-// Interfaz para los datos de triaje (subset mínimo para estadísticas)
+// Interfaz para los datos de historia clínica (subset mínimo para estadísticas)
 interface TriageRecordRaw {
 	heart_rate: number | null
 	respiratory_rate: number | null
@@ -56,7 +56,7 @@ export interface TriageTrend {
 }
 
 /**
- * Obtiene estadísticas agregadas de triaje para un laboratorio
+ * Obtiene estadísticas agregadas de historia clínica para un laboratorio
  */
 export async function getTriageStats(
 	laboratoryId: string,
@@ -80,7 +80,7 @@ export async function getTriageStats(
 
 		if (error) {
 			console.error('Error fetching triage stats:', error)
-			return { success: false, error: 'Error al obtener estadísticas de triaje' }
+			return { success: false, error: 'Error al obtener estadísticas de historia clínica' }
 		}
 
 		if (!triages || triages.length === 0) {
@@ -297,7 +297,7 @@ export async function getTriageStats(
 }
 
 /**
- * Obtiene tendencias de triaje en el tiempo
+ * Obtiene tendencias de historia clínica en el tiempo
  */
 export async function getTriageTrends(
 	laboratoryId: string,
@@ -318,7 +318,7 @@ export async function getTriageTrends(
 
 		if (error) {
 			console.error('Error fetching triage trends:', error)
-			return { success: false, error: 'Error al obtener tendencias de triaje' }
+			return { success: false, error: 'Error al obtener tendencias de historia clínica' }
 		}
 
 		const records = (triages as TriageRecordRaw[]) || []

@@ -35,7 +35,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Realtime: actualizar automáticamente el historial de triaje
+  // Realtime: actualizar automáticamente el historial de historia clínica
   React.useEffect(() => {
     if (!isOpen || !patientId) return;
 
@@ -67,7 +67,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         <div className='flex items-center gap-3'>
           <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
           <span className='text-lg text-gray-700 dark:text-gray-300'>
-            Cargando historial de triaje...
+            Cargando historial de historia clínica...
           </span>
         </div>
       </div>
@@ -79,7 +79,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
       <div className='text-center py-12'>
         <div className='text-red-500 dark:text-red-400'>
           <p className='text-lg font-medium'>
-            Error al cargar el historial de triaje
+            Error al cargar el historial de historia clínica
           </p>
           <p className='text-sm mt-2'>
             Verifica tu conexión a internet o contacta al administrador
@@ -89,7 +89,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
     );
   }
 
-  // Componente para renderizar un registro de triaje
+  // Componente para renderizar un registro de historia clínica
   const renderTriageRecord = (record: TriageRecord, isLatest: boolean = false) => (
     <div
       key={record.id}
@@ -269,7 +269,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         <div className='text-gray-500 dark:text-gray-400'>
           <Activity className='h-12 w-12 mx-auto mb-4 opacity-50' />
           <p className='text-lg font-medium'>
-            No hay registros de triaje
+            No hay registros de historia clínica
           </p>
           <p className='text-sm mt-2'>
             Este paciente no tiene registros de triaje aún
@@ -286,12 +286,12 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
 
   return (
     <div className='space-y-6'>
-      {/* Último Triaje - Vista destacada */}
+      {/* Última Historia Clínica - Vista destacada */}
       {latestTriage && (
         <div>
           <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2'>
             <Clock className='h-5 w-5 text-primary' />
-            Último Triaje
+            Última Historia Clínica
           </h3>
           {renderTriageRecord(latestTriage, true)}
         </div>
@@ -311,7 +311,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
       {/* Si solo hay un registro (el último), no mostrar sección de historial */}
       {historyWithoutLatest.length === 0 && latestTriage && (
         <div className='text-center py-8 text-sm text-gray-500 dark:text-gray-400'>
-          Este es el único registro de triaje del paciente
+          Este es el único registro de historia clínica del paciente
         </div>
       )}
     </div>

@@ -39,7 +39,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
 
   const canShowTriaje = useMemo(() => {
     if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
-    // Para SPT: medico_tratante, enfermero, owner y prueba pueden hacer triaje
+    // Para SPT: medico_tratante, enfermero, owner y prueba pueden hacer historia clínica
     return userRole === 'medico_tratante' || userRole === 'enfermero' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
@@ -111,7 +111,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
               )}
             >
               <ClipboardList className='w-4 h-4 flex-shrink-0' />
-              <span className='truncate'>Triaje</span>
+              <span className='truncate'>Historia Clínica</span>
             </button>
           </FeatureGuard>
         )}

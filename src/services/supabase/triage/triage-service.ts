@@ -376,7 +376,7 @@ const getTriageErrorMessage = (error: any): string => {
 
   // Error de duplicado
   if (code === '23505' || message.includes('duplicate key')) {
-    return 'Ya existe un registro de triaje con estos datos.';
+    return 'Ya existe un registro de historia clínica con estos datos.';
   }
 
   // Error de not null
@@ -391,11 +391,11 @@ const getTriageErrorMessage = (error: any): string => {
   }
 
   // Error genérico
-  return message || 'Error desconocido al procesar el triaje.';
+  return message || 'Error desconocido al procesar la historia clínica.';
 };
 
 /**
- * Validar que el triaje tenga datos mínimos necesarios
+ * Validar que la historia clínica tenga datos mínimos necesarios
  */
 const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>): void => {
   const missingFields: string[] = [];
@@ -452,7 +452,7 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
 // =====================================================================
 
 /**
- * Crear un nuevo registro de triaje
+ * Crear un nuevo registro de historia clínica
  * Calcula BMI automáticamente si hay altura y peso
  */
 export const createTriageRecord = async (
@@ -487,12 +487,12 @@ export const createTriageRecord = async (
       .single();
 
     if (error) {
-      console.error('Error creando registro de triaje:', error);
+      console.error('Error creando registro de historia clínica:', error);
       throw new Error(getTriageErrorMessage(error));
     }
 
     if (!record) {
-      throw new Error('No se pudo crear el registro de triaje');
+      throw new Error('No se pudo crear el registro de historia clínica');
     }
 
     return record as TriageRecord;
@@ -503,7 +503,7 @@ export const createTriageRecord = async (
 };
 
 /**
- * Actualizar un registro de triaje existente
+ * Actualizar un registro de historia clínica existente
  * Calcula BMI automáticamente si hay altura y peso
  */
 export const updateTriageRecord = async (
@@ -522,7 +522,7 @@ export const updateTriageRecord = async (
       .single();
 
     if (fetchError || !currentRecord) {
-      throw new Error('No se encontró el registro de triaje para actualizar');
+      throw new Error('No se encontró el registro de historia clínica para actualizar');
     }
 
     // Combinar datos actuales con los nuevos para validación
@@ -572,12 +572,12 @@ export const updateTriageRecord = async (
       .single();
 
     if (error) {
-      console.error('Error actualizando registro de triaje:', error);
+      console.error('Error actualizando registro de historia clínica:', error);
       throw new Error(getTriageErrorMessage(error));
     }
 
     if (!record) {
-      throw new Error('No se pudo actualizar el registro de triaje');
+      throw new Error('No se pudo actualizar el registro de historia clínica');
     }
 
     return record as TriageRecord;
@@ -588,8 +588,8 @@ export const updateTriageRecord = async (
 };
 
 /**
- * Obtener triaje de un caso médico específico
- * Retorna el registro de triaje asociado al caso o null si no existe
+ * Obtener historia clínica de un caso médico específico
+ * Retorna el registro de historia clínica asociado al caso o null si no existe
  */
 export const getTriageByCase = async (
   case_id: string
@@ -609,8 +609,8 @@ export const getTriageByCase = async (
       if (error.code === 'PGRST116') {
         return null;
       }
-      console.error('Error obteniendo triaje del caso:', error);
-      throw new Error('Error al obtener el triaje del caso médico.');
+      console.error('Error obteniendo historia clínica del caso:', error);
+      throw new Error('Error al obtener la historia clínica del caso médico.');
     }
 
     return record as TriageRecord;
@@ -621,7 +621,7 @@ export const getTriageByCase = async (
 };
 
 /**
- * Obtener historial completo de triajes de un paciente
+ * Obtener historial completo de historias clínicas de un paciente
  * Ordenado por fecha (más reciente primero)
  */
 export const getTriageHistoryByPatient = async (
@@ -659,7 +659,7 @@ export const getTriageHistoryByPatient = async (
 };
 
 /**
- * Obtener el último triaje de un paciente
+ * Obtener la última historia clínica de un paciente
  * Retorna el registro más reciente o null
  */
 export const getLatestTriageRecord = async (
@@ -703,7 +703,7 @@ export const getLatestTriageRecord = async (
 };
 
 /**
- * Obtener estadísticas de triaje de un paciente
+ * Obtener estadísticas de historia clínica de un paciente
  * Retorna total, promedios, tendencias, etc.
  */
 export const getTriageStatistics = async (

@@ -438,7 +438,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <NavItem
                     to='/dashboard/triage-analytics'
                     icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                    label='Triaje'
+                    label='Historia Clínica'
                     showFullContent={showFullContent}
                     onClick={onClose}
                   />
@@ -812,7 +812,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <NavItem
                     to='/prueba/triage-analytics'
                     icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                    label='Triaje'
+                    label='Historia Clínica'
                     showFullContent={showFullContent}
                     onClick={onClose}
                   />

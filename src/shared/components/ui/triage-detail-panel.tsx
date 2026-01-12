@@ -42,7 +42,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 	const getStatTitle = () => {
 		switch (statType) {
 			case 'totalTriages':
-				return 'Total de Triajes'
+				return 'Total de Historias Clínicas'
 			case 'heartRate':
 				return 'Frecuencia Cardíaca'
 			case 'respiratoryRate':
@@ -58,7 +58,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 			case 'habits':
 				return 'Hábitos Psicobiológicos'
 			default:
-				return 'Detalles de Triaje'
+				return 'Detalles de Historia Clínica'
 		}
 	}
 
@@ -123,11 +123,11 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						{/* Resumen General */}
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-								Resumen de Triajes
+								Resumen de Historias Clínicas
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Triajes</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Historias Clínicas</p>
 									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
 										{totalTriages}
 									</p>
@@ -140,7 +140,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
 										{avgDaily}
 									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">triajes por día</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">historias clínicas por día</p>
 								</div>
 								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Días con Datos</p>
@@ -158,7 +158,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						{trends && trends.length > 0 && (
 							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Triajes por Día
+									Tendencia de Historias Clínicas por Día
 								</h3>
 								<ResponsiveContainer width="100%" height={300}>
 									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
@@ -166,7 +166,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 										<XAxis dataKey="date" />
 										<YAxis />
 										<Tooltip />
-										<Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} name="Triajes" />
+										<Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} name="Historias Clínicas" />
 									</LineChart>
 								</ResponsiveContainer>
 							</div>
@@ -185,18 +185,18 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 										return (
 											<>
 												<div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-													<p className="text-sm text-gray-500 dark:text-gray-400">Día con más triajes</p>
+													<p className="text-sm text-gray-500 dark:text-gray-400">Día con más historias clínicas</p>
 													<p className="text-lg font-bold text-gray-900 dark:text-gray-100">
 														{format(new Date(maxDay.date), 'dd/MM/yyyy', { locale: es })}
 													</p>
-													<p className="text-sm text-gray-600 dark:text-gray-400">{maxDay.count} triajes</p>
+													<p className="text-sm text-gray-600 dark:text-gray-400">{maxDay.count} historias clínicas</p>
 												</div>
 												<div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-													<p className="text-sm text-gray-500 dark:text-gray-400">Día con menos triajes</p>
+													<p className="text-sm text-gray-500 dark:text-gray-400">Día con menos historias clínicas</p>
 													<p className="text-lg font-bold text-gray-900 dark:text-gray-100">
 														{format(new Date(minDay.date), 'dd/MM/yyyy', { locale: es })}
 													</p>
-													<p className="text-sm text-gray-600 dark:text-gray-400">{minDay.count} triajes</p>
+													<p className="text-sm text-gray-600 dark:text-gray-400">{minDay.count} historias clínicas</p>
 												</div>
 											</>
 										)

@@ -85,7 +85,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 			{/* Header */}
 			<div className='flex items-center justify-between'>
 				<div>
-					<h1 className='text-3xl font-bold'>Estadísticas de Triaje</h1>
+					<h1 className='text-3xl font-bold'>Estadísticas de Historia Clínica</h1>
 					<p className='text-muted-foreground'>Análisis anónimo de signos vitales</p>
 				</div>
 				<Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v, 10))}>
@@ -101,7 +101,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</Select>
 			</div>
 
-			{/* Total de triajes */}
+			{/* Total de historias clínicas */}
 			<Card 
 				className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
 				onClick={() => handleCardClick('totalTriages')}
@@ -109,7 +109,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 				<CardHeader className='pb-3'>
 					<CardTitle className='text-sm font-medium flex items-center gap-2'>
 						<Users className='h-4 w-4' />
-						Total de Triajes
+						Total de Historias Clínicas
 					</CardTitle>
 				</CardHeader>
 				<CardContent>

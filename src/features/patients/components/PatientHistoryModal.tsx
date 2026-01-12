@@ -852,8 +852,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               className='flex items-center gap-2'
                             >
                               <Activity className='h-4 w-4' />
-                              <span className='hidden md:inline'>Historial de Triaje</span>
-                              <span className='md:hidden'>Triajes</span>
+                              <span className='hidden md:inline'>Historia Clínica</span>
+                              <span className='md:hidden'>Historias</span>
                             </TabsTrigger>
                           )}
                         </TabsList>
@@ -1420,7 +1420,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
                       </TabsContent>
 
-                      {/* Tab: Datos de Triaje */}
+                      {/* Tab: Datos de Historia Clínica */}
                       <TabsContent
                         value='triage'
                         className='mt-0 flex-1 overflow-y-auto flex flex-col'
