@@ -558,7 +558,8 @@ export const validateRegistrationData = (
     errors.push('El nombre completo es obligatorio');
   }
 
-  if (!formData.phone) {
+  // El teléfono siempre debe estar presente (para dependientes se usa el del responsable)
+  if (!formData.phone || formData.phone.trim() === '') {
     errors.push('El teléfono es obligatorio');
   }
 
