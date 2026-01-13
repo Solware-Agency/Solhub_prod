@@ -264,6 +264,7 @@ export interface MedicalCaseWithPatient {
   edad: string | null;
   telefono: string | null;
   patient_email: string | null;
+  fecha_nacimiento?: string | null; // Fecha de nacimiento del paciente
 }
 
 // =====================================================================
@@ -1628,7 +1629,8 @@ export const findCaseByCode = async (
 					nombre,
 					edad,
 					telefono,
-					email
+					email,
+					fecha_nacimiento
 				)
 			`,
       )
@@ -1652,6 +1654,7 @@ export const findCaseByCode = async (
       edad: (data as any).patients?.edad || null,
       telefono: (data as any).patients?.telefono || null,
       patient_email: (data as any).patients?.email || null,
+      fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
       version: (data as any).version || null,
       image_url: (data as any).image_url || null,

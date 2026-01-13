@@ -94,10 +94,19 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 					// Parsear fecha de nacimiento
 					if (patientData.fecha_nacimiento) {
 						// La fecha viene como string (YYYY-MM-DD) desde la base de datos
-						const fecha = new Date(patientData.fecha_nacimiento)
-						// Validar que la fecha sea válida
-						if (!isNaN(fecha.getTime())) {
-							setFechaNacimiento(fecha)
+						// Parsear manualmente para evitar problemas de zona horaria
+						const fechaParts = patientData.fecha_nacimiento.split('-')
+						if (fechaParts.length === 3) {
+							const year = parseInt(fechaParts[0], 10)
+							const month = parseInt(fechaParts[1], 10) - 1 // Los meses en JS son 0-indexed
+							const day = parseInt(fechaParts[2], 10)
+							const fecha = new Date(year, month, day)
+							// Validar que la fecha sea válida
+							if (!isNaN(fecha.getTime())) {
+								setFechaNacimiento(fecha)
+							} else {
+								setFechaNacimiento(undefined)
+							}
 						} else {
 							setFechaNacimiento(undefined)
 						}
@@ -373,6 +382,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 												setEdad('')
 											}
 										}}
+										defaultMonth={fechaNacimiento || new Date()}
 										initialFocus
 										disabled={(date) => {
 											const today = new Date()
