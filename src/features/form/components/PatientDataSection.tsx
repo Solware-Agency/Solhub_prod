@@ -324,7 +324,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											)}
 										>
 											<CalendarIcon className="mr-2 h-4 w-4" />
-											{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Selecciona fecha</span>}
+											{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Fecha</span>}
 										</Button>
 									</FormControl>
 								</PopoverTrigger>

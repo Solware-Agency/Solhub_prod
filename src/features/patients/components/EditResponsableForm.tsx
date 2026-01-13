@@ -359,7 +359,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 										)}
 									>
 										<CalendarIcon className="mr-2 h-4 w-4" />
-										{fechaNacimiento ? format(fechaNacimiento, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
+										{fechaNacimiento ? format(fechaNacimiento, 'PPP', { locale: es }) : <span>Fecha</span>}
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0">
@@ -374,7 +374,13 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 											}
 										}}
 										initialFocus
-										disabled={(date) => date > new Date()}
+										disabled={(date) => {
+											const today = new Date()
+											today.setHours(0, 0, 0, 0)
+											const dateToCompare = new Date(date)
+											dateToCompare.setHours(0, 0, 0, 0)
+											return dateToCompare > today
+										}}
 									/>
 								</PopoverContent>
 							</Popover>
