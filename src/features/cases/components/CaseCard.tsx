@@ -47,13 +47,27 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 	const isMenor = patientType === 'menor'
 	const isAnimal = patientType === 'animal'
 	
+	const handleCardClick = (e: React.MouseEvent) => {
+		// Evitar que el click se propague si se hace clic en el menú de acciones
+		if ((e.target as HTMLElement).closest('[role="button"]') || 
+		    (e.target as HTMLElement).closest('.absolute')) {
+			return
+		}
+		onView(case_)
+	}
+	
 	return (
-		<div className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200">
+		<div 
+			className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
+			onClick={handleCardClick}
+		>
 			{/* Menú de tres puntos en la esquina superior derecha */}
-			<div className="absolute top-2 right-2 z-10">
+			<div 
+				className="absolute top-2 right-2 z-10"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<CaseActionsPopover
 					case_={case_}
-					onView={onView}
 					onGenerate={onGenerate}
 					onReactions={onReactions}
 					onTriaje={onTriaje}

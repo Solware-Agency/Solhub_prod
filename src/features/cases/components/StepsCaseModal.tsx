@@ -1511,7 +1511,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                           </h2>
                         </div>
                         <p className='text-sm text-black dark:text-indigo-100 truncate'>
-                          {case_ ? `Para ${case_.full_name}` : 'Nuevo caso'}
+                          {case_ ? case_.full_name : 'Nuevo caso'}
                         </p>
                       </div>
                     </div>

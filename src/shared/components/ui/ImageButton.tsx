@@ -27,10 +27,10 @@ export function ImageButton({
       size={size}
       variant={variant}
       onClick={() => window.open(imageUrl, '_blank')}
-      className={className}
+      className={`p-2 ${className}`}
+      title="Ver Imagen"
     >
-      <Eye className='w-3 h-3 mr-1' />
-      Ver Imagen
+      <Eye className='w-4 h-4' />
     </Button>
   );
 }

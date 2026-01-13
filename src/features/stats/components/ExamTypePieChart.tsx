@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { Card } from '@shared/components/ui/card'
-import { Stethoscope, Activity, FlaskRound, Info } from 'lucide-react'
+import { Stethoscope, Activity, FlaskRound, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { Button } from '@shared/components/ui/button'
 interface ExamTypePieChartProps {
 	startDate?: Date
 	endDate?: Date
@@ -13,6 +14,7 @@ interface ExamTypePieChartProps {
 const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+	const [isExpanded, setIsExpanded] = useState(false)
 
 	// Get exam type icon based on type (tolerant to accents/variants)
 	const getExamTypeIcon = (examType: string) => {
@@ -48,6 +50,10 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 			percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
 			color: getExamTypeColor(index),
 		})) || []
+
+	// Get top 3 or all data based on expanded state
+	const displayedData = isExpanded ? pieData : pieData.slice(0, 3)
+	const hasMoreItems = pieData.length > 3
 
 	if (isLoading) {
 		return (
@@ -94,7 +100,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 							<ResponsiveContainer width="100%" height="100%">
 								<PieChart>
 									<Pie
-										data={pieData}
+										data={displayedData}
 										cx="50%"
 										cy="50%"
 										labelLine={false}
@@ -107,23 +113,27 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 										strokeLinecap="round" // Bordes redondeados
 										paddingAngle={0} // Espacio adicional entre segmentos
 									>
-										{pieData.map((entry, index) => (
-											<Cell
-												key={`cell-${index}`}
-												fill={entry.color}
-												className="cursor-pointer"
-												strokeWidth={0}
-												style={{
-													opacity: hoveredIndex === index || hoveredIndex === null ? 1 : 0.6,
-													filter: hoveredIndex === index ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
-													transform: hoveredIndex === index ? 'scale(1.05)' : 'scale(1)',
-													transformOrigin: 'center',
-													transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-												}}
-												onMouseEnter={() => setHoveredIndex(index)}
-												onMouseLeave={() => setHoveredIndex(null)}
-											/>
-										))}
+										{displayedData.map((entry, index) => {
+											// Find the original index in pieData for hover state
+											const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
+											return (
+												<Cell
+													key={`cell-${index}`}
+													fill={entry.color}
+													className="cursor-pointer"
+													strokeWidth={0}
+													style={{
+														opacity: hoveredIndex === originalIndex || hoveredIndex === null ? 1 : 0.6,
+														filter: hoveredIndex === originalIndex ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
+														transform: hoveredIndex === originalIndex ? 'scale(1.05)' : 'scale(1)',
+														transformOrigin: 'center',
+														transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+													}}
+													onMouseEnter={() => setHoveredIndex(originalIndex)}
+													onMouseLeave={() => setHoveredIndex(null)}
+												/>
+											)
+										})}
 									</Pie>
 								</PieChart>
 							</ResponsiveContainer>
@@ -141,48 +151,71 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 
 						{/* Leyenda personalizada - Estilo original del SVG */}
 						<div className="flex flex-col">
-							{pieData.map((entry, index) => (
-								<div
-									key={entry.examType}
-									className={`flex items-center justify-between transition-all duration-300 cursor-pointer p-2 rounded-lg ${
-										hoveredIndex === index ? 'scale-105' : ''
-									}`}
-									onMouseEnter={() => setHoveredIndex(index)}
-									onMouseLeave={() => setHoveredIndex(null)}
-								>
-									<div className="flex items-center gap-2">
-										<div
-											className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
-												hoveredIndex === index ? 'scale-125' : ''
-											}`}
-											style={{ backgroundColor: entry.color }}
-										>
-											{getExamTypeIcon(entry.examType)}
-										</div>
-										<div>
-											<span
-												className={` flex items-center gap-2 text-sm transition-all duration-300 ${
-													hoveredIndex === index
-														? 'text-gray-900 dark:text-gray-100 font-medium'
-														: 'text-gray-600 dark:text-gray-400'
-												}`}
-											>
-												{entry.examType}
-												<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
-											</span>
-										</div>
-									</div>
-									<span
-										className={`text-sm transition-all duration-300 ${
-											hoveredIndex === index
-												? 'text-gray-900 dark:text-gray-100 font-semibold'
-												: 'text-gray-700 dark:text-gray-300 font-medium'
+							{displayedData.map((entry, index) => {
+								// Find the original index in pieData for hover state
+								const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
+								return (
+									<div
+										key={entry.examType}
+										className={`flex items-center justify-between transition-all duration-300 cursor-pointer p-2 rounded-lg ${
+											hoveredIndex === originalIndex ? 'scale-105' : ''
 										}`}
+										onMouseEnter={() => setHoveredIndex(originalIndex)}
+										onMouseLeave={() => setHoveredIndex(null)}
 									>
-										{Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
-									</span>
-								</div>
-							))}
+										<div className="flex items-center gap-2">
+											<div
+												className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+													hoveredIndex === originalIndex ? 'scale-125' : ''
+												}`}
+												style={{ backgroundColor: entry.color }}
+											>
+												{getExamTypeIcon(entry.examType)}
+											</div>
+											<div>
+												<span
+													className={` flex items-center gap-2 text-sm transition-all duration-300 ${
+														hoveredIndex === originalIndex
+															? 'text-gray-900 dark:text-gray-100 font-medium'
+															: 'text-gray-600 dark:text-gray-400'
+													}`}
+												>
+													{entry.examType}
+													<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
+												</span>
+											</div>
+										</div>
+										<span
+											className={`text-sm transition-all duration-300 ${
+												hoveredIndex === originalIndex
+													? 'text-gray-900 dark:text-gray-100 font-semibold'
+													: 'text-gray-700 dark:text-gray-300 font-medium'
+											}`}
+										>
+											{Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
+										</span>
+									</div>
+								)
+							})}
+							{hasMoreItems && (
+								<Button
+									variant="ghost"
+									onClick={() => setIsExpanded(!isExpanded)}
+									className="w-full mt-2 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+								>
+									{isExpanded ? (
+										<>
+											<ChevronUp className="w-4 h-4" />
+											Ver menos
+										</>
+									) : (
+										<>
+											<ChevronDown className="w-4 h-4" />
+											Ver más ({pieData.length - 3} más)
+										</>
+									)}
+								</Button>
+							)}
 						</div>
 					</div>
 				) : (

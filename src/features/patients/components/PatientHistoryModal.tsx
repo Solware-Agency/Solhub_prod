@@ -701,7 +701,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           Historial Médico
                         </h2>
                       </div>
-                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                      <p className='hidden sm:block text-sm text-gray-600 dark:text-gray-400 mt-1'>
                         Todos los casos registrados para este paciente
                       </p>
                     </div>
@@ -903,58 +903,72 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     </>
                                   )}
                                 </Button>
-                                {selectedCases.size > 0 && (
-                                  <>
-                                    <Button
-                                      variant='default'
-                                      onClick={handleDownloadMultiplePDFs}
-                                      disabled={
-                                        isDownloadingMultiple ||
-                                        isSendingEmails ||
-                                        isGeneratingPDF ||
-                                        isSaving
-                                      }
-                                    >
-                                      {isDownloadingMultiple ? (
-                                        <>
-                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                          Descargando ({downloadProgress.current}/
-                                          {downloadProgress.total})...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Download className='h-4 w-4 mr-2' />
-                                          Descargar ({selectedCases.size})
-                                        </>
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant='default'
-                                      onClick={handleSendMultipleEmails}
-                                      disabled={
-                                        isDownloadingMultiple ||
-                                        isSendingEmails ||
-                                        isGeneratingPDF ||
-                                        isSaving ||
-                                        !patient?.email
-                                      }
-                                      className='bg-blue-600 hover:bg-blue-700'
-                                    >
-                                      {isSendingEmails ? (
-                                        <>
-                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                          Enviando ({emailProgress.current}/
-                                          {emailProgress.total})...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Mail className='h-4 w-4 mr-2' />
-                                          Enviar Email ({selectedCases.size})
-                                        </>
-                                      )}
-                                    </Button>
-                                  </>
-                                )}
+                                <Button
+                                  variant='default'
+                                  onClick={handleDownloadMultiplePDFs}
+                                  disabled={
+                                    selectedCases.size === 0 ||
+                                    isDownloadingMultiple ||
+                                    isSendingEmails ||
+                                    isGeneratingPDF ||
+                                    isSaving
+                                  }
+                                >
+                                  {isDownloadingMultiple ? (
+                                    <>
+                                      <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white sm:mr-2'></div>
+                                      <span className='hidden sm:inline'>
+                                        Descargando ({downloadProgress.current}/
+                                        {downloadProgress.total})...
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Download className='h-4 w-4 sm:mr-2' />
+                                      <span className='hidden sm:inline'>
+                                        {selectedCases.size > 0 ? (
+                                          <>Descargar ({selectedCases.size})</>
+                                        ) : (
+                                          <>Descargar</>
+                                        )}
+                                      </span>
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  variant='default'
+                                  onClick={handleSendMultipleEmails}
+                                  disabled={
+                                    selectedCases.size === 0 ||
+                                    isDownloadingMultiple ||
+                                    isSendingEmails ||
+                                    isGeneratingPDF ||
+                                    isSaving ||
+                                    !patient?.email
+                                  }
+                                  className='bg-blue-600 hover:bg-blue-700'
+                                >
+                                  {isSendingEmails ? (
+                                    <>
+                                      <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white sm:mr-2'></div>
+                                      <span className='hidden sm:inline'>
+                                        Enviando ({emailProgress.current}/
+                                        {emailProgress.total})...
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Mail className='h-4 w-4 sm:mr-2' />
+                                      <span className='hidden sm:inline'>
+                                        {selectedCases.size > 0 ? (
+                                          <>Enviar Email ({selectedCases.size})</>
+                                        ) : (
+                                          <>Enviar Email</>
+                                        )}
+                                      </span>
+                                    </>
+                                  )}
+                                </Button>
                               </div>
                             )}
                           </div>
@@ -1368,7 +1382,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         disabled={
                                           isGeneratingPDF ||
                                           isSaving ||
-                                          caseItem.doc_aprobado !== 'aprobado'
+                                          caseItem.doc_aprobado !== 'aprobado' ||
+                                          selectedCases.size > 0 ||
+                                          isDownloadingMultiple
                                         }
                                       >
                                         {isGeneratingPDF || isSaving ? (
@@ -1384,7 +1400,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         ) : (
                                           <>
                                             <Download className='h-4 w-4 mr-2' />
-                                            Descargar PDF
+                                            PDF
                                           </>
                                         )}
                                       </Button>
