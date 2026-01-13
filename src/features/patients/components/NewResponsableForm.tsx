@@ -146,9 +146,24 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			}
 		} catch (error) {
 			console.error('Error creando responsable:', error)
+			
+			let errorMessage = 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
+			
+			if (error instanceof Error) {
+				if (error.message.includes('no autenticado')) {
+					errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+				} else if (error.message.includes('laboratorio')) {
+					errorMessage = 'No tienes un laboratorio asignado. Contacta al administrador.'
+				} else if (error.message.includes('duplicate') || error.message.includes('unique')) {
+					errorMessage = 'Ya existe un paciente con esta cédula.'
+				} else if (error.message.includes('required') || error.message.includes('null')) {
+					errorMessage = 'Por favor, completa todos los campos obligatorios.'
+				}
+			}
+			
 			toast({
-				title: '❌ Error',
-				description: error instanceof Error ? error.message : 'Error al registrar paciente',
+				title: '❌ Error al registrar paciente',
+				description: errorMessage,
 				variant: 'destructive',
 			})
 		} finally {

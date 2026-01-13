@@ -985,11 +985,27 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       }
     } catch (err: unknown) {
       console.error('Error al registrar historia clínica:', err);
-      const msg = err instanceof Error ? err.message : '';
-      setError('Error al registrar la historia clínica. Inténtalo de nuevo.');
+      
+      let errorMessage = 'No se pudo guardar la historia clínica. Por favor, intenta de nuevo.';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('no autenticado')) {
+          errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (err.message.includes('laboratorio')) {
+          errorMessage = 'No tienes permisos para editar esta historia clínica.';
+        } else if (err.message.includes('patient')) {
+          errorMessage = 'El paciente asociado al caso no existe.';
+        } else if (err.message.includes('constraint') || err.message.includes('required')) {
+          errorMessage = 'Por favor, completa todos los campos obligatorios de la historia clínica.';
+        } else if (err.message.includes('signos vitales') || err.message.includes('vital')) {
+          errorMessage = 'Verifica que los signos vitales estén dentro de rangos válidos.';
+        }
+      }
+      
+      setError(errorMessage);
       toast({
-        title: '❌ Error al registrar historia clínica',
-        description: msg || 'Hubo un problema al guardar los datos de historia clínica.',
+        title: '❌ Error al guardar historia clínica',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

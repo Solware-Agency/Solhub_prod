@@ -1041,10 +1041,26 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         }
       } catch (error) {
         console.error('Error updating case:', error);
+        
+        let errorMessage = 'No se pudieron guardar los cambios. Por favor, intenta de nuevo.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('no autenticado')) {
+            errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+          } else if (error.message.includes('laboratorio')) {
+            errorMessage = 'No tienes permisos para editar este caso.';
+          } else if (error.message.includes('not found')) {
+            errorMessage = 'El caso que intentas editar no existe.';
+          } else if (error.message.includes('constraint') || error.message.includes('required')) {
+            errorMessage = 'Por favor, completa todos los campos obligatorios del caso.';
+          } else if (error.message.includes('payment')) {
+            errorMessage = 'Hubo un problema al guardar los pagos. Verifica los montos ingresados.';
+          }
+        }
+        
         toast({
-          title: '❌ Error al guardar',
-          description:
-            'Hubo un problema al guardar los cambios. Inténtalo de nuevo.',
+          title: '❌ Error al guardar cambios',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {

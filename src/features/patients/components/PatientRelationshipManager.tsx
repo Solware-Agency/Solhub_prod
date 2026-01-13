@@ -194,9 +194,26 @@ export const PatientRelationshipManager = ({
 			}
 		} catch (error) {
 			console.error('Error creando dependiente:', error)
+			
+			let errorMessage = 'No se pudo registrar el dependiente. Por favor, intenta de nuevo.'
+			
+			if (error instanceof Error) {
+				if (error.message.includes('no autenticado')) {
+					errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+				} else if (error.message.includes('laboratorio')) {
+					errorMessage = 'No tienes un laboratorio asignado. Contacta al administrador.'
+				} else if (error.message.includes('duplicate') || error.message.includes('unique')) {
+					errorMessage = 'Ya existe un dependiente con estos datos.'
+				} else if (error.message.includes('required') || error.message.includes('null')) {
+					errorMessage = 'Por favor, completa todos los campos obligatorios: nombre y edad.'
+				} else if (error.message.includes('responsabilidad')) {
+					errorMessage = 'No se pudo vincular al dependiente con el responsable.'
+				}
+			}
+			
 			toast({
-				title: 'Error',
-				description: error instanceof Error ? error.message : 'Error al crear dependiente',
+				title: '❌ Error al registrar dependiente',
+				description: errorMessage,
 				variant: 'destructive',
 			})
 		} finally {
