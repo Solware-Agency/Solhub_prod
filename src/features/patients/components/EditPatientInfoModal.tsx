@@ -39,7 +39,10 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	const initialEdad = parseEdad(patient.edad)
 
 	// Parse the cedula to extract type and number
-	const parseCedula = (cedula: string) => {
+	const parseCedula = (cedula: string | null | undefined) => {
+		if (!cedula) {
+			return { type: 'V', number: '' }
+		}
 		const match = cedula.match(/^([VEJC])-(.+)$/)
 		if (match) {
 			return { type: match[1], number: match[2] }
@@ -239,14 +242,14 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<>
+				<div className="fixed inset-0 z-[99999] flex items-center justify-center">
 					{/* Backdrop */}
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/50 z-[99999998]"
+						className="absolute inset-0 bg-black/50"
 					/>
 
 					{/* Modal */}
@@ -255,11 +258,10 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 						animate={{ opacity: 1, scale: 1 }}
 						exit={{ opacity: 0, scale: 0.95 }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed inset-0 z-[99999999] flex items-center justify-center p-4"
-						onClick={onClose}
+						className="relative z-10 w-full max-w-4xl mx-4"
 					>
 						<div
-							className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
+							className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
 							onClick={(e) => e.stopPropagation()}
 						>
 							{/* Header */}
@@ -395,7 +397,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 							</form>
 						</div>
 					</motion.div>
-				</>
+				</div>
 			)}
 		</AnimatePresence>
 	)
