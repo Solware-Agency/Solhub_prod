@@ -201,21 +201,8 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 				}
 
 				setValue('fullName', patientData.nombre)
-			
-			// Si el dependiente no tiene teléfono, buscar el del responsable
-			let phoneToUse = patientData.telefono || ''
-			if (!phoneToUse && selectedResponsable) {
-				// Si no hay teléfono en el dependiente, buscar el del responsable directamente
-				try {
-					const responsableData = await findPatientById(selectedResponsable.id)
-					if (responsableData?.telefono) {
-						phoneToUse = responsableData.telefono
-						console.log('📞 Usando teléfono del responsable:', phoneToUse)
-					}
-				} catch (error) {
-					console.error('Error obteniendo teléfono del responsable:', error)
-				}
-			}
+			// Si el dependiente no tiene teléfono, usar el del responsable
+			const phoneToUse = patientData.telefono || selectedResponsableData?.telefono || ''
 			setValue('phone', phoneToUse)
 
 				// Calcular edad desde fecha de nacimiento si está disponible
@@ -273,7 +260,11 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 				setValue('phone', profile.telefono || '')
 			}
 		},
-	[setValue, selectedResponsable],
+		[setValue],
+	)
+
+	const handleDependentAdded = useCallback(
+		async (dependent: PatientProfile) => {
 			// Incrementar refreshKey para forzar recarga de dependientes
 			setDependentsRefreshKey((prev) => prev + 1)
 			// Recargar dependientes
