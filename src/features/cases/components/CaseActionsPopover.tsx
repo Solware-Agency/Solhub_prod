@@ -111,7 +111,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
               )}
             >
               <ClipboardList className='w-4 h-4 flex-shrink-0' />
-              <span className='truncate'>Historia Clínica</span>
+              <span className='truncate'>Historia</span>
             </button>
           </FeatureGuard>
         )}

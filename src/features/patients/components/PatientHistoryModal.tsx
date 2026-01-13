@@ -736,19 +736,19 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           <p className='text-sm text-gray-600 dark:text-gray-400'>
                             {isRepresentado && responsableData?.responsable ? (
                               <>
-                                Representado por: {responsableData.responsable.nombre} - {responsableData.responsable.cedula || 'Sin cédula'}
+                                🐾 Representado por: {responsableData.responsable.nombre} - {responsableData.responsable.cedula || 'Sin cédula'}
                                 {patient.gender && (
                                   <span className='ml-3'>
-                                    • Género: {patient.gender}
+                                    • {patient.gender}
                                   </span>
                                 )}
                               </>
                             ) : (
                               <>
-                                Cédula: {patient.cedula || 'No disponible'}
+                                {patient.cedula || 'No disponible'}
                                 {patient.gender && (
                                   <span className='ml-3'>
-                                    • Género: {patient.gender}
+                                    • {patient.gender}
                                   </span>
                                 )}
                               </>
@@ -1183,7 +1183,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             ) : (
                                               <>
                                                 <Download className='h-4 w-4 mr-2' />
-                                                Descargar PDF
+                                                PDF
                                               </>
                                             )}
                                           </Button>

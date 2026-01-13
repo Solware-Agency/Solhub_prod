@@ -492,26 +492,47 @@ const ChangelogTable: React.FC = () => {
 
 													{/* Details */}
 													<td className="px-4 py-4">
-														<div className="max-w-xs">
+														<div className="max-w-xs break-words overflow-wrap-anywhere">
 															{log.field_name === 'created_record' ? (
-																<span className="text-sm text-gray-900 dark:text-gray-100">
+																<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
 																	Creación de nuevo registro médico
 																</span>
 															) : log.field_name === 'deleted_record' ? (
-																<span className="text-sm text-gray-900 dark:text-gray-100">
-																	Eliminación del registro: {log.old_value}
+																<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
+																	Eliminación del registro: {(() => {
+																		const value = log.old_value || '';
+																		// Truncar URLs muy largas
+																		if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
+																			return value.substring(0, 50) + '...';
+																		}
+																		return value;
+																	})()}
 																</span>
 															) : (
-																<div className="text-sm flex items-start gap-4">
-																	<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">
+																<div className="text-sm break-words">
+																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
 																	</p>
-																	<div className="flex-1 min-w-0">
-																		<div className="text-xs text-gray-500 dark:text-gray-400">
-																			<span className="line-through">Antes: {log.old_value || '(vacío)'}</span>
+																	<div className="flex flex-col gap-1">
+																		<div className="text-xs text-gray-500 dark:text-gray-400 break-words">
+																			<span className="line-through">Antes: {(() => {
+																				const value = log.old_value || '(vacío)';
+																				// Truncar URLs muy largas
+																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
+																					return value.substring(0, 50) + '...';
+																				}
+																				return value;
+																			})()}</span>
 																		</div>
-																		<div className="text-xs text-green-600 dark:text-green-400">
-																			<span>Ahora: {log.new_value || '(vacío)'}</span>
+																		<div className="text-xs text-green-600 dark:text-green-400 break-words">
+																			<span>Ahora: {(() => {
+																				const value = log.new_value || '(vacío)';
+																				// Truncar URLs muy largas
+																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
+																					return value.substring(0, 50) + '...';
+																				}
+																				return value;
+																			})()}</span>
 																		</div>
 																	</div>
 																</div>
@@ -527,7 +548,7 @@ const ChangelogTable: React.FC = () => {
 
 							{/* Mobile view - Card layout */}
 							<div className="lg:hidden">
-								<div className="grid grid-cols-2 gap-3 sm:gap-4 p-3">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3">
 									{filteredLogs.map((log: ChangeLogData) => {
 										const actionInfo = getActionTypeInfo(log)
 										const logDate = format(new Date(log.changed_at), 'dd/MM/yyyy', { locale: es })
@@ -536,7 +557,7 @@ const ChangelogTable: React.FC = () => {
 										return (
 											<div
 												key={log.id}
-												className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm"
+												className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm overflow-hidden"
 											>
 												{/* Header with date and action type */}
 												<div className="flex items-center justify-between mb-2">
@@ -593,26 +614,40 @@ const ChangelogTable: React.FC = () => {
 												{/* Details */}
 												<div className="border-t border-gray-100 dark:border-gray-700 pt-2">
 													<span className="text-xs text-gray-500 dark:text-gray-400">Detalles:</span>
-													<div className="mt-1">
+													<div className="mt-1 break-words overflow-wrap-anywhere">
 														{log.field_name === 'created_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100">
+															<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
 																Creación de nuevo registro médico
 															</span>
 														) : log.field_name === 'deleted_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100">
+															<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
 																Eliminación del registro: {log.old_value}
 															</span>
 														) : (
-															<div className="text-sm flex items-start gap-3">
-																<p className="font-medium text-gray-900 dark:text-gray-100 flex-shrink-0 min-w-0">
+															<div className="text-sm flex flex-col gap-1">
+																<p className="font-medium text-gray-900 dark:text-gray-100">
 																	{translateFieldLabel(log.field_name, log.field_label)}
 																</p>
-																<div className="flex-1 min-w-0">
-																	<div className="text-xs text-gray-500 dark:text-gray-400">
-																		<span className="line-through">Antes: {log.old_value || '(vacío)'}</span>
+																<div className="flex flex-col gap-1 break-words">
+																	<div className="text-xs text-gray-500 dark:text-gray-400 break-words">
+																		<span className="line-through">Antes: {(() => {
+																			const value = log.old_value || '(vacío)';
+																			// Truncar URLs muy largas
+																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
+																				return value.substring(0, 50) + '...';
+																			}
+																			return value;
+																		})()}</span>
 																	</div>
-																	<div className="text-xs text-green-600 dark:text-green-400">
-																		<span>Ahora: {log.new_value || '(vacío)'}</span>
+																	<div className="text-xs text-green-600 dark:text-green-400 break-words">
+																		<span>Ahora: {(() => {
+																			const value = log.new_value || '(vacío)';
+																			// Truncar URLs muy largas
+																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
+																				return value.substring(0, 50) + '...';
+																			}
+																			return value;
+																		})()}</span>
 																	</div>
 																</div>
 															</div>
@@ -630,11 +665,8 @@ const ChangelogTable: React.FC = () => {
 
 				{/* Pagination */}
 				{!isLoading && filteredLogs.length > 0 && (
-					<div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
-						<div className="text-sm text-gray-500 dark:text-gray-400">
-							Mostrando {filteredLogs.length} de {logsData?.data?.length || 0} registros
-						</div>
-						<div className="flex items-center gap-2">
+					<div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+						<div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
 							<div className="w-32">
 								<CustomDropdown
 									value={rowsPerPage.toString()}

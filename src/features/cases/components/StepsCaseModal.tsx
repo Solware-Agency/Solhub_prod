@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Sparkles,
-  Heart,
   Shredder,
   FileCheck,
   Download,
@@ -1618,41 +1617,36 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                         Anterior
                       </motion.button>
 
-                      <motion.button
-                        onClick={handleNext}
-                        disabled={isCompleting || isSaving || isGeneratingPDF}
-                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {isCompleting ? (
-                          <>
-                            <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                            <span className='hidden sm:inline'>
-                              Saliendo...
-                            </span>
-                          </>
-                        ) : isSaving || isGeneratingPDF ? (
-                          <>
-                            <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                            <span className='hidden sm:inline'>
-                              Cargando...
-                            </span>
-                          </>
-                        ) : activeStep === computedSteps.length - 1 ? (
-                          <>
-                            <Heart className='w-4 h-4' />
-                            <span className='hidden sm:inline'>
-                              Terminar Proceso
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className='hidden sm:inline'>Siguiente</span>
-                            <ArrowRight className='w-4 h-4' />
-                          </>
-                        )}
-                      </motion.button>
+                      {activeStep < computedSteps.length - 1 && (
+                        <motion.button
+                          onClick={handleNext}
+                          disabled={isCompleting || isSaving || isGeneratingPDF}
+                          className='flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {isCompleting ? (
+                            <>
+                              <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                              <span className='hidden sm:inline'>
+                                Saliendo...
+                              </span>
+                            </>
+                          ) : isSaving || isGeneratingPDF ? (
+                            <>
+                              <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                              <span className='hidden sm:inline'>
+                                Cargando...
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className='hidden sm:inline'>Siguiente</span>
+                              <ArrowRight className='w-4 h-4' />
+                            </>
+                          )}
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 </div>
