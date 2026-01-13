@@ -19,87 +19,27 @@ interface PatientsListProps {
 	currentPage: number
 	totalPages: number
 	onPageChange: (page: number) => void
+	sortField: SortField
+	sortDirection: SortDirection
+	onSortChange: (field: SortField, direction: SortDirection) => void
 }
 
 
 // Use React.memo to prevent unnecessary re-renders
 const PatientsList: React.FC<PatientsListProps> = React.memo(
-	({ patientsData, isLoading, error, currentPage, totalPages, onPageChange }) => {
-		const [sortField, setSortField] = useState<SortField>('nombre')
-		const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+	({ patientsData, isLoading, error, currentPage, totalPages, onPageChange, sortField, sortDirection, onSortChange }) => {
 		const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 		const [isModalOpen, setIsModalOpen] = useState(false)
 
-		// Helper function to extract numeric age value from text
-		const extractAgeValue = useCallback((edad: string | null | undefined): number => {
-			if (!edad || edad.trim() === '') return -1 // Put empty ages at the end
-			
-			const edadStr = String(edad).trim().toUpperCase()
-			
-			// Extract number from string (handles "25", "25 AÑOS", "10 MESES", etc.)
-			const match = edadStr.match(/(\d+)/)
-			if (!match) return -1
-			
-			const number = parseInt(match[1], 10)
-			if (isNaN(number)) return -1
-			
-			// Convert months to years for proper comparison (1 year = 12 months)
-			// This ensures "12 MESES" (1 year) is less than "2 AÑOS" (2 years)
-			if (edadStr.includes('MES') || edadStr.includes('MESES')) {
-				return number / 12 // Convert months to years (decimal)
-			}
-			
-			return number
-		}, [])
-
-		// Sort patients - simplificado para la nueva estructura
-		const sortedPatients = useMemo(() => {
-			if (!patientsData || patientsData.length === 0) return []
-
-			return [...patientsData].sort((a: Patient, b: Patient) => {
-				let aValue = a[sortField]
-				let bValue = b[sortField]
-
-				// Special handling for edad - convert to number for proper sorting
-				if (sortField === 'edad') {
-					const aNum = extractAgeValue(aValue)
-					const bNum = extractAgeValue(bValue)
-					
-					// Handle empty values (they go to the end)
-					if (aNum === -1 && bNum === -1) return 0
-					if (aNum === -1) return 1 // a goes after b
-					if (bNum === -1) return -1 // b goes after a
-					
-					return sortDirection === 'asc' ? aNum - bNum : bNum - aNum
-				} else {
-					// Handle null values for other fields
-					if (aValue === null || aValue === undefined) aValue = ''
-					if (bValue === null || bValue === undefined) bValue = ''
-					
-					// String comparison for text fields
-					const aStr = String(aValue).toLowerCase()
-					const bStr = String(bValue).toLowerCase()
-
-					if (sortDirection === 'asc') {
-						return aStr > bStr ? 1 : -1
-					} else {
-						return aStr < bStr ? 1 : -1
-					}
-				}
-			})
-		}, [patientsData, sortField, sortDirection, extractAgeValue])
+		// Ya no necesitamos ordenar en el cliente, los datos ya vienen ordenados del servidor
 
 		// Handle sort
 		const handleSort = useCallback(
 			(field: SortField) => {
-				if (sortField === field) {
-					setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-				} else {
-					setSortField(field)
-					setSortDirection('asc')
-				}
+				const newDirection = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc'
+				onSortChange(field, newDirection)
 			},
-			[sortField, sortDirection],
+			[sortField, sortDirection, onSortChange],
 		)
 
 		// Handle patient selection
@@ -200,9 +140,9 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 
 					{/* Cards grid - responsive */}
 					<div className="max-h-[450px] sm:max-h-[500px] md:max-h-[550px] overflow-auto">
-						{sortedPatients.length > 0 ? (
+						{patientsData.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4">
-								{sortedPatients.map((patient: Patient) => (
+								{patientsData.map((patient: Patient) => (
 									<PatientCard
 										key={patient.id}
 										patient={patient}

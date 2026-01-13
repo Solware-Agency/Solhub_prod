@@ -397,7 +397,14 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
  * Obtener todos los pacientes con paginación - MULTI-TENANT
  * SOLO muestra pacientes del laboratorio del usuario autenticado
  */
-export const getPatients = async (page = 1, limit = 50, searchTerm?: string) => {
+export const getPatients = async (
+	page = 1,
+	limit = 50,
+	searchTerm?: string,
+	branchFilter?: string,
+	sortField: string = 'created_at',
+	sortDirection: 'asc' | 'desc' = 'desc'
+) => {
 	try {
 		const laboratoryId = await getUserLaboratoryId()
 
@@ -408,11 +415,107 @@ export const getPatients = async (page = 1, limit = 50, searchTerm?: string) => 
 			query = query.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
 		}
 
+		// Si hay filtro de branch, necesitamos obtener los patient_ids de medical_records_clean
+		// que coincidan con esa branch, y luego filtrar pacientes
+		if (branchFilter && branchFilter !== 'all') {
+			// Primero obtenemos los patient_ids únicos de medical_records_clean con esa branch
+			const { data: casesData, error: casesError } = await supabase
+				.from('medical_records_clean')
+				.select('patient_id')
+				.eq('laboratory_id', laboratoryId)
+				.eq('branch', branchFilter)
+
+			if (casesError) {
+				console.error('Error obteniendo casos por branch:', casesError)
+			} else if (casesData) {
+				// Extraer IDs únicos de pacientes
+				const uniquePatientIds = [...new Set(casesData.map(c => c.patient_id).filter(Boolean))]
+				
+				if (uniquePatientIds.length > 0) {
+					query = query.in('id', uniquePatientIds)
+				} else {
+					// No hay pacientes en esa branch, retornar vacío
+					return {
+						data: [],
+						count: 0,
+						page,
+						limit,
+						totalPages: 0,
+					}
+				}
+			}
+		}
+
+		// Si el campo de ordenamiento es 'edad', necesitamos ordenar en el cliente
+		// porque es un campo de texto que contiene "25 AÑOS", "10 MESES", etc.
+		if (sortField === 'edad') {
+			// Obtener todos los datos sin paginación
+			const { data: allData, error, count } = await query
+
+			if (error) {
+				throw error
+			}
+
+			// Función helper para extraer valor numérico de edad
+			const extractAgeValue = (edad: string | null | undefined): number => {
+				if (!edad || edad.trim() === '') return -1 // Vacíos al final
+				
+				const edadStr = String(edad).trim().toUpperCase()
+				const match = edadStr.match(/(\d+)/)
+				if (!match) return -1
+				
+				const number = parseInt(match[1], 10)
+				if (isNaN(number)) return -1
+				
+				// Convertir a días para comparación uniforme
+				// 1 año = 365 días, 1 mes = 30 días, 1 día = 1 día
+				if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) {
+					return number * 365 // Años a días
+				} else if (edadStr.includes('MES') || edadStr.includes('MESES')) {
+					return number * 30 // Meses a días
+				} else if (edadStr.includes('DÍA') || edadStr.includes('DÍAS') || edadStr.includes('DIA') || edadStr.includes('DIAS')) {
+					return number // Días
+				}
+				
+				// Si no especifica unidad, asumir años
+				return number * 365
+			}
+
+			// Ordenar en el cliente
+			const sortedData = (allData || []).sort((a: any, b: any) => {
+				const aValue = extractAgeValue(a.edad)
+				const bValue = extractAgeValue(b.edad)
+				
+				// Valores vacíos van al final
+				if (aValue === -1 && bValue === -1) return 0
+				if (aValue === -1) return 1
+				if (bValue === -1) return -1
+				
+				return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+			})
+
+			// Aplicar paginación después del ordenamiento
+			const from = (page - 1) * limit
+			const to = from + limit
+			const paginatedData = sortedData.slice(from, to)
+
+			return {
+				data: paginatedData,
+				count: count || 0,
+				page,
+				limit,
+				totalPages: Math.ceil((count || 0) / limit),
+			}
+		}
+
+		// Para otros campos, ordenar en la base de datos
+		query = query.order(sortField, { ascending: sortDirection === 'asc' })
+
 		// Paginación
 		const from = (page - 1) * limit
 		const to = from + limit - 1
 
-		const { data, error, count } = await query.range(from, to).order('created_at', { ascending: false })
+		const { data, error, count } = await query.range(from, to)
 
 		if (error) {
 			throw error
@@ -427,6 +530,49 @@ export const getPatients = async (page = 1, limit = 50, searchTerm?: string) => 
 		}
 	} catch (error) {
 		console.error('Error obteniendo pacientes:', error)
+		throw error
+	}
+}
+
+/**
+ * Obtener conteo de pacientes por branch (sede/sucursal)
+ * Cuenta pacientes únicos que tienen casos en cada branch
+ */
+export const getPatientsCountByBranch = async (): Promise<Record<string, number>> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Obtener todos los casos del laboratorio con su branch y patient_id
+		const { data, error } = await supabase
+			.from('medical_records_clean')
+			.select('branch, patient_id')
+			.eq('laboratory_id', laboratoryId)
+			.not('branch', 'is', null)
+
+		if (error) {
+			throw error
+		}
+
+		// Agrupar pacientes únicos por branch
+		const countMap: Record<string, Set<string>> = {}
+		data?.forEach((record) => {
+			if (record.branch && record.patient_id) {
+				if (!countMap[record.branch]) {
+					countMap[record.branch] = new Set()
+				}
+				countMap[record.branch].add(record.patient_id)
+			}
+		})
+
+		// Convertir Sets a conteos
+		const result: Record<string, number> = {}
+		Object.entries(countMap).forEach(([branch, patientIds]) => {
+			result[branch] = patientIds.size
+		})
+
+		return result
+	} catch (error) {
+		console.error('Error obteniendo conteo de pacientes por branch:', error)
 		throw error
 	}
 }
