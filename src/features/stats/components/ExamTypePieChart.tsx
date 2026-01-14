@@ -1,20 +1,19 @@
 import React, { useState } from 'react'
 import { Card } from '@shared/components/ui/card'
-import { Stethoscope, Activity, FlaskRound, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Stethoscope, Activity, FlaskRound, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency } from '@shared/utils/number-utils'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
-import { Button } from '@shared/components/ui/button'
 interface ExamTypePieChartProps {
 	startDate?: Date
 	endDate?: Date
+	onClick?: () => void
 }
 
-const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate }) => {
+const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate, onClick }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-	const [isExpanded, setIsExpanded] = useState(false)
 
 	// Get exam type icon based on type (tolerant to accents/variants)
 	const getExamTypeIcon = (examType: string) => {
@@ -43,21 +42,26 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 	// Calculate total revenue
 	const totalRevenue = stats?.revenueByExamType?.reduce((sum, item) => sum + item.revenue, 0) || 0
 
-	// Prepare data for pie chart with percentages
+	// Prepare data for pie chart with percentages, sorted by count (most requested first)
 	const pieData =
-		stats?.revenueByExamType?.map((item, index) => ({
-			...item,
-			percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
-			color: getExamTypeColor(index),
-		})) || []
+		stats?.revenueByExamType
+			?.slice()
+			.sort((a, b) => b.count - a.count) // Sort by count descending (most requested first)
+			.map((item, index) => ({
+				...item,
+				percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+				color: getExamTypeColor(index),
+			})) || []
 
-	// Get top 3 or all data based on expanded state
-	const displayedData = isExpanded ? pieData : pieData.slice(0, 3)
-	const hasMoreItems = pieData.length > 3
+	// Always show top 3
+	const displayedData = pieData.slice(0, 3)
 
 	if (isLoading) {
 		return (
-			<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+			<Card 
+				className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+				onClick={onClick}
+			>
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 					<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 						Tipos de Exámenes Más Solicitados{' '}
@@ -79,7 +83,10 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 	}
 
 	return (
-		<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+		<Card 
+			className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+			onClick={onClick}
+		>
 			<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 				<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 					Exámenes Más Solicitados{' '}
@@ -197,25 +204,6 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 									</div>
 								)
 							})}
-							{hasMoreItems && (
-								<Button
-									variant="ghost"
-									onClick={() => setIsExpanded(!isExpanded)}
-									className="w-full mt-2 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-								>
-									{isExpanded ? (
-										<>
-											<ChevronUp className="w-4 h-4" />
-											Ver menos
-										</>
-									) : (
-										<>
-											<ChevronDown className="w-4 h-4" />
-											Ver más ({pieData.length - 3} más)
-										</>
-									)}
-								</Button>
-							)}
 						</div>
 					</div>
 				) : (

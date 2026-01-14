@@ -34,6 +34,8 @@ const StatsPage: React.FC = () => {
 	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
 	const [selectedStat, setSelectedStat] = useState<StatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
+	const [selectedChart, setSelectedChart] = useState<StatType | null>(null)
+	const [isChartModalOpen, setIsChartModalOpen] = useState(false)
 
 	if (error) {
 		console.error('Error loading stats:', error)
@@ -69,6 +71,16 @@ const StatsPage: React.FC = () => {
 
 	const handleDetailPanelClose = () => {
 		setIsDetailPanelOpen(false)
+	}
+
+	const handleChartClick = (chartType: StatType) => {
+		setSelectedChart(chartType)
+		setIsChartModalOpen(true)
+	}
+
+	const handleChartModalClose = () => {
+		setIsChartModalOpen(false)
+		setSelectedChart(null)
 	}
 
 	// Calculate some additional metrics
@@ -163,7 +175,10 @@ const StatsPage: React.FC = () => {
 				{/* Charts Section */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-5 mb-3 sm:mb-5 md:mb-6">
 					{/* 12-Month Revenue Trend Chart with Interactive Bars */}
-					<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
+					<Card 
+						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
+						onClick={() => handleChartClick('revenueTrend')}
+					>
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 md:mb-6">
 								<h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0">
@@ -227,7 +242,10 @@ const StatsPage: React.FC = () => {
 					</Card>
 
 					{/* Service Distribution by Branch */}
-					<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
+					<Card 
+						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
+						onClick={() => handleChartClick('branchDistribution')}
+					>
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 								Distribución por Sede{' '}
@@ -254,11 +272,18 @@ const StatsPage: React.FC = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 					{/* Exam Type Pie Chart */}
 					<Suspense fallback={<ComponentFallback />}>
-						<ExamTypePieChart startDate={dateRange.start} endDate={dateRange.end} />
+						<ExamTypePieChart 
+							startDate={dateRange.start} 
+							endDate={dateRange.end}
+							onClick={() => handleChartClick('examTypes')}
+						/>
 					</Suspense>
 
 					{/* Currency Distribution Chart - Same style as Branch Distribution */}
-					<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg">
+					<Card 
+						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
+						onClick={() => handleChartClick('currencyDistribution')}
+					>
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 								Distribución por Moneda{' '}
@@ -284,7 +309,11 @@ const StatsPage: React.FC = () => {
 					</Card>
 					{/* Remaining Amount */}
 					<Suspense fallback={<ComponentFallback />}>
-						<RemainingAmount startDate={dateRange.start} endDate={dateRange.end} />
+						<RemainingAmount 
+							startDate={dateRange.start} 
+							endDate={dateRange.end}
+							onClick={() => handleChartClick('remainingAmount')}
+						/>
 					</Suspense>
 				</div>
 
@@ -292,22 +321,41 @@ const StatsPage: React.FC = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 					{/* Origin Revenue Report */}
 					<Suspense fallback={<ComponentFallback />}>
-						<OriginRevenueReport startDate={dateRange.start} endDate={dateRange.end} />
+						<OriginRevenueReport 
+							startDate={dateRange.start} 
+							endDate={dateRange.end}
+							onClick={() => handleChartClick('originRevenue')}
+						/>
 					</Suspense>
 
 					{/* Doctor Revenue Report */}
 					<Suspense fallback={<ComponentFallback />}>
-						<DoctorRevenueReport startDate={dateRange.start} endDate={dateRange.end} />
+						<DoctorRevenueReport 
+							startDate={dateRange.start} 
+							endDate={dateRange.end}
+							onClick={() => handleChartClick('doctorRevenue')}
+						/>
 					</Suspense>
 				</div>
 			</div>
 
-			{/* Stat Detail Panel */}
+			{/* Stat Detail Panel for KPI Cards */}
 			<Suspense fallback={<ComponentFallback />}>
 				<StatDetailPanel
 					isOpen={isDetailPanelOpen}
 					onClose={handleDetailPanelClose}
 					statType={selectedStat || 'totalRevenue'}
+					stats={stats}
+					isLoading={isLoading}
+				/>
+			</Suspense>
+
+			{/* Stat Detail Panel for Charts */}
+			<Suspense fallback={<ComponentFallback />}>
+				<StatDetailPanel
+					isOpen={isChartModalOpen}
+					onClose={handleChartModalClose}
+					statType={selectedChart || 'revenueTrend'}
 					stats={stats}
 					isLoading={isLoading}
 				/>

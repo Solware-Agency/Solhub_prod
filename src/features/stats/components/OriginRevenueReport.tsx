@@ -9,16 +9,20 @@ import { formatCurrency } from '@shared/utils/number-utils'
 interface OriginRevenueReportProps {
 	startDate?: Date
 	endDate?: Date
+	onClick?: () => void
 }
 
-const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, endDate }) => {
+const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, endDate, onClick }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
 
 	// formatCurrency is now imported from number-utils
 
 	return (
-		<Card className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+		<Card 
+			className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+			onClick={onClick}
+		>
 			<div className="bg-white dark:bg-background rounded-xl p-3 overflow-hidden flex flex-col h-full">
 				<div className="flex items-center justify-between mb-3">
 					<div className="flex items-center gap-3">
