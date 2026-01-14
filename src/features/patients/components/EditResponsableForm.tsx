@@ -363,12 +363,14 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 									<Button
 										variant="outline"
 										className={cn(
-											'w-full justify-start text-left font-normal',
+											'w-full justify-start text-left font-normal min-w-0',
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{fechaNacimiento ? format(fechaNacimiento, 'PPP', { locale: es }) : <span>Fecha</span>}
+										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<span className="truncate">
+											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
+										</span>
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0">

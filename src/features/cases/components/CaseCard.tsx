@@ -8,6 +8,7 @@ import { formatCurrency } from '@shared/utils/number-utils'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
+import { format } from 'date-fns'
 
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
@@ -138,9 +139,16 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 					</div>
 				</div>
 
-				<div>
-					<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
-					<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+				<div className="flex items-end gap-2 flex-wrap">
+					<div className="flex-1 min-w-0">
+						<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
+						<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+					</div>
+					{case_.created_at && (
+						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 mb-0.5">
+							{format(new Date(case_.created_at), 'dd/MM/yyyy')}
+						</span>
+					)}
 				</div>
 			</div>
 
