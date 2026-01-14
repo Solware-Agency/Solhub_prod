@@ -11,10 +11,13 @@ import { cn } from '@shared/lib/cn'
 import { Loader2, Search, User, Baby, Dog } from 'lucide-react'
 import {
 	findPatientByIdentificationNumber,
-	findPatientByNumberOnly,
+	findPatientByNumberOnlyOptimized,
 } from '@services/supabase/patients/identificaciones-service'
 import { getDependentsByResponsable } from '@services/supabase/patients/responsabilidades-service'
-import { searchPatients } from '@services/supabase/patients/patients-service'
+import {
+	searchPatients,
+	searchPatientsOptimized,
+} from '@services/supabase/patients/patients-service'
 
 // =====================================================================
 // TIPOS
@@ -67,18 +70,36 @@ export const PatientSearchAutocomplete = ({
 	const inputRef = useRef<HTMLInputElement>(null)
 	const suggestionsRef = useRef<HTMLDivElement>(null)
 	const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const searchInProgressRef = useRef<boolean>(false)
+	const currentSearchTermRef = useRef<string>('')
+	const abortControllerRef = useRef<AbortController | null>(null)
 
 	// =====================================================================
 	// BÚSQUEDA
 	// =====================================================================
 
-	const performSearch = useCallback(
+		const performSearch = useCallback(
 		async (searchTerm: string) => {
-			if (searchTerm.length < minSearchLength) {
+			const searchTermTrimmed = searchTerm.trim()
+
+			// Validar longitud mínima
+			if (searchTermTrimmed.length < minSearchLength) {
 				setResults([])
 				setShowSuggestions(false)
+				searchInProgressRef.current = false
+				currentSearchTermRef.current = ''
 				return
 			}
+
+			// Protección contra race conditions: solo procesar si es la búsqueda más reciente
+			currentSearchTermRef.current = searchTermTrimmed
+			searchInProgressRef.current = true
+
+			// Cancelar búsqueda anterior si existe
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort()
+			}
+			abortControllerRef.current = new AbortController()
 
 			setIsLoading(true)
 			setError(null)
@@ -86,66 +107,112 @@ export const PatientSearchAutocomplete = ({
 			try {
 				const searchResults: SearchResult[] = []
 
-				// 1. Buscar por número de identificación (cédula) - BÚSQUEDA OPTIMIZADA
 				// Detectar si es un número (con o sin prefijo)
-				const numeroMatch = searchTerm.trim().match(/^([VEJC])?[-]?([0-9]+)$/i)
-				if (numeroMatch) {
-					try {
-						const tipoPrefijo = numeroMatch[1]?.toUpperCase() as 'V' | 'E' | 'J' | 'C' | undefined
-						const numero = numeroMatch[2]
+				const numeroMatch = searchTermTrimmed.match(/^([VEJC])?[-]?([0-9]+)$/i)
+				const tipoPrefijo = numeroMatch?.[1]?.toUpperCase() as 'V' | 'E' | 'J' | 'C' | undefined
+				const numero = numeroMatch?.[2]
 
-						// Si tiene prefijo, buscar específicamente por ese tipo
-						// Si no tiene prefijo, buscar en todos los tipos (más eficiente)
-						let result: { paciente: any; identificacion: any } | null = null
+				// PARALELIZAR: Ejecutar búsquedas simultáneamente
+				const [identificationResult, patientsResult] = await Promise.all([
+					// 1. Búsqueda por número de identificación (si es número)
+					numeroMatch
+						? (async () => {
+								try {
+									// Verificar si la búsqueda fue cancelada
+									if (abortControllerRef.current?.signal.aborted) {
+										return null
+									}
+									if (tipoPrefijo) {
+										// Búsqueda específica por tipo
+										return await findPatientByIdentificationNumber(numero!, tipoPrefijo)
+									} else {
+										// Búsqueda optimizada por número en todos los tipos
+										return await findPatientByNumberOnlyOptimized(numero!)
+									}
+								} catch (err) {
+									if (err instanceof Error && err.name === 'AbortError') {
+										return null
+									}
+									console.warn('Error buscando por identificación:', err)
+									return null
+								}
+							})()
+						: Promise.resolve(null),
 
-						if (tipoPrefijo) {
-							// Búsqueda específica por tipo (usa índice compuesto)
-							result = await findPatientByIdentificationNumber(numero, tipoPrefijo)
-						} else {
-							// Búsqueda por número en todos los tipos (usa índice en numero)
-							result = await findPatientByNumberOnly(numero)
+					// 2. Búsqueda optimizada por nombre/teléfono (siempre ejecutar)
+					(async () => {
+						try {
+							// Verificar si la búsqueda fue cancelada
+							if (abortControllerRef.current?.signal.aborted) {
+								return []
+							}
+							return await searchPatientsOptimized(searchTermTrimmed, 10)
+						} catch (err) {
+							if (err instanceof Error && err.name === 'AbortError') {
+								return []
+							}
+							console.warn('Error en búsqueda optimizada, usando fallback:', err)
+							try {
+								return await searchPatients(searchTermTrimmed, 10)
+							} catch {
+								return []
+							}
+						}
+					})(),
+				])
+
+				// Verificar si esta búsqueda sigue siendo la más reciente
+				if (currentSearchTermRef.current !== searchTermTrimmed) {
+					// Se inició una nueva búsqueda, ignorar estos resultados
+					return
+				}
+
+				// Procesar resultado de identificación
+				if (identificationResult && identificationResult.paciente) {
+					const paciente = identificationResult.paciente
+					const tipoPaciente = (paciente as any).tipo_paciente
+					if (!tipoPaciente || tipoPaciente === 'adulto') {
+						// Verificar nuevamente si la búsqueda sigue siendo válida
+						if (currentSearchTermRef.current !== searchTermTrimmed) {
+							return
 						}
 
-						if (result && result.paciente) {
-							const paciente = result.paciente
-							// Solo incluir adultos como responsables
-							const tipoPaciente = (paciente as any).tipo_paciente
-							if (!tipoPaciente || tipoPaciente === 'adulto') {
-								// Buscar dependientes de este responsable
-								const dependientes = await getDependentsByResponsable(paciente.id)
+						// Buscar dependientes de este responsable
+						const dependientes = await getDependentsByResponsable(paciente.id)
 
-								searchResults.push({
-									responsable: {
-										id: paciente.id,
-										nombre: paciente.nombre,
-										cedula: paciente.cedula,
-										tipo_paciente: tipoPaciente || 'adulto',
-										edad: (paciente as any).edad || null,
-										telefono: paciente.telefono || null,
-									},
+						// Verificar una vez más antes de agregar resultados
+						if (currentSearchTermRef.current === searchTermTrimmed) {
+							searchResults.push({
+								responsable: {
+									id: paciente.id,
+									nombre: paciente.nombre,
+									cedula: paciente.cedula,
+									tipo_paciente: tipoPaciente || 'adulto',
+									edad: (paciente as any).edad || null,
+									telefono: paciente.telefono || null,
+								},
 								dependientes: dependientes.map((dep: any) => ({
 									id: dep.dependiente.id,
 									nombre: dep.dependiente.nombre,
-									cedula: dep.dependiente.cedula || null, // Mantener null si no tiene cédula
+									cedula: dep.dependiente.cedula || null,
 									tipo_paciente: dep.dependiente.tipo_paciente || dep.tipo,
 									edad: dep.dependiente.edad || null,
 									telefono: dep.dependiente.telefono || null,
 									fecha_nacimiento: dep.dependiente.fecha_nacimiento || null,
 									especie: dep.dependiente.especie || null,
 								})),
-								})
-							}
+							})
 						}
-					} catch (err) {
-						console.warn('Error buscando por identificación:', err)
 					}
 				}
 
-				// 2. Buscar por nombre o teléfono
-				const patients = await searchPatients(searchTerm)
+				// Procesar resultados de búsqueda por nombre/teléfono
+				for (const patient of patientsResult) {
+					// Verificar si la búsqueda sigue siendo válida
+					if (currentSearchTermRef.current !== searchTermTrimmed) {
+						return
+					}
 
-				for (const patient of patients) {
-					// Solo incluir adultos como responsables
 					const tipoPaciente = (patient as any).tipo_paciente
 					if (!tipoPaciente || tipoPaciente === 'adulto') {
 						// Verificar si ya está en resultados
@@ -154,38 +221,51 @@ export const PatientSearchAutocomplete = ({
 							// Buscar dependientes
 							const dependientes = await getDependentsByResponsable(patient.id)
 
-							searchResults.push({
-								responsable: {
-									id: patient.id,
-									nombre: patient.nombre,
-									cedula: patient.cedula,
-									tipo_paciente: tipoPaciente || 'adulto',
-									edad: (patient as any).edad || null,
-									telefono: patient.telefono || null,
-								},
-								dependientes: dependientes.map((dep: any) => ({
-									id: dep.dependiente.id,
-									nombre: dep.dependiente.nombre,
-									cedula: dep.dependiente.cedula || null, // Mantener null si no tiene cédula
-									tipo_paciente: dep.dependiente.tipo_paciente || dep.tipo,
-									edad: dep.dependiente.edad,
-									telefono: dep.dependiente.telefono,
-									fecha_nacimiento: dep.dependiente.fecha_nacimiento,
-									especie: dep.dependiente.especie,
-								})),
-							})
+							// Verificar una vez más antes de agregar resultados
+							if (currentSearchTermRef.current === searchTermTrimmed) {
+								searchResults.push({
+									responsable: {
+										id: patient.id,
+										nombre: patient.nombre,
+										cedula: patient.cedula,
+										tipo_paciente: tipoPaciente || 'adulto',
+										edad: (patient as any).edad || null,
+										telefono: patient.telefono || null,
+									},
+									dependientes: dependientes.map((dep: any) => ({
+										id: dep.dependiente.id,
+										nombre: dep.dependiente.nombre,
+										cedula: dep.dependiente.cedula || null,
+										tipo_paciente: dep.dependiente.tipo_paciente || dep.tipo,
+										edad: dep.dependiente.edad,
+										telefono: dep.dependiente.telefono,
+										fecha_nacimiento: dep.dependiente.fecha_nacimiento,
+										especie: dep.dependiente.especie,
+									})),
+								})
+							}
 						}
 					}
 				}
 
-				setResults(searchResults)
-				setShowSuggestions(searchResults.length > 0)
+				// Verificación final antes de actualizar estado
+				if (currentSearchTermRef.current === searchTermTrimmed) {
+					setResults(searchResults)
+					setShowSuggestions(searchResults.length > 0)
+				}
 			} catch (err) {
-				console.error('Error en búsqueda:', err)
-				setError('Error al buscar pacientes')
-				setResults([])
+				// Solo mostrar error si esta búsqueda sigue siendo la más reciente
+				if (currentSearchTermRef.current === searchTermTrimmed) {
+					console.error('Error en búsqueda:', err)
+					setError('Error al buscar pacientes')
+					setResults([])
+				}
 			} finally {
-				setIsLoading(false)
+				// Solo actualizar loading si esta búsqueda sigue siendo la más reciente
+				if (currentSearchTermRef.current === searchTermTrimmed) {
+					setIsLoading(false)
+					searchInProgressRef.current = false
+				}
 			}
 		},
 		[minSearchLength],
@@ -196,22 +276,35 @@ export const PatientSearchAutocomplete = ({
 	// =====================================================================
 
 	useEffect(() => {
+		// Limpiar timeout anterior
 		if (debounceTimeoutRef.current) {
 			clearTimeout(debounceTimeoutRef.current)
+			debounceTimeoutRef.current = null
 		}
 
+		const trimmedValue = inputValue.trim()
+
+		// Si el valor está vacío o es muy corto, limpiar resultados inmediatamente
+		if (trimmedValue.length < minSearchLength) {
+			setResults([])
+			setShowSuggestions(false)
+			currentSearchTermRef.current = ''
+			return
+		}
+
+		// Configurar nuevo timeout para búsqueda
 		debounceTimeoutRef.current = setTimeout(() => {
-			if (inputValue.trim().length >= minSearchLength) {
-				performSearch(inputValue.trim())
-			} else {
-				setResults([])
-				setShowSuggestions(false)
+			// Verificar que el valor no haya cambiado durante el debounce
+			if (inputValue.trim() === trimmedValue && trimmedValue.length >= minSearchLength) {
+				performSearch(trimmedValue)
 			}
-		}, 500) // 500ms de debounce para esperar a que el usuario termine de escribir
+			debounceTimeoutRef.current = null
+		}, 300) // 300ms de debounce (reducido para mejor responsividad)
 
 		return () => {
 			if (debounceTimeoutRef.current) {
 				clearTimeout(debounceTimeoutRef.current)
+				debounceTimeoutRef.current = null
 			}
 		}
 	}, [inputValue, performSearch, minSearchLength])
@@ -335,8 +428,17 @@ export const PatientSearchAutocomplete = ({
 						}
 					}}
 					onBlur={() => {
+						// Solo ocultar si el nuevo foco no está en las sugerencias
 						// Delay para permitir clicks en sugerencias
-						setTimeout(() => setShowSuggestions(false), 200)
+						setTimeout(() => {
+							// Verificar si el nuevo elemento con foco está dentro de las sugerencias
+							const activeElement = document.activeElement
+							const suggestionsElement = suggestionsRef.current
+							
+							if (!suggestionsElement?.contains(activeElement)) {
+								setShowSuggestions(false)
+							}
+						}, 200)
 					}}
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}

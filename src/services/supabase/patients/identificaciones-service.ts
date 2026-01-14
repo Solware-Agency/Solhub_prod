@@ -255,6 +255,9 @@ export const deleteIdentification = async (id: string): Promise<void> => {
  * Útil cuando el usuario solo ingresa el número sin el prefijo
  * 
  * OPTIMIZACIÓN: Usa el índice compuesto (laboratory_id, numero) para búsqueda rápida
+ * 
+ * @deprecated Para mejor rendimiento, usar findPatientByNumberOnlyOptimized
+ * Esta función se mantiene para compatibilidad
  */
 export const findPatientByNumberOnly = async (
 	numero: string,
@@ -304,6 +307,72 @@ export const findPatientByNumberOnly = async (
 	} catch (error) {
 		console.error('Error buscando paciente por número:', error)
 		throw error
+	}
+}
+
+/**
+ * Búsqueda optimizada de identificación usando pg_trgm
+ * Permite búsqueda parcial y aproximada de números
+ * 
+ * @param numero - Número de identificación a buscar
+ * @param tipoDocumento - Tipo opcional para filtrar (V, E, J, C)
+ * @returns Resultado con paciente e identificación, o null si no se encuentra
+ */
+export const findPatientByNumberOnlyOptimized = async (
+	numero: string,
+	tipoDocumento?: 'V' | 'E' | 'J' | 'C',
+): Promise<{ paciente: any; identificacion: Identificacion } | null> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Intentar usar función SQL optimizada
+		const { data, error } = await supabase.rpc('search_identifications_optimized', {
+			search_numero: numero.trim(),
+			lab_id: laboratoryId,
+			tipo_documento_filter: tipoDocumento || null,
+		})
+
+		if (error) {
+			// Fallback a búsqueda tradicional
+			console.warn('⚠️ Búsqueda optimizada de identificación falló, usando fallback:', error)
+			return await findPatientByNumberOnly(numero)
+		}
+
+		if (!data || data.length === 0) {
+			return null
+		}
+
+		// Tomar el primer resultado (mayor similitud)
+		const identificacionData = data[0]
+		const identificacion: Identificacion = {
+			id: identificacionData.id,
+			laboratory_id: laboratoryId,
+			paciente_id: identificacionData.paciente_id,
+			tipo_documento: identificacionData.tipo_documento as 'V' | 'E' | 'J' | 'C' | 'pasaporte',
+			numero: identificacionData.numero,
+			created_at: null,
+			updated_at: null,
+		}
+
+		// Obtener el paciente asociado
+		const { data: paciente, error: pacienteError } = await supabase
+			.from('patients')
+			.select('*')
+			.eq('id', identificacion.paciente_id)
+			.single()
+
+		if (pacienteError || !paciente) {
+			throw new Error('Paciente no encontrado')
+		}
+
+		return {
+			paciente,
+			identificacion,
+		}
+	} catch (error) {
+		console.error('Error en búsqueda optimizada de identificación:', error)
+		// Fallback a búsqueda tradicional
+		return await findPatientByNumberOnly(numero)
 	}
 }
 

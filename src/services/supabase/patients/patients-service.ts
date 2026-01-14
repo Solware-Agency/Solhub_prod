@@ -630,6 +630,9 @@ export const getPatientStatistics = async (patientId: string) => {
 /**
  * Buscar pacientes por nombre o cédula (para autocomplete) - MULTI-TENANT
  * SOLO busca en el laboratorio del usuario autenticado
+ * 
+ * @deprecated Usar searchPatientsOptimized para mejor rendimiento
+ * Esta función se mantiene para compatibilidad y como fallback
  */
 export const searchPatients = async (searchTerm: string, limit = 10) => {
 	try {
@@ -651,6 +654,61 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 	} catch (error) {
 		console.error('Error buscando pacientes:', error)
 		throw error
+	}
+}
+
+/**
+ * Búsqueda optimizada usando pg_trgm (método GitHub/GitLab)
+ * 10-100x más rápida que ILIKE en tablas grandes
+ * 
+ * Usa índices GIN con trigramas para búsqueda parcial rápida
+ * Retorna resultados ordenados por relevancia (similarity_score)
+ * 
+ * @param searchTerm - Término de búsqueda (nombre, teléfono o cédula)
+ * @param limit - Límite de resultados (default: 10)
+ * @returns Array de pacientes ordenados por relevancia
+ */
+export const searchPatientsOptimized = async (
+	searchTerm: string,
+	limit = 10,
+): Promise<Patient[]> => {
+	try {
+		const laboratoryId = await getUserLaboratoryId()
+
+		// Usar función SQL optimizada con pg_trgm
+		const { data, error } = await supabase.rpc('search_patients_optimized', {
+			search_term: searchTerm.trim(),
+			lab_id: laboratoryId,
+			result_limit: limit,
+		})
+
+		if (error) {
+			// Fallback a búsqueda tradicional si falla
+			console.warn('⚠️ Búsqueda optimizada falló, usando fallback:', error)
+			return await searchPatients(searchTerm, limit)
+		}
+
+		// Mapear resultados a formato Patient
+		return (data || []).map((row: any) => ({
+			id: row.id,
+			nombre: row.nombre,
+			cedula: row.cedula || null,
+			telefono: row.telefono || null,
+			email: row.email || null,
+			gender: (row.gender as 'Masculino' | 'Femenino' | null) || null,
+			tipo_paciente: (row.tipo_paciente as 'adulto' | 'menor' | 'animal' | null) || null,
+			edad: row.edad || null,
+			fecha_nacimiento: row.fecha_nacimiento || null,
+			especie: row.especie || null,
+			laboratory_id: laboratoryId,
+			created_at: null,
+			updated_at: null,
+			version: null,
+		})) as Patient[]
+	} catch (error) {
+		console.error('Error en búsqueda optimizada:', error)
+		// Fallback a búsqueda tradicional
+		return await searchPatients(searchTerm, limit)
 	}
 }
 
