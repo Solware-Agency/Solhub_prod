@@ -4,7 +4,7 @@
 // Componente para registrar un nuevo responsable (adulto) cuando no existe
 // =====================================================================
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
@@ -58,6 +58,56 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 	const { toast } = useToast()
 
 	// =====================================================================
+	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
+	// =====================================================================
+
+	const calculateAgeFromDate = (birthDate: Date): { value: string; unidad: 'Años' | 'Meses' } => {
+		const today = new Date()
+		const birth = new Date(birthDate)
+		
+		// Calcular años y meses
+		let years = today.getFullYear() - birth.getFullYear()
+		let months = today.getMonth() - birth.getMonth()
+		let days = today.getDate() - birth.getDate()
+		
+		// Ajustar si el día de cumpleaños aún no ha llegado este año
+		if (days < 0) {
+			months--
+			// Obtener días del mes anterior
+			const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+			days += lastMonth.getDate()
+		}
+		
+		// Ajustar si el mes de cumpleaños aún no ha llegado este año
+		if (months < 0) {
+			years--
+			months += 12
+		}
+		
+		// Calcular meses totales para decidir formato
+		const totalMonths = years * 12 + months
+		
+		// Si tiene 12 meses o más (1 año o más), mostrar en años
+		if (totalMonths >= 12) {
+			return { value: years.toString(), unidad: 'Años' }
+		}
+		// Si tiene menos de 12 meses pero más de 0 meses, mostrar en meses
+		else if (totalMonths >= 1) {
+			return { value: totalMonths.toString(), unidad: 'Meses' }
+		}
+		// Si tiene menos de 1 mes, mostrar como "0 Meses" (recién nacido)
+		else {
+			return { value: '0', unidad: 'Meses' }
+		}
+	}
+
+	// Calcular edad cuando hay fecha de nacimiento
+	const calculatedAge = useMemo(() => {
+		if (!fechaNacimiento) return null
+		return calculateAgeFromDate(fechaNacimiento)
+	}, [fechaNacimiento])
+
+	// =====================================================================
 	// HANDLERS
 	// =====================================================================
 
@@ -97,8 +147,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			// 1. Formatear cédula completa
 			const cedulaFormatted = `${cedulaTipo}-${cedulaNumero.trim()}`
 
-			// 2. Formatear edad si se proporcionó
-			const edadFormatted = edad ? `${edad} ${edadUnidad}` : null
+			// 2. Formatear edad: usar edad calculada si hay fecha, sino usar edad manual
+			const edadFormatted = fechaNacimiento && calculatedAge
+				? `${calculatedAge.value} ${calculatedAge.unidad}`
+				: edad
+				? `${edad} ${edadUnidad}`
+				: null
 
 			// 3. Crear paciente responsable (adulto)
 			const nuevoPaciente = await createPatient({
@@ -346,26 +400,33 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 							<div className="flex gap-2 relative">
 								<Input
 									type="number"
-									value={edad}
+									value={fechaNacimiento && calculatedAge ? calculatedAge.value : edad}
 									onChange={(e) => {
 										if (!fechaNacimiento) {
 											setEdad(e.target.value)
 										}
 									}}
-									placeholder="Edad"
-									className={cn('flex-1', fechaNacimiento && 'opacity-50 cursor-not-allowed')}
+									placeholder={fechaNacimiento && calculatedAge ? 'Calculada automáticamente' : 'Edad'}
+									className={cn(
+										'flex-1',
+										fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+									)}
 									disabled={!!fechaNacimiento}
+									readOnly={!!fechaNacimiento}
 								/>
 								<FormDropdown
 									options={createDropdownOptions(['Años', 'Meses'])}
-									value={edadUnidad}
+									value={fechaNacimiento && calculatedAge ? calculatedAge.unidad : edadUnidad}
 									onChange={(value) => {
 										if (!fechaNacimiento) {
 											setEdadUnidad(value as 'Años' | 'Meses')
 										}
 									}}
 									placeholder="Unidad"
-									className="w-24 transition-none"
+									className={cn(
+										'w-24 transition-none',
+										fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+									)}
 									disabled={!!fechaNacimiento}
 									direction="auto"
 									id="edad-unidad"
