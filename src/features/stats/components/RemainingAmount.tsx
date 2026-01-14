@@ -8,9 +8,10 @@ import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 interface RemainingAmountProps {
 	startDate?: Date
 	endDate?: Date
+	onClick?: () => void
 }
 
-const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate }) => {
+const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, onClick }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const cardRef = useRef<HTMLDivElement>(null)
 	const [isVisible, setIsVisible] = useState(false)
@@ -50,7 +51,8 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate })
 	return (
 		<Card
 			ref={cardRef}
-			className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full"
+			className="hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+			onClick={onClick}
 		>
 			<div className="bg-white dark:bg-background rounded-xl p-3 flex flex-col h-full">
 				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3">

@@ -6,6 +6,44 @@
 import { supabase } from '../config/config';
 // import type { Database } from '@shared/types/types' // No longer used
 
+// =====================================================================
+// FUNCIONES HELPER
+// =====================================================================
+
+/**
+ * Obtener laboratory_id del usuario autenticado
+ * Helper function para multi-tenant
+ */
+const getUserLaboratoryId = async (): Promise<string> => {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id;
+
+    if (!laboratoryId) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    return laboratoryId;
+  } catch (error) {
+    console.error('Error obteniendo laboratory_id:', error);
+    throw error;
+  }
+};
+
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
@@ -264,6 +302,7 @@ export interface MedicalCaseWithPatient {
   edad: string | null;
   telefono: string | null;
   patient_email: string | null;
+  fecha_nacimiento?: string | null; // Fecha de nacimiento del paciente
 }
 
 // =====================================================================
@@ -1042,22 +1081,186 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   sortDirection?: 'asc' | 'desc';
 }) => {
   try {
-    // Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing
+    // Si hay un término de búsqueda, intentar usar función optimizada primero
     if (filters?.searchTerm) {
       const cleanSearchTerm = filters.searchTerm.trim();
-      console.log(
-        '🔍 [DEBUG] Término de búsqueda original:',
-        filters.searchTerm,
-      );
-      console.log('🔍 [DEBUG] Término de búsqueda limpio:', cleanSearchTerm);
 
       if (cleanSearchTerm) {
+        // Intentar usar función SQL optimizada con pg_trgm
+        try {
+          const laboratoryId = await getUserLaboratoryId();
+          const { data: optimizedResults, error: optimizedError } = await supabase.rpc(
+            'search_medical_cases_optimized',
+            {
+              search_term: cleanSearchTerm,
+              lab_id: laboratoryId,
+              result_limit: 1000, // Límite alto para obtener todos los resultados relevantes
+            },
+          );
+
+          if (!optimizedError && optimizedResults && optimizedResults.length > 0) {
+            // Obtener los IDs de los casos encontrados
+            const caseIds = optimizedResults.map((r: any) => r.id);
+
+            // Obtener los casos completos con información del paciente
+            const { data: fullCases, error: fullCasesError } = await supabase
+              .from('medical_records_clean')
+              .select(
+                `
+                *,
+                patients(
+                  cedula,
+                  nombre,
+                  edad,
+                  telefono,
+                  email,
+                  fecha_nacimiento
+                )
+              `,
+              )
+              .in('id', caseIds)
+              .order('created_at', { ascending: false });
+
+            if (!fullCasesError && fullCases) {
+              // Transformar los datos
+              const transformedData = fullCases.map((item: any) => ({
+                ...item,
+                cedula: item.patients?.cedula || '',
+                nombre: item.patients?.nombre || '',
+                edad: item.patients?.edad || null,
+                telefono: item.patients?.telefono || null,
+                patient_email: item.patients?.email || null,
+                fecha_nacimiento: item.patients?.fecha_nacimiento || null,
+                version: item.version || null,
+              })) as MedicalCaseWithPatient[];
+
+              // Aplicar otros filtros si existen (misma lógica que el método tradicional)
+              let filteredData = transformedData;
+
+              if (filters?.branch) {
+                filteredData = filteredData.filter(
+                  (item) => item.branch === filters.branch,
+                );
+              }
+
+              if (filters?.dateFrom) {
+                filteredData = filteredData.filter(
+                  (item) => item.date >= filters.dateFrom!,
+                );
+              }
+
+              if (filters?.dateTo) {
+                filteredData = filteredData.filter(
+                  (item) => item.date <= filters.dateTo!,
+                );
+              }
+
+              if (filters?.examType) {
+                let exactExamType = filters.examType;
+                if (filters.examType === 'inmunohistoquimica') {
+                  exactExamType = 'Inmunohistoquímica';
+                } else if (filters.examType === 'citologia') {
+                  exactExamType = 'Citología';
+                } else if (filters.examType === 'biopsia') {
+                  exactExamType = 'Biopsia';
+                }
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === exactExamType,
+                );
+              }
+
+              if (filters?.paymentStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.payment_status === filters.paymentStatus,
+                );
+              }
+
+              if (filters?.documentStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.doc_aprobado === filters.documentStatus,
+                );
+              }
+
+              if (filters?.pdfStatus) {
+                if (filters.pdfStatus === 'pendientes') {
+                  filteredData = filteredData.filter(
+                    (item) => item.pdf_en_ready === false,
+                  );
+                } else if (filters.pdfStatus === 'faltantes') {
+                  filteredData = filteredData.filter(
+                    (item) => item.pdf_en_ready === true,
+                  );
+                }
+              }
+
+              if (filters?.citoStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.cito_status === filters.citoStatus,
+                );
+              }
+
+              if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.treating_doctor &&
+                    filters.doctorFilter!.includes(item.treating_doctor),
+                );
+              }
+
+              if (filters?.originFilter && filters.originFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.origin && filters.originFilter!.includes(item.origin),
+                );
+              }
+
+              if (filters?.userRole === 'residente') {
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === 'Biopsia',
+                );
+              }
+
+              if (filters?.userRole === 'citotecno') {
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === 'Citología',
+                );
+              }
+
+              if (filters?.userRole === 'patologo') {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.exam_type === 'Biopsia' ||
+                    item.exam_type === 'Inmunohistoquímica',
+                );
+              }
+
+              // Aplicar ordenamiento si existe
+              if (filters?.sortField && filters?.sortDirection) {
+                filteredData.sort((a, b) => {
+                  const aValue = (a as any)[filters.sortField!];
+                  const bValue = (b as any)[filters.sortField!];
+                  if (filters.sortDirection === 'asc') {
+                    return aValue > bValue ? 1 : -1;
+                  } else {
+                    return aValue < bValue ? 1 : -1;
+                  }
+                });
+              }
+
+              return filteredData;
+            }
+          }
+        } catch (optimizedError) {
+          console.warn(
+            '⚠️ Búsqueda optimizada falló, usando método tradicional:',
+            optimizedError,
+          );
+          // Continuar con método tradicional como fallback
+        }
+
+        // FALLBACK: Método tradicional (múltiples queries con ILIKE)
         // Escapar caracteres especiales
         const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
-        console.log(
-          '🔍 [DEBUG] Término de búsqueda escapado:',
-          escapedSearchTerm,
-        );
 
         // Hacer múltiples consultas separadas y combinar resultados
         const searchPromises = [
@@ -1628,7 +1831,8 @@ export const findCaseByCode = async (
 					nombre,
 					edad,
 					telefono,
-					email
+					email,
+					fecha_nacimiento
 				)
 			`,
       )
@@ -1652,6 +1856,7 @@ export const findCaseByCode = async (
       edad: (data as any).patients?.edad || null,
       telefono: (data as any).patients?.telefono || null,
       patient_email: (data as any).patients?.email || null,
+      fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
       version: (data as any).version || null,
       image_url: (data as any).image_url || null,

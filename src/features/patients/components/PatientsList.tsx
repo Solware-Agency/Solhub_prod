@@ -253,18 +253,18 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
 				)}
 
 				{patient.telefono && (
-					<div className="flex items-center text-xs sm:text-sm">
-						<Phone className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
-						<span className="text-gray-600 dark:text-gray-300 truncate">
+					<div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 text-xs sm:text-sm font-medium w-fit">
+						<Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+						<span className="truncate">
 							{patient.telefono}
 						</span>
 					</div>
 				)}
 
 				{patient.email && (
-					<div className="flex items-center text-xs sm:text-sm">
-						<Mail className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
-						<span className="text-gray-600 dark:text-gray-300 truncate">
+					<div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 text-xs sm:text-sm font-medium w-fit">
+						<Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+						<span className="truncate">
 							{patient.email}
 						</span>
 					</div>

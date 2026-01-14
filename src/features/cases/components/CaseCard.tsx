@@ -8,6 +8,7 @@ import { formatCurrency } from '@shared/utils/number-utils'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
+import { format } from 'date-fns'
 
 interface CaseCardProps {
 	case_: MedicalCaseWithPatient
@@ -47,13 +48,27 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 	const isMenor = patientType === 'menor'
 	const isAnimal = patientType === 'animal'
 	
+	const handleCardClick = (e: React.MouseEvent) => {
+		// Evitar que el click se propague si se hace clic en el menú de acciones
+		if ((e.target as HTMLElement).closest('[role="button"]') || 
+		    (e.target as HTMLElement).closest('.absolute')) {
+			return
+		}
+		onView(case_)
+	}
+	
 	return (
-		<div className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200">
+		<div 
+			className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
+			onClick={handleCardClick}
+		>
 			{/* Menú de tres puntos en la esquina superior derecha */}
-			<div className="absolute top-2 right-2 z-10">
+			<div 
+				className="absolute top-2 right-2 z-10"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<CaseActionsPopover
 					case_={case_}
-					onView={onView}
 					onGenerate={onGenerate}
 					onReactions={onReactions}
 					onTriaje={onTriaje}
@@ -124,9 +139,16 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 					</div>
 				</div>
 
-				<div>
-					<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
-					<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+				<div className="flex items-end gap-2 flex-wrap">
+					<div className="flex-1 min-w-0">
+						<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
+						<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+					</div>
+					{case_.created_at && (
+						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 mb-0.5">
+							{format(new Date(case_.created_at), 'dd/MM/yyyy')}
+						</span>
+					)}
 				</div>
 			</div>
 

@@ -265,11 +265,20 @@ export const PatientRelationshipManager = ({
 					// Manejar fecha de nacimiento
 					if (patientData.fecha_nacimiento) {
 						// La fecha viene como string (YYYY-MM-DD) desde la base de datos
-						const fecha = new Date(patientData.fecha_nacimiento)
-						// Validar que la fecha sea válida
-						if (!isNaN(fecha.getTime())) {
-							setFechaNacimiento(fecha)
-							setEdad('') // Limpiar edad manual si hay fecha
+						// Parsear manualmente para evitar problemas de zona horaria
+						const fechaParts = patientData.fecha_nacimiento.split('-')
+						if (fechaParts.length === 3) {
+							const year = parseInt(fechaParts[0], 10)
+							const month = parseInt(fechaParts[1], 10) - 1 // Los meses en JS son 0-indexed
+							const day = parseInt(fechaParts[2], 10)
+							const fecha = new Date(year, month, day)
+							// Validar que la fecha sea válida
+							if (!isNaN(fecha.getTime())) {
+								setFechaNacimiento(fecha)
+								setEdad('') // Limpiar edad manual si hay fecha
+							} else {
+								setFechaNacimiento(undefined)
+							}
 						} else {
 							setFechaNacimiento(undefined)
 						}
@@ -426,12 +435,14 @@ export const PatientRelationshipManager = ({
 									<Button
 										variant="outline"
 										className={cn(
-											'w-full justify-start text-left font-normal',
+											'w-full justify-start text-left font-normal min-w-0',
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{fechaNacimiento ? format(fechaNacimiento, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
+										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<span className="truncate">
+											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
+										</span>
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0">
@@ -439,8 +450,15 @@ export const PatientRelationshipManager = ({
 										mode="single"
 										selected={fechaNacimiento}
 										onSelect={setFechaNacimiento}
+										defaultMonth={fechaNacimiento || new Date()}
 										initialFocus
-										disabled={(date) => date > new Date()}
+										disabled={(date) => {
+											const today = new Date()
+											today.setHours(0, 0, 0, 0)
+											const dateToCompare = new Date(date)
+											dateToCompare.setHours(0, 0, 0, 0)
+											return dateToCompare > today
+										}}
 									/>
 								</PopoverContent>
 							</Popover>

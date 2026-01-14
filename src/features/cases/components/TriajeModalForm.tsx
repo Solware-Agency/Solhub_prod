@@ -1570,11 +1570,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           )}
 
           {/* Botones */}
-          <div className='flex gap-4 pt-4'>
+          <div className='flex flex-col sm:flex-row gap-4 pt-4'>
             <Button
               type='submit'
               disabled={loading}
-              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1'
+              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1 min-w-0'
             >
               {loading ? (
                 <>
@@ -1595,61 +1595,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             <Button
               type='button'
               onClick={() => {
-                if (isEditing && triageComplete) {
-                  // Si estamos editando y el triaje está completo, cancelar edición y volver a vista
-                  setIsEditing(false);
-                  // Recargar datos originales
-                  if (existingTriage && isMedico && !isEnfermero) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      frecuenciaCardiaca:
-                        existingTriage.heart_rate?.toString() || '',
-                      frecuenciaRespiratoria:
-                        existingTriage.respiratory_rate?.toString() || '',
-                      saturacionOxigeno:
-                        existingTriage.oxygen_saturation?.toString() || '',
-                      temperatura:
-                        existingTriage.temperature_celsius?.toString() || '',
-                      presionArterial:
-                        existingTriage.blood_pressure?.toString() || '',
-                      talla: existingTriage.height_cm?.toString() || '',
-                      peso: existingTriage.weight_kg?.toString() || '',
-                      imc: existingTriage.bmi?.toString() || '',
-                      motivoConsulta: existingTriage.reason || '',
-                      antecedentesPersonales:
-                        existingTriage.personal_background || '',
-                      antecedentesFamiliares:
-                        existingTriage.family_history || '',
-                      habitosPsicobiologicos:
-                        existingTriage.psychobiological_habits || '',
-                      examenFisico: existingTriage.examen_fisico || '',
-                      comentario: existingTriage.comment || '',
-                      cafe: existingTriage.cafe?.toString() || '',
-                      alcohol: existingTriage.alcohol || '',
-                      ...(existingTriage.tabaco !== null &&
-                      existingTriage.tabaco !== undefined
-                        ? {
-                            tabaco: existingTriage.tabaco > 0 ? 'Si' : 'No',
-                            indiceTabaquico:
-                              existingTriage.tabaco > 0
-                                ? `Índice: ${
-                                    existingTriage.tabaco
-                                  } paq/año (${getSmokingRiskCategory(
-                                    existingTriage.tabaco,
-                                  )})`
-                                : '',
-                          }
-                        : {}),
-                    }));
-                  }
-                } else {
-                  // Si no estamos editando o la historia clínica no está completa, cerrar modal
-                  onClose();
-                }
+                // Cerrar el modal inmediatamente cuando se cancela la edición
+                onClose();
               }}
               disabled={loading}
               variant='outline'
-              className='px-6'
+              className='px-6 flex-shrink-0 whitespace-nowrap'
             >
               {isEditing && triageComplete ? 'Cancelar edición' : 'Cancelar'}
             </Button>
