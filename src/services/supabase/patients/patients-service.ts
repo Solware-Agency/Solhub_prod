@@ -6,6 +6,30 @@
 import { supabase } from '@services/supabase/config/config'
 import { findPatientByIdentificationNumber, parseCedula } from './identificaciones-service'
 
+// =====================================================================
+// CLASE DE ERROR CON CÓDIGOS
+// =====================================================================
+
+/**
+ * Errores específicos que pueden ocurrir al trabajar con pacientes
+ */
+export class PatientError extends Error {
+	constructor(
+		message: string,
+		public code:
+			| 'USER_NOT_AUTHENTICATED'
+			| 'USER_NO_LABORATORY'
+			| 'PATIENT_NOT_FOUND'
+			| 'PATIENT_DUPLICATE'
+			| 'PATIENT_REQUIRED_FIELD'
+			| 'DATABASE_ERROR'
+			| 'UNKNOWN_ERROR',
+	) {
+		super(message)
+		this.name = 'PatientError'
+	}
+}
+
 // Tipos específicos para pacientes (simplificados para evitar problemas de importación)
 export interface Patient {
 	id: string
@@ -65,25 +89,33 @@ const getUserLaboratoryId = async (): Promise<string> => {
 		const {
 			data: { user },
 		} = await supabase.auth.getUser()
-		if (!user) throw new Error('Usuario no autenticado')
+		if (!user) throw new PatientError('Usuario no autenticado', 'USER_NOT_AUTHENTICATED')
 
 		const { data: profile, error } = await supabase.from('profiles').select('laboratory_id').eq('id', user.id).single()
 
 		if (error || !profile) {
-			throw new Error('Usuario no tiene laboratorio asignado')
+			throw new PatientError('Usuario no tiene laboratorio asignado', 'USER_NO_LABORATORY')
 		}
 
 		// Type assertion porque sabemos que laboratory_id existe en la BD
 		const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id
 
 		if (!laboratoryId) {
-			throw new Error('Usuario no tiene laboratorio asignado')
+			throw new PatientError('Usuario no tiene laboratorio asignado', 'USER_NO_LABORATORY')
 		}
 
 		return laboratoryId
 	} catch (error) {
 		console.error('Error obteniendo laboratory_id:', error)
-		throw error
+		// Si ya es un PatientError, re-lanzarlo
+		if (error instanceof PatientError) {
+			throw error
+		}
+		// Si es otro error, convertirlo
+		throw new PatientError(
+			error instanceof Error ? error.message : 'Error desconocido',
+			'UNKNOWN_ERROR',
+		)
 	}
 }
 
@@ -269,14 +301,37 @@ export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory
 			.single()
 
 		if (error) {
-			throw error
+			// Convertir errores de Supabase a códigos de error
+			const errorMessage = error.message || ''
+			const errorCode = error.code || ''
+
+			// Error de duplicado (unique constraint)
+			if (errorCode === '23505' || errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+				throw new PatientError('Ya existe un paciente con esta cédula', 'PATIENT_DUPLICATE')
+			}
+
+			// Error de campo requerido (not null)
+			if (errorCode === '23502' || errorMessage.includes('null value')) {
+				throw new PatientError('Falta un campo obligatorio', 'PATIENT_REQUIRED_FIELD')
+			}
+
+			// Error genérico de base de datos
+			throw new PatientError(errorMessage || 'Error al crear paciente', 'DATABASE_ERROR')
 		}
 
 		console.log('✅ Paciente creado exitosamente:', data)
 		return data as unknown as Patient
 	} catch (error) {
 		console.error('❌ Error creando paciente:', error)
-		throw error
+		// Si ya es un PatientError, re-lanzarlo
+		if (error instanceof PatientError) {
+			throw error
+		}
+		// Si es otro error, convertirlo
+		throw new PatientError(
+			error instanceof Error ? error.message : 'Error desconocido al crear paciente',
+			'UNKNOWN_ERROR',
+		)
 	}
 }
 
