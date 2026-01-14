@@ -403,14 +403,158 @@ export const getPatients = async (
 	searchTerm?: string,
 	branchFilter?: string,
 	sortField: string = 'created_at',
-	sortDirection: 'asc' | 'desc' = 'desc'
+	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
 	try {
 		const laboratoryId = await getUserLaboratoryId()
 
+		// Si hay término de búsqueda, usar función optimizada primero
+		if (searchTerm && searchTerm.trim().length >= 2) {
+			try {
+				// Usar búsqueda optimizada con pg_trgm
+				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 1000) // Límite alto para obtener todos los relevantes
+
+				if (optimizedResults && optimizedResults.length > 0) {
+					// Obtener IDs de pacientes encontrados
+					const patientIds = optimizedResults.map((p) => p.id)
+
+					// Construir query con los IDs encontrados
+					let query = supabase
+						.from('patients')
+						.select('*', { count: 'exact' })
+						.eq('laboratory_id', laboratoryId)
+						.in('id', patientIds)
+
+					// Aplicar filtro de branch si existe
+					if (branchFilter && branchFilter !== 'all') {
+						// Obtener patient_ids de medical_records_clean con esa branch
+						const { data: casesData, error: casesError } = await supabase
+							.from('medical_records_clean')
+							.select('patient_id')
+							.eq('laboratory_id', laboratoryId)
+							.eq('branch', branchFilter)
+
+						if (casesError) {
+							console.error('Error obteniendo casos por branch:', casesError)
+						} else if (casesData) {
+							const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
+
+							if (uniquePatientIds.length > 0) {
+								// Intersectar con los IDs de búsqueda optimizada
+								const filteredIds = patientIds.filter((id) => uniquePatientIds.includes(id))
+								if (filteredIds.length > 0) {
+									query = query.in('id', filteredIds)
+								} else {
+									// No hay pacientes que coincidan con ambos filtros
+									return {
+										data: [],
+										count: 0,
+										page,
+										limit,
+										totalPages: 0,
+									}
+								}
+							} else {
+								return {
+									data: [],
+									count: 0,
+									page,
+									limit,
+									totalPages: 0,
+								}
+							}
+						}
+					}
+
+					// Manejar ordenamiento especial para 'edad'
+					if (sortField === 'edad') {
+						const { data: allData, error, count } = await query
+
+						if (error) {
+							throw error
+						}
+
+						const extractAgeValue = (edad: string | null | undefined): number => {
+							if (!edad || edad.trim() === '') return -1
+
+							const edadStr = String(edad).trim().toUpperCase()
+							const match = edadStr.match(/(\d+)/)
+							if (!match) return -1
+
+							const number = parseInt(match[1], 10)
+							if (isNaN(number)) return -1
+
+							if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) {
+								return number * 365
+							} else if (edadStr.includes('MES') || edadStr.includes('MESES')) {
+								return number * 30
+							} else if (
+								edadStr.includes('DÍA') ||
+								edadStr.includes('DÍAS') ||
+								edadStr.includes('DIA') ||
+								edadStr.includes('DIAS')
+							) {
+								return number
+							}
+
+							return number * 365
+						}
+
+						const sortedData = (allData || []).sort((a: any, b: any) => {
+							const aValue = extractAgeValue(a.edad)
+							const bValue = extractAgeValue(b.edad)
+
+							if (aValue === -1 && bValue === -1) return 0
+							if (aValue === -1) return 1
+							if (bValue === -1) return -1
+
+							return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+						})
+
+						const from = (page - 1) * limit
+						const to = from + limit
+						const paginatedData = sortedData.slice(from, to)
+
+						return {
+							data: paginatedData,
+							count: count || 0,
+							page,
+							limit,
+							totalPages: Math.ceil((count || 0) / limit),
+						}
+					}
+
+					// Para otros campos, ordenar en la base de datos
+					query = query.order(sortField, { ascending: sortDirection === 'asc' })
+
+					// Paginación
+					const from = (page - 1) * limit
+					const to = from + limit - 1
+
+					const { data, error, count } = await query.range(from, to)
+
+					if (error) {
+						throw error
+					}
+
+					return {
+						data: data || [],
+						count: count || 0,
+						page,
+						limit,
+						totalPages: Math.ceil((count || 0) / limit),
+					}
+				}
+			} catch (optimizedError) {
+				console.warn('⚠️ Búsqueda optimizada falló, usando método tradicional:', optimizedError)
+				// Continuar con método tradicional como fallback
+			}
+		}
+
+		// MÉTODO TRADICIONAL (fallback o cuando no hay searchTerm)
 		let query = supabase.from('patients').select('*', { count: 'exact' }).eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
 
-		// Filtro de búsqueda
+		// Filtro de búsqueda tradicional (solo si no se usó la optimizada)
 		if (searchTerm) {
 			query = query.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
 		}
@@ -429,8 +573,8 @@ export const getPatients = async (
 				console.error('Error obteniendo casos por branch:', casesError)
 			} else if (casesData) {
 				// Extraer IDs únicos de pacientes
-				const uniquePatientIds = [...new Set(casesData.map(c => c.patient_id).filter(Boolean))]
-				
+				const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
+
 				if (uniquePatientIds.length > 0) {
 					query = query.in('id', uniquePatientIds)
 				} else {
@@ -459,24 +603,29 @@ export const getPatients = async (
 			// Función helper para extraer valor numérico de edad
 			const extractAgeValue = (edad: string | null | undefined): number => {
 				if (!edad || edad.trim() === '') return -1 // Vacíos al final
-				
+
 				const edadStr = String(edad).trim().toUpperCase()
 				const match = edadStr.match(/(\d+)/)
 				if (!match) return -1
-				
+
 				const number = parseInt(match[1], 10)
 				if (isNaN(number)) return -1
-				
+
 				// Convertir a días para comparación uniforme
 				// 1 año = 365 días, 1 mes = 30 días, 1 día = 1 día
 				if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) {
 					return number * 365 // Años a días
 				} else if (edadStr.includes('MES') || edadStr.includes('MESES')) {
 					return number * 30 // Meses a días
-				} else if (edadStr.includes('DÍA') || edadStr.includes('DÍAS') || edadStr.includes('DIA') || edadStr.includes('DIAS')) {
+				} else if (
+					edadStr.includes('DÍA') ||
+					edadStr.includes('DÍAS') ||
+					edadStr.includes('DIA') ||
+					edadStr.includes('DIAS')
+				) {
 					return number // Días
 				}
-				
+
 				// Si no especifica unidad, asumir años
 				return number * 365
 			}
@@ -485,12 +634,12 @@ export const getPatients = async (
 			const sortedData = (allData || []).sort((a: any, b: any) => {
 				const aValue = extractAgeValue(a.edad)
 				const bValue = extractAgeValue(b.edad)
-				
+
 				// Valores vacíos van al final
 				if (aValue === -1 && bValue === -1) return 0
 				if (aValue === -1) return 1
 				if (bValue === -1) return -1
-				
+
 				return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
 			})
 
@@ -630,7 +779,7 @@ export const getPatientStatistics = async (patientId: string) => {
 /**
  * Buscar pacientes por nombre o cédula (para autocomplete) - MULTI-TENANT
  * SOLO busca en el laboratorio del usuario autenticado
- * 
+ *
  * @deprecated Usar searchPatientsOptimized para mejor rendimiento
  * Esta función se mantiene para compatibilidad y como fallback
  */
@@ -660,18 +809,15 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 /**
  * Búsqueda optimizada usando pg_trgm (método GitHub/GitLab)
  * 10-100x más rápida que ILIKE en tablas grandes
- * 
+ *
  * Usa índices GIN con trigramas para búsqueda parcial rápida
  * Retorna resultados ordenados por relevancia (similarity_score)
- * 
+ *
  * @param searchTerm - Término de búsqueda (nombre, teléfono o cédula)
  * @param limit - Límite de resultados (default: 10)
  * @returns Array de pacientes ordenados por relevancia
  */
-export const searchPatientsOptimized = async (
-	searchTerm: string,
-	limit = 10,
-): Promise<Patient[]> => {
+export const searchPatientsOptimized = async (searchTerm: string, limit = 10): Promise<Patient[]> => {
 	try {
 		const laboratoryId = await getUserLaboratoryId()
 
