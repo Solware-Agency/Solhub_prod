@@ -1,10 +1,127 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@shared/components/ui/card'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useAuth } from '@app/providers/AuthContext'
 import EyeTrackingComponent from './RobotTraking'
 import { FileText, Users, History, Settings, LogOut, FolderInput } from 'lucide-react'
+import type { UserRole } from '@services/supabase/laboratories/laboratory-roles-service'
+
+// Mapeo de rutas por rol
+const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?: string; form?: string; changelog?: string; home?: string }> = {
+	employee: {
+		home: '/employee/home',
+		cases: '/employee/records',
+		patients: '/employee/patients',
+		settings: '/employee/settings',
+		form: '/employee/form',
+		changelog: '/employee/changelog',
+	},
+	residente: {
+		home: '/medic/home',
+		cases: '/medic/cases',
+		settings: '/medic/settings',
+	},
+	citotecno: {
+		home: '/cito/home',
+		cases: '/cito/cases',
+		settings: '/cito/settings',
+	},
+	patologo: {
+		home: '/patolo/home',
+		cases: '/patolo/cases',
+		settings: '/patolo/settings',
+	},
+	imagenologia: {
+		home: '/imagenologia/home',
+		cases: '/imagenologia/cases',
+		patients: '/imagenologia/patients',
+	},
+	medico_tratante: {
+		home: '/medico-tratante/home',
+		cases: '/medico-tratante/cases',
+		patients: '/medico-tratante/patients',
+		settings: '/medico-tratante/settings',
+	},
+	enfermero: {
+		home: '/enfermero/home',
+		cases: '/enfermero/cases',
+		patients: '/enfermero/patients',
+		settings: '/enfermero/settings',
+	},
+	call_center: {
+		home: '/call-center/home',
+		cases: '/call-center/cases',
+		patients: '/call-center/patients',
+		settings: '/call-center/settings',
+	},
+}
+
+// Función para determinar qué botones mostrar según el rol
+const getAvailableButtonsForRole = (role: UserRole | undefined) => {
+	if (!role) return []
+
+	const routes = ROLE_ROUTES[role] || {}
+	const buttons: Array<{
+		title: string
+		icon: React.ComponentType<{ className?: string }>
+		path?: string
+		description: string
+		onClick?: () => void
+	}> = []
+
+	// Formulario: Solo employee
+	if (role === 'employee' && routes.form) {
+		buttons.push({
+			title: 'Formulario',
+			icon: FileText,
+			path: routes.form,
+			description: 'Crear nuevo registro',
+		})
+	}
+
+	// Casos: Todos los roles (excepto owner)
+	if (routes.cases) {
+		buttons.push({
+			title: 'Casos',
+			icon: FolderInput,
+			path: routes.cases,
+			description: 'Ver todos los casos',
+		})
+	}
+
+	// Pacientes: employee, imagenologia, medico_tratante, enfermero, call_center
+	if (routes.patients) {
+		buttons.push({
+			title: 'Pacientes',
+			icon: Users,
+			path: routes.patients,
+			description: 'Gestionar pacientes',
+		})
+	}
+
+	// Historial: Solo employee
+	if (role === 'employee' && routes.changelog) {
+		buttons.push({
+			title: 'Historial',
+			icon: History,
+			path: routes.changelog,
+			description: 'Ver historial de cambios',
+		})
+	}
+
+	// Ajustes: Todos los roles (excepto owner)
+	if (routes.settings) {
+		buttons.push({
+			title: 'Ajustes',
+			icon: Settings,
+			path: routes.settings,
+			description: 'Configuración del sistema',
+		})
+	}
+
+	return buttons
+}
 
 const ReceptionistHomePage: React.FC = () => {
 	const navigate = useNavigate()
@@ -27,45 +144,21 @@ const ReceptionistHomePage: React.FC = () => {
 		}
 	}
 
-	const navigationButtons = [
-		{
-			title: 'Formulario',
-			icon: FileText,
-			path: '/employee/form',
-			description: 'Crear nuevo registro',
-		},
-		{
-			title: 'Casos',
-			icon: FolderInput,
-			path: '/employee/records',
-			description: 'Ver todos los casos',
-		},
-		{
-			title: 'Pacientes',
-			icon: Users,
-			path: '/employee/patients',
-			description: 'Gestionar pacientes',
-		},
-		{
-			title: 'Historial',
-			icon: History,
-			path: '/employee/changelogpage',
-			description: 'Ver historial de cambios',
-		},
-		{
-			title: 'Ajustes',
-			icon: Settings,
-			path: '/employee/settings',
-			description: 'Configuración del sistema',
-		},
-		{
+	// Obtener botones disponibles según el rol
+	const navigationButtons = useMemo(() => {
+		const buttons = getAvailableButtonsForRole(profile?.role as UserRole)
+		
+		// Agregar botón de cerrar sesión al final
+		buttons.push({
 			title: 'Cerrar Sesión',
 			icon: LogOut,
 			path: '/',
 			description: 'Salir del sistema',
 			onClick: handleLogout,
-		},
-	]
+		})
+
+		return buttons
+	}, [profile?.role])
 
 	return (
 		<div className="max-w-6xl mx-auto h-full flex flex-col">
@@ -85,7 +178,7 @@ const ReceptionistHomePage: React.FC = () => {
 						</div>
 					</div>
 					<p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-						Gestiona pacientes y registros médicos de forma eficiente.
+						Accede a las herramientas y funcionalidades disponibles para tu rol.
 					</p>
 				</div>
 				<div className="relative">

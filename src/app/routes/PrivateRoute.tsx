@@ -92,29 +92,32 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 			switch (profile.role) {
 				case 'owner':
 					return <Navigate to="/dashboard/home" replace />
+				case 'prueba':
+					return <Navigate to="/prueba/home" replace />
+				case 'medicowner':
+					return <Navigate to="/dashboard/home" replace />
+				// Cada rol va a su propia ruta de home (que renderiza el mismo componente)
 				case 'residente':
-					return <Navigate to="/medic/cases" replace />
+					return <Navigate to="/medic/home" replace />
 				case 'employee':
 					return <Navigate to="/employee/home" replace />
 				case 'citotecno':
-					return <Navigate to="/cito/cases" replace />
+					return <Navigate to="/cito/home" replace />
 				case 'patologo':
-					return <Navigate to="/patolo/cases" replace />
+					return <Navigate to="/patolo/home" replace />
 				case 'imagenologia':
-					return <Navigate to="/imagenologia/cases" replace />
-			case 'medicowner':
-				return <Navigate to="/dashboard/home" replace />
-			case 'medico_tratante':
-				return <Navigate to="/medico-tratante/cases" replace />
-			case 'enfermero':
-				return <Navigate to="/enfermero/cases" replace />
-			case 'call_center':
-				return <Navigate to="/call-center/cases" replace />
-			case 'prueba':
-				return <Navigate to="/prueba/home" replace />
-			default:
-				// Fallback for unknown roles
-				return <Navigate to="/employee/home" replace />
+					return <Navigate to="/imagenologia/home" replace />
+				case 'medico_tratante':
+					return <Navigate to="/medico-tratante/home" replace />
+				case 'enfermero':
+					return <Navigate to="/enfermero/home" replace />
+				case 'call_center':
+					return <Navigate to="/call-center/home" replace />
+				case 'admin':
+					return <Navigate to="/medic/home" replace />
+				default:
+					// Fallback para roles desconocidos
+					return <Navigate to="/employee/home" replace />
 			}
 		}
 	}
