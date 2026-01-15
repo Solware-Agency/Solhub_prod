@@ -647,6 +647,132 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     handleInputChange(field, numericValue);
   };
 
+  // Función para validar rangos de signos vitales
+  const validateVitalSignsRanges = (): { isValid: boolean; errorMessage: string } => {
+    const errors: string[] = [];
+    
+    // Validar Frecuencia Cardíaca (30-250 lpm)
+    if (formData.frecuenciaCardiaca) {
+      const fc = parseFloat(formData.frecuenciaCardiaca);
+      if (!isNaN(fc) && (fc < 30 || fc > 250)) {
+        errors.push('La frecuencia cardíaca debe estar entre 30 y 250 lpm.');
+      }
+    }
+    
+    // Validar Frecuencia Respiratoria (8-60 rpm)
+    if (formData.frecuenciaRespiratoria) {
+      const fr = parseFloat(formData.frecuenciaRespiratoria);
+      if (!isNaN(fr) && (fr < 8 || fr > 60)) {
+        errors.push('La frecuencia respiratoria debe estar entre 8 y 60 rpm.');
+      }
+    }
+    
+    // Validar Saturación de Oxígeno (50-100%)
+    if (formData.saturacionOxigeno) {
+      const sat = parseFloat(formData.saturacionOxigeno);
+      if (!isNaN(sat) && (sat < 50 || sat > 100)) {
+        errors.push('La saturación de oxígeno debe estar entre 50 y 100%.');
+      }
+    }
+    
+    // Validar Temperatura (32-43°C)
+    if (formData.temperatura) {
+      const temp = parseFloat(formData.temperatura);
+      if (!isNaN(temp) && (temp < 32 || temp > 43)) {
+        errors.push('La temperatura debe estar entre 32 y 43°C.');
+      }
+    }
+    
+    // Validar Peso (1-300 kg)
+    if (formData.peso) {
+      const peso = parseFloat(formData.peso);
+      if (!isNaN(peso) && (peso < 1 || peso > 300)) {
+        errors.push('El peso debe estar entre 1 y 300 kg.');
+      }
+    }
+    
+    // Validar Talla (30-250 cm)
+    if (formData.talla) {
+      const talla = parseFloat(formData.talla);
+      if (!isNaN(talla) && (talla < 30 || talla > 250)) {
+        errors.push('La talla debe estar entre 30 y 250 cm.');
+      }
+    }
+    
+    // Validar Presión Arterial (formato: sistólica/diastólica)
+    if (formData.presionArterial && formData.presionArterial.includes('/')) {
+      const [sistolica, diastolica] = formData.presionArterial.split('/').map(v => parseFloat(v.trim()));
+      if (!isNaN(sistolica) && (sistolica < 50 || sistolica > 250)) {
+        errors.push('La presión sistólica debe estar entre 50 y 250 mmHg.');
+      }
+      if (!isNaN(diastolica) && (diastolica < 30 || diastolica > 150)) {
+        errors.push('La presión diastólica debe estar entre 30 y 150 mmHg.');
+      }
+    }
+    
+    if (errors.length > 0) {
+      return {
+        isValid: false,
+        errorMessage: errors.join(' ')
+      };
+    }
+    
+    return { isValid: true, errorMessage: '' };
+  };
+
+  // Función para validar que todos los signos vitales obligatorios estén completos
+  const validateRequiredVitalSigns = (): { isValid: boolean; errorMessage: string } => {
+    const missingFields: string[] = [];
+    
+    // Helper para verificar si un campo tiene valor válido
+    const hasValue = (value: string | undefined | null): boolean => {
+      return value !== null && value !== undefined && value.trim().length > 0;
+    };
+    
+    // Verificar cada signo vital obligatorio
+    if (!hasValue(formData.frecuenciaCardiaca)) {
+      missingFields.push('Frecuencia Cardíaca');
+    }
+    
+    if (!hasValue(formData.frecuenciaRespiratoria)) {
+      missingFields.push('Frecuencia Respiratoria');
+    }
+    
+    if (!hasValue(formData.saturacionOxigeno)) {
+      missingFields.push('Saturación de Oxígeno');
+    }
+    
+    if (!hasValue(formData.temperatura)) {
+      missingFields.push('Temperatura');
+    }
+    
+    if (!hasValue(formData.presionArterial)) {
+      missingFields.push('Presión Arterial');
+    }
+    
+    if (!hasValue(formData.peso)) {
+      missingFields.push('Peso');
+    }
+    
+    if (!hasValue(formData.talla)) {
+      missingFields.push('Talla');
+    }
+    
+    // Si faltan campos, retornar mensaje específico
+    if (missingFields.length > 0) {
+      const fieldsText = missingFields.length === 1 
+        ? missingFields[0]
+        : missingFields.slice(0, -1).join(', ') + ' y ' + missingFields[missingFields.length - 1];
+        
+      return {
+        isValid: false,
+        errorMessage: `Es obligatorio completar todos los signos vitales. Falta(n): ${fieldsText}.`
+      };
+    }
+    
+    return { isValid: true, errorMessage: '' };
+  };
+
   // Función para validar que el formulario tenga datos antes de guardar
   const validateFormData = (): { isValid: boolean; errorMessage: string } => {
     // Helper para verificar si un campo tiene valor real (no vacío ni solo espacios)
@@ -675,7 +801,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital para poder guardar.',
+            'Debe ingresar los signos vitales completos para registrar en el sistema.',
         };
       }
       return { isValid: true, errorMessage: '' };
@@ -697,7 +823,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital y un dato clínico para poder guardar.',
+            'Debe ingresar los signos vitales completos y al menos un dato clínico para registrar en el sistema.',
         };
       }
 
@@ -705,7 +831,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital para poder guardar.',
+            'Debe ingresar los signos vitales completos para registrar en el sistema.',
         };
       }
 
@@ -747,6 +873,32 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       toast({
         title: '⚠️ Formulario incompleto',
         description: validation.errorMessage,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar que todos los signos vitales obligatorios estén completos
+    const requiredValidation = validateRequiredVitalSigns();
+    if (!requiredValidation.isValid) {
+      setError(requiredValidation.errorMessage);
+      toast({
+        title: '⚠️ Signos vitales incompletos',
+        description: requiredValidation.errorMessage,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar rangos de signos vitales
+    const rangeValidation = validateVitalSignsRanges();
+    if (!rangeValidation.isValid) {
+      setError(rangeValidation.errorMessage);
+      toast({
+        title: '❌ Valores fuera de rango',
+        description: rangeValidation.errorMessage,
         variant: 'destructive',
       });
       setLoading(false);
