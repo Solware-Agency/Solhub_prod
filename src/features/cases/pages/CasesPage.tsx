@@ -14,6 +14,7 @@ const CasesPage: React.FC = () => {
 	// Nuevos estados para filtros del servidor
 	const [serverFilters, setServerFilters] = useState<{
     examType?: string;
+    consulta?: string;
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
@@ -83,6 +84,11 @@ const CasesPage: React.FC = () => {
 		setCurrentPage(1) // Reset a página 1 cuando cambia el tamaño
 	}, [])
 
+	const handleFiltersChange = useCallback((filters: any) => {
+		setServerFilters(filters);
+		setCurrentPage(1); // Reset a página 1 cuando cambian los filtros
+	}, []);
+
 	return (
 		<RecordsSection
 			cases={casesData?.data ? mapToLegacyRecords(casesData.data) : []}
@@ -92,7 +98,7 @@ const CasesPage: React.FC = () => {
 			isFullscreen={isFullscreen}
 			setIsFullscreen={setIsFullscreen}
 			onSearch={handleSearch}
-			onFiltersChange={setServerFilters}
+			onFiltersChange={handleFiltersChange}
 			// Datos de paginación del servidor
 			pagination={{
 				currentPage,
