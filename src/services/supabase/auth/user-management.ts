@@ -13,6 +13,7 @@ export interface UserProfile {
 	estado?: 'pendiente' | 'aprobado'
 	phone?: string | number | null
 	laboratory_id?: string | null
+	signature_url?: string | null
 }
 
 /* ------------------------------------------------------------------
@@ -495,5 +496,68 @@ export const updateUserToAdmin = async (
 	} catch (error) {
 		console.error('Unexpected error updating user to admin:', error)
 		return { success: false, error: error as Error }
+	}
+}
+
+/**
+ * Actualiza la URL de la firma del médico en el perfil
+ * Solo para roles médicos en laboratorio SPT
+ */
+export const updateDoctorSignature = async (
+	userId: string,
+	signatureUrl: string | null,
+): Promise<{
+	data: UserProfile | null
+	error: PostgrestError | Error | null
+}> => {
+	try {
+		console.log(`Updating doctor signature for user ${userId}`)
+
+		// 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) {
+			throw new Error('Usuario no autenticado')
+		}
+
+		const { data: profile, error: profileError } = await supabase
+			.from('profiles')
+			.select('laboratory_id')
+			.eq('id', user.id)
+			.single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null }
+
+		if (profileError || !profile?.laboratory_id) {
+			throw new Error('Usuario no tiene laboratorio asignado')
+		}
+
+		// 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+		const { data, error } = await supabase
+			.from('profiles')
+			.update({
+				signature_url: signatureUrl,
+				updated_at: new Date().toISOString(),
+			})
+			.eq('id', userId)
+			.eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+			.select()
+
+		if (error) {
+			console.error('Error updating doctor signature:', error)
+			return { data: null, error }
+		}
+		if (!data || data.length === 0) {
+			const noProfileError = new Error(
+				`No se pudo actualizar la firma. Verifica que el usuario pertenezca a tu laboratorio.`,
+			)
+			console.error('No profile found for update:', noProfileError)
+			return { data: null, error: noProfileError }
+		}
+
+		console.log('Doctor signature updated successfully:', data[0])
+		return { data: data[0] as UserProfile, error: null }
+	} catch (error) {
+		console.error('Unexpected error updating doctor signature:', error)
+		return { data: null, error: error as Error }
 	}
 }
