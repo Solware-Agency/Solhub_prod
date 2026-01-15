@@ -536,6 +536,7 @@ export const getCasesWithPatientInfo = async (
     dateFrom?: string;
     dateTo?: string;
     examType?: string;
+    consulta?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
     userRole?:
       | 'owner'
@@ -720,6 +721,13 @@ export const getCasesWithPatientInfo = async (
         });
       }
 
+      // Filtro por tipo de consulta (especialidad médica)
+      if (filters?.consulta) {
+        combinedResults = combinedResults.filter((item: any) => {
+          return item.consulta === filters.consulta;
+        });
+      }
+
       if (filters?.paymentStatus) {
         combinedResults = combinedResults.filter(
           (item: any) => item.payment_status === filters.paymentStatus,
@@ -897,6 +905,11 @@ export const getCasesWithPatientInfo = async (
         exactExamType = 'Biopsia';
       }
       query = query.eq('exam_type', exactExamType);
+    }
+
+    // Filtro por tipo de consulta (especialidad médica)
+    if (filters?.consulta) {
+      query = query.eq('consulta', filters.consulta);
     }
 
     if (filters?.paymentStatus) {

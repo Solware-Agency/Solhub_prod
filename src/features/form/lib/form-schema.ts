@@ -92,7 +92,7 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 	return z.object({
 		fullName: z
 			.string()
-			.min(1, 'Nombre completo es requerido')
+			.min(1, 'Debe seleccionar o ingresar el nombre del paciente')
 			.regex(
 				/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]+$/,
 				'Nombre solo debe contener letras y espacios',

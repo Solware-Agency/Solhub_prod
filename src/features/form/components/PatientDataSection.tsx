@@ -1,6 +1,6 @@
 import { type Control } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
-import { FormField, FormItem, FormLabel, FormControl } from '@shared/components/ui/form'
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@shared/components/ui/form'
 import { AutocompleteInput } from '@shared/components/ui/autocomplete-input'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
@@ -155,7 +155,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					<FormField
 						control={control}
 						name="gender"
-						render={({ field }) => (
+						render={({ field, fieldState }) => (
 							<FormItem className="space-y-2 flex flex-col col-span-full md:col-span-3">
 								<FormLabel>Género *</FormLabel>
 								<FormControl>
@@ -164,10 +164,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 										value={field.value as string}
 										onChange={field.onChange}
 										placeholder="Género"
-										className={inputStyles + ' transition-none'}
+										className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 										id="patient-gender"
 									/>
 								</FormControl>
+								<FormMessage />
 							</FormItem>
 						)}
 					/>
@@ -177,7 +178,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 				<FormField
 					control={control}
 					name="fullName"
-					render={({ field }) => (
+					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
 							<FormLabel>Nombre Completo *</FormLabel>
 							<FormControl>
@@ -192,11 +193,10 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											field.onChange(e)
 										}
 									}}
-									className={inputStyles + ' transition-none'}
+									className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 								/>
 							</FormControl>
-							{/* Espaciador invisible para mantener altura consistente con el párrafo de cédula */}
-							<div className="min-h-[32px] sm:min-h-[36px]"></div>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>
@@ -205,7 +205,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 				<FormField
 					control={control}
 					name="phone"
-					render={({ field }) => (
+					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
 							<FormLabel>Teléfono *</FormLabel>
 							<FormControl>
@@ -222,11 +222,10 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											field.onChange(e)
 										}
 									}}
-									className={inputStyles + ' transition-none'}
+									className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 								/>
 							</FormControl>
-							{/* Espaciador invisible para mantener altura consistente con el párrafo de cédula */}
-							<div className="min-h-[32px] sm:min-h-[36px]"></div>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>

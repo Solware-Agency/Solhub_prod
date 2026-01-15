@@ -82,8 +82,8 @@ export function MedicalFormContainer() {
 	const form = useForm<FormValues>({
 		resolver: dynamicResolver,
 		defaultValues: getInitialFormValues(),
-		mode: 'onSubmit', // Solo validar cuando se envía el formulario
-		reValidateMode: 'onChange', // Re-validar en onChange solo después del primer submit
+		mode: 'onChange', // Validar en tiempo real para feedback inmediato
+		reValidateMode: 'onChange', // Re-validar en onChange después del primer submit
 		shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
 	})
 
@@ -225,11 +225,32 @@ export function MedicalFormContainer() {
 	const onError = useCallback(
 		(errors: any) => {
 			console.log('❌ Errores de validación del formulario:', errors)
-			toast({
-				title: '❌ Error de validación',
-				description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
-				variant: 'destructive',
-			})
+			
+			// Prioridad: Si falta el nombre del paciente, mostrar mensaje específico
+			if (errors.fullName) {
+				toast({
+					title: '⚠️ Paciente no seleccionado',
+					description: 'Por favor, seleccione o ingrese un paciente para continuar con el registro del caso.',
+					variant: 'destructive',
+				})
+			} else {
+				// Otros errores de validación
+				toast({
+					title: '❌ Error de validación',
+					description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
+					variant: 'destructive',
+				})
+			}
+			
+			// Scroll al primer campo con error
+			const firstErrorField = Object.keys(errors)[0]
+			if (firstErrorField) {
+				const element = document.getElementsByName(firstErrorField)[0]
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					element.focus()
+				}
+			}
 		},
 		[toast],
 	)

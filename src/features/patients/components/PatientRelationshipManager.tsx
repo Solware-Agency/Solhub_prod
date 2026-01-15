@@ -4,14 +4,13 @@
 // Componente para gestionar responsabilidades (agregar dependientes)
 // =====================================================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -23,7 +22,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { cn } from '@shared/lib/cn'
 import { Plus, CalendarIcon, Baby, Dog } from 'lucide-react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { createResponsibility } from '@services/supabase/patients/responsabilidades-service'
 import { createPatient, updatePatient, findPatientById } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
@@ -67,6 +65,57 @@ export const PatientRelationshipManager = ({
 	const { toast } = useToast()
 
 	// =====================================================================
+	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
+	// =====================================================================
+
+	const calculateAgeFromDate = (birthDate: Date): { value: string; unidad: 'Años' | 'Meses' | 'Días' } => {
+		const today = new Date()
+		const birth = new Date(birthDate)
+
+		// Calcular años y meses
+		let years = today.getFullYear() - birth.getFullYear()
+		let months = today.getMonth() - birth.getMonth()
+		let days = today.getDate() - birth.getDate()
+
+		// Ajustar si el día de cumpleaños aún no ha llegado este año
+		if (days < 0) {
+			months--
+			// Obtener días del mes anterior
+			const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+			days += lastMonth.getDate()
+		}
+
+		// Ajustar si el mes de cumpleaños aún no ha llegado este año
+		if (months < 0) {
+			years--
+			months += 12
+		}
+
+		// Calcular días totales para decidir formato
+		const totalDays = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24))
+		const totalMonths = years * 12 + months
+
+		// Si tiene 12 meses o más (1 año o más), mostrar en años
+		if (totalMonths >= 12) {
+			return { value: years.toString(), unidad: 'Años' }
+		}
+		// Si tiene menos de 12 meses pero más de 0 meses, mostrar en meses
+		else if (totalMonths >= 1) {
+			return { value: totalMonths.toString(), unidad: 'Meses' }
+		}
+		// Si tiene menos de 1 mes, mostrar en días
+		else {
+			return { value: totalDays.toString(), unidad: 'Días' }
+		}
+	}
+
+	// Calcular edad cuando hay fecha de nacimiento
+	const calculatedAge = useMemo(() => {
+		if (!fechaNacimiento) return null
+		return calculateAgeFromDate(fechaNacimiento)
+	}, [fechaNacimiento])
+
+	// =====================================================================
 	// HANDLERS
 	// =====================================================================
 
@@ -102,14 +151,20 @@ export const PatientRelationshipManager = ({
 		setIsSubmitting(true)
 
 		try {
-			const edadFormatted = edad ? `${edad} ${edadUnidad}` : null
+			// Formatear edad: usar edad calculada si hay fecha, sino usar edad manual
+			const edadFormatted =
+				fechaNacimiento && calculatedAge
+					? `${calculatedAge.value} ${calculatedAge.unidad}`
+					: edad
+					? `${edad} ${edadUnidad}`
+					: null
 
 			if (dependentToEdit) {
 				// MODO EDICIÓN: Actualizar dependiente existente
 				const pacienteActualizado = await updatePatient(dependentToEdit.id, {
 					nombre: nombre.trim(),
 					edad: edadFormatted,
-					telefono: telefono || null,
+					telefono: null, // Los dependientes no tienen teléfono propio
 					email: email || null,
 					gender: gender && gender.trim() !== '' ? gender : null,
 					fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
@@ -151,34 +206,29 @@ export const PatientRelationshipManager = ({
 					cedula: null, // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
 					nombre: nombre.trim(),
 					edad: edadFormatted,
-					telefono: telefono || null,
-					email: email || null,
-					gender: gender && gender.trim() !== '' ? gender : null, // Asegurar que no se guarde cadena vacía
-					tipo_paciente: tipoDependiente,
-					fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
-					especie: tipoDependiente === 'animal' ? especie.trim() : null,
-				} as any)
+				telefono: null, // Los dependientes no tienen teléfono propio
+				email: email || null,
+				gender: gender && gender.trim() !== '' ? gender : null, // Asegurar que no se guarde cadena vacía
+				tipo_paciente: tipoDependiente,
+				fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
+				especie: tipoDependiente === 'animal' ? especie.trim() : null,
+			} as any)
 
-				// Crear relación de responsabilidad
-				await createResponsibility({
-					paciente_id_responsable: responsable.id,
-					paciente_id_dependiente: nuevoPaciente.id,
-					tipo: tipoDependiente,
-				})
+			// Crear relación de responsabilidad
+			await createResponsibility({
+			paciente_id_responsable: responsable.id,
+			paciente_id_dependiente: nuevoPaciente.id,
+			tipo: tipoDependiente,
+		})
 
-				// Notificar éxito
-				toast({
-					title: 'Éxito',
-					description: `${tipoDependiente === 'menor' ? 'Menor' : 'Animal'} agregado correctamente`,
-				})
+		// Notificar éxito
+		toast({
+			title: 'Éxito',
+			description: `${tipoDependiente === 'menor' ? 'Menor' : 'Animal'} agregado correctamente`,
+		})
 
-				// Resetear formulario
-				resetForm()
-
-				// Cerrar diálogo
-				setIsOpen(false)
-
-				// Notificar al componente padre
+		// Resetear formulario
+		resetForm()
 				if (onDependentAdded) {
 					onDependentAdded({
 						id: nuevoPaciente.id,
@@ -228,7 +278,7 @@ export const PatientRelationshipManager = ({
 		setEdad('')
 		setEdadUnidad('Años')
 		setEspecie('')
-		setTelefono('')
+		setTelefono(responsable.telefono || '') // Siempre del responsable
 		setEmail('')
 		setGender('')
 	}
@@ -257,7 +307,8 @@ export const PatientRelationshipManager = ({
 					// Cargar datos del dependiente a editar
 					setTipoDependiente((patientData.tipo_paciente as 'menor' | 'animal') || 'menor')
 					setNombre(patientData.nombre || '')
-					setTelefono(patientData.telefono || '')
+					// Teléfono siempre del responsable
+					setTelefono(responsable.telefono || '')
 					setEmail(patientData.email || '')
 					setGender(patientData.gender || '')
 					setEspecie(patientData.especie || '')
@@ -449,7 +500,13 @@ export const PatientRelationshipManager = ({
 									<Calendar
 										mode="single"
 										selected={fechaNacimiento}
-										onSelect={setFechaNacimiento}
+										onSelect={(date) => {
+											setFechaNacimiento(date)
+											// Limpiar edad manual si se selecciona fecha
+											if (date) {
+												setEdad('')
+											}
+										}}
 										defaultMonth={fechaNacimiento || new Date()}
 										initialFocus
 										disabled={(date) => {
@@ -469,19 +526,41 @@ export const PatientRelationshipManager = ({
 							<div className="flex gap-2">
 								<Input
 									type="number"
-									value={edad}
-									onChange={(e) => setEdad(e.target.value)}
-									placeholder="Edad"
-									className="flex-1"
+									value={fechaNacimiento && calculatedAge ? calculatedAge.value : edad}
+									onChange={(e) => {
+										if (!fechaNacimiento) {
+											setEdad(e.target.value)
+										}
+									}}
+									placeholder={fechaNacimiento && calculatedAge ? 'Calculada automáticamente' : 'Edad'}
+									className={cn(
+										'flex-1',
+										fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+									)}
+									disabled={!!fechaNacimiento}
+									readOnly={!!fechaNacimiento}
 								/>
-							<Select value={edadUnidad} onValueChange={(value) => setEdadUnidad(value as 'Años' | 'Meses' | 'Días')}>
-								<SelectTrigger className="w-24">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="Años">Años</SelectItem>
-									<SelectItem value="Meses">Meses</SelectItem>
-									<SelectItem value="Días">Días</SelectItem>
+								<Select
+									value={fechaNacimiento && calculatedAge ? calculatedAge.unidad : edadUnidad}
+									onValueChange={(value) => {
+										if (!fechaNacimiento) {
+											setEdadUnidad(value as 'Años' | 'Meses' | 'Días')
+										}
+									}}
+									disabled={!!fechaNacimiento}
+								>
+									<SelectTrigger
+										className={cn(
+											'w-24',
+											fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+										)}
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="Años">Años</SelectItem>
+										<SelectItem value="Meses">Meses</SelectItem>
+										<SelectItem value="Días">Días</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>
@@ -492,19 +571,15 @@ export const PatientRelationshipManager = ({
 					{/* Última línea: Teléfono y Email */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label htmlFor="telefono">Teléfono</Label>
+							<Label htmlFor="telefono">Teléfono (del responsable)</Label>
 							<Input
 								id="telefono"
 								value={telefono}
-								onChange={(e) => {
-									const { value } = e.target
-									// Permitir números, guiones, espacios, paréntesis y el símbolo +
-									if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
-										setTelefono(value)
-									}
-								}}
-								placeholder="Teléfono de contacto"
+								disabled
+								readOnly
+								placeholder="Teléfono del responsable"
 								maxLength={15}
+								className="opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800"
 							/>
 						</div>
 

@@ -11,7 +11,6 @@ import { Label } from '@shared/components/ui/label'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -22,8 +21,7 @@ import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { UserPlus, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { createPatient } from '@services/supabase/patients/patients-service'
+import { createPatient, PatientError } from '@services/supabase/patients/patients-service'
 import { createIdentification } from '@services/supabase/patients/identificaciones-service'
 import { useToast } from '@shared/hooks/use-toast'
 import { cn } from '@shared/lib/cn'
@@ -64,12 +62,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 	const calculateAgeFromDate = (birthDate: Date): { value: string; unidad: 'Años' | 'Meses' } => {
 		const today = new Date()
 		const birth = new Date(birthDate)
-		
+
 		// Calcular años y meses
 		let years = today.getFullYear() - birth.getFullYear()
 		let months = today.getMonth() - birth.getMonth()
 		let days = today.getDate() - birth.getDate()
-		
+
 		// Ajustar si el día de cumpleaños aún no ha llegado este año
 		if (days < 0) {
 			months--
@@ -77,16 +75,16 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
 			days += lastMonth.getDate()
 		}
-		
+
 		// Ajustar si el mes de cumpleaños aún no ha llegado este año
 		if (months < 0) {
 			years--
 			months += 12
 		}
-		
+
 		// Calcular meses totales para decidir formato
 		const totalMonths = years * 12 + months
-		
+
 		// Si tiene 12 meses o más (1 año o más), mostrar en años
 		if (totalMonths >= 12) {
 			return { value: years.toString(), unidad: 'Años' }
@@ -148,11 +146,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			const cedulaFormatted = `${cedulaTipo}-${cedulaNumero.trim()}`
 
 			// 2. Formatear edad: usar edad calculada si hay fecha, sino usar edad manual
-			const edadFormatted = fechaNacimiento && calculatedAge
-				? `${calculatedAge.value} ${calculatedAge.unidad}`
-				: edad
-				? `${edad} ${edadUnidad}`
-				: null
+			const edadFormatted =
+				fechaNacimiento && calculatedAge
+					? `${calculatedAge.value} ${calculatedAge.unidad}`
+					: edad
+					? `${edad} ${edadUnidad}`
+					: null
 
 			// 3. Crear paciente responsable (adulto)
 			const nuevoPaciente = await createPatient({
@@ -200,25 +199,41 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			}
 		} catch (error) {
 			console.error('Error creando responsable:', error)
-			
+
 			let errorMessage = 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
-			
-			if (error instanceof Error) {
-				if (error.message.includes('no autenticado')) {
-					errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
-				} else if (error.message.includes('laboratorio')) {
-					errorMessage = 'No tienes un laboratorio asignado. Contacta al administrador.'
-				} else if (error.message.includes('duplicate') || error.message.includes('unique')) {
-					errorMessage = 'Ya existe un paciente con esta cédula.'
-				} else if (error.message.includes('required') || error.message.includes('null')) {
-					errorMessage = 'Por favor, completa todos los campos obligatorios.'
+
+			if (error instanceof PatientError) {
+				// Usar códigos de error en lugar de mensajes
+				switch (error.code) {
+					case 'USER_NOT_AUTHENTICATED':
+						errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+						break
+					case 'USER_NO_LABORATORY':
+						errorMessage = 'No tienes un laboratorio asignado. Contacta al administrador.'
+						break
+					case 'PATIENT_DUPLICATE':
+						errorMessage = 'Ya existe un paciente con esta cédula.'
+						break
+					case 'PATIENT_REQUIRED_FIELD':
+						errorMessage = 'Por favor, completa todos los campos obligatorios.'
+						break
+					case 'DATABASE_ERROR':
+						errorMessage = 'Error al guardar en la base de datos. Por favor, intenta de nuevo.'
+						break
+					case 'UNKNOWN_ERROR':
+					default:
+						errorMessage = error.message || 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
+						break
 				}
+			} else if (error instanceof Error) {
+				// Fallback para errores que no son PatientError
+				errorMessage = error.message || 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
 			}
-			
+
 			toast({
-				title: '❌ Error al registrar paciente',
+				title: '❌ No se pudo registrar el paciente',
 				description: errorMessage,
-				variant: 'destructive',
+				variant: 'default',
 			})
 		} finally {
 			setIsSubmitting(false)
@@ -259,10 +274,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent 
-				className="max-w-2xl max-h-[90vh] overflow-visible"
-				onOpenAutoFocus={handleOpenAutoFocus}
-			>
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible" onOpenAutoFocus={handleOpenAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>

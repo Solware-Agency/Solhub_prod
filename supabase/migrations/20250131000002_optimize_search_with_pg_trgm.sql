@@ -84,20 +84,20 @@ BEGIN
   RETURN QUERY
   SELECT 
     p.id,
-    p.nombre,
-    p.cedula,
-    p.telefono,
-    p.email,
-    p.gender,
-    p.tipo_paciente,
-    p.edad,
+    p.nombre::TEXT,
+    p.cedula::TEXT,
+    p.telefono::TEXT,
+    p.email::TEXT,
+    p.gender::TEXT,
+    p.tipo_paciente::TEXT,
+    p.edad::TEXT,
     p.fecha_nacimiento,
-    p.especie,
+    p.especie::TEXT,
     -- Calcular score de similitud (mayor = más relevante)
     GREATEST(
-      similarity(p.nombre, search_term),
-      similarity(COALESCE(p.telefono, ''), search_term),
-      similarity(COALESCE(p.cedula, ''), search_term)
+      similarity(p.nombre::TEXT, search_term),
+      similarity(COALESCE(p.telefono, '')::TEXT, search_term),
+      similarity(COALESCE(p.cedula, '')::TEXT, search_term)
     ) as similarity_score
   FROM patients p
   WHERE p.laboratory_id = lab_id

@@ -48,7 +48,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	// if (totalPages <= 1) return null
 
 	return (
-		<div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-700">
+		<div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
 			{/* Información de casos mostrados */}
 			<div className="text-sm text-gray-600 dark:text-gray-400 order-3 sm:order-1">
 				{totalItems > 0 ? (

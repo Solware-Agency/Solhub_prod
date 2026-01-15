@@ -47,6 +47,7 @@ interface CasesTableProps {
   onCaseSelect?: (case_: UnifiedMedicalRecord) => void;
   onFiltersChange?: (filters: {
     examType?: string;
+    consulta?: string;
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
@@ -556,6 +557,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setPdfStatusFilter('all');
       setExamTypeFilter('all');
       setDocumentStatusFilter('all');
+      setConsultaFilter('all');
       setEmailSentStatusFilter('all');
       // También limpiar los filtros temporales
       setTempStatusFilter('all');
@@ -674,6 +676,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempPendingCasesFilter,
       tempPdfStatusFilter,
       tempExamTypeFilter,
+      tempConsultaFilter,
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
       pagination,
@@ -886,6 +889,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         pendingCasesFilter !== 'all' ||
         pdfStatusFilter !== 'all' ||
         examTypeFilter !== 'all' ||
+        consultaFilter !== 'all' ||
         documentStatusFilter !== 'all' ||
         emailSentStatusFilter !== 'all' ||
         (searchTerm && searchTerm.trim() !== '') ||
