@@ -305,27 +305,31 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Cédula</label>
-													<div className="grid grid-cols-4 gap-2">
-														<CustomDropdown
-															options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
-															value={formData.cedulaType}
-															onChange={handleCedulaTypeChange}
-															placeholder="Tipo"
-															className="text-sm"
-															direction="auto"
-														/>
-														<Input
-															name="cedulaNumber"
-															value={formData.cedulaNumber}
-															onChange={handleCedulaNumberChange}
-															placeholder={formData.cedulaType === 'S/C' ? 'No aplica' : '12345678'}
-															className={cn(
-																'col-span-3 text-sm',
-																formData.cedulaType === 'S/C' && 'opacity-50 cursor-not-allowed',
-															)}
-															disabled={formData.cedulaType === 'S/C'}
-															required={formData.cedulaType !== 'S/C'}
-														/>
+													<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
+														<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+															<CustomDropdown
+																options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
+																value={formData.cedulaType}
+																onChange={handleCedulaTypeChange}
+																placeholder="Tipo"
+																className="text-sm"
+																direction="auto"
+															/>
+														</div>
+														<div className="col-span-4 sm:col-span-4">
+															<Input
+																name="cedulaNumber"
+																value={formData.cedulaNumber}
+																onChange={handleCedulaNumberChange}
+																placeholder={formData.cedulaType === 'S/C' ? 'No aplica' : '12345678'}
+																className={cn(
+																	'text-sm',
+																	formData.cedulaType === 'S/C' && 'opacity-50 cursor-not-allowed',
+																)}
+																disabled={formData.cedulaType === 'S/C'}
+																required={formData.cedulaType !== 'S/C'}
+															/>
+														</div>
 													</div>
 												</div>
 

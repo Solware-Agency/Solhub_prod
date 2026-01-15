@@ -441,10 +441,10 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 				<CardContent className="p-3 sm:p-4">
 					{selectedResponsable && selectedResponsableData ? (
-						<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
 							{/* Card del Responsable - Izquierda */}
-							<div className="lg:col-span-5">
-								<div className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+							<div className="flex flex-col">
+								<div className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
 									<div className="mb-3">
 										<div className="flex items-center justify-between mb-2">
 											<h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Responsable</h3>
@@ -468,7 +468,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 										</p>
 									</div>
 
-									<div className="space-y-2">
+									<div className="space-y-2 flex-grow">
 										{selectedResponsableData.edad && (
 											<div className="flex items-center text-xs sm:text-sm">
 												<span className="text-gray-600 dark:text-gray-300">{selectedResponsableData.edad}</span>
@@ -514,78 +514,76 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 								</div>
 							</div>
 
-							{/* División - Centro */}
-							<div className="hidden lg:flex lg:col-span-1 items-center justify-center">
-								<div className="w-px h-full bg-gray-200 dark:bg-gray-700"></div>
-							</div>
-
 							{/* Dependientes - Derecha */}
-							<div className="lg:col-span-6">
-								<div className="flex items-center justify-between mb-3">
-									<h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-										Dependientes ({dependents.length})
-									</h3>
-									<PatientRelationshipManager
-										responsable={selectedResponsable}
-										onDependentAdded={handleDependentAdded}
-										onDependentUpdated={handleDependentUpdated}
-									/>
-								</div>
-
-								{isLoadingDependents ? (
-									<div className="text-sm text-muted-foreground py-4 text-center">Cargando dependientes...</div>
-								) : dependents.length === 0 ? (
-									<div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-										No hay dependientes registrados
+							<div className="flex flex-col h-full">
+								<div className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
+									<div className="flex items-center justify-between mb-3">
+										<h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+											Dependientes ({dependents.length})
+										</h3>
+										<PatientRelationshipManager
+											responsable={selectedResponsable}
+											onDependentAdded={handleDependentAdded}
+											onDependentUpdated={handleDependentUpdated}
+										/>
 									</div>
-								) : (
-									<div className="space-y-2 max-h-[400px] overflow-y-auto">
-										{dependents.map((dep) => (
-											<div
-												key={dep.id}
-												className={cn(
-													'flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors group',
-													selectedProfile?.id === dep.id
-														? 'border-primary bg-primary/5'
-														: 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
-												)}
-												onClick={() => handleSelectProfile(dep)}
-											>
-												{dep.tipo_paciente === 'menor' ? (
-													<Baby className="w-5 h-5 text-blue-500" />
-												) : dep.tipo_paciente === 'animal' ? (
-													<Dog className="w-5 h-5 text-green-500" />
-												) : (
-													<User className="w-5 h-5 text-gray-500" />
-												)}
-												<div className="flex-1 min-w-0">
-													<div className="font-medium">{dep.nombre}</div>
-													<div className="text-sm text-muted-foreground">
-														{dep.tipo_paciente === 'menor' && dep.edad && `Edad: ${dep.edad}`}
-														{dep.tipo_paciente === 'animal' && dep.especie && `Especie: ${dep.especie}`}
-														{dep.fecha_nacimiento &&
-															` • Nac: ${new Date(dep.fecha_nacimiento).toLocaleDateString()}`}
+
+									{isLoadingDependents ? (
+										<div className="text-sm text-muted-foreground py-4 text-center flex-grow flex items-center justify-center">Cargando dependientes...</div>
+									) : dependents.length === 0 ? (
+										<div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex-grow flex items-center justify-center">
+											No hay dependientes registrados
+										</div>
+									) : (
+										<div className="space-y-2 flex-grow overflow-y-auto">
+											{dependents.map((dep) => (
+												<div
+													key={dep.id}
+													className={cn(
+														'flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors group',
+														selectedProfile?.id === dep.id
+															? 'border-primary bg-primary/5'
+															: 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
+													)}
+													onClick={() => handleSelectProfile(dep)}
+												>
+													{dep.tipo_paciente === 'menor' ? (
+														<Baby className="w-5 h-5 text-blue-500" />
+													) : dep.tipo_paciente === 'animal' ? (
+														<Dog className="w-5 h-5 text-green-500" />
+													) : (
+														<User className="w-5 h-5 text-gray-500" />
+													)}
+													<div className="flex-1 min-w-0">
+														<div className="font-medium">{dep.nombre}</div>
+														<div className="text-sm text-muted-foreground">
+															{[
+																dep.tipo_paciente === 'menor' && dep.edad && `Edad: ${dep.edad}`,
+																dep.tipo_paciente === 'animal' && dep.especie && `Especie: ${dep.especie}`,
+																dep.fecha_nacimiento && new Date(dep.fecha_nacimiento).toLocaleDateString()
+															].filter(Boolean).join(' • ')}
+														</div>
+													</div>
+													<div className="flex items-center gap-2">
+														{selectedProfile?.id === dep.id && <CheckCircle className="w-5 h-5 text-primary" />}
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+															onClick={(e) => {
+																e.stopPropagation()
+																handleEditDependent(dep)
+															}}
+														>
+															<Edit className="w-4 h-4" />
+														</Button>
 													</div>
 												</div>
-												<div className="flex items-center gap-2">
-													{selectedProfile?.id === dep.id && <CheckCircle className="w-5 h-5 text-primary" />}
-													<Button
-														type="button"
-														variant="ghost"
-														size="sm"
-														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-														onClick={(e) => {
-															e.stopPropagation()
-															handleEditDependent(dep)
-														}}
-													>
-														<Edit className="w-4 h-4" />
-													</Button>
-												</div>
-											</div>
-										))}
-									</div>
-								)}
+											))}
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 					) : (

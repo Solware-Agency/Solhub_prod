@@ -241,14 +241,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         <DialogDescription className="sr-only">
           Configure los filtros para buscar casos específicos
         </DialogDescription>
-        {/* Botón X rojo para cerrar */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className='absolute top-4 right-4 z-50 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
-          aria-label="Cerrar filtros"
-        >
-          <X className='w-5 h-5 text-red-500 hover:text-red-600' />
-        </button>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden flex flex-col flex-1 min-h-0'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger

@@ -589,6 +589,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     }, [currentCase, isEditing]);
 
+    // Resetear estado de edición cuando el modal se cierra
+    useEffect(() => {
+      if (!isOpen) {
+        setIsEditing(false);
+        setEditedCase({});
+        setPaymentMethods([]);
+        setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+        setIsAddingNewPayment(false);
+      }
+    }, [isOpen]);
+
     const handleEditClick = () => {
       if (!currentCase) return;
       setIsEditing(true);
@@ -600,6 +611,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       setPaymentMethods([]);
       setNewPaymentMethod({ method: '', amount: 0, reference: '' });
       setIsAddingNewPayment(false);
+    };
+
+    // Función wrapper para onClose que resetea el estado de edición
+    const handleClose = () => {
+      setIsEditing(false);
+      setEditedCase({});
+      setPaymentMethods([]);
+      setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+      setIsAddingNewPayment(false);
+      onClose();
     };
 
     const handleDeleteClick = () => {
@@ -628,7 +649,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Close modals and panel
         setIsDeleteModalOpen(false);
-        onClose();
+        handleClose();
 
         // Call onDelete callback if provided
         if (onDelete) {
@@ -1470,7 +1491,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={isEditing ? undefined : onClose}
+                onClick={isEditing ? undefined : handleClose}
                 className={`fixed inset-0 bg-black/50 ${
                   isFullscreen
                     ? 'z-[99999999999999999]'
@@ -1503,7 +1524,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     {/* Botón X (derecha) */}
                     <div className='flex items-center gap-2 flex-shrink-0'>
                       <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className='p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none'
                         aria-label='Cerrar'
                       >

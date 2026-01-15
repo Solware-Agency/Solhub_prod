@@ -1089,7 +1089,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         </div>
                                       </div>
 
-                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
+                                      {/* Primera fila: Tipo de Examen, Médico Tratante, Sede, Imagen, Acciones */}
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3'>
                                         <div>
                                           <p className='text-xs text-gray-500 dark:text-gray-400'>
                                             Tipo de Examen
@@ -1119,6 +1120,63 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           </div>
                                         </div>
 
+                                        {/* Imagen del caso */}
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Imagen
+                                          </p>
+                                          <div className='mt-1'>
+                                            <ImageButton imageUrl={(caseItem as any).image_url} />
+                                          </div>
+                                        </div>
+
+                                        {/* Acciones */}
+                                        <div className='flex gap-2 items-center justify-center sm:justify-start md:justify-center'>
+                                          <Button
+                                            onClick={() =>
+                                              handleCheckAndDownloadPDF(
+                                                caseItem,
+                                              )
+                                            }
+                                            disabled={
+                                              isGeneratingPDF ||
+                                              isSaving ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado' ||
+                                              selectedCases.size > 0 ||
+                                              isDownloadingMultiple
+                                            }
+                                          >
+                                            {isGeneratingPDF || isSaving ? (
+                                              <>
+                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                                Generando...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Download className='h-4 w-4 mr-2' />
+                                                PDF
+                                              </>
+                                            )}
+                                          </Button>
+                                          <Button
+                                            onClick={() =>
+                                              setPreviewingCaseId(caseItem.id)
+                                            }
+                                            disabled={
+                                              isSaving ||
+                                              !caseItem.informepdf_url ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado'
+                                            }
+                                          >
+                                            <Eye className='w-4 h-4' />
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Resto de campos */}
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
                                         {/* Ocultar Monto Total para SPT */}
                                         {!isSpt && (
                                           <div>
@@ -1156,65 +1214,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             </p>
                                           </div>
                                         )}
-
-                                        {/* Imagen del caso */}
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Imagen
-                                          </p>
-                                          <div className='mt-1'>
-                                            <ImageButton imageUrl={(caseItem as any).image_url} />
-                                          </div>
-                                        </div>
-
-                                        <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
-                                          <Button
-                                            onClick={() =>
-                                              handleCheckAndDownloadPDF(
-                                                caseItem,
-                                              )
-                                            }
-                                            disabled={
-                                              isGeneratingPDF ||
-                                              isSaving ||
-                                              caseItem.doc_aprobado !==
-                                                'aprobado' ||
-                                              selectedCases.size > 0 ||
-                                              isDownloadingMultiple
-                                            }
-                                          >
-                                            {isGeneratingPDF || isSaving ? (
-                                              <>
-                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                                Generando...
-                                              </>
-                                            ) : caseItem.doc_aprobado !==
-                                              'aprobado' ? (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                No tiene PDF
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                PDF
-                                              </>
-                                            )}
-                                          </Button>
-                                          <Button
-                                            onClick={() =>
-                                              setPreviewingCaseId(caseItem.id)
-                                            }
-                                            disabled={
-                                              isSaving ||
-                                              !caseItem.informepdf_url ||
-                                              caseItem.doc_aprobado !==
-                                                'aprobado'
-                                            }
-                                          >
-                                            <Eye className='w-4 h-4' />
-                                          </Button>
-                                        </div>
                                       </div>
 
                                       {caseItem.diagnostico && (
@@ -1391,11 +1390,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           <>
                                             <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
                                             Generando...
-                                          </>
-                                        ) : caseItem.doc_aprobado !== 'aprobado' ? (
-                                          <>
-                                            <Download className='h-4 w-4 mr-2' />
-                                            No tiene PDF
                                           </>
                                         ) : (
                                           <>
