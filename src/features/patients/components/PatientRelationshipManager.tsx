@@ -216,15 +216,19 @@ export const PatientRelationshipManager = ({
 
 			// Crear relación de responsabilidad
 			await createResponsibility({
-				})
+			paciente_id_responsable: responsable.id,
+			paciente_id_dependiente: nuevoPaciente.id,
+			tipo: tipoDependiente,
+		})
 
-				// Resetear formulario
-				resetForm()
+		// Notificar éxito
+		toast({
+			title: 'Éxito',
+			description: `${tipoDependiente === 'menor' ? 'Menor' : 'Animal'} agregado correctamente`,
+		})
 
-				// Cerrar diálogo
-				setIsOpen(false)
-
-				// Notificar al componente padre
+		// Resetear formulario
+		resetForm()
 				if (onDependentAdded) {
 					onDependentAdded({
 						id: nuevoPaciente.id,
