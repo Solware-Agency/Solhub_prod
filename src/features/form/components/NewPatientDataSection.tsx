@@ -52,6 +52,11 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 	const justSelectedRef = useRef(false) // Ref para rastrear selección reciente
 	const ageValue = useWatch({ control, name: 'ageValue' }) // Observar edad para deshabilitar fecha
 
+	// Exponer selectedProfile globalmente para que PatientDataSection pueda acceder
+	useEffect(() => {
+		(window as any).__selectedProfile = selectedProfile;
+	}, [selectedProfile]);
+
 	// Observar valores del formulario para detectar cuando se limpia
 	const fullName = useWatch({ control, name: 'fullName' })
 	const idNumber = useWatch({ control, name: 'idNumber' })

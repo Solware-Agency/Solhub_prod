@@ -164,7 +164,7 @@ export const PatientRelationshipManager = ({
 				const pacienteActualizado = await updatePatient(dependentToEdit.id, {
 					nombre: nombre.trim(),
 					edad: edadFormatted,
-					telefono: telefono || null,
+					telefono: null, // Los dependientes no tienen teléfono propio
 					email: email || null,
 					gender: gender && gender.trim() !== '' ? gender : null,
 					fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
@@ -206,25 +206,16 @@ export const PatientRelationshipManager = ({
 					cedula: null, // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
 					nombre: nombre.trim(),
 					edad: edadFormatted,
-					telefono: telefono || null,
-					email: email || null,
-					gender: gender && gender.trim() !== '' ? gender : null, // Asegurar que no se guarde cadena vacía
-					tipo_paciente: tipoDependiente,
-					fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
-					especie: tipoDependiente === 'animal' ? especie.trim() : null,
-				} as any)
+				telefono: null, // Los dependientes no tienen teléfono propio
+				email: email || null,
+				gender: gender && gender.trim() !== '' ? gender : null, // Asegurar que no se guarde cadena vacía
+				tipo_paciente: tipoDependiente,
+				fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
+				especie: tipoDependiente === 'animal' ? especie.trim() : null,
+			} as any)
 
-				// Crear relación de responsabilidad
-				await createResponsibility({
-					paciente_id_responsable: responsable.id,
-					paciente_id_dependiente: nuevoPaciente.id,
-					tipo: tipoDependiente,
-				})
-
-				// Notificar éxito
-				toast({
-					title: 'Éxito',
-					description: `${tipoDependiente === 'menor' ? 'Menor' : 'Animal'} agregado correctamente`,
+			// Crear relación de responsabilidad
+			await createResponsibility({
 				})
 
 				// Resetear formulario
@@ -283,7 +274,7 @@ export const PatientRelationshipManager = ({
 		setEdad('')
 		setEdadUnidad('Años')
 		setEspecie('')
-		setTelefono('')
+		setTelefono(responsable.telefono || '') // Siempre del responsable
 		setEmail('')
 		setGender('')
 	}
@@ -312,7 +303,8 @@ export const PatientRelationshipManager = ({
 					// Cargar datos del dependiente a editar
 					setTipoDependiente((patientData.tipo_paciente as 'menor' | 'animal') || 'menor')
 					setNombre(patientData.nombre || '')
-					setTelefono(patientData.telefono || '')
+					// Teléfono siempre del responsable
+					setTelefono(responsable.telefono || '')
 					setEmail(patientData.email || '')
 					setGender(patientData.gender || '')
 					setEspecie(patientData.especie || '')
@@ -575,19 +567,15 @@ export const PatientRelationshipManager = ({
 					{/* Última línea: Teléfono y Email */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label htmlFor="telefono">Teléfono</Label>
+							<Label htmlFor="telefono">Teléfono (del responsable)</Label>
 							<Input
 								id="telefono"
 								value={telefono}
-								onChange={(e) => {
-									const { value } = e.target
-									// Permitir números, guiones, espacios, paréntesis y el símbolo +
-									if (/^[0-9-+\s()]*$/.test(value) && value.length <= 15) {
-										setTelefono(value)
-									}
-								}}
-								placeholder="Teléfono de contacto"
+								disabled
+								readOnly
+								placeholder="Teléfono del responsable"
 								maxLength={15}
+								className="opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800"
 							/>
 						</div>
 
