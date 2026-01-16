@@ -622,6 +622,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isResidente && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/medic/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               {/* <NavItem
 								to="/medic/form"
 								icon={<FileText className="stroke-2 size-5 shrink-0" />}
@@ -657,6 +666,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isCitotecno && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/cito/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/cito/cases'
@@ -671,6 +689,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isPatologo && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/patolo/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/patolo/cases'
@@ -685,6 +712,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isImagenologia && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/imagenologia/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/imagenologia/cases'
@@ -708,6 +744,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isMedicoTratante && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/medico-tratante/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/medico-tratante/cases'
@@ -731,6 +776,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isEnfermero && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/enfermero/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/enfermero/cases'
@@ -754,6 +808,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isCallCenter && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/call-center/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/call-center/cases'
@@ -990,6 +1053,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isCallCenter && (
           <NavItem
             to='/call-center/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isImagenologia && (
+          <NavItem
+            to='/imagenologia/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
             label='Ajustes'
             showFullContent={showFullContent}

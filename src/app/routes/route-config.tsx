@@ -148,6 +148,10 @@ export const imagenologiaRoutes: RouteConfig[] = [
     feature: 'hasPatients',
     component: PatientsPage,
   },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
 ];
 
 // Configuración de rutas para citotecno
