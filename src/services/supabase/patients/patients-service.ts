@@ -334,7 +334,7 @@ export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory
 		// El sistema antiguo (patients.cedula) ya funcionó correctamente
 		// =====================================================================
 		const createdCedula = (data as any).cedula
-		const laboratoryId = (data as any).laboratory_id
+		// Usar el laboratoryId que ya tenemos (se insertó en la línea 304)
 
 		if (createdCedula && createdCedula !== 'S/C') {
 			try {
