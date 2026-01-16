@@ -9,6 +9,7 @@ import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@/services/supabase/config/config'
 import type { ChangeLog } from '@/services/legacy/supabase-service'
 import type { Patient } from '@/services/supabase/patients/patients-service'
+import { updatePatient } from '@/services/supabase/patients/patients-service'
 import { cn } from '@shared/lib/cn'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 
@@ -179,27 +180,21 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				return
 			}
 
-			// Actualizar el paciente en la nueva tabla patients
+			// Actualizar el paciente usando el servicio (incluye dual-write automático)
 			// Construir payload de update; solo incluir image_url si imagenologia
 			const updatePayload: any = {
-				cedula: newCedula,
+				cedula: formData.cedulaType === 'S/C' ? null : newCedula,
 				nombre: formData.nombre,
 				telefono: formData.telefono || null,
 				email: formData.email || null,
 				edad: formData.edad,
-				updated_at: new Date().toISOString(),
 			}
 			if (isImagenologia) {
 				updatePayload.image_url = formData.image_url || null
 			}
 
-			const { error: updateError } = await supabase
-				.from('patients')
-				.update(updatePayload)
-				.eq('id', patient.id)
-				.eq('id', patient.id)
-
-			if (updateError) throw updateError
+			// Usar updatePatient que incluye dual-write automático a identificaciones
+			await updatePatient(patient.id, updatePayload, user.id)
 
 			// Registrar los cambios en change_logs para el paciente
 			for (const change of changes) {
