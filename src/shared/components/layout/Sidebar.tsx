@@ -96,6 +96,8 @@ const NavGroup: React.FC<NavGroupProps> = ({
   const [hoverTimeout, setHoverTimeout] = React.useState<NodeJS.Timeout | null>(
     null,
   );
+  const touchStartTimeRef = React.useRef<number>(0);
+  const touchHandledRef = React.useRef<boolean>(false);
 
   // Verificar si algún item hijo está activo
   const isChildActive = childPaths.some(
@@ -129,10 +131,47 @@ const NavGroup: React.FC<NavGroupProps> = ({
     setHoverTimeout(timeout);
   };
 
+  // Función para touch (mobile)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    touchStartTimeRef.current = Date.now();
+    touchHandledRef.current = false;
+    // Prevenir que el evento se propague al overlay
+    e.stopPropagation();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    // Prevenir que el evento se propague al overlay
+    e.stopPropagation();
+    
+    const touchDuration = Date.now() - touchStartTimeRef.current;
+    
+    // Solo procesar si fue un toque rápido (menos de 300ms) y no se ha manejado ya
+    if (touchDuration < 300 && !touchHandledRef.current) {
+      e.preventDefault();
+      touchHandledRef.current = true;
+      onToggle();
+    }
+  };
+
   // Función para click (mobile y desktop)
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevenir que el evento se propague al overlay en mobile
     if (isMobile) {
-      // En mobile, solo funciona con clicks
+      e.stopPropagation();
+    }
+    
+    // En mobile, si ya se manejó el touch, ignorar el click
+    if (isMobile && touchHandledRef.current) {
+      e.preventDefault();
+      touchHandledRef.current = false; // Reset para el próximo toque
+      return;
+    }
+
+    if (isMobile) {
+      // En mobile, solo funciona con clicks si no se manejó el touch
       onToggle();
     } else {
       // En desktop, también permitir clicks para mayor flexibilidad
@@ -167,6 +206,8 @@ const NavGroup: React.FC<NavGroupProps> = ({
         }`}
         title={!showFullContent ? label : undefined}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className='flex gap-3 items-center min-w-0'>
           {icon}

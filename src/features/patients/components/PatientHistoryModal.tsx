@@ -61,6 +61,54 @@ interface PatientHistoryModalProps {
   patient: Patient | null;
 }
 
+// Helper to calculate age from fecha_nacimiento
+function calculateAgeFromFechaNacimiento(fechaNacimiento: string | null | undefined): string | null {
+  if (!fechaNacimiento) return null;
+  
+  try {
+    const fechaNac = new Date(fechaNacimiento);
+    const hoy = new Date();
+    
+    // Validar que la fecha sea válida
+    if (isNaN(fechaNac.getTime())) return null;
+    
+    // Validar que la fecha no sea en el futuro
+    if (fechaNac > hoy) return null;
+    
+    // Calcular diferencia en años y meses
+    let years = hoy.getFullYear() - fechaNac.getFullYear();
+    let months = hoy.getMonth() - fechaNac.getMonth();
+    
+    // Ajustar si el mes actual es menor que el mes de nacimiento
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // Ajustar si el día actual es menor que el día de nacimiento
+    if (months === 0 && hoy.getDate() < fechaNac.getDate()) {
+      years--;
+      months = 11;
+    }
+    
+    // Si tiene más de 1 año, mostrar en años
+    if (years >= 1) {
+      return `${years} Años`;
+    }
+    // Si tiene menos de 1 año pero más de 0 meses, mostrar en meses
+    else if (months >= 1) {
+      return `${months} Meses`;
+    }
+    // Si tiene menos de 1 mes, mostrar como "0 Meses" (recién nacido)
+    else {
+      return '0 Meses';
+    }
+  } catch (error) {
+    console.error('Error calculando edad desde fecha_nacimiento:', error);
+    return null;
+  }
+}
+
 const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   isOpen,
   onClose,
@@ -742,6 +790,28 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     • {patient.gender}
                                   </span>
                                 )}
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (patient.edad) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {patient.edad}
+                                      </span>
+                                    );
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    patient.fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {calculatedAge}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </>
                             ) : (
                               <>
@@ -751,6 +821,28 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     • {patient.gender}
                                   </span>
                                 )}
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (patient.edad) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {patient.edad}
+                                      </span>
+                                    );
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    patient.fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {calculatedAge}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </>
                             )}
                           </p>
