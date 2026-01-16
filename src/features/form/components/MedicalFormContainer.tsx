@@ -9,7 +9,7 @@ import { PatientDataSection } from './PatientDataSection';
 import { ServiceSection } from './ServiceSection';
 import { PaymentSection } from './PaymentSection';
 import { CommentsSection } from './CommentsSection';
-import { FilePlus2, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useExchangeRate } from '@shared/hooks/useExchangeRate';
 import { useResetForm } from '@shared/hooks/useResetForm';
 import {
@@ -18,7 +18,6 @@ import {
 } from '@services/supabase/cases/registration-service';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
-import { useModuleField } from '@shared/hooks/useModuleField';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
@@ -59,9 +58,6 @@ export function MedicalFormContainer() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patientSectionResetKey, setPatientSectionResetKey] = useState(0)
-
-	// Verificar configuración del módulo para médico tratante
-	const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante')
 
 	// Obtener configuración completa del módulo para pasar a registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
@@ -150,9 +146,23 @@ export function MedicalFormContainer() {
 				console.log('Datos de pagos:', data.payments)
 				console.log('Tasa de cambio:', exchangeRate)
 
+				// Normalizar datos para asegurar que todos los campos opcionales tengan valores por defecto (no undefined)
+				const normalizedData = {
+					...data,
+					examType: data.examType ?? '',
+					treatingDoctor: data.treatingDoctor ?? '',
+					origin: data.origin ?? '',
+					sampleType: data.sampleType ?? '',
+					branch: data.branch ?? '',
+					consulta: data.consulta ?? '',
+					relationship: data.relationship ?? '',
+					email: data.email ?? '',
+					numberOfSamples: data.numberOfSamples ?? 1,
+				}
+
 				// Validar datos antes del envío
 				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-				const validationErrors = validateRegistrationData(data, exchangeRate, moduleConfig, laboratory?.slug)
+				const validationErrors = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug)
 				if (validationErrors.length > 0) {
 					toast({
 						title: '❌ Error de validación',
@@ -164,7 +174,7 @@ export function MedicalFormContainer() {
 
 				// Registrar caso médico con nueva estructura
 				// Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
-				const result = await registerMedicalCase(data, exchangeRate, moduleConfig)
+				const result = await registerMedicalCase(normalizedData, exchangeRate, moduleConfig)
 
 				if (result.error) {
 					console.error('Error al guardar con nueva estructura:', result.error)
@@ -289,22 +299,6 @@ export function MedicalFormContainer() {
 		})
 	}, [form, toast])
 
-	// Memoize the new record handler to prevent unnecessary re-renders
-	const handleNewRecord = useCallback(() => {
-		form.reset(getInitialFormValues())
-		setUsdValue('')
-		setVesValue('')
-		setVesInputValue('')
-		setUsdFromVes('')
-		setIsSubmitted(false)
-		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
-		setPatientSectionResetKey((prev) => prev + 1)
-		toast({
-			title: ' Nuevo Registro',
-			description: 'Formulario listo para un nuevo registro.',
-		})
-	}, [form, toast])
-
 	// Listen for clear form events from parent components
 	useEffect(() => {
 		const handleClearFormEvent = () => {
@@ -370,16 +364,6 @@ export function MedicalFormContainer() {
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />
-						{isSubmitted ? (
-							<Button
-								type="button"
-								onClick={handleNewRecord}
-								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
-							>
-								<FilePlus2 />
-								Nuevo Registro
-							</Button>
-						) : (
 							<Button
 								type="button"
 								onClick={handleButtonClick}
@@ -395,7 +379,6 @@ export function MedicalFormContainer() {
 									'Enviar'
 								)}
 							</Button>
-						)}
 					</form>
 				</Form>
 			</div>
