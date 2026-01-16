@@ -162,13 +162,41 @@ export function MedicalFormContainer() {
 
 				// Validar datos antes del envío
 				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-				const validationErrors = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug)
-				if (validationErrors.length > 0) {
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug)
+				
+				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
+				if (Object.keys(validationResult.fieldErrors).length > 0) {
+					// Establecer errores en cada campo del formulario
+					Object.entries(validationResult.fieldErrors).forEach(([fieldName, errorMessage]) => {
+						form.setError(fieldName as keyof FormValues, {
+							type: 'manual',
+							message: errorMessage,
+						})
+					})
+					
+					// Mostrar toast con mensaje general
 					toast({
 						title: '❌ Error de validación',
-						description: validationErrors.join(', '),
+						description: validationResult.errorMessages.join(', '),
 						variant: 'destructive',
 					})
+					
+					// Scroll al primer campo con error
+					const firstErrorField = Object.keys(validationResult.fieldErrors)[0]
+					if (firstErrorField) {
+						const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+						                document.getElementById(`service-${firstErrorField}`) ||
+						                document.getElementById(`patient-${firstErrorField}`)
+						if (element) {
+							setTimeout(() => {
+								element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+								if ('focus' in element && typeof (element as any).focus === 'function') {
+									(element as any).focus()
+								}
+							}, 100)
+						}
+					}
+					
 					return
 				}
 

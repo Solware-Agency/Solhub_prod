@@ -26,12 +26,16 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 	const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples
 	const branchConfig = moduleConfig?.fields?.branch
 	const consultaConfig = moduleConfig?.fields?.consulta
+	const medicoTratanteConfig = moduleConfig?.fields?.medicoTratante
 	const isSPT = laboratorySlug?.toLowerCase() === 'spt'
 
 	// Definir schemas condicionales para cada campo
-	// Para SPT: Solo sede es obligatorio, los demás campos son opcionales
-	const examTypeSchema = examTypeConfig?.enabled && examTypeConfig?.required && !isSPT
-		? z.string().min(1, 'El tipo de examen es requerido')
+	// Para SPT: examType solo es requerido individualmente si consulta NO está habilitado
+	// Si ambos están habilitados, la validación especial de "al menos uno" se maneja en validateRegistrationData
+	const examTypeSchema = examTypeConfig?.enabled && examTypeConfig?.required
+		? (isSPT && consultaConfig?.enabled
+			? z.string().optional().or(z.literal('')) // Para SPT con ambos habilitados, opcional individualmente
+			: z.string().min(1, 'El tipo de examen es requerido')) // Requerido normalmente
 		: z.string().optional().or(z.literal(''))
 
 	const originSchema = originConfig?.enabled && originConfig?.required
@@ -75,9 +79,12 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 		? z.string().min(1, 'La sede es requerida')
 		: z.string().optional().or(z.literal(''))
 
-	// Para SPT: consulta es opcional aunque esté habilitado y marcado como requerido
-	const consultaSchema = consultaConfig?.enabled && consultaConfig?.required && !isSPT
-		? z.string().min(1, 'La consulta (especialidad médica) es requerida')
+	// Para SPT: consulta solo es requerido individualmente si examType NO está habilitado
+	// Si ambos están habilitados, la validación especial de "al menos uno" se maneja en validateRegistrationData
+	const consultaSchema = consultaConfig?.enabled && consultaConfig?.required
+		? (isSPT && examTypeConfig?.enabled
+			? z.string().optional().or(z.literal('')) // Para SPT con ambos habilitados, opcional individualmente
+			: z.string().min(1, 'La consulta (especialidad médica) es requerida')) // Requerido normalmente
 		: z.string().optional().or(z.literal(''))
 
 	// totalAmount es opcional porque se valida en validateRegistrationData
@@ -140,14 +147,22 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null, laboratoryS
 		}),
 		examType: examTypeSchema,
 		origin: originSchema,
-		treatingDoctor: z
-			.string()
-			.regex(
-				/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
-				'Médico tratante solo debe contener letras y espacios',
-			)
-			.optional()
-			.or(z.literal('')), // Opcional: solo requerido si está habilitado en la configuración del módulo
+		treatingDoctor: medicoTratanteConfig?.enabled && medicoTratanteConfig?.required
+			? z
+				.string()
+				.min(1, 'El doctor tratante es obligatorio')
+				.regex(
+					/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
+					'Médico tratante solo debe contener letras y espacios',
+				)
+			: z
+				.string()
+				.regex(
+					/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
+					'Médico tratante solo debe contener letras y espacios',
+				)
+				.optional()
+				.or(z.literal('')),
 		sampleType: sampleTypeSchema,
 		numberOfSamples: numberOfSamplesSchema,
 		relationship: z.string().optional(),

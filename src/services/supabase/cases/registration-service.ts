@@ -532,46 +532,89 @@ export const searchPatientForForm = async (cedula: string) => {
 }
 
 /**
+ * Tipo para errores de validación mapeados a campos
+ */
+export interface ValidationErrors {
+  [fieldName: string]: string; // Nombre del campo -> mensaje de error
+}
+
+/**
  * Validar datos antes del registro
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
  * @param laboratorySlug - Slug del laboratorio (opcional, para validaciones específicas por lab)
+ * @returns Objeto con errores mapeados a nombres de campos y array de mensajes para retrocompatibilidad
  */
 export const validateRegistrationData = (
   formData: FormValues,
   exchangeRate?: number,
   moduleConfig?: ModuleConfig | null,
   laboratorySlug?: string | null,
-): string[] => {
-  const errors: string[] = [];
+): { fieldErrors: ValidationErrors; errorMessages: string[] } => {
+  const fieldErrors: ValidationErrors = {};
+  const errorMessages: string[] = [];
+
+  // Debug: Log de configuración recibida
+  if (laboratorySlug?.toLowerCase() === 'spt') {
+    console.log('🔍 [SPT Validation] Configuración recibida:', {
+      examType: moduleConfig?.fields?.examType,
+      consulta: moduleConfig?.fields?.consulta,
+      formData: {
+        examType: formData.examType,
+        consulta: (formData as any).consulta,
+      },
+    });
+  }
 
   // Validaciones obligatorias (siempre requeridas)
   if (!formData.idType) {
-    errors.push('El tipo de cédula es obligatorio');
+    const errorMsg = 'El tipo de cédula es obligatorio';
+    fieldErrors.idType = errorMsg;
+    errorMessages.push(errorMsg);
   }
   if (!formData.idNumber && formData.idType !== 'S/C') {
-    errors.push('El número de cédula es obligatorio');
+    const errorMsg = 'El número de cédula es obligatorio';
+    fieldErrors.idNumber = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   if (!formData.fullName) {
-    errors.push('El nombre completo es obligatorio');
+    const errorMsg = 'El nombre completo es obligatorio';
+    fieldErrors.fullName = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   if (!formData.phone) {
-    errors.push('El teléfono es obligatorio');
+    const errorMsg = 'El teléfono es obligatorio';
+    fieldErrors.phone = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar examType solo si está habilitado y es requerido
   const examTypeConfig = moduleConfig?.fields?.examType;
+  const isSPT = laboratorySlug?.toLowerCase() === 'spt';
+  // Para SPT: examType solo es requerido individualmente si está habilitado y requerido
+  // La validación especial de "al menos uno" se maneja después
   if (examTypeConfig?.enabled && examTypeConfig?.required && !formData.examType) {
-    errors.push('El tipo de examen es obligatorio');
+    // Para SPT, solo validar individualmente si consulta NO está habilitado
+    // Si consulta está habilitado, la validación especial se encarga
+    const consultaConfig = moduleConfig?.fields?.consulta;
+    const shouldValidateIndividually = !isSPT || !consultaConfig?.enabled;
+    
+    if (shouldValidateIndividually) {
+      const errorMsg = 'El tipo de examen es obligatorio';
+      fieldErrors.examType = errorMsg;
+      errorMessages.push(errorMsg);
+    }
   }
 
   // Validar origin solo si está habilitado y es requerido
   const originConfig = moduleConfig?.fields?.procedencia;
   if (originConfig?.enabled && originConfig?.required && !formData.origin) {
-    errors.push('El origen es obligatorio');
+    const errorMsg = 'El origen es obligatorio';
+    fieldErrors.origin = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar médico tratante solo si está habilitado y es requerido
@@ -582,13 +625,17 @@ export const validateRegistrationData = (
     !formData.treatingDoctor &&
     !formData.doctorName
   ) {
-    errors.push('El doctor tratante es obligatorio');
+    const errorMsg = 'El doctor tratante es obligatorio';
+    fieldErrors.treatingDoctor = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar sampleType solo si está habilitado y es requerido
   const sampleTypeConfig = moduleConfig?.fields?.sampleType;
   if (sampleTypeConfig?.enabled && sampleTypeConfig?.required && !formData.sampleType) {
-    errors.push('El tipo de muestra es obligatorio');
+    const errorMsg = 'El tipo de muestra es obligatorio';
+    fieldErrors.sampleType = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar numberOfSamples solo si está habilitado y es requerido
@@ -598,32 +645,62 @@ export const validateRegistrationData = (
     numberOfSamplesConfig?.required &&
     (!formData.numberOfSamples || formData.numberOfSamples < 1)
   ) {
-    errors.push('El número de muestras es obligatorio');
+    const errorMsg = 'El número de muestras es obligatorio';
+    fieldErrors.numberOfSamples = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar branch solo si está habilitado y es requerido
   const branchConfig = moduleConfig?.fields?.branch;
-  if (branchConfig?.enabled && branchConfig?.required && !formData.branch && !formData.patientBranch) {
-    errors.push('La sede es obligatoria');
+  // Para SPT, branch es siempre requerido (independientemente de la configuración)
+  if ((isSPT || (branchConfig?.enabled && branchConfig?.required)) && !formData.branch && !formData.patientBranch) {
+    const errorMsg = 'La sede es obligatoria';
+    fieldErrors.branch = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
   const consultaConfig = moduleConfig?.fields?.consulta;
   const consultaValue = (formData as any).consulta; // Usar as any temporalmente hasta actualizar tipos
+  
+  // IMPORTANTE: Solo validar si el campo está HABILITADO
+  // Si está deshabilitado, no debe validarse bajo ninguna circunstancia
   if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
-    errors.push('La consulta (especialidad médica) es obligatoria');
+    // Para SPT, solo validar individualmente si examType NO está habilitado
+    // Si examType está habilitado, la validación especial se encarga
+    const shouldValidateIndividually = !isSPT || !examTypeConfig?.enabled;
+    
+    if (shouldValidateIndividually) {
+      const errorMsg = 'La consulta (especialidad médica) es obligatoria';
+      fieldErrors.consulta = errorMsg;
+      errorMessages.push(errorMsg);
+    }
+  } else if (!consultaConfig?.enabled && consultaValue) {
+    // Si el campo está deshabilitado pero tiene valor, no debería validarse
+    // Esto es solo para debug - en producción no debería pasar
+    if (isSPT) {
+      console.warn('⚠️ [SPT Validation] Campo consulta está deshabilitado pero tiene valor:', consultaValue);
+    }
   }
 
   // Validación especial para SPT: al menos uno de examType o consulta debe estar presente
   // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
   // IMPORTANTE: Esta validación solo se ejecuta en onSubmit, no durante el llenado del formulario
-  const isSPT = laboratorySlug?.toLowerCase() === 'spt';
   if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
     // Solo validar si el formulario tiene datos básicos completos (indicando que el usuario está listo para enviar)
     // Si falta información básica del paciente, no validar examType/consulta aún
     const hasBasicPatientData = formData.fullName && formData.idNumber && formData.phone;
     if (hasBasicPatientData && !formData.examType && !consultaValue) {
-      errors.push('Debe seleccionar al menos un Tipo de Examen o una Consulta');
+      const errorMsg = 'Debe seleccionar al menos un Tipo de Examen o una Consulta';
+      // Marcar ambos campos para que el usuario sepa que debe llenar al menos uno
+      // Solo marcar el campo que está habilitado
+      if (examTypeConfig?.enabled) {
+        fieldErrors.examType = errorMsg;
+      }
+      if (consultaConfig?.enabled) {
+        fieldErrors.consulta = errorMsg;
+      }
+      errorMessages.push(errorMsg);
     }
   }
 
@@ -631,7 +708,9 @@ export const validateRegistrationData = (
   const hasPayments =
     formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
   if (hasPayments && formData.totalAmount <= 0) {
-    errors.push('El monto total debe ser mayor a 0 cuando hay pagos');
+    const errorMsg = 'El monto total debe ser mayor a 0 cuando hay pagos';
+    fieldErrors.totalAmount = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
   // Validar pagos usando la función que convierte correctamente las monedas
@@ -644,11 +723,11 @@ export const validateRegistrationData = (
     );
 
     if (!paymentValidation.isValid) {
-      errors.push(
-        paymentValidation.errorMessage || 'Error en la validación de pagos',
-      );
+      const errorMsg = paymentValidation.errorMessage || 'Error en la validación de pagos';
+      fieldErrors.totalAmount = errorMsg;
+      errorMessages.push(errorMsg);
     }
   }
 
-  return errors;
+  return { fieldErrors, errorMessages };
 };

@@ -243,7 +243,7 @@ export const ServiceSection = memo(
             <FormField
               control={control}
               name='treatingDoctor'
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>
                     Médico Tratante {medicoTratanteConfig.required && '*'}
@@ -262,9 +262,10 @@ export const ServiceSection = memo(
                           field.onChange(e);
                         }
                       }}
-                      className={inputStyles}
+                      className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -279,7 +280,7 @@ export const ServiceSection = memo(
                 <FormField
                   control={control}
                   name='sampleType'
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Tipo de Muestra *</FormLabel>
                       <FormControl>
@@ -290,9 +291,10 @@ export const ServiceSection = memo(
                             <Microscope className='h-4 w-4 text-muted-foreground' />
                           }
                           {...field}
-                          className={inputStyles}
+                          className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -303,7 +305,7 @@ export const ServiceSection = memo(
                 <FormField
                   control={control}
                   name='numberOfSamples'
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Cantidad de Muestras *</FormLabel>
                       <FormControl>
@@ -316,9 +318,10 @@ export const ServiceSection = memo(
                             const value = e.target.value;
                             field.onChange(value === '' ? 0 : Number(value));
                           }}
-                          className={inputStyles}
+                          className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -427,7 +430,7 @@ export const ServiceSection = memo(
             <FormField
               control={control}
               name='consulta'
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>
                     Consulta {consultaConfig.required && '*'}
@@ -438,10 +441,11 @@ export const ServiceSection = memo(
                       value={field.value}
                       onChange={field.onChange}
                       placeholder='Seleccione una especialidad'
-                      className={inputStyles}
+                      className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
                       id='service-consulta'
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
