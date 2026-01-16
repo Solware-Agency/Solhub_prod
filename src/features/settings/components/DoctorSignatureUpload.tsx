@@ -48,7 +48,9 @@ export const DoctorSignatureUpload: React.FC = () => {
 
 	// Cargar preview de firma existente
 	useEffect(() => {
+		console.log('Profile signature_url:', profile?.signature_url)
 		if (profile?.signature_url) {
+			// Usar la URL directamente sin cache buster inicialmente
 			setPreviewUrl(profile.signature_url)
 		} else {
 			setPreviewUrl(null)
@@ -228,22 +230,79 @@ export const DoctorSignatureUpload: React.FC = () => {
 				</h2>
 
 				<div className="space-y-2">
-					{/* Información */}
-					<div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200 dark:border-blue-800">
-						<p className="text-xs text-blue-800 dark:text-blue-300">
-							Sube una imagen de tu firma en formato JPG/JPEG (máximo 10MB). Esta firma se
-							utilizará en documentos médicos.
-						</p>
-					</div>
+					{/* Información - Solo mostrar si no hay firma existente */}
+					{!profile?.signature_url && (
+						<div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200 dark:border-blue-800">
+							<p className="text-xs text-blue-800 dark:text-blue-300">
+								Sube una imagen de tu firma en formato JPG/JPEG (máximo 10MB). Esta firma se
+								utilizará en documentos médicos.
+							</p>
+						</div>
+					)}
 
 					{/* Preview de firma existente o nueva */}
 					{previewUrl && (
 						<div className="relative border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-800/50">
-							<div className="flex flex-col items-center justify-center">
+							<div className="flex flex-col items-center justify-center min-h-[100px]">
 								<img
 									src={previewUrl}
 									alt="Preview de firma"
 									className="max-w-full max-h-24 object-contain rounded"
+									crossOrigin="anonymous"
+									onError={async (e) => {
+										const img = e.currentTarget
+										const originalSrc = img.src.split('?')[0]
+										
+										// Intentar verificar el archivo directamente
+										try {
+											const response = await fetch(originalSrc, { method: 'HEAD' })
+											console.error('Error loading signature image - Response details:', {
+												url: previewUrl,
+												imgSrc: img.src,
+												originalSrc,
+												status: response.status,
+												statusText: response.statusText,
+												contentType: response.headers.get('content-type'),
+												headers: Object.fromEntries(response.headers.entries()),
+												error: e,
+												nativeError: e.nativeEvent
+											})
+											
+											// Si el archivo existe pero no se puede cargar como imagen, probablemente está corrupto
+											if (response.ok) {
+												const contentType = response.headers.get('content-type')
+												if (contentType && !contentType.startsWith('image/')) {
+													console.error('File exists but has wrong content type:', contentType)
+												}
+											}
+										} catch (fetchError) {
+											console.error('Error fetching file metadata:', fetchError)
+										}
+										
+										// Intentar recargar con cache buster solo una vez
+										if (!img.src.includes('?t=')) {
+											// Primera vez que falla, intentar con cache buster
+											setTimeout(() => {
+												img.src = `${originalSrc}?t=${Date.now()}`
+											}, 100)
+										} else {
+											// Ya intentamos con cache buster, el archivo probablemente está corrupto
+											// Ocultar la imagen y mostrar un mensaje
+											img.style.display = 'none'
+											const container = img.parentElement
+											if (container && !container.querySelector('.error-message')) {
+												const errorMsg = document.createElement('div')
+												errorMsg.className = 'error-message text-xs text-red-500 dark:text-red-400 text-center p-2'
+												errorMsg.innerHTML = '⚠️ No se pudo cargar la imagen. El archivo podría estar corrupto.<br/>Por favor, elimina y vuelve a subir la firma.'
+												container.appendChild(errorMsg)
+											}
+											console.warn('La imagen de la firma no se puede cargar después de múltiples intentos. El archivo podría estar corrupto. Se recomienda eliminar y volver a subir.')
+										}
+									}}
+									onLoad={() => {
+										console.log('Signature image loaded successfully:', previewUrl)
+										setError(null) // Limpiar error si se carga correctamente
+									}}
 								/>
 								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 									{selectedFile ? 'Vista previa de nueva firma' : 'Firma actual'}
@@ -252,63 +311,65 @@ export const DoctorSignatureUpload: React.FC = () => {
 						</div>
 					)}
 
-					{/* Input de archivo */}
-					<div>
-						<Label htmlFor="signature-file">Seleccionar archivo JPG/JPEG</Label>
-						<div className="mt-1">
-							<input
-								ref={fileInputRef}
-								id="signature-file"
-								type="file"
-								accept=".jpg,.jpeg,image/jpeg"
-								onChange={handleFileSelect}
-								className="hidden"
-								disabled={isUploading || isDeleting}
-							/>
-							{selectedFile ? (
-								<div className="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2 flex-1 min-w-0">
-											<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-											<div className="flex-1 min-w-0">
-												<p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-													{selectedFile.name}
-												</p>
-												<p className="text-xs text-blue-700 dark:text-blue-300">
-													{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-												</p>
-											</div>
-										</div>
-										<Button
-											type="button"
-											onClick={() => fileInputRef.current?.click()}
-											disabled={isUploading || isDeleting}
-											variant="outline"
-											size="sm"
-											className="ml-2 flex-shrink-0"
-										>
-											Cambiar
-										</Button>
-									</div>
-								</div>
-							) : (
-								<Button
-									type="button"
-									onClick={() => fileInputRef.current?.click()}
+					{/* Input de archivo - Solo mostrar si no hay firma existente */}
+					{!profile?.signature_url && (
+						<div>
+							<Label htmlFor="signature-file">Seleccionar archivo JPG/JPEG</Label>
+							<div className="mt-1">
+								<input
+									ref={fileInputRef}
+									id="signature-file"
+									type="file"
+									accept=".jpg,.jpeg,image/jpeg"
+									onChange={handleFileSelect}
+									className="hidden"
 									disabled={isUploading || isDeleting}
-									className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-								>
-									<Upload className="h-4 w-4" />
-									Seleccionar archivo
-								</Button>
+								/>
+								{selectedFile ? (
+									<div className="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2 flex-1 min-w-0">
+												<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+												<div className="flex-1 min-w-0">
+													<p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+														{selectedFile.name}
+													</p>
+													<p className="text-xs text-blue-700 dark:text-blue-300">
+														{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+													</p>
+												</div>
+											</div>
+											<Button
+												type="button"
+												onClick={() => fileInputRef.current?.click()}
+												disabled={isUploading || isDeleting}
+												variant="outline"
+												size="sm"
+												className="ml-2 flex-shrink-0"
+											>
+												Cambiar
+											</Button>
+										</div>
+									</div>
+								) : (
+									<Button
+										type="button"
+										onClick={() => fileInputRef.current?.click()}
+										disabled={isUploading || isDeleting}
+										className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+									>
+										<Upload className="h-4 w-4" />
+										Seleccionar archivo
+									</Button>
+								)}
+							</div>
+							{!selectedFile && (
+								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+									Formato: JPG/JPEG | Tamaño máximo: 10MB
+								</p>
 							)}
 						</div>
-						{!selectedFile && (
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-								Formato: JPG/JPEG | Tamaño máximo: 10MB
-							</p>
-						)}
-					</div>
+					)}
 
 					{/* Mensaje de error */}
 					{error && (

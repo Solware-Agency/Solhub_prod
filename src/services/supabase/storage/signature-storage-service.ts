@@ -32,11 +32,17 @@ export function validateSignatureFile(file: File): { valid: boolean; error?: str
 		}
 	}
 
-	// Validar tipo MIME
-	if (!ALLOWED_MIME_TYPES.includes(file.type.toLowerCase())) {
+	// Validar tipo MIME (algunos navegadores reportan 'image/jpg' en lugar de 'image/jpeg')
+	const normalizedMimeType = file.type.toLowerCase()
+	const isValidMimeType = 
+		normalizedMimeType === 'image/jpeg' || 
+		normalizedMimeType === 'image/jpg' ||
+		normalizedMimeType.startsWith('image/') && (fileExtension === '.jpg' || fileExtension === '.jpeg')
+	
+	if (!isValidMimeType && file.type) {
 		return {
 			valid: false,
-			error: `Tipo de archivo no permitido. Solo se aceptan imágenes JPG/JPEG`,
+			error: `Tipo de archivo no permitido. Solo se aceptan imágenes JPG/JPEG. Tipo recibido: ${file.type}`,
 		}
 	}
 
@@ -56,6 +62,14 @@ export async function uploadDoctorSignature(
 	laboratoryId: string,
 ): Promise<{ data: string | null; error: PostgrestError | Error | null }> {
 	try {
+		// Verificar que el archivo sea válido
+		if (!file || !(file instanceof File)) {
+			return {
+				data: null,
+				error: new Error('Archivo inválido: no es una instancia de File'),
+			}
+		}
+
 		// Validar archivo
 		const validation = validateSignatureFile(file)
 		if (!validation.valid) {
@@ -69,19 +83,172 @@ export async function uploadDoctorSignature(
 		const fileExtension = file.name.toLowerCase().endsWith('.jpeg') ? '.jpeg' : '.jpg'
 		const filePath = `${laboratoryId}/${userId}/signature${fileExtension}`
 
-		// Subir archivo a Supabase Storage
-		const { data: uploadData, error: uploadError } = await supabase.storage
-			.from(BUCKET_NAME)
-			.upload(filePath, file, {
-				cacheControl: '3600',
-				upsert: true, // Reemplazar si ya existe
+		// Asegurar que siempre usamos 'image/jpeg' como content type
+		// Algunos navegadores pueden reportar 'image/jpg' pero Supabase espera 'image/jpeg'
+		const contentType = 'image/jpeg'
+		
+		// Leer el archivo como ArrayBuffer para validar que sea JPEG válido
+		const arrayBuffer = await file.arrayBuffer()
+		
+		// Validar que el archivo realmente sea una imagen JPEG válida
+		// Los archivos JPEG válidos comienzan con los bytes FF D8 FF
+		const uint8Array = new Uint8Array(arrayBuffer)
+		if (uint8Array.length < 3 || uint8Array[0] !== 0xFF || uint8Array[1] !== 0xD8 || uint8Array[2] !== 0xFF) {
+			console.error('Invalid JPEG file: File does not start with JPEG magic bytes', {
+				firstBytes: Array.from(uint8Array.slice(0, 10)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+				expected: '0xFF 0xD8 0xFF'
 			})
+			return {
+				data: null,
+				error: new Error('El archivo no es una imagen JPEG válida. Por favor, verifica que el archivo no esté corrupto.'),
+			}
+		}
+		
+		// Crear un nuevo File con el tipo correcto para asegurar que se suba correctamente
+		// Esto es más confiable que usar Blob porque File preserva mejor el tipo MIME
+		const imageFile = new File([arrayBuffer], file.name, {
+			type: contentType,
+			lastModified: file.lastModified
+		})
+		
+		// Log para debugging
+		console.log('Uploading signature:', {
+			filePath,
+			fileName: file.name,
+			fileSize: file.size,
+			fileType: file.type,
+			newFileType: imageFile.type,
+			contentType,
+			userId,
+			laboratoryId,
+			firstBytes: Array.from(uint8Array.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+		})
+		
+		// Subir archivo usando la API REST directamente para tener control total sobre los headers
+		// Esto evita que el header global 'Content-Type: application/json' interfiera
+		const { data: { session } } = await supabase.auth.getSession()
+		if (!session) {
+			return {
+				data: null,
+				error: new Error('No hay sesión activa. Por favor, inicia sesión.'),
+			}
+		}
+
+		// Obtener la URL y key de Supabase desde las variables de entorno
+		const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+		const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+		const uploadUrl = `${supabaseUrl}/storage/v1/object/${BUCKET_NAME}/${filePath}`
+		
+		// Usar fetch directamente para tener control completo sobre los headers
+		// NOTA: No especificamos 'Content-Type' aquí porque el navegador lo maneja automáticamente
+		// cuando usamos File como body, y luego corregimos el mimetype en la BD después
+		const uploadResponse = await fetch(uploadUrl, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${session.access_token}`,
+				'apikey': supabaseKey || '',
+				// NO especificar Content-Type aquí - el navegador lo maneja automáticamente
+				'x-upsert': 'true', // Permitir sobrescribir si existe
+				'cache-control': '3600',
+			},
+			body: imageFile, // Enviar el File directamente (el navegador establecerá el Content-Type correcto)
+		})
+
+		let uploadData = null
+		let uploadError = null
+
+		if (!uploadResponse.ok) {
+			const errorText = await uploadResponse.text()
+			try {
+				const errorJson = JSON.parse(errorText)
+				uploadError = {
+					message: errorJson.message || errorJson.error || 'Error al subir el archivo',
+					statusCode: uploadResponse.status,
+					error: errorJson,
+				}
+			} catch {
+				uploadError = {
+					message: errorText || 'Error al subir el archivo',
+					statusCode: uploadResponse.status,
+					error: errorText,
+				}
+			}
+		} else {
+			try {
+				const responseData = await uploadResponse.json()
+				uploadData = responseData
+			} catch {
+				// Si no hay JSON en la respuesta, crear un objeto de éxito
+				uploadData = { path: filePath }
+			}
+		}
+
+		// Si el upload fue exitoso, asegurar que el mimetype sea correcto en la BD
+		// Esto es un workaround para cuando Supabase detecta incorrectamente el tipo
+		if (uploadData && !uploadError) {
+			// Esperar un momento para que el archivo se procese completamente
+			await new Promise(resolve => setTimeout(resolve, 500))
+			
+			try {
+				// Primero, verificar el mimetype actual
+				const { data: fileInfo, error: infoError } = await supabase.storage
+					.from(BUCKET_NAME)
+					.list(filePath.split('/').slice(0, -1).join('/'), {
+						limit: 1,
+						search: filePath.split('/').pop()
+					})
+				
+				// Forzar la actualización del mimetype usando la función RPC
+				const { error: fixError } = await supabase.rpc('fix_signature_mimetype', {
+					file_path: filePath,
+					correct_mimetype: contentType
+				})
+				
+				if (fixError) {
+					console.warn('Warning: Could not fix file mimetype (non-critical):', fixError)
+				} else {
+					console.log('File mimetype corrected successfully')
+					
+					// Verificar que se corrigió correctamente
+					await new Promise(resolve => setTimeout(resolve, 200))
+					const { data: verifyInfo } = await supabase.storage
+						.from(BUCKET_NAME)
+						.list(filePath.split('/').slice(0, -1).join('/'), {
+							limit: 1,
+							search: filePath.split('/').pop()
+						})
+					
+					if (verifyInfo && verifyInfo.length > 0) {
+						console.log('Verified file metadata:', verifyInfo[0])
+					}
+				}
+			} catch (fixErr) {
+				console.warn('Warning: Error fixing file mimetype (non-critical):', fixErr)
+			}
+		}
 
 		if (uploadError) {
 			console.error('Error uploading signature:', uploadError)
+			console.error('Error details:', {
+				message: uploadError.message,
+				statusCode: uploadError.statusCode,
+				error: uploadError,
+				fullError: JSON.stringify(uploadError, null, 2),
+			})
+			
+			// Mejorar el mensaje de error para debugging
+			let errorMessage = 'Error desconocido al subir la firma'
+			if (uploadError.message) {
+				errorMessage = uploadError.message
+			} else if (typeof uploadError === 'string') {
+				errorMessage = uploadError
+			} else if (uploadError.error) {
+				errorMessage = uploadError.error
+			}
+			
 			return {
 				data: null,
-				error: uploadError,
+				error: new Error(`Error al subir la firma: ${errorMessage}`),
 			}
 		}
 
