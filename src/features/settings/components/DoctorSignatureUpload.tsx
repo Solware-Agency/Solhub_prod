@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
-import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
@@ -408,62 +407,51 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 			{/* Input de archivo - Solo mostrar si no hay firma existente */}
 			{!currentSignatureUrl && (
 				<div>
-					<Label htmlFor={`signature-file-${signatureNumber}`}>
-						Seleccionar archivo JPG/JPEG
-					</Label>
-					<div className="mt-1">
-						<input
-							ref={fileInputRef}
-							id={`signature-file-${signatureNumber}`}
-							type="file"
-							accept=".jpg,.jpeg,image/jpeg"
-							onChange={handleFileSelect}
-							className="hidden"
-							disabled={isUploading || isDeleting}
-						/>
-						{selectedFile ? (
-							<div className="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-2 flex-1 min-w-0">
-										<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-										<div className="flex-1 min-w-0">
-											<p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-												{selectedFile.name}
-											</p>
-											<p className="text-xs text-blue-700 dark:text-blue-300">
-												{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-											</p>
-										</div>
+					<input
+						ref={fileInputRef}
+						id={`signature-file-${signatureNumber}`}
+						type="file"
+						accept=".jpg,.jpeg,image/jpeg"
+						onChange={handleFileSelect}
+						className="hidden"
+						disabled={isUploading || isDeleting}
+					/>
+					{selectedFile ? (
+						<div className="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2 flex-1 min-w-0">
+									<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+											{selectedFile.name}
+										</p>
+										<p className="text-xs text-blue-700 dark:text-blue-300">
+											{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+										</p>
 									</div>
-									<Button
-										type="button"
-										onClick={() => fileInputRef.current?.click()}
-										disabled={isUploading || isDeleting}
-										variant="outline"
-										size="sm"
-										className="ml-2 flex-shrink-0"
-									>
-										Cambiar
-									</Button>
 								</div>
+								<Button
+									type="button"
+									onClick={() => fileInputRef.current?.click()}
+									disabled={isUploading || isDeleting}
+									variant="outline"
+									size="sm"
+									className="ml-2 flex-shrink-0"
+								>
+									Cambiar
+								</Button>
 							</div>
-						) : (
-							<Button
-								type="button"
-								onClick={() => fileInputRef.current?.click()}
-								disabled={isUploading || isDeleting}
-								className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-							>
-								<Upload className="h-4 w-4 mr-2" />
-								Seleccionar archivo
-							</Button>
-						)}
-					</div>
-					{/* Solo mostrar el mensaje de formato para la firma Principal */}
-					{!selectedFile && isRequired && (
-						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-							Formato: JPG/JPEG | Tamaño máximo: 10MB
-						</p>
+						</div>
+					) : (
+						<Button
+							type="button"
+							onClick={() => fileInputRef.current?.click()}
+							disabled={isUploading || isDeleting}
+							className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+						>
+							<Upload className="h-4 w-4 mr-2" />
+							Seleccionar archivo
+						</Button>
 					)}
 				</div>
 			)}
