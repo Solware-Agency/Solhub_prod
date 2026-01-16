@@ -5,7 +5,6 @@ import {
   Search,
   Maximize2,
   Download,
-  MailCheck,
 } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
@@ -22,19 +21,13 @@ import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmatio
 import RequestCaseModal from './RequestCaseModal';
 import UnifiedCaseModal from './UnifiedCaseModal';
 import HorizontalLinearStepper from './StepsCaseModal';
-import CaseActionsPopover from './CaseActionsPopover';
 import CaseCard from './CaseCard';
 import TriajeModal from './TriajeModal';
 import Pagination from './Pagination';
 import FiltersModal from './FiltersModal';
 import ActiveFiltersDisplay from './ActiveFiltersDisplay';
-import { getStatusColor } from './status';
-import { BranchBadge } from '@shared/components/ui/branch-badge';
-// import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
-import { formatCurrency } from '@shared/utils/number-utils';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
-import { formatDateFromISO } from '@shared/utils/date-utils';
 
 interface CasesTableProps {
   cases: UnifiedMedicalRecord[];
