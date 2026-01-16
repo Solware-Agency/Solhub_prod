@@ -54,12 +54,14 @@ export function validateSignatureFile(file: File): { valid: boolean; error?: str
  * @param userId - ID del usuario médico
  * @param file - Archivo de imagen JPG/JPEG
  * @param laboratoryId - ID del laboratorio (para organización multi-tenant)
+ * @param signatureNumber - Número de firma (1 = principal, 2 = adicional 1, 3 = adicional 2). Por defecto 1 para compatibilidad.
  * @returns URL pública de la imagen subida
  */
 export async function uploadDoctorSignature(
 	userId: string,
 	file: File,
 	laboratoryId: string,
+	signatureNumber: number = 1,
 ): Promise<{ data: string | null; error: PostgrestError | Error | null }> {
 	try {
 		// Verificar que el archivo sea válido
@@ -79,9 +81,20 @@ export async function uploadDoctorSignature(
 			}
 		}
 
-		// Generar path único: {laboratory_id}/{user_id}/signature.jpg
+		// Validar número de firma
+		if (signatureNumber < 1 || signatureNumber > 3) {
+			return {
+				data: null,
+				error: new Error('Número de firma inválido. Debe ser 1, 2 o 3'),
+			}
+		}
+
+		// Generar path único: {laboratory_id}/{user_id}/signature.jpg o signature_2.jpg o signature_3.jpg
 		const fileExtension = file.name.toLowerCase().endsWith('.jpeg') ? '.jpeg' : '.jpg'
-		const filePath = `${laboratoryId}/${userId}/signature${fileExtension}`
+		const signatureFileName = signatureNumber === 1 
+			? `signature${fileExtension}` 
+			: `signature_${signatureNumber}${fileExtension}`
+		const filePath = `${laboratoryId}/${userId}/${signatureFileName}`
 
 		// Asegurar que siempre usamos 'image/jpeg' como content type
 		// Algunos navegadores pueden reportar 'image/jpg' pero Supabase espera 'image/jpeg'
@@ -280,15 +293,18 @@ export async function uploadDoctorSignature(
  * @param userId - ID del usuario médico
  * @param signatureUrl - URL de la firma a eliminar
  * @param laboratoryId - ID del laboratorio
+ * @param signatureNumber - Número de firma (1 = principal, 2 = adicional 1, 3 = adicional 2). Opcional, se puede inferir de la URL.
  */
 export async function deleteDoctorSignature(
 	userId: string,
 	signatureUrl: string,
 	laboratoryId: string,
+	signatureNumber?: number,
 ): Promise<{ error: PostgrestError | Error | null }> {
 	try {
 		// Extraer el path del archivo desde la URL
 		// Formato esperado: https://[project].supabase.co/storage/v1/object/public/doctor-signatures/{laboratory_id}/{user_id}/signature.jpg
+		// o signature_2.jpg o signature_3.jpg
 		const urlParts = signatureUrl.split('/')
 		const bucketIndex = urlParts.findIndex((part) => part === BUCKET_NAME)
 		
@@ -298,8 +314,21 @@ export async function deleteDoctorSignature(
 			}
 		}
 
-		// Reconstruir el path: {laboratory_id}/{user_id}/signature.jpg
+		// Reconstruir el path: {laboratory_id}/{user_id}/signature.jpg o signature_2.jpg o signature_3.jpg
 		const filePath = urlParts.slice(bucketIndex + 1).join('/')
+		
+		// Si se proporciona signatureNumber, validar que coincida con el path
+		if (signatureNumber !== undefined) {
+			if (signatureNumber < 1 || signatureNumber > 3) {
+				return {
+					error: new Error('Número de firma inválido. Debe ser 1, 2 o 3'),
+				}
+			}
+			const expectedFileName = signatureNumber === 1 ? 'signature' : `signature_${signatureNumber}`
+			if (!filePath.includes(expectedFileName)) {
+				console.warn(`Advertencia: El número de firma (${signatureNumber}) no coincide con el path del archivo (${filePath})`)
+			}
+		}
 
 		// Eliminar archivo de Supabase Storage
 		const { error: deleteError } = await supabase.storage

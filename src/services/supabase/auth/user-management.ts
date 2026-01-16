@@ -14,6 +14,8 @@ export interface UserProfile {
 	phone?: string | number | null
 	laboratory_id?: string | null
 	signature_url?: string | null
+	signature_url_2?: string | null
+	signature_url_3?: string | null
 }
 
 /* ------------------------------------------------------------------
@@ -500,18 +502,47 @@ export const updateUserToAdmin = async (
 }
 
 /**
+ * Helper para obtener el nombre del campo de firma según el número
+ */
+function getSignatureFieldName(signatureNumber: number): 'signature_url' | 'signature_url_2' | 'signature_url_3' {
+	switch (signatureNumber) {
+		case 1:
+			return 'signature_url'
+		case 2:
+			return 'signature_url_2'
+		case 3:
+			return 'signature_url_3'
+		default:
+			throw new Error(`Número de firma inválido: ${signatureNumber}. Debe ser 1, 2 o 3`)
+	}
+}
+
+/**
  * Actualiza la URL de la firma del médico en el perfil
  * Solo para roles médicos en laboratorio SPT
+ * @param userId - ID del usuario médico
+ * @param signatureUrl - URL de la firma (o null para eliminar)
+ * @param signatureNumber - Número de firma (1 = principal, 2 = adicional 1, 3 = adicional 2). Por defecto 1 para compatibilidad.
  */
 export const updateDoctorSignature = async (
 	userId: string,
 	signatureUrl: string | null,
+	signatureNumber: number = 1,
 ): Promise<{
 	data: UserProfile | null
 	error: PostgrestError | Error | null
 }> => {
 	try {
-		console.log(`Updating doctor signature for user ${userId}`)
+		// Validar número de firma
+		if (signatureNumber < 1 || signatureNumber > 3) {
+			return {
+				data: null,
+				error: new Error('Número de firma inválido. Debe ser 1, 2 o 3'),
+			}
+		}
+
+		const fieldName = getSignatureFieldName(signatureNumber)
+		console.log(`Updating doctor signature ${signatureNumber} (${fieldName}) for user ${userId}`)
 
 		// 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
 		const {
@@ -532,12 +563,15 @@ export const updateDoctorSignature = async (
 		}
 
 		// 🔐 MULTI-TENANT: Validar laboratory_id antes de actualizar
+		// Construir el objeto de actualización dinámicamente
+		const updateData: Record<string, string | null> = {
+			[fieldName]: signatureUrl,
+			updated_at: new Date().toISOString(),
+		}
+
 		const { data, error } = await supabase
 			.from('profiles')
-			.update({
-				signature_url: signatureUrl,
-				updated_at: new Date().toISOString(),
-			})
+			.update(updateData)
 			.eq('id', userId)
 			.eq('laboratory_id', profile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
 			.select()
@@ -554,7 +588,7 @@ export const updateDoctorSignature = async (
 			return { data: null, error: noProfileError }
 		}
 
-		console.log('Doctor signature updated successfully:', data[0])
+		console.log(`Doctor signature ${signatureNumber} updated successfully:`, data[0])
 		return { data: data[0] as UserProfile, error: null }
 	} catch (error) {
 		console.error('Unexpected error updating doctor signature:', error)
