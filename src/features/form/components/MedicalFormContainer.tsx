@@ -168,6 +168,7 @@ export function MedicalFormContainer() {
 							type: 'manual',
 							message: errorMessage,
 						})
+
 					})
 					
 					// Mostrar toast con mensaje general
