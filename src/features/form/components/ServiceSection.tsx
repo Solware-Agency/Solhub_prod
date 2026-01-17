@@ -154,29 +154,27 @@ export const ServiceSection = memo(
           <CardTitle className='text-base sm:text-lg'>Servicio</CardTitle>
         </CardHeader>
         <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap gap-2 sm:gap-3'>
-          {/* Tipo de Examen - Usa config.examTypes del laboratorio */}
-          {examTypeConfig?.enabled && (
-            <FormField
-              control={control}
-              name='examType'
-              render={({ field, fieldState }) => (
-                <FormItem className='min-w-[180px] flex-1'>
-                  <FormLabel>Tipo de Examen{!isSPT && ' *'}</FormLabel>
-                  <FormControl>
-                    <FormDropdown
-                      options={examTypesOptions}
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder='Seleccione una opción'
-                      className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-                      id='service-exam-type'
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          {/* Tipo de Examen - SIEMPRE obligatorio (se usa para generar el código del caso) */}
+          <FormField
+            control={control}
+            name='examType'
+            render={({ field, fieldState }) => (
+              <FormItem className='min-w-[180px] flex-1'>
+                <FormLabel>Tipo de Examen *</FormLabel>
+                <FormControl>
+                  <FormDropdown
+                    options={examTypesOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder='Seleccione una opción'
+                    className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+                    id='service-exam-type'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           {/* Procedencia - CON AUTOCOMPLETADO */}
           {procedenciaConfig?.enabled && (
             <FormField

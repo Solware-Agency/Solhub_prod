@@ -19,7 +19,6 @@ import {
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
-import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -62,13 +61,10 @@ export function MedicalFormContainer() {
 	// Obtener configuración completa del módulo para pasar a registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
 
-	// Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
-	const { laboratory } = useLaboratory()
-
 	// Crear schema dinámico basado en la configuración del módulo
 	const dynamicFormSchema = useMemo(() => {
-		return createFormSchema(moduleConfig, laboratory?.slug)
-	}, [moduleConfig, laboratory?.slug])
+		return createFormSchema(moduleConfig)
+	}, [moduleConfig])
 
 	// Crear resolver dinámico que se actualiza cuando cambia el schema
 	const dynamicResolver = useMemo(() => {
@@ -161,8 +157,8 @@ export function MedicalFormContainer() {
 				}
 
 				// Validar datos antes del envío
-				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug)
+				// Pasar configuración completa del módulo para validación
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig)
 				
 				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
 				if (Object.keys(validationResult.fieldErrors).length > 0) {
@@ -275,7 +271,7 @@ export function MedicalFormContainer() {
 				// Otros errores de validación
 				toast({
 					title: '❌ Error de validación',
-					description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
+					description: 'Por favor, los campos en rojo son obligatorios.',
 					variant: 'destructive',
 				})
 			}

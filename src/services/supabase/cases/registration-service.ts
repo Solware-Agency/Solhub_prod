@@ -154,15 +154,16 @@ export const registerMedicalCase = async (
 		const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null
 
 		// Obtener el slug del laboratorio actual
+		// Nota: Usamos 'as never' porque 'laboratories' no está en los tipos generados de Supabase
 		let laboratorySlug: string | null = null
 		if (profileWithLab?.laboratory_id) {
-			const { data: labData } = await supabase
+			const { data: labData } = await (supabase as any)
 				.from('laboratories')
 				.select('slug')
 				.eq('id', profileWithLab.laboratory_id)
 				.single()
 			
-			laboratorySlug = labData?.slug || null
+			laboratorySlug = (labData as { slug?: string } | null)?.slug || null
 		}
 
 		// Preparar datos del paciente y del caso
@@ -540,34 +541,27 @@ export interface ValidationErrors {
 
 /**
  * Validar datos antes del registro
+ * 
+ * NOTA: La mayoría de las validaciones de campos se hacen en Zod (form-schema.ts)
+ * Esta función solo valida lógica de negocio compleja que no se puede hacer en Zod:
+ * - Validación de pagos y conversión de monedas
+ * - Validaciones que requieren datos externos
+ * 
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
- * @param laboratorySlug - Slug del laboratorio (opcional, para validaciones específicas por lab)
  * @returns Objeto con errores mapeados a nombres de campos y array de mensajes para retrocompatibilidad
  */
 export const validateRegistrationData = (
   formData: FormValues,
   exchangeRate?: number,
   moduleConfig?: ModuleConfig | null,
-  laboratorySlug?: string | null,
 ): { fieldErrors: ValidationErrors; errorMessages: string[] } => {
   const fieldErrors: ValidationErrors = {};
   const errorMessages: string[] = [];
 
-  // Debug: Log de configuración recibida
-  if (laboratorySlug?.toLowerCase() === 'spt') {
-    console.log('🔍 [SPT Validation] Configuración recibida:', {
-      examType: moduleConfig?.fields?.examType,
-      consulta: moduleConfig?.fields?.consulta,
-      formData: {
-        examType: formData.examType,
-        consulta: (formData as any).consulta,
-      },
-    });
-  }
-
-  // Validaciones obligatorias (siempre requeridas)
+  // Validaciones obligatorias básicas (siempre requeridas)
+  // NOTA: Estas también están en Zod, pero las mantenemos aquí como validación de seguridad
   if (!formData.idType) {
     const errorMsg = 'El tipo de cédula es obligatorio';
     fieldErrors.idType = errorMsg;
@@ -591,25 +585,31 @@ export const validateRegistrationData = (
     errorMessages.push(errorMsg);
   }
 
-  // Validar examType solo si está habilitado y es requerido
-  const examTypeConfig = moduleConfig?.fields?.examType;
-  const isSPT = laboratorySlug?.toLowerCase() === 'spt';
-  // Para SPT: examType solo es requerido individualmente si está habilitado y requerido
-  // La validación especial de "al menos uno" se maneja después
-  if (examTypeConfig?.enabled && examTypeConfig?.required && !formData.examType) {
-    // Para SPT, solo validar individualmente si consulta NO está habilitado
-    // Si consulta está habilitado, la validación especial se encarga
-    const consultaConfig = moduleConfig?.fields?.consulta;
-    const shouldValidateIndividually = !isSPT || !consultaConfig?.enabled;
-    
-    if (shouldValidateIndividually) {
-      const errorMsg = 'El tipo de examen es obligatorio';
-      fieldErrors.examType = errorMsg;
-      errorMessages.push(errorMsg);
-    }
+  // Validar examType: SIEMPRE obligatorio (se usa para generar código)
+  if (!formData.examType) {
+    const errorMsg = 'El tipo de examen es obligatorio';
+    fieldErrors.examType = errorMsg;
+    errorMessages.push(errorMsg);
   }
 
-  // Validar origin solo si está habilitado y es requerido
+  // Validar branch: SIEMPRE obligatorio
+  if (!formData.branch && !formData.patientBranch) {
+    const errorMsg = 'La sede es obligatoria';
+    fieldErrors.branch = errorMsg;
+    errorMessages.push(errorMsg);
+  }
+
+  // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
+  const consultaConfig = moduleConfig?.fields?.consulta;
+  const consultaValue = (formData as any).consulta;
+  
+  if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
+    const errorMsg = 'La consulta (especialidad médica) es obligatoria';
+    fieldErrors.consulta = errorMsg;
+    errorMessages.push(errorMsg);
+  }
+
+  // Validar otros campos según configuración (solo si están habilitados y son requeridos)
   const originConfig = moduleConfig?.fields?.procedencia;
   if (originConfig?.enabled && originConfig?.required && !formData.origin) {
     const errorMsg = 'El origen es obligatorio';
@@ -617,7 +617,6 @@ export const validateRegistrationData = (
     errorMessages.push(errorMsg);
   }
 
-  // Validar médico tratante solo si está habilitado y es requerido
   const doctorConfig = moduleConfig?.fields?.medicoTratante;
   if (
     doctorConfig?.enabled &&
@@ -625,12 +624,11 @@ export const validateRegistrationData = (
     !formData.treatingDoctor &&
     !formData.doctorName
   ) {
-    const errorMsg = 'El doctor tratante es obligatorio';
+    const errorMsg = 'El doctor tratante es requerido';
     fieldErrors.treatingDoctor = errorMsg;
     errorMessages.push(errorMsg);
   }
 
-  // Validar sampleType solo si está habilitado y es requerido
   const sampleTypeConfig = moduleConfig?.fields?.sampleType;
   if (sampleTypeConfig?.enabled && sampleTypeConfig?.required && !formData.sampleType) {
     const errorMsg = 'El tipo de muestra es obligatorio';
@@ -638,7 +636,6 @@ export const validateRegistrationData = (
     errorMessages.push(errorMsg);
   }
 
-  // Validar numberOfSamples solo si está habilitado y es requerido
   const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples;
   if (
     numberOfSamplesConfig?.enabled &&
@@ -650,61 +647,7 @@ export const validateRegistrationData = (
     errorMessages.push(errorMsg);
   }
 
-  // Validar branch solo si está habilitado y es requerido
-  const branchConfig = moduleConfig?.fields?.branch;
-  // Para SPT, branch es siempre requerido (independientemente de la configuración)
-  if ((isSPT || (branchConfig?.enabled && branchConfig?.required)) && !formData.branch && !formData.patientBranch) {
-    const errorMsg = 'La sede es obligatoria';
-    fieldErrors.branch = errorMsg;
-    errorMessages.push(errorMsg);
-  }
-
-  // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
-  const consultaConfig = moduleConfig?.fields?.consulta;
-  const consultaValue = (formData as any).consulta; // Usar as any temporalmente hasta actualizar tipos
-  
-  // IMPORTANTE: Solo validar si el campo está HABILITADO
-  // Si está deshabilitado, no debe validarse bajo ninguna circunstancia
-  if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
-    // Para SPT, solo validar individualmente si examType NO está habilitado
-    // Si examType está habilitado, la validación especial se encarga
-    const shouldValidateIndividually = !isSPT || !examTypeConfig?.enabled;
-    
-    if (shouldValidateIndividually) {
-      const errorMsg = 'La consulta (especialidad médica) es obligatoria';
-      fieldErrors.consulta = errorMsg;
-      errorMessages.push(errorMsg);
-    }
-  } else if (!consultaConfig?.enabled && consultaValue) {
-    // Si el campo está deshabilitado pero tiene valor, no debería validarse
-    // Esto es solo para debug - en producción no debería pasar
-    if (isSPT) {
-      console.warn('⚠️ [SPT Validation] Campo consulta está deshabilitado pero tiene valor:', consultaValue);
-    }
-  }
-
-  // Validación especial para SPT: al menos uno de examType o consulta debe estar presente
-  // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
-  // IMPORTANTE: Esta validación solo se ejecuta en onSubmit, no durante el llenado del formulario
-  if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
-    // Solo validar si el formulario tiene datos básicos completos (indicando que el usuario está listo para enviar)
-    // Si falta información básica del paciente, no validar examType/consulta aún
-    const hasBasicPatientData = formData.fullName && formData.idNumber && formData.phone;
-    if (hasBasicPatientData && !formData.examType && !consultaValue) {
-      const errorMsg = 'Debe seleccionar al menos un Tipo de Examen o una Consulta';
-      // Marcar ambos campos para que el usuario sepa que debe llenar al menos uno
-      // Solo marcar el campo que está habilitado
-      if (examTypeConfig?.enabled) {
-        fieldErrors.examType = errorMsg;
-      }
-      if (consultaConfig?.enabled) {
-        fieldErrors.consulta = errorMsg;
-      }
-      errorMessages.push(errorMsg);
-    }
-  }
-
-  // Solo validar totalAmount si hay pagos (labs con módulo de pagos)
+  // Validaciones complejas de negocio (pagos y conversión de monedas)
   const hasPayments =
     formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
   if (hasPayments && formData.totalAmount <= 0) {
@@ -715,7 +658,6 @@ export const validateRegistrationData = (
 
   // Validar pagos usando la función que convierte correctamente las monedas
   if (hasPayments) {
-    // Validar que los pagos no excedan el monto total (con conversión de monedas)
     const paymentValidation = validateFormPayments(
       formData.payments || [],
       formData.totalAmount,
