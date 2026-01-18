@@ -43,6 +43,7 @@ export interface ChangeLogJoined {
 	changed_at: string
 	created_at: string | null
 	deleted_record_info?: string | null
+	change_session_id?: string | null // ID para agrupar cambios de la misma sesión
 	medical_records_clean?: {
 		id: string | null
 		code: string | null
@@ -633,6 +634,12 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
           created_at: (log['created_at'] as string | null) ?? null,
           deleted_record_info:
             (log['deleted_record_info'] as string | null) ?? null,
+          change_session_id:
+            (log['change_session_id'] as string | null) ?? null,
+          // Debug: verificar que change_session_id se está recuperando
+          // ...(process.env.NODE_ENV === 'development' && {
+          //   _debug_change_session_id: log['change_session_id'],
+          // }),
           medical_records_clean:
             (log['medical_records_clean'] as
               | {

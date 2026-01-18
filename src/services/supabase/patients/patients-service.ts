@@ -11,6 +11,7 @@ import {
 	updateIdentification,
 	getIdentificacionesByPatient,
 } from './identificaciones-service'
+import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils'
 
 // =====================================================================
 // CLASE DE ERROR CON CÓDIGOS
@@ -530,6 +531,9 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 
 /**
  * Registrar cambios de paciente en change_logs
+ * 
+ * IMPORTANTE: Esta función se ejecuta dentro de la misma promesa del update
+ * para mitigar fallos parciales (si el update falla, el log no se registra)
  */
 const logPatientChanges = async (patientId: string, oldData: Patient, newData: PatientUpdate, userId: string) => {
 	try {
@@ -539,6 +543,11 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 
 		const userEmail = profile?.email || user.user?.email || 'unknown'
 		const userDisplayName = profile?.display_name || 'Usuario'
+
+		// Generar session_id único para esta sesión de edición (por submit, no por modal)
+		// Esto agrupa todos los cambios del mismo submit en una sola sesión
+		const changeSessionId = generateChangeSessionId()
+		const changedAt = new Date().toISOString()
 
 		// Crear logs para cada campo que cambió
 		const changes = []
@@ -553,23 +562,26 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 			gender: 'Género',
 		}
 
-		// Detectar cambios
+		// Detectar cambios con normalización (evita falsos positivos)
 		for (const [field, newValue] of Object.entries(newData)) {
 			if (field === 'updated_at' || field === 'version') continue
 
 			const oldValue = oldData[field as keyof Patient]
 
-			if (oldValue !== newValue) {
+			// Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
+			if (hasRealChange(oldValue, newValue)) {
 				changes.push({
 					patient_id: patientId,
 					entity_type: 'patient',
 					field_name: field,
 					field_label: fieldLabels[field] || field,
-					old_value: String(oldValue || ''),
-					new_value: String(newValue || ''),
+					old_value: formatValueForLog(oldValue),
+					new_value: formatValueForLog(newValue),
 					user_id: userId,
 					user_email: userEmail,
 					user_display_name: userDisplayName,
+					change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
+					changed_at: changedAt, // Mismo timestamp para todos
 				})
 			}
 		}
@@ -580,12 +592,14 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 
 			if (error) {
 				console.error('Error registrando cambios del paciente:', error)
+				// No lanzar error para no romper el flujo del update
 			} else {
-				console.log(`✅ ${changes.length} cambios registrados para el paciente`)
+				console.log(`✅ ${changes.length} cambios registrados para el paciente (session: ${changeSessionId})`)
 			}
 		}
 	} catch (error) {
 		console.error('Error en logPatientChanges:', error)
+		// No lanzar error para no romper el flujo del update
 	}
 }
 

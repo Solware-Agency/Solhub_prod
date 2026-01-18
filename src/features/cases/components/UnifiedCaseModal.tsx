@@ -971,29 +971,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               'No se puede actualizar el paciente: patient_id no está disponible',
             );
           }
+          // updatePatient ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updatePatient(currentCase.patient_id, patientChanges, user.id);
-
-          // Registrar cambios en logs para el paciente
-          for (const change of patientChangeLogs) {
-            const changeLog = {
-              patient_id: currentCase.patient_id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'patient',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging patient change:', logError);
-          }
 
           toast({
             title: '✅ Datos del paciente actualizados',
@@ -1005,28 +985,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos del caso si hay cambios
         if (Object.keys(caseChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, caseChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of caseChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError) console.error('Error logging case change:', logError);
-          }
 
           toast({
             title: '✅ Caso actualizado exitosamente',
@@ -1039,29 +1000,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos financieros si hay cambios
         if (Object.keys(financialChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, financialChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of financialChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging financial change:', logError);
-          }
 
           toast({
             title: '✅ Información financiera actualizada',

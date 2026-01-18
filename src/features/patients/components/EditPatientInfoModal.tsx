@@ -194,27 +194,8 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 			}
 
 			// Usar updatePatient que incluye dual-write automático a identificaciones
+			// y registro automático de cambios en change_logs (con agrupación por session_id)
 			await updatePatient(patient.id, updatePayload, user.id)
-
-			// Registrar los cambios en change_logs para el paciente
-			for (const change of changes) {
-				const changeLog: ChangeLog = {
-					patient_id: patient.id,
-					entity_type: 'patient',
-					user_id: user.id,
-					user_email: user.email || 'unknown@email.com',
-					user_display_name: user.user_metadata?.display_name || null,
-					field_name: change.field,
-					field_label: change.fieldLabel,
-					old_value: change.oldValue || null,
-					new_value: change.newValue || null,
-					changed_at: new Date().toISOString(),
-				}
-
-				const { error: logError } = await supabase.from('change_logs').insert(changeLog)
-
-				if (logError) throw logError
-			}
 
 			toast({
 				description: 'Datos del paciente actualizados exitosamente.',
