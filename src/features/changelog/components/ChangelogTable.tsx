@@ -60,23 +60,87 @@ const ChangelogTable: React.FC = () => {
 
 	// Realtime subscription for change logs
 	useEffect(() => {
-		const channel = supabase
-			.channel('realtime-changelog')
-			.on(
-				'postgres_changes',
-				{
-					event: '*', // INSERT | UPDATE | DELETE
-					schema: 'public',
-					table: 'change_logs',
-				},
-				() => {
-					queryClient.invalidateQueries({ queryKey: ['change-logs'] }) // tanstack refetch
-				},
-			)
-			.subscribe()
+		let channel: ReturnType<typeof supabase.channel> | null = null
+
+		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
+		const timeoutId = setTimeout(async () => {
+			try {
+				// Obtener laboratory_id del usuario para filtrar cambios
+				const {
+					data: { user },
+				} = await supabase.auth.getUser()
+				if (!user) {
+					console.warn('⚠️ [ChangelogTable] Usuario no autenticado, omitiendo suscripción realtime')
+					return
+				}
+
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('laboratory_id')
+					.eq('id', user.id)
+					.single()
+
+				if (!profile?.laboratory_id) {
+					console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
+					return
+				}
+
+				console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
+
+				channel = supabase
+					.channel('realtime-changelog', {
+						config: {
+							broadcast: { self: true },
+						},
+					})
+					.on(
+						'postgres_changes',
+						{
+							event: '*', // INSERT | UPDATE | DELETE
+							schema: 'public',
+							table: 'change_logs',
+							filter: `laboratory_id=eq.${profile.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
+						},
+						(payload) => {
+							console.log('🔄 [ChangelogTable] Cambio detectado en change_logs:', {
+								event: payload.eventType,
+								table: payload.table,
+								new: payload.new,
+								old: payload.old,
+							})
+
+							// Invalidar queries para forzar refetch
+							queryClient.invalidateQueries({
+								queryKey: ['change-logs'],
+								exact: false, // Invalidar todas las variaciones (diferentes páginas)
+							})
+
+							console.log('✅ [ChangelogTable] Queries invalidadas, refetch automático')
+						},
+					)
+					.subscribe((status) => {
+						console.log('📡 [ChangelogTable] Estado del canal realtime:', status)
+						if (status === 'SUBSCRIBED') {
+							console.log('✅ [ChangelogTable] Suscripción realtime exitosa')
+						} else if (status === 'CHANNEL_ERROR') {
+							console.error('❌ [ChangelogTable] Error en canal realtime')
+						} else if (status === 'CLOSED') {
+							console.warn('⚠️ [ChangelogTable] Canal realtime cerrado')
+						} else if (status === 'TIMED_OUT') {
+							console.warn('⏱️ [ChangelogTable] Canal realtime timeout')
+						}
+					})
+			} catch (error) {
+				console.error('❌ [ChangelogTable] Error configurando suscripción realtime:', error)
+			}
+		}, 1000) // Esperar 1 segundo para asegurar que la conexión esté lista
 
 		return () => {
-			supabase.removeChannel(channel)
+			clearTimeout(timeoutId)
+			if (channel) {
+				console.log('🧹 [ChangelogTable] Limpiando suscripción realtime')
+				supabase.removeChannel(channel)
+			}
 		}
 	}, [queryClient])
 
