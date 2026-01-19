@@ -3,6 +3,7 @@ import { supabase } from '@/services/supabase/config/config';
 import { useToast } from '@shared/hooks/use-toast';
 import { getDownloadUrl } from '@/services/utils/download-utils';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
+import { useAuth } from '@app/providers/AuthContext';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 
 interface MedicalRecord {
@@ -45,6 +46,7 @@ export function usePDFDownload(options?: {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { laboratory } = useLaboratory();
+  const { user } = useAuth();
 
   const GENERATE_PDF =
     laboratory?.config?.webhooks?.generatePdf ||
@@ -119,6 +121,7 @@ export function usePDFDownload(options?: {
       const requestBody = {
         caseId: caseData.id,
         patientId: caseQueryData.patient_id,
+        userId: user?.id || null, // User ID de quien genera el PDF
       };
 
       console.log('Request body:', requestBody);

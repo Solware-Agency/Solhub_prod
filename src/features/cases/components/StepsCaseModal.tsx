@@ -40,6 +40,7 @@ import SendEmailModal from './SendEmailModal';
 
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
+import { useAuth } from '@app/providers/AuthContext';
 
 interface MedicalRecord {
   id?: string;
@@ -93,6 +94,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -452,6 +454,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         body: JSON.stringify({
           caseId: case_.id,
           patientId: caseData.patient_id,
+          userId: user?.id || profile?.id || null, // User ID de quien hace clic en "Rellenar datos"
         }),
       });
 
@@ -794,6 +797,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       const requestBody = {
         caseId: case_.id,
         patientId: caseData.patient_id,
+        userId: user?.id || profile?.id || null, // User ID de quien genera el PDF
       };
 
       console.log('Request body:', requestBody);
