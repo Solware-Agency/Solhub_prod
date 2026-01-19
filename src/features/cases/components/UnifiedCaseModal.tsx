@@ -1865,13 +1865,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             )}
                           </div>
                           <InfoRow
-                            label={patientResponsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
+                            label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
                             value={currentCase.telefono || ''}
                             field='telefono'
                             isEditing={isEditing}
                             editedValue={editedCase.telefono ?? null}
                             onChange={handleInputChange}
-                            disabled={!!patientResponsableData}
+                            disabled={!!responsableData}
                           />
                           <InfoRow
                             label='Email'
