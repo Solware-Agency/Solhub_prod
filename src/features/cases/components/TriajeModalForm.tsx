@@ -148,7 +148,7 @@ const TriageInfoDisplay: React.FC<{
       </div>
 
       {/* Grid de signos vitales */}
-      <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+      <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20'>
         <CardHeader className='p-4 sm:p-6'>
           <CardTitle className='text-base sm:text-lg'>Signos Vitales</CardTitle>
         </CardHeader>
@@ -266,27 +266,101 @@ const TriageInfoDisplay: React.FC<{
         </CardContent>
       </Card>
 
-      {/* Información clínica */}
-      {(record.reason ||
-        record.personal_background ||
-        record.family_history ||
-        record.psychobiological_habits ||
-        record.tabaco !== null) && (
-        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+      {/* Motivo de consulta */}
+      {record.reason && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'>
           <CardHeader className='p-4 sm:p-6'>
-            <CardTitle className='text-base sm:text-lg'>
-              Información Clínica
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-green-700 dark:text-green-300'>
+              <MessageSquare className='h-5 w-5 text-green-600 dark:text-green-400' />
+              Motivo de consulta
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+            <p className='text-sm'>{record.reason}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Hábitos */}
+      {(record.psychobiological_habits ||
+        record.tabaco !== null ||
+        record.cafe !== null ||
+        record.alcohol) && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
+              <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
+              Hábitos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap items-end gap-x-4 gap-y-3'>
+            {record.psychobiological_habits && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Hábitos psicobiológicos
+                </p>
+                <p className='text-sm'>{record.psychobiological_habits}</p>
+              </div>
+            )}
+            {record.tabaco !== null && record.tabaco !== undefined && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Índice Tabáquico
+                </p>
+                <div className='flex items-center gap-2'>
+                  <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium inline-block ${
+                      record.tabaco === 0
+                        ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        : record.tabaco < 10
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : record.tabaco <= 20
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        : record.tabaco <= 40
+                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}
+                  >
+                    {getSmokingRiskCategory(record.tabaco)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {record.cafe !== null && record.cafe !== undefined && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Café (tazas/día)
+                </p>
+                <p className='text-sm font-medium'>
+                  {record.cafe} {record.cafe === 1 ? 'taza' : 'tazas'}
+                </p>
+              </div>
+            )}
+            {record.alcohol && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Alcohol
+                </p>
+                <p className='text-sm font-medium capitalize'>
+                  {record.alcohol === 'No' ? 'No' : record.alcohol}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Antecedentes */}
+      {(record.personal_background || record.family_history) && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
+              <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+              Antecedentes
             </CardTitle>
           </CardHeader>
           <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
-            {record.reason && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Motivo de consulta
-                </p>
-                <p className='text-sm'>{record.reason}</p>
-              </div>
-            )}
             {record.personal_background && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
@@ -303,55 +377,20 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{record.family_history}</p>
               </div>
             )}
-            {record.psychobiological_habits && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Hábitos psicobiológicos
-                </p>
-                <p className='text-sm'>{record.psychobiological_habits}</p>
-              </div>
-            )}
-            {record.tabaco !== null && record.tabaco !== undefined && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Índice Tabáquico
-                </p>
-                <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${
-                    record.tabaco === 0
-                      ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                      : record.tabaco < 10
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                      : record.tabaco <= 20
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                      : record.tabaco <= 40
-                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                  }`}
-                >
-                  {getSmokingRiskCategory(record.tabaco)}
-                </span>
-              </div>
-            )}
-            {record.cafe !== null && record.cafe !== undefined && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Café (tazas/día)
-                </p>
-                <p className='text-sm font-medium'>
-                  {record.cafe} {record.cafe === 1 ? 'taza' : 'tazas'}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
 
       {/* Examen físico y comentarios */}
       {(record.examen_fisico || record.comment) && (
-        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
-          <CardContent className='p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
+              <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
+              Examen Físico y Observaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
             {record.examen_fisico && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1'>
