@@ -1382,6 +1382,33 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className='space-y-4'
           >
+            {/* Mostrar alerta si no hay email */}
+            {!case_.email && (
+              <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
+                <div className='flex flex-col gap-2'>
+                  <p className='text-teal-700 dark:text-teal-300 text-sm font-medium'>
+                    El paciente no tiene correo electrónico registrado
+                  </p>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='w-full sm:w-auto border-teal-500 text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-900/20'
+                    onClick={() => {
+                      // TODO: Abrir modal para agregar email
+                      toast({
+                        title: 'Funcionalidad en desarrollo',
+                        description: 'Próximamente podrás agregar el correo desde aquí',
+                      });
+                    }}
+                  >
+                    <Send className='w-4 h-4 mr-2' />
+                    Agregar Correo Electrónico
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
               {/* Activa el nodo de transformar a PDF y luego te redirecciona al PDF */}
               <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
