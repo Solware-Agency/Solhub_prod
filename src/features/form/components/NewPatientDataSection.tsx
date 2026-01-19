@@ -453,9 +453,9 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 			</Card>
 
 			{/* Seleccionar Perfil */}
-			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
-				<CardContent className="p-3 sm:p-4">
-					{selectedResponsable && selectedResponsableData ? (
+			{selectedResponsable && selectedResponsableData && (
+				<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
+					<CardContent className="p-3 sm:p-4">
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
 							{/* Card del Responsable - Izquierda */}
 							<div className="flex flex-col">
@@ -564,49 +564,58 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 											No hay dependientes registrados
 										</div>
 									) : (
-										<div className="space-y-2 flex-grow overflow-y-auto">
+										<div 
+											className={cn(
+												"grid grid-cols-2 gap-2 min-h-[180px]",
+												dependents.length > 6 
+													? "max-h-[180px] overflow-y-auto pr-1" 
+													: ""
+											)}
+										>
 											{dependents.map((dep) => (
 												<div
 													key={dep.id}
 													className={cn(
-														'flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors group',
+														'flex flex-col gap-1 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-colors group relative h-[55px]',
 														selectedProfile?.id === dep.id
 															? 'border-primary bg-primary/5'
 															: 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
 													)}
 													onClick={() => handleSelectProfile(dep)}
 												>
-													{dep.tipo_paciente === 'menor' ? (
-														<Baby className="w-5 h-5 text-blue-500" />
-													) : dep.tipo_paciente === 'animal' ? (
-														<Dog className="w-5 h-5 text-green-500" />
-													) : (
-														<User className="w-5 h-5 text-gray-500" />
-													)}
-													<div className="flex-1 min-w-0">
-														<div className="font-medium">{dep.nombre}</div>
-														<div className="text-sm text-muted-foreground">
-															{[
-																dep.tipo_paciente === 'menor' && dep.edad && `Edad: ${dep.edad}`,
-																dep.tipo_paciente === 'animal' && dep.especie && `Especie: ${dep.especie}`,
-																dep.fecha_nacimiento && new Date(dep.fecha_nacimiento).toLocaleDateString()
-															].filter(Boolean).join(' • ')}
+													<div className="flex items-center justify-between gap-1.5">
+														<div className="flex items-center gap-1.5 flex-1 min-w-0">
+															{dep.tipo_paciente === 'menor' ? (
+																<Baby className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+															) : dep.tipo_paciente === 'animal' ? (
+																<Dog className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+															) : (
+																<User className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+															)}
+															<div className="font-medium text-xs truncate">{dep.nombre}</div>
+														</div>
+														<div className="flex items-center gap-0.5 flex-shrink-0">
+															{selectedProfile?.id === dep.id && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																onClick={(e) => {
+																	e.stopPropagation()
+																	handleEditDependent(dep)
+																}}
+															>
+																<Edit className="w-3 h-3" />
+															</Button>
 														</div>
 													</div>
-													<div className="flex items-center gap-2">
-														{selectedProfile?.id === dep.id && <CheckCircle className="w-5 h-5 text-primary" />}
-														<Button
-															type="button"
-															variant="ghost"
-															size="sm"
-															className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-															onClick={(e) => {
-																e.stopPropagation()
-																handleEditDependent(dep)
-															}}
-														>
-															<Edit className="w-4 h-4" />
-														</Button>
+													<div className="text-[10px] text-muted-foreground line-clamp-1 leading-tight">
+														{[
+															dep.tipo_paciente === 'menor' && dep.edad && `Edad: ${dep.edad}`,
+															dep.tipo_paciente === 'animal' && dep.especie && `Especie: ${dep.especie}`,
+															dep.fecha_nacimiento && new Date(dep.fecha_nacimiento).toLocaleDateString()
+														].filter(Boolean).join(' • ')}
 													</div>
 												</div>
 											))}
@@ -615,30 +624,26 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 								</div>
 							</div>
 						</div>
-					) : (
-						<div className="text-center py-8 text-gray-500 dark:text-gray-400">
-							<p className="text-sm">Primero debes seleccionar un paciente</p>
-						</div>
-					)}
-					{/* Modal de edición de responsable */}
-					{selectedResponsable && (
-						<EditResponsableForm
-							responsable={selectedResponsable}
-							isOpen={editResponsableOpen}
-							onClose={() => setEditResponsableOpen(false)}
-							onUpdated={handleResponsableUpdated}
-						/>
-					)}
-					{/* Modal de edición de dependiente */}
-					{selectedResponsable && editDependentOpen && dependentToEdit && (
-						<PatientRelationshipManager
-							responsable={selectedResponsable}
-							onDependentUpdated={handleDependentUpdated}
-							dependentToEdit={dependentToEdit}
-						/>
-					)}
-				</CardContent>
-			</Card>
+					</CardContent>
+				</Card>
+			)}
+			{/* Modal de edición de responsable */}
+			{selectedResponsable && (
+				<EditResponsableForm
+					responsable={selectedResponsable}
+					isOpen={editResponsableOpen}
+					onClose={() => setEditResponsableOpen(false)}
+					onUpdated={handleResponsableUpdated}
+				/>
+			)}
+			{/* Modal de edición de dependiente */}
+			{selectedResponsable && editDependentOpen && dependentToEdit && (
+				<PatientRelationshipManager
+					responsable={selectedResponsable}
+					onDependentUpdated={handleDependentUpdated}
+					dependentToEdit={dependentToEdit}
+				/>
+			)}
 		</div>
 	)
 }

@@ -1584,23 +1584,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
                 {/* Content */}
                 <div className='p-4 sm:p-6 space-y-6'>
-                  <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                    <p className='text-teal-400 text-sm'>
-                      Este caso fue creado por{' '}
-                      <span className='font-semibold'>
-                        {creatorData?.displayName || 'Usuario del sistema'}
-                      </span>{' '}
-                      el{' '}
-                      {currentCase.created_at
-                        ? format(
-                            new Date(currentCase.created_at),
-                            'dd/MM/yyyy',
-                            { locale: es },
-                          )
-                        : 'Fecha no disponible'}
-                    </p>
-                  </div>
-
                   {/* Changelog Section */}
                   {isChangelogOpen && !isEditing && (
                     <InfoSection title='Historial de Cambios' icon={History}>
@@ -2667,6 +2650,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Additional Information */}
                   <InfoSection title='Información Adicional' icon={FileText}>
                     <div className='space-y-1'>
+                      <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3'>
+                        <p className='text-teal-400 text-sm'>
+                          Este caso fue creado por{' '}
+                          <span className='font-semibold'>
+                            {creatorData?.displayName || 'Usuario del sistema'}
+                          </span>
+                        </p>
+                      </div>
                       <InfoRow
                         label='Fecha de creación'
                         value={new Date(
