@@ -888,11 +888,16 @@ export const getCasesWithPatientInfo = async (
     }
 
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.examType) {
@@ -1570,11 +1575,16 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       }
 
       if (filters?.dateFrom) {
-        query = query.gte('date', filters.dateFrom);
+        // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+        query = query.filter('created_at', 'gte', filters.dateFrom);
       }
 
       if (filters?.dateTo) {
-        query = query.lte('date', filters.dateTo);
+        // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+        const nextDay = new Date(filters.dateTo);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split('T')[0];
+        query = query.filter('created_at', 'lt', nextDayStr);
       }
 
       if (filters?.examType) {
@@ -1919,11 +1929,16 @@ export const getMedicalCasesStats = async (filters?: {
 
     // Aplicar filtros
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.branch) {
