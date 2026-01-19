@@ -180,6 +180,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     }
   }, [isOpen]);
 
+  // Reset forceEditMode when case changes (e.g., opening modal for different patient)
+  React.useEffect(() => {
+    setForceEditMode(false);
+  }, [case_?.id]);
+
   if (!isOpen || !case_) {
     return null;
   }
