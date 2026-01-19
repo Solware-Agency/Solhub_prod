@@ -572,6 +572,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) return false;
 
+    // Obtener tipo de paciente del case
+    const patientType = (case_ as any)?.tipo_paciente;
+    const isDependiente = patientType === 'menor' || patientType === 'animal';
+
     // Para enfermero: solo necesita signos vitales
     if (isEnfermero) {
       return !!(
@@ -585,7 +589,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       );
     }
 
-    // Para médico: necesita signos vitales O datos clínicos (al menos algo guardado)
+    // Para médico: lógica diferente según tipo de paciente
     if (isMedico) {
       const hasVitalSigns = !!(
         triage.heart_rate ||
@@ -608,7 +612,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         triage.alcohol
       );
 
-      return hasVitalSigns || hasClinicalData;
+      // Para dependientes (menores/animales): solo necesitan signos vitales O datos clínicos
+      if (isDependiente) {
+        return hasVitalSigns || hasClinicalData;
+      }
+
+      // Para adultos: necesitan signos vitales Y datos clínicos
+      return hasVitalSigns && hasClinicalData;
     }
 
     // Para otros usuarios: necesita datos clínicos
