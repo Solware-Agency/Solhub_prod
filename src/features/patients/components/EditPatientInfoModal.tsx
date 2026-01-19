@@ -56,6 +56,9 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	const { profile } = useUserProfile()
 	const isImagenologia = profile?.role === 'imagenologia'
 
+	// Verificar si es dependiente (menor o animal)
+	const isDependiente = patient.tipo_paciente === 'menor' || patient.tipo_paciente === 'animal'
+
 	const [formData, setFormData] = useState({
 		nombre: patient.nombre,
 		telefono: patient.telefono || '',
@@ -310,8 +313,17 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 												</div>
 
 												<div className="space-y-2">
-													<label className="text-sm text-gray-500 dark:text-gray-400">Teléfono</label>
-													<Input name="telefono" value={formData.telefono} onChange={handleChange} />
+													<label className="text-sm text-gray-500 dark:text-gray-400">
+														Teléfono{isDependiente && ' (del responsable)'}
+													</label>
+													<Input 
+														name="telefono" 
+														value={formData.telefono} 
+														onChange={handleChange}
+														disabled={isDependiente}
+														readOnly={isDependiente}
+														className={isDependiente ? 'opacity-50 cursor-not-allowed' : ''}
+													/>
 												</div>
 
 												<div className="space-y-2">

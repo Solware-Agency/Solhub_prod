@@ -193,6 +193,7 @@ interface InfoRowProps {
   isEditing?: boolean;
   editedValue?: string | number | null;
   onChange?: (field: string, value: unknown) => void;
+  disabled?: boolean;
 }
 
 const InfoRow: React.FC<InfoRowProps> = React.memo(
@@ -205,8 +206,9 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
     isEditing = false,
     editedValue,
     onChange,
+    disabled = false,
   }) => {
-    const isEditableField = Boolean(isEditing && editable && field && onChange);
+    const isEditableField = Boolean(isEditing && editable && field && onChange && !disabled);
     const displayValue = field ? editedValue ?? value : value;
 
     return (
@@ -223,6 +225,7 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
               value={String(displayValue ?? '')}
               onChange={(e) => onChange?.(field!, e.target.value)}
               className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+              disabled={disabled}
             />
           </div>
         ) : (
@@ -1862,12 +1865,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             )}
                           </div>
                           <InfoRow
-                            label='Teléfono'
+                            label={patientResponsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
                             value={currentCase.telefono || ''}
                             field='telefono'
                             isEditing={isEditing}
                             editedValue={editedCase.telefono ?? null}
                             onChange={handleInputChange}
+                            disabled={!!patientResponsableData}
                           />
                           <InfoRow
                             label='Email'

@@ -1205,16 +1205,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     );
   }
 
-  // Debug: log the conditions to see why it might not show read-only view
-  console.log('[TriajeModalForm] Render decision:', {
-    existingTriage: !!existingTriage,
-    triageComplete,
-    isEditing,
-    forceEditMode,
-    shouldShowReadOnly: existingTriage && triageComplete && !isEditing && !forceEditMode,
-    patientId: case_?.patient_id,
-  });
-
   if (existingTriage && triageComplete && !isEditing && !forceEditMode) {
     return (
       <div className='p-4'>
