@@ -585,7 +585,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       );
     }
 
-    // Para médico: necesita signos vitales + datos clínicos
+    // Para médico: necesita signos vitales O datos clínicos (al menos algo guardado)
     if (isMedico) {
       const hasVitalSigns = !!(
         triage.heart_rate ||
@@ -608,7 +608,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         triage.alcohol
       );
 
-      return hasVitalSigns && hasClinicalData;
+      return hasVitalSigns || hasClinicalData;
     }
 
     // Para otros usuarios: necesita datos clínicos
@@ -1186,6 +1186,16 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       </div>
     );
   }
+
+  // Debug: log the conditions to see why it might not show read-only view
+  console.log('[TriajeModalForm] Render decision:', {
+    existingTriage: !!existingTriage,
+    triageComplete,
+    isEditing,
+    forceEditMode,
+    shouldShowReadOnly: existingTriage && triageComplete && !isEditing && !forceEditMode,
+    patientId: case_?.patient_id,
+  });
 
   if (existingTriage && triageComplete && !isEditing && !forceEditMode) {
     return (
