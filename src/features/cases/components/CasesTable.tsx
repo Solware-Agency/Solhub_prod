@@ -423,14 +423,18 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             currentFilters.citoStatus = 'negativo';
           }
           if (dateRange?.from) {
-            currentFilters.dateFrom = dateRange.from.toISOString();
+            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+            const year = dateRange.from.getFullYear();
+            const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
+            const day = String(dateRange.from.getDate()).padStart(2, '0');
+            currentFilters.dateFrom = `${year}-${month}-${day}`;
           }
           if (dateRange?.to) {
-            // Siempre ajustar dateTo al final del día (23:59:59.999)
-            // para incluir todos los registros del último día del rango
-            const endOfDay = new Date(dateRange.to);
-            endOfDay.setHours(23, 59, 59, 999);
-            currentFilters.dateTo = endOfDay.toISOString();
+            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+            const year = dateRange.to.getFullYear();
+            const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
+            const day = String(dateRange.to.getDate()).padStart(2, '0');
+            currentFilters.dateTo = `${year}-${month}-${day}`;
           }
 
           // Agregar el nuevo sort
@@ -638,14 +642,18 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           serverFilters.citoStatus = 'negativo';
         }
         if (tempDateRange?.from) {
-          serverFilters.dateFrom = tempDateRange.from.toISOString();
+          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+          const year = tempDateRange.from.getFullYear();
+          const month = String(tempDateRange.from.getMonth() + 1).padStart(2, '0');
+          const day = String(tempDateRange.from.getDate()).padStart(2, '0');
+          serverFilters.dateFrom = `${year}-${month}-${day}`;
         }
         if (tempDateRange?.to) {
-          // Siempre ajustar dateTo al final del día (23:59:59.999)
-          // para incluir todos los registros del último día del rango
-          const endOfDay = new Date(tempDateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          serverFilters.dateTo = endOfDay.toISOString();
+          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+          const year = tempDateRange.to.getFullYear();
+          const month = String(tempDateRange.to.getMonth() + 1).padStart(2, '0');
+          const day = String(tempDateRange.to.getDate()).padStart(2, '0');
+          serverFilters.dateTo = `${year}-${month}-${day}`;
         }
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
