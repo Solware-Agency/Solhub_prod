@@ -13,13 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog } from 'lucide-react'
+import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog, Info } from 'lucide-react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { cn } from '@shared/lib/cn'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { PatientSearchAutocomplete, type PatientProfile } from '@features/patients/components/PatientSearchAutocomplete'
 import { PatientProfileSelector } from '@features/patients/components/PatientProfileSelector'
 import { PatientRelationshipManager } from '@features/patients/components/PatientRelationshipManager'
@@ -415,7 +416,21 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 			{/* Búsqueda de Paciente */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 				<CardHeader className="p-4 sm:p-6">
-					<CardTitle className="text-base sm:text-lg">Buscar Paciente</CardTitle>
+					<div className="flex items-center gap-2">
+						<CardTitle className="text-base sm:text-lg">Buscar Paciente</CardTitle>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Info className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+								</TooltipTrigger>
+								<TooltipContent className="!max-w-lg w-auto" style={{ maxWidth: '32rem' }}>
+									<p className="text-sm whitespace-normal text-left">
+										Busca un paciente existente por cédula, nombre o teléfono. Si el paciente no existe, puedes registrarlo como nuevo paciente.
+									</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
 				</CardHeader>
 				<CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -518,9 +533,23 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 							<div className="flex flex-col h-full">
 								<div className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
 									<div className="flex items-center justify-between mb-3">
-										<h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-											Dependientes ({dependents.length})
-										</h3>
+										<div className="flex items-center gap-2">
+											<h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+												Dependientes ({dependents.length})
+											</h3>
+											<TooltipProvider>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<Info className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+													</TooltipTrigger>
+													<TooltipContent className="!max-w-lg w-auto" style={{ maxWidth: '32rem' }}>
+														<p className="text-sm whitespace-normal text-left">
+															Los dependientes son pacientes asociados a un responsable (por ejemplo, hijos menores, mascotas u otros familiares). Puedes seleccionar un dependiente para registrar un caso médico en su nombre.
+														</p>
+													</TooltipContent>
+												</Tooltip>
+											</TooltipProvider>
+										</div>
 										<PatientRelationshipManager
 											responsable={selectedResponsable}
 											onDependentAdded={handleDependentAdded}

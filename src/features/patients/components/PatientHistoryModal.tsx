@@ -737,7 +737,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               onClick={onClose}
             >
               <div
-                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-input'
+                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input'
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -914,7 +914,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   </div>
 
                   {/* Tabs */}
-                  <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
+                  <div className='flex-1 overflow-hidden flex flex-col min-h-0 h-full'>
                     <Tabs
                       value={activeTab}
                       onValueChange={setActiveTab}
@@ -954,7 +954,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Historial de Casos */}
                       <TabsContent
                         value='cases'
-                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
                         {/* Search and Filters */}
                         <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
@@ -1067,7 +1067,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {/* Cases List */}
-                        <div className='flex-1 overflow-y-auto p-4 min-h-0'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           {isLoading ? (
                             <div className='flex items-center justify-center py-12'>
                               <div className='flex items-center gap-3'>
@@ -1329,7 +1329,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Casos de Representados */}
                       <TabsContent
                         value='representados'
-                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
                         {/* Search */}
                         <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
@@ -1346,7 +1346,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {/* Cases List */}
-                        <div className='flex-1 overflow-y-auto p-4'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           {isLoadingDependentsCases ? (
                             <div className='flex items-center justify-center py-12'>
                               <div className='flex items-center gap-3'>
@@ -1525,9 +1525,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Datos de Historia Clínica */}
                       <TabsContent
                         value='triage'
-                        className='mt-0 flex-1 overflow-y-auto flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
-                        <div className='p-4'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           <TriageHistoryTab
                             patientId={patient?.id || ''}
                             isOpen={isOpen}

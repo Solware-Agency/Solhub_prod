@@ -1191,10 +1191,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 {isNotRechazado ? (
                   <p className='text-teal-400 text-sm'>
-                    Para completar este paso, haz clic en el botón de arriba
-                    para ir a rellenar los datos del documento en Google Docs.
-                    Una vez que termines regresa a esta pestaña para continuar
-                    con el siguiente paso.
+                    Rellena los datos y regresa a esta pestaña para continuar.
                   </p>
                 ) : (
                   <p className='text-teal-400 text-sm'>
@@ -1243,7 +1240,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {isSpt && isMedicoTratante
                     ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
-                    : 'Para completar este paso, haz clic en el botón de arriba para marcar el documento como completado y espera por la aprobacion para continuar con el siguiente paso.'}
+                    : 'Marca el documento como completado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1298,7 +1295,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1370,7 +1367,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1452,7 +1449,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                   ? docAprobado === 'pendiente'
                     ? 'Esperando aprobación del owner'
                     : 'Completa los pasos previos para habilitar la descarga'
-                  : 'Haz clic en el botón "Descargar PDF" y espera mientras preparamos tu documento. El proceso puede tardar unos segundos dependiendo de la carga del sistema.'}
+                  : 'Descarga el PDF del documento.'}
               </p>
             </div>
           </motion.div>
