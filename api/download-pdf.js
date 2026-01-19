@@ -15,9 +15,9 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' })
 
   try {
-    const { caseId, token } = req.query
+    const { caseId, token, preview } = req.query
 
-    console.log('[DOWNLOAD-PDF] Request:', { caseId, token })
+    console.log('[DOWNLOAD-PDF] Request:', { caseId, token, preview })
 
     if (!caseId || !token) {
       return res.status(400).json({ error: 'Parámetros faltantes: caseId y token son requeridos' })
@@ -93,8 +93,11 @@ export default async function handler(req, res) {
 
     const fileName = `${caseCode}-${sanitizedName}.pdf`
 
+    // Determinar Content-Disposition: inline para vista previa, attachment para descarga
+    const disposition = preview === 'true' ? 'inline' : 'attachment'
+
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+    res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`)
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.setHeader('Pragma', 'no-cache')
     res.setHeader('Expires', '0')
