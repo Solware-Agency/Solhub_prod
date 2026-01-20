@@ -18,6 +18,7 @@ import {
 	Loader2,
 	AlertCircle,
 } from 'lucide-react'
+import { SignatureImageEditorModal } from './SignatureImageEditorModal'
 
 interface SignatureSectionProps {
 	signatureNumber: 1 | 2 | 3
@@ -50,6 +51,8 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 	const [isUploading, setIsUploading] = useState(false)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [isEditorOpen, setIsEditorOpen] = useState(false)
+	const [fileToEdit, setFileToEdit] = useState<File | null>(null)
 
 	// Cargar preview de firma existente
 	useEffect(() => {
@@ -77,14 +80,41 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 		}
 
 		setError(null)
-		setSelectedFile(file)
+		// Abrir modal de edición en lugar de crear preview directamente
+		setFileToEdit(file)
+		setIsEditorOpen(true)
+	}
 
-		// Crear preview
+	const handleImageEdited = (editedFile: File) => {
+		// Validar el archivo editado
+		const validation = validateSignatureFile(editedFile)
+		if (!validation.valid) {
+			setError(validation.error || 'Archivo editado inválido')
+			toast({
+				title: '❌ Error de validación',
+				description: validation.error || 'El archivo editado no es válido',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		setSelectedFile(editedFile)
+		
+		// Crear preview del archivo editado
 		const reader = new FileReader()
 		reader.onloadend = () => {
 			setPreviewUrl(reader.result as string)
 		}
-		reader.readAsDataURL(file)
+		reader.readAsDataURL(editedFile)
+	}
+
+	const handleEditorClose = () => {
+		setIsEditorOpen(false)
+		setFileToEdit(null)
+		// Limpiar input si se cancela
+		if (fileInputRef.current) {
+			fileInputRef.current.value = ''
+		}
 	}
 
 	const handleUpload = async () => {
@@ -519,6 +549,14 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 					</Button>
 				)}
 			</div>
+
+			{/* Modal de edición de imagen */}
+			<SignatureImageEditorModal
+				isOpen={isEditorOpen}
+				onClose={handleEditorClose}
+				imageFile={fileToEdit}
+				onSave={handleImageEdited}
+			/>
 		</div>
 	)
 }

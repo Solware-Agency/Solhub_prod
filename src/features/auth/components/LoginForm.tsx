@@ -235,7 +235,7 @@ function LoginForm() {
           delay={200}
           className='w-full h-full flex items-center justify-center'
         >
-          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
+          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none md:rounded-2xl p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20'>
             <div className='text-center mb-4 flex flex-col items-center justify-center'>
               <SolHubIcon
                 fill='#fff'
