@@ -368,6 +368,9 @@ export type Database = {
           id: string;
           phone: string | null;
           role: string;
+          signature_url: string | null;
+          signature_url_2: string | null;
+          signature_url_3: string | null;
           updated_at: string | null;
         };
         Insert: {
@@ -380,6 +383,9 @@ export type Database = {
           id: string;
           phone?: string | null;
           role?: string;
+          signature_url?: string | null;
+          signature_url_2?: string | null;
+          signature_url_3?: string | null;
           updated_at?: string | null;
         };
         Update: {
@@ -392,6 +398,9 @@ export type Database = {
           id?: string;
           phone?: string | null;
           role?: string;
+          signature_url?: string | null;
+          signature_url_2?: string | null;
+          signature_url_3?: string | null;
           updated_at?: string | null;
         };
         Relationships: [];

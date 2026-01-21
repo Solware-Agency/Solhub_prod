@@ -1,6 +1,7 @@
 import { supabase } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { useState } from 'react'
+import { useAuth } from '@app/providers/AuthContext'
 
 interface MedicalRecord {
 	id?: string
@@ -10,6 +11,7 @@ interface MedicalRecord {
 export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => void) => {
 	const { toast } = useToast()
 	const [, setIsSaving] = useState(false)
+	const { user } = useAuth()
 
 	const handleTransformToPDF = async () => {
 		if (!case_?.id) {
@@ -62,6 +64,7 @@ export const useHandleTransformToPDF = (case_: MedicalRecord, handleNext: () => 
 
 			const requestBody = {
 				caseId: case_.id,
+				userId: user?.id || null, // User ID de quien genera el PDF
 			}
 
 			console.log('Request body:', requestBody)

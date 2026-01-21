@@ -210,30 +210,60 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
       </div>
 
       {/* Información clínica (si existe) */}
-      {(record.reason || record.personal_background || record.family_history || record.psychobiological_habits) && (
-        <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-4'>
-          {record.reason && (
-            <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Motivo de consulta</p>
-              <p className='text-sm'>{record.reason}</p>
-            </div>
-          )}
-          {record.personal_background && (
-            <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes personales</p>
-              <p className='text-sm'>{record.personal_background}</p>
-            </div>
-          )}
-          {record.family_history && (
-            <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes familiares</p>
-              <p className='text-sm'>{record.family_history}</p>
-            </div>
-          )}
-          {record.psychobiological_habits && (
-            <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Hábitos psicobiológicos</p>
-              <p className='text-sm'>{record.psychobiological_habits}</p>
+      {(record.reason || record.personal_background || record.family_history || record.psychobiological_habits || record.tabaco !== null || record.cafe !== null || record.alcohol) && (
+        <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'>
+          <div className='grid grid-cols-2 gap-4 mb-4'>
+            {record.reason && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Motivo de consulta</p>
+                <p className='text-sm'>{record.reason}</p>
+              </div>
+            )}
+            {record.personal_background && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes personales</p>
+                <p className='text-sm'>{record.personal_background}</p>
+              </div>
+            )}
+            {record.family_history && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes familiares</p>
+                <p className='text-sm'>{record.family_history}</p>
+              </div>
+            )}
+            {record.psychobiological_habits && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Hábitos psicobiológicos</p>
+                <p className='text-sm'>{record.psychobiological_habits}</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Café, Alcohol y Tabaquismo en la misma línea */}
+          {(record.tabaco !== null || record.cafe !== null || record.alcohol) && (
+            <div className='flex flex-wrap items-end gap-x-4 gap-y-2 pt-2 border-t border-gray-200 dark:border-gray-700'>
+              {record.cafe !== null && record.cafe !== undefined && (
+                <div className='flex-1 min-w-[120px]'>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Café</p>
+                  <p className='text-sm font-medium'>
+                    {record.cafe} {record.cafe === 1 ? 'taza/día' : 'tazas/día'}
+                  </p>
+                </div>
+              )}
+              {record.alcohol && (
+                <div className='flex-1 min-w-[120px]'>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Alcohol</p>
+                  <p className='text-sm font-medium capitalize'>
+                    {record.alcohol === 'No' ? 'No' : record.alcohol}
+                  </p>
+                </div>
+              )}
+              {record.tabaco !== null && record.tabaco !== undefined && (
+                <div className='flex-1 min-w-[120px]'>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Tabaquismo</p>
+                  <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
+                </div>
+              )}
             </div>
           )}
         </div>

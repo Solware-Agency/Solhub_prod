@@ -61,6 +61,54 @@ interface PatientHistoryModalProps {
   patient: Patient | null;
 }
 
+// Helper to calculate age from fecha_nacimiento
+function calculateAgeFromFechaNacimiento(fechaNacimiento: string | null | undefined): string | null {
+  if (!fechaNacimiento) return null;
+  
+  try {
+    const fechaNac = new Date(fechaNacimiento);
+    const hoy = new Date();
+    
+    // Validar que la fecha sea válida
+    if (isNaN(fechaNac.getTime())) return null;
+    
+    // Validar que la fecha no sea en el futuro
+    if (fechaNac > hoy) return null;
+    
+    // Calcular diferencia en años y meses
+    let years = hoy.getFullYear() - fechaNac.getFullYear();
+    let months = hoy.getMonth() - fechaNac.getMonth();
+    
+    // Ajustar si el mes actual es menor que el mes de nacimiento
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // Ajustar si el día actual es menor que el día de nacimiento
+    if (months === 0 && hoy.getDate() < fechaNac.getDate()) {
+      years--;
+      months = 11;
+    }
+    
+    // Si tiene más de 1 año, mostrar en años
+    if (years >= 1) {
+      return `${years} Años`;
+    }
+    // Si tiene menos de 1 año pero más de 0 meses, mostrar en meses
+    else if (months >= 1) {
+      return `${months} Meses`;
+    }
+    // Si tiene menos de 1 mes, mostrar como "0 Meses" (recién nacido)
+    else {
+      return '0 Meses';
+    }
+  } catch (error) {
+    console.error('Error calculando edad desde fecha_nacimiento:', error);
+    return null;
+  }
+}
+
 const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   isOpen,
   onClose,
@@ -689,7 +737,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               onClick={onClose}
             >
               <div
-                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-input'
+                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input'
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -742,6 +790,28 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     • {patient.gender}
                                   </span>
                                 )}
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (patient.edad) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {patient.edad}
+                                      </span>
+                                    );
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    patient.fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {calculatedAge}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </>
                             ) : (
                               <>
@@ -751,6 +821,28 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     • {patient.gender}
                                   </span>
                                 )}
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (patient.edad) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {patient.edad}
+                                      </span>
+                                    );
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    patient.fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return (
+                                      <span className='ml-3'>
+                                        • {calculatedAge}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </>
                             )}
                           </p>
@@ -822,7 +914,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   </div>
 
                   {/* Tabs */}
-                  <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
+                  <div className='flex-1 overflow-hidden flex flex-col min-h-0 h-full'>
                     <Tabs
                       value={activeTab}
                       onValueChange={setActiveTab}
@@ -862,7 +954,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Historial de Casos */}
                       <TabsContent
                         value='cases'
-                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
                         {/* Search and Filters */}
                         <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
@@ -975,7 +1067,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {/* Cases List */}
-                        <div className='flex-1 overflow-y-auto p-4 min-h-0'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           {isLoading ? (
                             <div className='flex items-center justify-center py-12'>
                               <div className='flex items-center gap-3'>
@@ -1089,7 +1181,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         </div>
                                       </div>
 
-                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
+                                      {/* Primera fila: Tipo de Examen, Médico Tratante, Sede, Imagen, Acciones */}
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3'>
                                         <div>
                                           <p className='text-xs text-gray-500 dark:text-gray-400'>
                                             Tipo de Examen
@@ -1119,6 +1212,63 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           </div>
                                         </div>
 
+                                        {/* Imagen del caso */}
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                            Imagen
+                                          </p>
+                                          <div className='mt-1'>
+                                            <ImageButton imageUrl={(caseItem as any).image_url} />
+                                          </div>
+                                        </div>
+
+                                        {/* Acciones */}
+                                        <div className='flex gap-2 items-center justify-center sm:justify-start md:justify-center'>
+                                          <Button
+                                            onClick={() =>
+                                              handleCheckAndDownloadPDF(
+                                                caseItem,
+                                              )
+                                            }
+                                            disabled={
+                                              isGeneratingPDF ||
+                                              isSaving ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado' ||
+                                              selectedCases.size > 0 ||
+                                              isDownloadingMultiple
+                                            }
+                                          >
+                                            {isGeneratingPDF || isSaving ? (
+                                              <>
+                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                                Generando...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Download className='h-4 w-4 mr-2' />
+                                                PDF
+                                              </>
+                                            )}
+                                          </Button>
+                                          <Button
+                                            onClick={() =>
+                                              setPreviewingCaseId(caseItem.id)
+                                            }
+                                            disabled={
+                                              isSaving ||
+                                              !caseItem.informepdf_url ||
+                                              caseItem.doc_aprobado !==
+                                                'aprobado'
+                                            }
+                                          >
+                                            <Eye className='w-4 h-4' />
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Resto de campos */}
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
                                         {/* Ocultar Monto Total para SPT */}
                                         {!isSpt && (
                                           <div>
@@ -1156,65 +1306,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             </p>
                                           </div>
                                         )}
-
-                                        {/* Imagen del caso */}
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Imagen
-                                          </p>
-                                          <div className='mt-1'>
-                                            <ImageButton imageUrl={(caseItem as any).image_url} />
-                                          </div>
-                                        </div>
-
-                                        <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
-                                          <Button
-                                            onClick={() =>
-                                              handleCheckAndDownloadPDF(
-                                                caseItem,
-                                              )
-                                            }
-                                            disabled={
-                                              isGeneratingPDF ||
-                                              isSaving ||
-                                              caseItem.doc_aprobado !==
-                                                'aprobado' ||
-                                              selectedCases.size > 0 ||
-                                              isDownloadingMultiple
-                                            }
-                                          >
-                                            {isGeneratingPDF || isSaving ? (
-                                              <>
-                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                                Generando...
-                                              </>
-                                            ) : caseItem.doc_aprobado !==
-                                              'aprobado' ? (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                No tiene PDF
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                PDF
-                                              </>
-                                            )}
-                                          </Button>
-                                          <Button
-                                            onClick={() =>
-                                              setPreviewingCaseId(caseItem.id)
-                                            }
-                                            disabled={
-                                              isSaving ||
-                                              !caseItem.informepdf_url ||
-                                              caseItem.doc_aprobado !==
-                                                'aprobado'
-                                            }
-                                          >
-                                            <Eye className='w-4 h-4' />
-                                          </Button>
-                                        </div>
                                       </div>
 
                                       {caseItem.diagnostico && (
@@ -1238,7 +1329,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Casos de Representados */}
                       <TabsContent
                         value='representados'
-                        className='mt-0 flex-1 overflow-hidden flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
                         {/* Search */}
                         <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
@@ -1255,7 +1346,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
 
                         {/* Cases List */}
-                        <div className='flex-1 overflow-y-auto p-4'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           {isLoadingDependentsCases ? (
                             <div className='flex items-center justify-center py-12'>
                               <div className='flex items-center gap-3'>
@@ -1392,11 +1483,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
                                             Generando...
                                           </>
-                                        ) : caseItem.doc_aprobado !== 'aprobado' ? (
-                                          <>
-                                            <Download className='h-4 w-4 mr-2' />
-                                            No tiene PDF
-                                          </>
                                         ) : (
                                           <>
                                             <Download className='h-4 w-4 mr-2' />
@@ -1439,9 +1525,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       {/* Tab: Datos de Historia Clínica */}
                       <TabsContent
                         value='triage'
-                        className='mt-0 flex-1 overflow-y-auto flex flex-col'
+                        className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
-                        <div className='p-4'>
+                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           <TriageHistoryTab
                             patientId={patient?.id || ''}
                             isOpen={isOpen}

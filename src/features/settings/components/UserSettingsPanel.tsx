@@ -9,6 +9,7 @@ import { updatePassword, updateUserProfile, updateUserMetadata } from '@/service
 import { useToast } from '@shared/hooks/use-toast'
 import { Eye, EyeOff, User, Key, Save, Loader2, CheckCircle, AlertCircle, PhoneIcon } from 'lucide-react'
 import { SessionTimeoutSettings } from './SessionTimeoutSettings'
+import { DoctorSignatureUpload } from './DoctorSignatureUpload'
 
 const UserSettingsPanel: React.FC = () => {
 	const { user, refreshUser } = useAuth()
@@ -359,6 +360,11 @@ const UserSettingsPanel: React.FC = () => {
 			{/* Session Timeout Settings */}
 			<div className="mt-6">
 				<SessionTimeoutSettings />
+			</div>
+
+			{/* Doctor Signature Upload - Solo para médicos en SPT */}
+			<div className="mt-6">
+				<DoctorSignatureUpload />
 			</div>
 		</div>
 	)

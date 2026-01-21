@@ -29,6 +29,10 @@ export interface UserProfile {
 	estado?: 'pendiente' | 'aprobado'
 	// Debe alinear con BD (text)
 	phone?: string | null
+	laboratory_id?: string | null
+	signature_url?: string | null
+	signature_url_2?: string | null
+	signature_url_3?: string | null
 }
 
 // Sign up with email and password - ENHANCED WITH PROPER EMAIL VERIFICATION

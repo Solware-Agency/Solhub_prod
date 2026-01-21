@@ -257,8 +257,19 @@ const CustomDropdown = forwardRef<HTMLDivElement, CustomDropdownProps>(
 			</div>
 		)
 
+		// Extraer clases relacionadas con borde y focus del className pasado
+		// para aplicarlas al trigger que es el que muestra el borde
+		const borderClasses = className 
+			? className.split(' ').filter(c => 
+				c.includes('border') || 
+				c.includes('focus:border') || 
+				c.includes('ring') ||
+				c.includes('focus:ring')
+			).join(' ')
+			: ''
+
 		return (
-			<div ref={combinedRef} className={cn('relative w-full', className)} {...props}>
+			<div ref={combinedRef} className={cn('relative w-full')} {...props}>
 				{/* Trigger */}
 				<div
 					id={id}
@@ -271,6 +282,7 @@ const CustomDropdown = forwardRef<HTMLDivElement, CustomDropdownProps>(
 						'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer transition-transform duration-200 hover:border-primary hover:shadow-sm hover:bg-accent/50',
 						disabled && 'cursor-not-allowed opacity-50 hover:border-input hover:shadow-none hover:bg-background',
 						isOpen && 'ring-2 ring-ring ring-offset-2',
+						borderClasses, // Aplicar clases de borde del className pasado
 					)}
 					tabIndex={disabled ? -1 : 0}
 					role="combobox"

@@ -1103,13 +1103,16 @@ const MainUsers: React.FC = () => {
 													<TooltipTrigger>
 														<Info className="size-4" />
 													</TooltipTrigger>
-													<TooltipContent className="p-3">
-														<div className="flex flex-col gap-3 text-xs">
-															<div className="flex items-center justify-between gap-3">
-																<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-																	<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-																	<span className="break-all">{user.email}</span>
+													<TooltipContent className="p-3 max-w-lg w-auto">
+														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
+															{user.display_name && (
+																<div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 whitespace-nowrap">
+																	{user.display_name}
 																</div>
+															)}
+															<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+																<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+																<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{user.email}</span>
 																<Button
 																	variant="ghost"
 																	size="icon"
@@ -1125,11 +1128,9 @@ const MainUsers: React.FC = () => {
 															</div>
 
 															{user.phone && (
-																<div className="flex items-center justify-between gap-3">
-																	<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-																		<Phone className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-																		<span className="break-all">{formatPhoneForDisplay(user.phone)}</span>
-																	</div>
+																<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+																	<Phone className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+																	<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{formatPhoneForDisplay(user.phone)}</span>
 																	<Button
 																		variant="ghost"
 																		size="icon"

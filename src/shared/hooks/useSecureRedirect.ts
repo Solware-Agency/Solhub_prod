@@ -110,26 +110,43 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'owner':
 				redirectPath = ownerPath
 				break
-			case 'residente':
-				redirectPath = adminPath
+			case 'prueba':
+				// Prueba tiene su propio home
+				redirectPath = '/prueba/home'
 				break
 			case 'medicowner':
 				redirectPath = medicownerPath
+				break
+			// Cada rol va a su propia ruta de home (que renderiza el mismo componente)
+			case 'residente':
+				redirectPath = '/medic/home'
 				break
 			case 'employee':
 				redirectPath = employeePath
 				break
 			case 'citotecno':
-				redirectPath = citoPath
+				redirectPath = '/cito/home'
 				break
 			case 'patologo':
-				redirectPath = patoloPath
+				redirectPath = '/patolo/home'
 				break
 			case 'imagenologia':
-				redirectPath = imagenologiaPath
+				redirectPath = '/imagenologia/home'
+				break
+			case 'medico_tratante':
+				redirectPath = '/medico-tratante/home'
+				break
+			case 'enfermero':
+				redirectPath = '/enfermero/home'
+				break
+			case 'call_center':
+				redirectPath = '/call-center/home'
+				break
+			case 'admin':
+				redirectPath = '/medic/home'
 				break
 			default:
-				redirectPath = employeePath // fallback to employee
+				redirectPath = employeePath // fallback
 		}
 
 		console.log(`Redirecting user with role "${profile.role}" to: ${redirectPath}`)

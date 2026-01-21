@@ -9,7 +9,7 @@ import { PatientDataSection } from './PatientDataSection';
 import { ServiceSection } from './ServiceSection';
 import { PaymentSection } from './PaymentSection';
 import { CommentsSection } from './CommentsSection';
-import { FilePlus2, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useExchangeRate } from '@shared/hooks/useExchangeRate';
 import { useResetForm } from '@shared/hooks/useResetForm';
 import {
@@ -18,9 +18,7 @@ import {
 } from '@services/supabase/cases/registration-service';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
-import { useModuleField } from '@shared/hooks/useModuleField';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
-import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -60,19 +58,13 @@ export function MedicalFormContainer() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patientSectionResetKey, setPatientSectionResetKey] = useState(0)
 
-	// Verificar configuración del módulo para médico tratante
-	const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante')
-
 	// Obtener configuración completa del módulo para pasar a registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
 
-	// Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
-	const { laboratory } = useLaboratory()
-
 	// Crear schema dinámico basado en la configuración del módulo
 	const dynamicFormSchema = useMemo(() => {
-		return createFormSchema(moduleConfig, laboratory?.slug)
-	}, [moduleConfig, laboratory?.slug])
+		return createFormSchema(moduleConfig)
+	}, [moduleConfig])
 
 	// Crear resolver dinámico que se actualiza cuando cambia el schema
 	const dynamicResolver = useMemo(() => {
@@ -150,21 +142,64 @@ export function MedicalFormContainer() {
 				console.log('Datos de pagos:', data.payments)
 				console.log('Tasa de cambio:', exchangeRate)
 
+				// Normalizar datos para asegurar que todos los campos opcionales tengan valores por defecto (no undefined)
+				const normalizedData = {
+					...data,
+					examType: data.examType ?? '',
+					treatingDoctor: data.treatingDoctor ?? '',
+					origin: data.origin ?? '',
+					sampleType: data.sampleType ?? '',
+					branch: data.branch ?? '',
+					consulta: data.consulta ?? '',
+					relationship: data.relationship ?? '',
+					email: data.email ?? '',
+					numberOfSamples: data.numberOfSamples ?? 1,
+				}
+
 				// Validar datos antes del envío
-				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-				const validationErrors = validateRegistrationData(data, exchangeRate, moduleConfig, laboratory?.slug)
-				if (validationErrors.length > 0) {
+				// Pasar configuración completa del módulo para validación
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig)
+				
+				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
+				if (Object.keys(validationResult.fieldErrors).length > 0) {
+					// Establecer errores en cada campo del formulario
+					Object.entries(validationResult.fieldErrors).forEach(([fieldName, errorMessage]) => {
+						form.setError(fieldName as keyof FormValues, {
+							type: 'manual',
+							message: errorMessage,
+						})
+
+					})
+					
+					// Mostrar toast con mensaje general
 					toast({
 						title: '❌ Error de validación',
-						description: validationErrors.join(', '),
+						description: validationResult.errorMessages.join(', '),
 						variant: 'destructive',
 					})
+					
+					// Scroll al primer campo con error
+					const firstErrorField = Object.keys(validationResult.fieldErrors)[0]
+					if (firstErrorField) {
+						const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+						                document.getElementById(`service-${firstErrorField}`) ||
+						                document.getElementById(`patient-${firstErrorField}`)
+						if (element) {
+							setTimeout(() => {
+								element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+								if ('focus' in element && typeof (element as any).focus === 'function') {
+									(element as any).focus()
+								}
+							}, 100)
+						}
+					}
+					
 					return
 				}
 
 				// Registrar caso médico con nueva estructura
 				// Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
-				const result = await registerMedicalCase(data, exchangeRate, moduleConfig)
+				const result = await registerMedicalCase(normalizedData, exchangeRate, moduleConfig)
 
 				if (result.error) {
 					console.error('Error al guardar con nueva estructura:', result.error)
@@ -237,7 +272,7 @@ export function MedicalFormContainer() {
 				// Otros errores de validación
 				toast({
 					title: '❌ Error de validación',
-					description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
+					description: 'Por favor, los campos en rojo son obligatorios.',
 					variant: 'destructive',
 				})
 			}
@@ -286,22 +321,6 @@ export function MedicalFormContainer() {
 		toast({
 			title: ' Formulario Limpio',
 			description: 'Todos los campos han sido reiniciados.',
-		})
-	}, [form, toast])
-
-	// Memoize the new record handler to prevent unnecessary re-renders
-	const handleNewRecord = useCallback(() => {
-		form.reset(getInitialFormValues())
-		setUsdValue('')
-		setVesValue('')
-		setVesInputValue('')
-		setUsdFromVes('')
-		setIsSubmitted(false)
-		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
-		setPatientSectionResetKey((prev) => prev + 1)
-		toast({
-			title: ' Nuevo Registro',
-			description: 'Formulario listo para un nuevo registro.',
 		})
 	}, [form, toast])
 
@@ -370,16 +389,6 @@ export function MedicalFormContainer() {
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />
-						{isSubmitted ? (
-							<Button
-								type="button"
-								onClick={handleNewRecord}
-								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
-							>
-								<FilePlus2 />
-								Nuevo Registro
-							</Button>
-						) : (
 							<Button
 								type="button"
 								onClick={handleButtonClick}
@@ -395,7 +404,6 @@ export function MedicalFormContainer() {
 									'Enviar'
 								)}
 							</Button>
-						)}
 					</form>
 				</Form>
 			</div>

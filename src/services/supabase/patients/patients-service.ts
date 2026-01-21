@@ -4,7 +4,14 @@
 // Servicios para manejar la tabla patients de forma independiente
 
 import { supabase } from '@services/supabase/config/config'
-import { findPatientByIdentificationNumber, parseCedula } from './identificaciones-service'
+import {
+	findPatientByIdentificationNumber,
+	parseCedula,
+	createIdentification,
+	updateIdentification,
+	getIdentificacionesByPatient,
+} from './identificaciones-service'
+import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils'
 
 // =====================================================================
 // CLASE DE ERROR CON CÓDIGOS
@@ -320,6 +327,57 @@ export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory
 		}
 
 		console.log('✅ Paciente creado exitosamente:', data)
+
+		// =====================================================================
+		// DUAL-WRITE: Escribir en sistema nuevo (identificaciones)
+		// =====================================================================
+		// Esto es NO-CRÍTICO: si falla, solo loggear pero no fallar la creación
+		// El sistema antiguo (patients.cedula) ya funcionó correctamente
+		// =====================================================================
+		const createdCedula = (data as any).cedula
+		// Usar el laboratoryId que ya tenemos (se insertó en la línea 304)
+
+		if (createdCedula && createdCedula !== 'S/C') {
+			try {
+				console.log('🔄 Dual-write: Creando identificación en sistema nuevo...')
+
+				// Parsear cédula para obtener tipo y número
+				const { tipo, numero } = parseCedula(createdCedula)
+
+				if (!laboratoryId) {
+					console.warn('⚠️ Dual-write: No se pudo obtener laboratory_id, omitiendo identificación')
+				} else {
+					// Verificar si ya existe identificación para este paciente
+					const existingIdentificaciones = await getIdentificacionesByPatient((data as any).id)
+
+					// Buscar si ya existe una identificación con el mismo tipo y número
+					const matchingIdentificacion = existingIdentificaciones.find(
+						(ident) => ident.tipo_documento === tipo && ident.numero === numero,
+					)
+
+					if (matchingIdentificacion) {
+						// Ya existe, no hacer nada
+						console.log('ℹ️ Dual-write: Identificación ya existe, omitiendo creación')
+					} else {
+						// Crear nueva identificación
+						await createIdentification({
+							paciente_id: (data as any).id,
+							tipo_documento: tipo,
+							numero: numero,
+							laboratory_id: laboratoryId,
+						})
+						console.log('✅ Dual-write: Identificación creada exitosamente')
+					}
+				}
+			} catch (error) {
+				// NO fallar si falla el sistema nuevo, solo loggear
+				console.warn('⚠️ Dual-write: No se pudo crear identificación (no crítico):', error)
+				console.warn('⚠️ La creación del paciente se completó exitosamente en el sistema antiguo')
+			}
+		} else {
+			console.log('ℹ️ Dual-write: Paciente sin cédula (S/C o null), omitiendo identificación')
+		}
+
 		return data as unknown as Patient
 	} catch (error) {
 		console.error('❌ Error creando paciente:', error)
@@ -379,6 +437,90 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 			await logPatientChanges(id, currentPatient, updates, userId)
 		}
 
+		// =====================================================================
+		// DUAL-WRITE: Escribir en sistema nuevo (identificaciones)
+		// =====================================================================
+		// Esto es NO-CRÍTICO: si falla, solo loggear pero no fallar la actualización
+		// El sistema antiguo (patients.cedula) ya funcionó correctamente
+		// =====================================================================
+		const updatedCedula = (data as any).cedula
+		const previousCedula = currentPatient.cedula
+
+		// Solo hacer dual-write si la cédula cambió o se agregó
+		if (updatedCedula && updatedCedula !== 'S/C' && updatedCedula !== previousCedula) {
+			try {
+				console.log('🔄 Dual-write: Actualizando identificación en sistema nuevo...')
+
+				// Parsear cédula para obtener tipo y número
+				const { tipo, numero } = parseCedula(updatedCedula)
+
+				// Obtener laboratory_id del paciente actualizado
+				const laboratoryId = (data as any).laboratory_id
+
+				if (!laboratoryId) {
+					console.warn('⚠️ Dual-write: No se pudo obtener laboratory_id, omitiendo identificación')
+				} else {
+					// Buscar identificaciones existentes del paciente
+					const existingIdentificaciones = await getIdentificacionesByPatient(id)
+
+					// Buscar si ya existe una identificación con el mismo tipo y número
+					const matchingIdentificacion = existingIdentificaciones.find(
+						(ident) => ident.tipo_documento === tipo && ident.numero === numero,
+					)
+
+					if (matchingIdentificacion) {
+						// Ya existe, no hacer nada (ya está actualizada)
+						console.log('ℹ️ Dual-write: Identificación ya existe con estos datos, omitiendo actualización')
+					} else {
+						// Buscar si hay una identificación del mismo tipo (para actualizar)
+						const sameTypeIdentificacion = existingIdentificaciones.find(
+							(ident) => ident.tipo_documento === tipo,
+						)
+
+						if (sameTypeIdentificacion) {
+							// Actualizar la identificación existente del mismo tipo
+							await updateIdentification(sameTypeIdentificacion.id, {
+								tipo_documento: tipo,
+								numero: numero,
+							})
+							console.log('✅ Dual-write: Identificación actualizada exitosamente')
+						} else {
+							// Crear nueva identificación
+							await createIdentification({
+								paciente_id: id,
+								tipo_documento: tipo,
+								numero: numero,
+								laboratory_id: laboratoryId,
+							})
+							console.log('✅ Dual-write: Identificación creada exitosamente')
+						}
+					}
+				}
+			} catch (error) {
+				// NO fallar si falla el sistema nuevo, solo loggear
+				console.warn('⚠️ Dual-write: No se pudo actualizar/crear identificación (no crítico):', error)
+				console.warn('⚠️ La actualización del paciente se completó exitosamente en el sistema antiguo')
+			}
+		} else if (updatedCedula === null || updatedCedula === 'S/C') {
+			// Si se eliminó la cédula, intentar eliminar identificaciones (opcional, no crítico)
+			try {
+				console.log('🔄 Dual-write: Cédula eliminada, verificando identificaciones...')
+				const existingIdentificaciones = await getIdentificacionesByPatient(id)
+				if (existingIdentificaciones.length > 0) {
+					console.log(
+						`ℹ️ Dual-write: Paciente tiene ${existingIdentificaciones.length} identificación(es) pero cédula fue eliminada. Se mantienen las identificaciones por seguridad.`,
+					)
+					// NO eliminamos las identificaciones automáticamente por seguridad
+					// El usuario puede eliminarlas manualmente si es necesario
+				}
+			} catch (error) {
+				// No crítico, solo loggear
+				console.warn('⚠️ Dual-write: No se pudo verificar identificaciones (no crítico):', error)
+			}
+		} else {
+			console.log('ℹ️ Dual-write: Cédula no cambió, omitiendo actualización de identificación')
+		}
+
 		console.log('✅ Paciente actualizado exitosamente:', data)
 		return data as unknown as Patient
 	} catch (error) {
@@ -389,6 +531,9 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 
 /**
  * Registrar cambios de paciente en change_logs
+ * 
+ * IMPORTANTE: Esta función se ejecuta dentro de la misma promesa del update
+ * para mitigar fallos parciales (si el update falla, el log no se registra)
  */
 const logPatientChanges = async (patientId: string, oldData: Patient, newData: PatientUpdate, userId: string) => {
 	try {
@@ -398,6 +543,11 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 
 		const userEmail = profile?.email || user.user?.email || 'unknown'
 		const userDisplayName = profile?.display_name || 'Usuario'
+
+		// Generar session_id único para esta sesión de edición (por submit, no por modal)
+		// Esto agrupa todos los cambios del mismo submit en una sola sesión
+		const changeSessionId = generateChangeSessionId()
+		const changedAt = new Date().toISOString()
 
 		// Crear logs para cada campo que cambió
 		const changes = []
@@ -412,23 +562,26 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 			gender: 'Género',
 		}
 
-		// Detectar cambios
+		// Detectar cambios con normalización (evita falsos positivos)
 		for (const [field, newValue] of Object.entries(newData)) {
 			if (field === 'updated_at' || field === 'version') continue
 
 			const oldValue = oldData[field as keyof Patient]
 
-			if (oldValue !== newValue) {
+			// Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
+			if (hasRealChange(oldValue, newValue)) {
 				changes.push({
 					patient_id: patientId,
 					entity_type: 'patient',
 					field_name: field,
 					field_label: fieldLabels[field] || field,
-					old_value: String(oldValue || ''),
-					new_value: String(newValue || ''),
+					old_value: formatValueForLog(oldValue),
+					new_value: formatValueForLog(newValue),
 					user_id: userId,
 					user_email: userEmail,
 					user_display_name: userDisplayName,
+					change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
+					changed_at: changedAt, // Mismo timestamp para todos
 				})
 			}
 		}
@@ -439,12 +592,14 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 
 			if (error) {
 				console.error('Error registrando cambios del paciente:', error)
+				// No lanzar error para no romper el flujo del update
 			} else {
-				console.log(`✅ ${changes.length} cambios registrados para el paciente`)
+				console.log(`✅ ${changes.length} cambios registrados para el paciente (session: ${changeSessionId})`)
 			}
 		}
 	} catch (error) {
 		console.error('Error en logPatientChanges:', error)
+		// No lanzar error para no romper el flujo del update
 	}
 }
 
@@ -627,8 +782,8 @@ export const getPatients = async (
 			if (casesError) {
 				console.error('Error obteniendo casos por branch:', casesError)
 			} else if (casesData) {
-				// Extraer IDs únicos de pacientes
-				const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
+				// Extraer IDs únicos de pacientes (filtrar nulls y convertir a string[])
+				const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter((id): id is string => id !== null))]
 
 				if (uniquePatientIds.length > 0) {
 					query = query.in('id', uniquePatientIds)
@@ -873,11 +1028,31 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
  * @returns Array de pacientes ordenados por relevancia
  */
 export const searchPatientsOptimized = async (searchTerm: string, limit = 10): Promise<Patient[]> => {
+	let laboratoryId: string
 	try {
-		const laboratoryId = await getUserLaboratoryId()
+		laboratoryId = await getUserLaboratoryId()
+	} catch (error) {
+		console.error('Error obteniendo laboratory_id:', error)
+		// Fallback a búsqueda tradicional sin laboratory_id
+		const fallbackResults = await searchPatients(searchTerm, limit)
+		return fallbackResults.map((p: any) => ({
+			id: p.id,
+			laboratory_id: '', // No disponible
+			cedula: p.cedula || '',
+			nombre: p.nombre || '',
+			edad: null,
+			telefono: p.telefono || null,
+			email: null,
+			gender: p.gender || null,
+			created_at: null,
+			updated_at: null,
+			version: null,
+		})) as Patient[]
+	}
 
+	try {
 		// Usar función SQL optimizada con pg_trgm
-		const { data, error } = await supabase.rpc('search_patients_optimized', {
+		const { data, error } = await (supabase.rpc as any)('search_patients_optimized', {
 			search_term: searchTerm.trim(),
 			lab_id: laboratoryId,
 			result_limit: limit,
@@ -886,11 +1061,26 @@ export const searchPatientsOptimized = async (searchTerm: string, limit = 10): P
 		if (error) {
 			// Fallback a búsqueda tradicional si falla
 			console.warn('⚠️ Búsqueda optimizada falló, usando fallback:', error)
-			return await searchPatients(searchTerm, limit)
+			const fallbackResults = await searchPatients(searchTerm, limit)
+			// Convertir resultados del fallback a formato Patient completo
+			return fallbackResults.map((p: any) => ({
+				id: p.id,
+				laboratory_id: laboratoryId,
+				cedula: p.cedula || '',
+				nombre: p.nombre || '',
+				edad: null,
+				telefono: p.telefono || null,
+				email: null,
+				gender: p.gender || null,
+				created_at: null,
+				updated_at: null,
+				version: null,
+			})) as Patient[]
 		}
 
 		// Mapear resultados a formato Patient
-		return (data || []).map((row: any) => ({
+		const results = (data as any) || []
+		return results.map((row: any) => ({
 			id: row.id,
 			nombre: row.nombre,
 			cedula: row.cedula || null,
@@ -909,7 +1099,26 @@ export const searchPatientsOptimized = async (searchTerm: string, limit = 10): P
 	} catch (error) {
 		console.error('Error en búsqueda optimizada:', error)
 		// Fallback a búsqueda tradicional
-		return await searchPatients(searchTerm, limit)
+		try {
+			const fallbackResults = await searchPatients(searchTerm, limit)
+			// Convertir resultados del fallback a formato Patient completo
+			return fallbackResults.map((p: any) => ({
+				id: p.id,
+				laboratory_id: laboratoryId,
+				cedula: p.cedula || '',
+				nombre: p.nombre || '',
+				edad: null,
+				telefono: p.telefono || null,
+				email: null,
+				gender: p.gender || null,
+				created_at: null,
+				updated_at: null,
+				version: null,
+			})) as Patient[]
+		} catch (fallbackError) {
+			console.error('Error en fallback de búsqueda:', fallbackError)
+			return []
+		}
 	}
 }
 

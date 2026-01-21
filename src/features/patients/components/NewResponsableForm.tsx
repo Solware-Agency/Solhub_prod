@@ -298,7 +298,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="telefono">Teléfono</Label>
+							<Label htmlFor="telefono">Teléfono *</Label>
 							<Input
 								id="telefono"
 								value={telefono}
@@ -369,7 +369,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha de Nacimiento</Label>
+							<Label>Fecha de Nacimiento *</Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button

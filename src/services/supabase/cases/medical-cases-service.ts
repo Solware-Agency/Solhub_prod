@@ -5,6 +5,7 @@
 
 import { supabase } from '../config/config';
 // import type { Database } from '@shared/types/types' // No longer used
+import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils';
 
 // =====================================================================
 // FUNCIONES HELPER
@@ -887,11 +888,16 @@ export const getCasesWithPatientInfo = async (
     }
 
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.examType) {
@@ -1569,11 +1575,16 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       }
 
       if (filters?.dateFrom) {
-        query = query.gte('date', filters.dateFrom);
+        // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+        query = query.filter('created_at', 'gte', filters.dateFrom);
       }
 
       if (filters?.dateTo) {
-        query = query.lte('date', filters.dateTo);
+        // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+        const nextDay = new Date(filters.dateTo);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split('T')[0];
+        query = query.filter('created_at', 'lt', nextDayStr);
       }
 
       if (filters?.examType) {
@@ -1744,6 +1755,9 @@ export const updateMedicalCase = async (
 
 /**
  * Registrar cambios de caso médico en change_logs
+ * 
+ * IMPORTANTE: Esta función se ejecuta dentro de la misma promesa del update
+ * para mitigar fallos parciales (si el update falla, el log no se registra)
  */
 const logMedicalCaseChanges = async (
   caseId: string,
@@ -1762,6 +1776,11 @@ const logMedicalCaseChanges = async (
 
     const userEmail = profile?.email || user.user?.email || 'unknown';
     const userDisplayName = profile?.display_name || 'Usuario';
+
+    // Generar session_id único para esta sesión de edición (por submit, no por modal)
+    // Esto agrupa todos los cambios del mismo submit en una sola sesión
+    const changeSessionId = generateChangeSessionId();
+    const changedAt = new Date().toISOString();
 
     // Crear logs para cada campo que cambió
     const changes = [];
@@ -1786,25 +1805,30 @@ const logMedicalCaseChanges = async (
       descripcion_macroscopica: 'Descripción Macroscópica',
       diagnostico: 'Diagnóstico',
       comentario: 'Comentario',
+      consulta: 'Tipo de Consulta',
+      image_url: 'URL de Imagen',
     };
 
-    // Detectar cambios
+    // Detectar cambios con normalización (evita falsos positivos)
     for (const [field, newValue] of Object.entries(newData)) {
-      if (field === 'updated_at') continue;
+      if (field === 'updated_at' || field === 'version') continue;
 
       const oldValue = oldData[field as keyof MedicalCase];
 
-      if (oldValue !== newValue) {
+      // Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
+      if (hasRealChange(oldValue, newValue)) {
         changes.push({
           medical_record_id: caseId,
           entity_type: 'medical_case',
           field_name: field,
           field_label: fieldLabels[field] || field,
-          old_value: String(oldValue || ''),
-          new_value: String(newValue || ''),
+          old_value: formatValueForLog(oldValue),
+          new_value: formatValueForLog(newValue),
           user_id: userId,
           user_email: userEmail,
           user_display_name: userDisplayName,
+          change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
+          changed_at: changedAt, // Mismo timestamp para todos
         });
       }
     }
@@ -1815,14 +1839,16 @@ const logMedicalCaseChanges = async (
 
       if (error) {
         console.error('Error registrando cambios del caso médico:', error);
+        // No lanzar error para no romper el flujo del update
       } else {
         console.log(
-          `✅ ${changes.length} cambios registrados para el caso médico`,
+          `✅ ${changes.length} cambios registrados para el caso médico (session: ${changeSessionId})`,
         );
       }
     }
   } catch (error) {
     console.error('Error en logMedicalCaseChanges:', error);
+    // No lanzar error para no romper el flujo del update
   }
 };
 
@@ -1903,11 +1929,16 @@ export const getMedicalCasesStats = async (filters?: {
 
     // Aplicar filtros
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.branch) {

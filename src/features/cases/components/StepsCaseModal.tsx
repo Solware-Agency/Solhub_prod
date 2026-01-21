@@ -40,6 +40,7 @@ import SendEmailModal from './SendEmailModal';
 
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
+import { useAuth } from '@app/providers/AuthContext';
 
 interface MedicalRecord {
   id?: string;
@@ -93,6 +94,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -452,6 +454,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         body: JSON.stringify({
           caseId: case_.id,
           patientId: caseData.patient_id,
+          userId: user?.id || profile?.id || null, // User ID de quien hace clic en "Rellenar datos"
         }),
       });
 
@@ -794,6 +797,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       const requestBody = {
         caseId: case_.id,
         patientId: caseData.patient_id,
+        userId: user?.id || profile?.id || null, // User ID de quien genera el PDF
       };
 
       console.log('Request body:', requestBody);
@@ -1187,10 +1191,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 {isNotRechazado ? (
                   <p className='text-teal-400 text-sm'>
-                    Para completar este paso, haz clic en el botón de arriba
-                    para ir a rellenar los datos del documento en Google Docs.
-                    Una vez que termines regresa a esta pestaña para continuar
-                    con el siguiente paso.
+                    Rellena los datos y regresa a esta pestaña para continuar.
                   </p>
                 ) : (
                   <p className='text-teal-400 text-sm'>
@@ -1239,7 +1240,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {isSpt && isMedicoTratante
                     ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
-                    : 'Para completar este paso, haz clic en el botón de arriba para marcar el documento como completado y espera por la aprobacion para continuar con el siguiente paso.'}
+                    : 'Marca el documento como completado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1294,7 +1295,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1366,7 +1367,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1381,6 +1382,33 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className='space-y-4'
           >
+            {/* Mostrar alerta si no hay email */}
+            {!case_.email && (
+              <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
+                <div className='flex flex-col gap-2'>
+                  <p className='text-teal-700 dark:text-teal-300 text-sm font-medium'>
+                    El paciente no tiene correo electrónico registrado
+                  </p>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='w-full sm:w-auto border-teal-500 text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-900/20'
+                    onClick={() => {
+                      // TODO: Abrir modal para agregar email
+                      toast({
+                        title: 'Funcionalidad en desarrollo',
+                        description: 'Próximamente podrás agregar el correo desde aquí',
+                      });
+                    }}
+                  >
+                    <Send className='w-4 h-4 mr-2' />
+                    Agregar Correo Electrónico
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
               {/* Activa el nodo de transformar a PDF y luego te redirecciona al PDF */}
               <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
@@ -1448,7 +1476,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                   ? docAprobado === 'pendiente'
                     ? 'Esperando aprobación del owner'
                     : 'Completa los pasos previos para habilitar la descarga'
-                  : 'Haz clic en el botón "Descargar PDF" y espera mientras preparamos tu documento. El proceso puede tardar unos segundos dependiendo de la carga del sistema.'}
+                  : 'Descarga el PDF del documento.'}
               </p>
             </div>
           </motion.div>

@@ -9,6 +9,7 @@ import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@/services/supabase/config/config'
 import type { ChangeLog } from '@/services/legacy/supabase-service'
 import type { Patient } from '@/services/supabase/patients/patients-service'
+import { updatePatient } from '@/services/supabase/patients/patients-service'
 import { cn } from '@shared/lib/cn'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 
@@ -54,6 +55,9 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 	const { profile } = useUserProfile()
 	const isImagenologia = profile?.role === 'imagenologia'
+
+	// Verificar si es dependiente (menor o animal)
+	const isDependiente = patient.tipo_paciente === 'menor' || patient.tipo_paciente === 'animal'
 
 	const [formData, setFormData] = useState({
 		nombre: patient.nombre,
@@ -179,47 +183,22 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				return
 			}
 
-			// Actualizar el paciente en la nueva tabla patients
+			// Actualizar el paciente usando el servicio (incluye dual-write automático)
 			// Construir payload de update; solo incluir image_url si imagenologia
 			const updatePayload: any = {
-				cedula: newCedula,
+				cedula: formData.cedulaType === 'S/C' ? null : newCedula,
 				nombre: formData.nombre,
 				telefono: formData.telefono || null,
 				email: formData.email || null,
 				edad: formData.edad,
-				updated_at: new Date().toISOString(),
 			}
 			if (isImagenologia) {
 				updatePayload.image_url = formData.image_url || null
 			}
 
-			const { error: updateError } = await supabase
-				.from('patients')
-				.update(updatePayload)
-				.eq('id', patient.id)
-				.eq('id', patient.id)
-
-			if (updateError) throw updateError
-
-			// Registrar los cambios en change_logs para el paciente
-			for (const change of changes) {
-				const changeLog: ChangeLog = {
-					patient_id: patient.id,
-					entity_type: 'patient',
-					user_id: user.id,
-					user_email: user.email || 'unknown@email.com',
-					user_display_name: user.user_metadata?.display_name || null,
-					field_name: change.field,
-					field_label: change.fieldLabel,
-					old_value: change.oldValue || null,
-					new_value: change.newValue || null,
-					changed_at: new Date().toISOString(),
-				}
-
-				const { error: logError } = await supabase.from('change_logs').insert(changeLog)
-
-				if (logError) throw logError
-			}
+			// Usar updatePatient que incluye dual-write automático a identificaciones
+			// y registro automático de cambios en change_logs (con agrupación por session_id)
+			await updatePatient(patient.id, updatePayload, user.id)
 
 			toast({
 				description: 'Datos del paciente actualizados exitosamente.',
@@ -305,33 +284,46 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Cédula</label>
-													<div className="grid grid-cols-4 gap-2">
-														<CustomDropdown
-															options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
-															value={formData.cedulaType}
-															onChange={handleCedulaTypeChange}
-															placeholder="Tipo"
-															className="text-sm"
-															direction="auto"
-														/>
-														<Input
-															name="cedulaNumber"
-															value={formData.cedulaNumber}
-															onChange={handleCedulaNumberChange}
-															placeholder={formData.cedulaType === 'S/C' ? 'No aplica' : '12345678'}
-															className={cn(
-																'col-span-3 text-sm',
-																formData.cedulaType === 'S/C' && 'opacity-50 cursor-not-allowed',
-															)}
-															disabled={formData.cedulaType === 'S/C'}
-															required={formData.cedulaType !== 'S/C'}
-														/>
+													<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
+														<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+															<CustomDropdown
+																options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
+																value={formData.cedulaType}
+																onChange={handleCedulaTypeChange}
+																placeholder="Tipo"
+																className="text-sm"
+																direction="auto"
+															/>
+														</div>
+														<div className="col-span-4 sm:col-span-4">
+															<Input
+																name="cedulaNumber"
+																value={formData.cedulaNumber}
+																onChange={handleCedulaNumberChange}
+																placeholder={formData.cedulaType === 'S/C' ? 'No aplica' : '12345678'}
+																className={cn(
+																	'text-sm',
+																	formData.cedulaType === 'S/C' && 'opacity-50 cursor-not-allowed',
+																)}
+																disabled={formData.cedulaType === 'S/C'}
+																required={formData.cedulaType !== 'S/C'}
+															/>
+														</div>
 													</div>
 												</div>
 
 												<div className="space-y-2">
-													<label className="text-sm text-gray-500 dark:text-gray-400">Teléfono</label>
-													<Input name="telefono" value={formData.telefono} onChange={handleChange} />
+													<label className="text-sm text-gray-500 dark:text-gray-400">
+														Teléfono{isDependiente && ' (del responsable)'}
+													</label>
+													<Input 
+														name="telefono" 
+														value={formData.telefono} 
+														onChange={handleChange}
+														disabled={isDependiente}
+														readOnly={isDependiente}
+														className={isDependiente ? 'opacity-50 cursor-not-allowed' : ''}
+													/>
 												</div>
 
 												<div className="space-y-2">

@@ -18,6 +18,8 @@ import {
   Eye,
   Send,
   Copy,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type {
   MedicalCaseWithPatient,
@@ -191,6 +193,7 @@ interface InfoRowProps {
   isEditing?: boolean;
   editedValue?: string | number | null;
   onChange?: (field: string, value: unknown) => void;
+  disabled?: boolean;
 }
 
 const InfoRow: React.FC<InfoRowProps> = React.memo(
@@ -203,8 +206,9 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
     isEditing = false,
     editedValue,
     onChange,
+    disabled = false,
   }) => {
-    const isEditableField = Boolean(isEditing && editable && field && onChange);
+    const isEditableField = Boolean(isEditing && editable && field && onChange && !disabled);
     const displayValue = field ? editedValue ?? value : value;
 
     return (
@@ -221,6 +225,7 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
               value={String(displayValue ?? '')}
               onChange={(e) => onChange?.(field!, e.target.value)}
               className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+              disabled={disabled}
             />
           </div>
         ) : (
@@ -263,6 +268,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+    const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
     
     // Image URL state for imagenologia role
     const [imageUrl, setImageUrl] = useState('');
@@ -589,6 +595,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     }, [currentCase, isEditing]);
 
+    // Resetear estado de edición cuando el modal se cierra
+    useEffect(() => {
+      if (!isOpen) {
+        setIsEditing(false);
+        setEditedCase({});
+        setPaymentMethods([]);
+        setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+        setIsAddingNewPayment(false);
+      }
+    }, [isOpen]);
+
     const handleEditClick = () => {
       if (!currentCase) return;
       setIsEditing(true);
@@ -600,6 +617,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       setPaymentMethods([]);
       setNewPaymentMethod({ method: '', amount: 0, reference: '' });
       setIsAddingNewPayment(false);
+    };
+
+    // Función wrapper para onClose que resetea el estado de edición
+    const handleClose = () => {
+      setIsEditing(false);
+      setEditedCase({});
+      setPaymentMethods([]);
+      setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+      setIsAddingNewPayment(false);
+      onClose();
     };
 
     const handleDeleteClick = () => {
@@ -628,7 +655,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Close modals and panel
         setIsDeleteModalOpen(false);
-        onClose();
+        handleClose();
 
         // Call onDelete callback if provided
         if (onDelete) {
@@ -947,29 +974,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               'No se puede actualizar el paciente: patient_id no está disponible',
             );
           }
+          // updatePatient ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updatePatient(currentCase.patient_id, patientChanges, user.id);
-
-          // Registrar cambios en logs para el paciente
-          for (const change of patientChangeLogs) {
-            const changeLog = {
-              patient_id: currentCase.patient_id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'patient',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging patient change:', logError);
-          }
 
           toast({
             title: '✅ Datos del paciente actualizados',
@@ -981,28 +988,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos del caso si hay cambios
         if (Object.keys(caseChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, caseChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of caseChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError) console.error('Error logging case change:', logError);
-          }
 
           toast({
             title: '✅ Caso actualizado exitosamente',
@@ -1015,29 +1003,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos financieros si hay cambios
         if (Object.keys(financialChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, financialChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of financialChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging financial change:', logError);
-          }
 
           toast({
             title: '✅ Información financiera actualizada',
@@ -1470,7 +1438,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={isEditing ? undefined : onClose}
+                onClick={isEditing ? undefined : handleClose}
                 className={`fixed inset-0 bg-black/50 ${
                   isFullscreen
                     ? 'z-[99999999999999999]'
@@ -1503,7 +1471,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     {/* Botón X (derecha) */}
                     <div className='flex items-center gap-2 flex-shrink-0'>
                       <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className='p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none'
                         aria-label='Cerrar'
                       >
@@ -1616,23 +1584,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
                 {/* Content */}
                 <div className='p-4 sm:p-6 space-y-6'>
-                  <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                    <p className='text-teal-400 text-sm'>
-                      Este caso fue creado por{' '}
-                      <span className='font-semibold'>
-                        {creatorData?.displayName || 'Usuario del sistema'}
-                      </span>{' '}
-                      el{' '}
-                      {currentCase.created_at
-                        ? format(
-                            new Date(currentCase.created_at),
-                            'dd/MM/yyyy',
-                            { locale: es },
-                          )
-                        : 'Fecha no disponible'}
-                    </p>
-                  </div>
-
                   {/* Changelog Section */}
                   {isChangelogOpen && !isEditing && (
                     <InfoSection title='Historial de Cambios' icon={History}>
@@ -1733,136 +1684,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.nombre ?? null}
                         onChange={handleInputChange}
                       />
-                      {/* Cédula - Mostrar información del responsable si es menor o animal */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
-                        </span>
-                        <div className='sm:w-1/2 sm:text-right'>
-                          {responsableData?.responsable ? (
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                              {responsableData.responsable.nombre} - {responsableData.responsable.cedula}
-                            </span>
-                          ) : (
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                              {currentCase.cedula || 'Sin cédula'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Edad:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2 grid grid-cols-2 gap-2'>
-                            {(() => {
-                              const parsed = parseEdad(
-                                String(
-                                  editedCase.edad ?? currentCase.edad ?? '',
-                                ),
-                              );
-                              const ageValue = parsed.value;
-                              const ageUnit = parsed.unit;
-                              return (
-                                <>
-                                  <Input
-                                    id='edad-input'
-                                    name='edad'
-                                    type='number'
-                                    placeholder='0'
-                                    value={ageValue === '' ? '' : ageValue}
-                                    min={0}
-                                    max={150}
-                                    onChange={(e) => {
-                                      const newValue = e.target.value;
-                                      const numeric =
-                                        newValue === '' ? '' : Number(newValue);
-                                      const unitToUse = ageUnit || 'Años';
-                                      const newEdad =
-                                        newValue === ''
-                                          ? null
-                                          : `${numeric} ${unitToUse}`;
-                                      handleInputChange('edad', newEdad);
-                                    }}
-                                    className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                                  />
-                                  <CustomDropdown
-                                    id='edad-unit-dropdown'
-                                    options={createDropdownOptions([
-                                      'Meses',
-                                      'Años',
-                                    ])}
-                                    value={ageUnit || 'Años'}
-                                    onChange={(newUnit) => {
-                                      const parsedNow = parseEdad(
-                                        String(
-                                          editedCase.edad ??
-                                            currentCase.edad ??
-                                            '',
-                                        ),
-                                      );
-                                      const valueNow = parsedNow.value;
-                                      const valueToUse =
-                                        valueNow === '' ? '' : valueNow;
-                                      const newEdad =
-                                        valueToUse === ''
-                                          ? null
-                                          : `${valueToUse} ${newUnit}`;
-                                      handleInputChange('edad', newEdad);
-                                    }}
-                                    placeholder='Unidad'
-                                    className='text-sm'
-                                    direction='auto'
-                                  />
-                                </>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {(() => {
-                              // Si hay edad, mostrarla
-                              if (currentCase.edad) {
-                                return currentCase.edad;
-                              }
-                              // Si no hay edad pero hay fecha_nacimiento, calcularla
-                              const calculatedAge = calculateAgeFromFechaNacimiento(
-                                (currentCase as any).fecha_nacimiento
-                              );
-                              if (calculatedAge) {
-                                return calculatedAge;
-                              }
-                              // Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
-                              return 'Sin edad';
-                            })()}
-                          </span>
-                        )}
-                      </div>
-                      <InfoRow
-                        label='Teléfono'
-                        value={currentCase.telefono || ''}
-                        field='telefono'
-                        isEditing={isEditing}
-                        editedValue={editedCase.telefono ?? null}
-                        onChange={handleInputChange}
-                      />
-                      <InfoRow
-                        label='Email'
-                        value={currentCase.patient_email || 'N/A'}
-                        field='patient_email'
-                        type='email'
-                        isEditing={isEditing}
-                        editedValue={editedCase.patient_email ?? null}
-                        onChange={handleInputChange}
-                      />
                       
                       {/* Image URL field - Always visible for imagenologia/owner, visible for others only if URL exists */}
                       {(profile?.role === 'imagenologia' || profile?.role === 'owner' || (currentCase as any).image_url) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                            URL de Imagen:
+                            Imagen:
                           </span>
                           {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
                             <div className='sm:w-1/2'>
@@ -1885,6 +1712,160 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           )}
                         </div>
+                      )}
+                      
+                      {/* Botón Ver más/Ver menos */}
+                      <div className='flex justify-center pt-2'>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
+                          className='text-sm text-primary hover:text-primary/80'
+                        >
+                          {showFullPatientInfo ? (
+                            <>
+                              Ver menos
+                              <ChevronUp className='ml-1 h-4 w-4' />
+                            </>
+                          ) : (
+                            <>
+                              Ver más
+                              <ChevronDown className='ml-1 h-4 w-4' />
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
+                      {showFullPatientInfo && (
+                        <>
+                          {/* Cédula - Mostrar información del responsable si es menor o animal */}
+                          <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
+                            </span>
+                            <div className='sm:w-1/2 sm:text-right'>
+                              {responsableData?.responsable ? (
+                                <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                                  {responsableData.responsable.nombre} - {responsableData.responsable.cedula}
+                                </span>
+                              ) : (
+                                <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                                  {currentCase.cedula || 'Sin cédula'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
+                          <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              Edad:
+                            </span>
+                            {isEditing ? (
+                              <div className='sm:w-1/2 grid grid-cols-2 gap-2'>
+                                {(() => {
+                                  const parsed = parseEdad(
+                                    String(
+                                      editedCase.edad ?? currentCase.edad ?? '',
+                                    ),
+                                  );
+                                  const ageValue = parsed.value;
+                                  const ageUnit = parsed.unit;
+                                  return (
+                                    <>
+                                      <Input
+                                        id='edad-input'
+                                        name='edad'
+                                        type='number'
+                                        placeholder='0'
+                                        value={ageValue === '' ? '' : ageValue}
+                                        min={0}
+                                        max={150}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const numeric =
+                                            newValue === '' ? '' : Number(newValue);
+                                          const unitToUse = ageUnit || 'Años';
+                                          const newEdad =
+                                            newValue === ''
+                                              ? null
+                                              : `${numeric} ${unitToUse}`;
+                                          handleInputChange('edad', newEdad);
+                                        }}
+                                        className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                                      />
+                                      <CustomDropdown
+                                        id='edad-unit-dropdown'
+                                        options={createDropdownOptions([
+                                          'Meses',
+                                          'Años',
+                                        ])}
+                                        value={ageUnit || 'Años'}
+                                        onChange={(newUnit) => {
+                                          const parsedNow = parseEdad(
+                                            String(
+                                              editedCase.edad ??
+                                                currentCase.edad ??
+                                                '',
+                                            ),
+                                          );
+                                          const valueNow = parsedNow.value;
+                                          const valueToUse =
+                                            valueNow === '' ? '' : valueNow;
+                                          const newEdad =
+                                            valueToUse === ''
+                                              ? null
+                                              : `${valueToUse} ${newUnit}`;
+                                          handleInputChange('edad', newEdad);
+                                        }}
+                                        placeholder='Unidad'
+                                        className='text-sm'
+                                        direction='auto'
+                                      />
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (currentCase.edad) {
+                                    return currentCase.edad;
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    (currentCase as any).fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return calculatedAge;
+                                  }
+                                  // Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
+                                  return 'Sin edad';
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                          <InfoRow
+                            label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
+                            value={currentCase.telefono || ''}
+                            field='telefono'
+                            isEditing={isEditing}
+                            editedValue={editedCase.telefono ?? null}
+                            onChange={handleInputChange}
+                            disabled={!!responsableData}
+                          />
+                          <InfoRow
+                            label='Email'
+                            value={currentCase.patient_email || 'N/A'}
+                            field='patient_email'
+                            type='email'
+                            isEditing={isEditing}
+                            editedValue={editedCase.patient_email ?? null}
+                            onChange={handleInputChange}
+                          />
+                        </>
                       )}
                       
                       {/* Note: relationship field not in new structure, could be added if needed */}
@@ -2669,6 +2650,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Additional Information */}
                   <InfoSection title='Información Adicional' icon={FileText}>
                     <div className='space-y-1'>
+                      <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3'>
+                        <p className='text-teal-400 text-sm'>
+                          Este caso fue creado por{' '}
+                          <span className='font-semibold'>
+                            {creatorData?.displayName || 'Usuario del sistema'}
+                          </span>
+                        </p>
+                      </div>
                       <InfoRow
                         label='Fecha de creación'
                         value={new Date(
