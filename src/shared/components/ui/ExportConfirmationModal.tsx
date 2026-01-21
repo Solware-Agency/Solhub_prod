@@ -54,7 +54,7 @@ export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = (
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
 				<DialogHeader>
 					<div className="flex items-center gap-3 mb-2">
 						<div className={cn('w-12 h-12 rounded-full flex items-center justify-center', getIconBgColor())}>

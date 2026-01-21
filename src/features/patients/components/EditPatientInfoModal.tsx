@@ -240,11 +240,11 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 						className="relative z-10 w-full max-w-4xl mx-4"
 					>
 						<div
-							className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
+							className="bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
 							onClick={(e) => e.stopPropagation()}
 						>
 							{/* Header */}
-							<div className="sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
+							<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
 								<div className="flex items-center justify-between">
 									<div>
 										<div>

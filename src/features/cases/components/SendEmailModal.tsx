@@ -90,7 +90,7 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-2xl'>
+      <DialogContent className='max-w-2xl bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Mail className='w-5 h-5' />

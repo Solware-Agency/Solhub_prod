@@ -97,7 +97,7 @@ export const SignatureImageEditorModal: React.FC<SignatureImageEditorModalProps>
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0 left-[1rem] right-[1rem] sm:left-[50%] sm:right-auto translate-x-0 sm:translate-x-[-50%]">
+			<DialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0 left-[1rem] right-[1rem] sm:left-[50%] sm:right-auto translate-x-0 sm:translate-x-[-50%] bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
 				{/* Título arriba */}
 				<DialogHeader className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
 					<DialogTitle className="text-base sm:text-lg">Editar firma</DialogTitle>

@@ -193,7 +193,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   if (error || queryError) {
     return ReactDOM.createPortal(
       <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
-        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+        <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error
           </h3>
@@ -242,7 +242,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className={`bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto ${
+              className={`bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto ${
                 isFullscreen ? 'h-[90vh]' : ''
               }`}
             >
@@ -344,7 +344,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     // Fallback: renderizar sin portal si hay error
     return (
       <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
-        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+        <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error
           </h3>
