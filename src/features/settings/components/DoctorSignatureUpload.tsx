@@ -441,7 +441,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 						ref={fileInputRef}
 						id={`signature-file-${signatureNumber}`}
 						type="file"
-						accept=".jpg,.jpeg,image/jpeg"
+						accept=".jpg,.jpeg,.png,image/jpeg,image/png"
 						onChange={handleFileSelect}
 						className="hidden"
 						disabled={isUploading || isDeleting}
@@ -596,7 +596,7 @@ export const DoctorSignatureUpload: React.FC = () => {
 						Firmas Digitales
 					</div>
 					<span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-						JPG/JPEG (máx. 10MB)
+						JPG/JPEG/PNG (máx. 10MB)
 					</span>
 				</h2>
 

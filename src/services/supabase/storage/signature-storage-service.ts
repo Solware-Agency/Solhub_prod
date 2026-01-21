@@ -8,11 +8,11 @@ import type { PostgrestError } from '@supabase/supabase-js'
 
 const BUCKET_NAME = 'doctor-signatures'
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB en bytes
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg']
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg']
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 
 /**
- * Valida que el archivo sea JPG/JPEG y no exceda el tamaño máximo
+ * Valida que el archivo sea JPG/JPEG/PNG y no exceda el tamaño máximo
  */
 export function validateSignatureFile(file: File): { valid: boolean; error?: string } {
 	// Validar tamaño
@@ -28,7 +28,7 @@ export function validateSignatureFile(file: File): { valid: boolean; error?: str
 	if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
 		return {
 			valid: false,
-			error: `Formato no permitido. Solo se aceptan archivos JPG/JPEG`,
+			error: `Formato no permitido. Solo se aceptan archivos JPG/JPEG/PNG`,
 		}
 	}
 
@@ -37,12 +37,13 @@ export function validateSignatureFile(file: File): { valid: boolean; error?: str
 	const isValidMimeType = 
 		normalizedMimeType === 'image/jpeg' || 
 		normalizedMimeType === 'image/jpg' ||
-		normalizedMimeType.startsWith('image/') && (fileExtension === '.jpg' || fileExtension === '.jpeg')
+		normalizedMimeType === 'image/png' ||
+		normalizedMimeType.startsWith('image/') && (fileExtension === '.jpg' || fileExtension === '.jpeg' || fileExtension === '.png')
 	
 	if (!isValidMimeType && file.type) {
 		return {
 			valid: false,
-			error: `Tipo de archivo no permitido. Solo se aceptan imágenes JPG/JPEG. Tipo recibido: ${file.type}`,
+			error: `Tipo de archivo no permitido. Solo se aceptan imágenes JPG/JPEG/PNG. Tipo recibido: ${file.type}`,
 		}
 	}
 
@@ -52,7 +53,7 @@ export function validateSignatureFile(file: File): { valid: boolean; error?: str
 /**
  * Sube la firma del médico a Supabase Storage
  * @param userId - ID del usuario médico
- * @param file - Archivo de imagen JPG/JPEG
+ * @param file - Archivo de imagen JPG/JPEG/PNG
  * @param laboratoryId - ID del laboratorio (para organización multi-tenant)
  * @param signatureNumber - Número de firma (1 = principal, 2 = adicional 1, 3 = adicional 2). Por defecto 1 para compatibilidad.
  * @returns URL pública de la imagen subida
@@ -89,37 +90,66 @@ export async function uploadDoctorSignature(
 			}
 		}
 
-		// Generar path único: {laboratory_id}/{user_id}/signature.jpg o signature_2.jpg o signature_3.jpg
-		const fileExtension = file.name.toLowerCase().endsWith('.jpeg') ? '.jpeg' : '.jpg'
+		// Determinar extensión y tipo de contenido basado en el archivo
+		const fileName = file.name.toLowerCase()
+		let fileExtension: string
+		let contentType: string
+		
+		if (fileName.endsWith('.png')) {
+			fileExtension = '.png'
+			contentType = 'image/png'
+		} else if (fileName.endsWith('.jpeg')) {
+			fileExtension = '.jpeg'
+			contentType = 'image/jpeg'
+		} else {
+			fileExtension = '.jpg'
+			contentType = 'image/jpeg'
+		}
+		
 		const signatureFileName = signatureNumber === 1 
 			? `signature${fileExtension}` 
 			: `signature_${signatureNumber}${fileExtension}`
 		const filePath = `${laboratoryId}/${userId}/${signatureFileName}`
 
-		// Asegurar que siempre usamos 'image/jpeg' como content type
-		// Algunos navegadores pueden reportar 'image/jpg' pero Supabase espera 'image/jpeg'
-		const contentType = 'image/jpeg'
-		
-		// Leer el archivo como ArrayBuffer para validar que sea JPEG válido
+		// Leer el archivo como ArrayBuffer para validar que sea una imagen válida
 		const arrayBuffer = await file.arrayBuffer()
-		
-		// Validar que el archivo realmente sea una imagen JPEG válida
-		// Los archivos JPEG válidos comienzan con los bytes FF D8 FF
 		const uint8Array = new Uint8Array(arrayBuffer)
-		if (uint8Array.length < 3 || uint8Array[0] !== 0xFF || uint8Array[1] !== 0xD8 || uint8Array[2] !== 0xFF) {
-			console.error('Invalid JPEG file: File does not start with JPEG magic bytes', {
-				firstBytes: Array.from(uint8Array.slice(0, 10)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
-				expected: '0xFF 0xD8 0xFF'
-			})
-			return {
-				data: null,
-				error: new Error('El archivo no es una imagen JPEG válida. Por favor, verifica que el archivo no esté corrupto.'),
+		
+		// Validar magic bytes según el tipo de archivo
+		if (fileExtension === '.png') {
+			// Los archivos PNG válidos comienzan con los bytes 89 50 4E 47 0D 0A 1A 0A
+			if (uint8Array.length < 8 || 
+				uint8Array[0] !== 0x89 || 
+				uint8Array[1] !== 0x50 || 
+				uint8Array[2] !== 0x4E || 
+				uint8Array[3] !== 0x47) {
+				console.error('Invalid PNG file: File does not start with PNG magic bytes', {
+					firstBytes: Array.from(uint8Array.slice(0, 10)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+					expected: '0x89 0x50 0x4E 0x47'
+				})
+				return {
+					data: null,
+					error: new Error('El archivo no es una imagen PNG válida. Por favor, verifica que el archivo no esté corrupto.'),
+				}
+			}
+		} else {
+			// Validar que el archivo realmente sea una imagen JPEG válida
+			// Los archivos JPEG válidos comienzan con los bytes FF D8 FF
+			if (uint8Array.length < 3 || uint8Array[0] !== 0xFF || uint8Array[1] !== 0xD8 || uint8Array[2] !== 0xFF) {
+				console.error('Invalid JPEG file: File does not start with JPEG magic bytes', {
+					firstBytes: Array.from(uint8Array.slice(0, 10)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+					expected: '0xFF 0xD8 0xFF'
+				})
+				return {
+					data: null,
+					error: new Error('El archivo no es una imagen JPEG válida. Por favor, verifica que el archivo no esté corrupto.'),
+				}
 			}
 		}
 		
 		// Crear un nuevo File con el tipo correcto para asegurar que se suba correctamente
 		// Esto es más confiable que usar Blob porque File preserva mejor el tipo MIME
-		const imageFile = new File([arrayBuffer], file.name, {
+		const imageFile = new File([arrayBuffer], signatureFileName, {
 			type: contentType,
 			lastModified: file.lastModified
 		})
@@ -128,13 +158,15 @@ export async function uploadDoctorSignature(
 		console.log('Uploading signature:', {
 			filePath,
 			fileName: file.name,
+			signatureFileName,
 			fileSize: file.size,
 			fileType: file.type,
 			newFileType: imageFile.type,
 			contentType,
+			fileExtension,
 			userId,
 			laboratoryId,
-			firstBytes: Array.from(uint8Array.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+			firstBytes: Array.from(uint8Array.slice(0, 8)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
 		})
 		
 		// Subir archivo usando la API REST directamente para tener control total sobre los headers
@@ -304,7 +336,7 @@ export async function deleteDoctorSignature(
 	try {
 		// Extraer el path del archivo desde la URL
 		// Formato esperado: https://[project].supabase.co/storage/v1/object/public/doctor-signatures/{laboratory_id}/{user_id}/signature.jpg
-		// o signature_2.jpg o signature_3.jpg
+		// o signature_2.jpg, signature_3.jpg, signature.png, signature_2.png, signature_3.png
 		const urlParts = signatureUrl.split('/')
 		const bucketIndex = urlParts.findIndex((part) => part === BUCKET_NAME)
 		
@@ -315,6 +347,7 @@ export async function deleteDoctorSignature(
 		}
 
 		// Reconstruir el path: {laboratory_id}/{user_id}/signature.jpg o signature_2.jpg o signature_3.jpg
+		// o signature.png o signature_2.png o signature_3.png
 		const filePath = urlParts.slice(bucketIndex + 1).join('/')
 		
 		// Si se proporciona signatureNumber, validar que coincida con el path
