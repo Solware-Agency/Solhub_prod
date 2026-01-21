@@ -201,17 +201,28 @@ const ChangelogTable: React.FC = () => {
 			let matchesDate = true
 			if (dateRange?.from || dateRange?.to) {
 				const logDate = new Date(log.changed_at)
-				const fromDate = dateRange.from
-				const toDate = dateRange.to
+				let fromDate = dateRange.from ? new Date(dateRange.from) : null
+				let toDate = dateRange.to ? new Date(dateRange.to) : null
+
+				// Normalizar fechas: establecer fromDate al inicio del día (00:00:00)
+				if (fromDate) {
+					fromDate.setHours(0, 0, 0, 0)
+				}
+
+				// Normalizar fechas: establecer toDate al final del día (23:59:59.999)
+				// Esto asegura que se incluyan todos los registros del día seleccionado
+				if (toDate) {
+					toDate.setHours(23, 59, 59, 999)
+				}
 
 				if (fromDate && toDate) {
-					// Rango completo: desde fecha hasta fecha
+					// Rango completo: desde inicio del día hasta final del día
 					matchesDate = logDate >= fromDate && logDate <= toDate
 				} else if (fromDate) {
-					// Solo fecha desde
+					// Solo fecha desde: incluir desde inicio del día
 					matchesDate = logDate >= fromDate
 				} else if (toDate) {
-					// Solo fecha hasta
+					// Solo fecha hasta: incluir hasta final del día
 					matchesDate = logDate <= toDate
 				}
 			}

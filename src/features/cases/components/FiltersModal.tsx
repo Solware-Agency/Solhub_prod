@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@shared/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@shared/components/ui/button';
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
 import {
@@ -235,12 +236,17 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-background'
+        className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'
       >
         <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
         <DialogDescription className="sr-only">
           Configure los filtros para buscar casos específicos
         </DialogDescription>
+        {/* Botón X para cerrar */}
+        <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden flex flex-col flex-1 min-h-0'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger

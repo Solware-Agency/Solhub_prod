@@ -22,7 +22,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { UserPlus, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { createPatient, PatientError } from '@services/supabase/patients/patients-service'
-import { createIdentification } from '@services/supabase/patients/identificaciones-service'
 import { useToast } from '@shared/hooks/use-toast'
 import { cn } from '@shared/lib/cn'
 import type { PatientProfile } from './PatientSearchAutocomplete'
@@ -154,6 +153,8 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					: null
 
 			// 3. Crear paciente responsable (adulto)
+			// NOTA: createPatient() ya hace el dual-write automáticamente a identificaciones,
+			//       no es necesario crear la identificación manualmente aquí
 			const nuevoPaciente = await createPatient({
 				cedula: cedulaFormatted,
 				nombre: nombre.trim(),
@@ -165,14 +166,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 				fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
 			} as any)
 
-			// 4. Crear identificación en la tabla identificaciones
-			await createIdentification({
-				paciente_id: nuevoPaciente.id,
-				tipo_documento: cedulaTipo,
-				numero: cedulaNumero.trim(),
-			})
-
-			// 5. Notificar éxito
+			// 4. Notificar éxito
 			toast({
 				title: '✅ Paciente registrado',
 				description: `${nombre.trim()} ha sido registrado correctamente`,
@@ -274,12 +268,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible" onOpenAutoFocus={handleOpenAutoFocus}>
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]" onOpenAutoFocus={handleOpenAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4 py-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+				<div className="space-y-4 py-4 px-2 overflow-y-auto max-h-[calc(90vh-180px)]">
 					{/* Primera línea: Nombre Completo y Teléfono */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">

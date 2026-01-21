@@ -45,7 +45,22 @@ import {
 import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
-import { getAvailableRolesForLaboratory } from '@/services/supabase/laboratories/laboratory-roles-service'
+import { getAvailableRolesForLaboratory, ROLE_LABELS, type UserRole } from '@/services/supabase/laboratories/laboratory-roles-service'
+
+// Mapeo de descripciones específicas para instrucciones de uso
+const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
+	owner: 'Los usuarios con rol de propietario siempre pueden ver todos los casos, independientemente de la sede asignada.',
+	admin: 'Los usuarios con rol de administrador tienen acceso completo sin restricciones a todas las funcionalidades.',
+	employee: 'Los recepcionistas pueden registrar y editar casos médicos. Con sede asignada solo ven casos de esa sede, sin sede pueden ver todos.',
+	residente: 'Los usuarios con rol de residente tienen acceso a registros, casos generados, médicos y ajustes.',
+	citotecno: 'Los citotecnólogos gestionan citologías y realizan análisis técnico de muestras.',
+	patologo: 'Los patólogos analizan y diagnostican muestras patológicas, generando diagnósticos para casos de biopsia.',
+	enfermero: 'Los enfermeros tienen acceso para atención y seguimiento de pacientes.',
+	medico_tratante: 'Los médicos tratantes son responsables del tratamiento del paciente y pueden ver casos relacionados.',
+	imagenologia: 'Los usuarios de imagenología gestionan estudios de imagen y radiología.',
+	prueba: 'Rol de prueba con acceso completo sin restricciones.',
+	call_center: 'El personal de call center puede visualizar y enviar casos, además de editar información básica de pacientes.',
+}
 
 interface UserProfile {
 	id: string
@@ -776,21 +791,21 @@ const MainUsers: React.FC = () => {
 								<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
 								aprobados por un propietario antes de poder acceder al sistema.
 							</li>
-							<li>
-								<strong>Asignación de Sede:</strong> Los Recepcionistas con una sede asignada solo podrán ver los casos
-								médicos de esa sede.
-							</li>
-							<li>
-								<strong>Sin Restricción:</strong> Los Recepcionistas sin sede asignada pueden ver todos los casos.
-							</li>
-							<li>
-								<strong>Propietarios:</strong> Los usuarios con rol de propietario siempre pueden ver todos los casos,
-								independientemente de la sede asignada.
-							</li>
-							<li>
-								<strong>Residentes:</strong> Los usuarios con rol de residente tienen acceso a registros, casos
-								generados, médicos y ajustes.
-							</li>
+							{availableRoles.length > 0 && (
+								<>
+									{availableRoles.map((role) => {
+										const roleValue = role.value as UserRole
+										const instruction = ROLE_INSTRUCTIONS[roleValue]
+										if (!instruction) return null
+										
+										return (
+											<li key={roleValue}>
+												<strong>{role.label}{roleValue !== 'call_center' ? 's' : ''}:</strong> {instruction}
+											</li>
+										)
+									})}
+								</>
+							)}
 						</>
 					)}
 				</ul>
@@ -926,22 +941,6 @@ const MainUsers: React.FC = () => {
 									key={user.id}
 									className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700"
 								>
-									{/* Header con rol y estado */}
-									<div className="flex items-center justify-between mb-2 sm:mb-3">
-										<span
-											className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getRoleColor(
-												user.role,
-											)}`}
-										>
-											{getRoleIcon(user.role)}
-											{user.role === 'owner'
-												? 'Propietario'
-												: user.role === 'residente'
-												? 'Residente'
-												: 'Recepcionista'}
-										</span>
-									</div>
-
 									{/* Email */}
 									<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
 										<Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -959,36 +958,6 @@ const MainUsers: React.FC = () => {
 											</p>
 										</div>
 									)}
-
-									{/* Estado de aprobación */}
-									<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-										{getApprovalIcon(user.estado)}
-										<span
-											className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getApprovalColor(
-												user.estado,
-											)}`}
-										>
-											{user.estado === 'aprobado' ? 'Aprobado' : 'Pendiente de aprobación'}
-										</span>
-									</div>
-
-									{/* Sede asignada */}
-									<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-										<MapPin className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-										<div className="flex items-center gap-2">
-											{user.assigned_branch ? (
-												<span
-													className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getBranchColor(
-														user.assigned_branch,
-													)}`}
-												>
-													{user.assigned_branch}
-												</span>
-											) : (
-												<span className="text-sm text-gray-500 dark:text-gray-400">Sin sede asignada</span>
-											)}
-										</div>
-									</div>
 
 									{/* Fecha de registro */}
 									<div className="flex items-center text gap-1.5 sm:gap-2 mb-2 sm:mb-3">
