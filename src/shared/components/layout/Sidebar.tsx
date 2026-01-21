@@ -20,7 +20,7 @@ import {
   FolderSearch,
   Activity,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
@@ -99,9 +99,12 @@ const NavGroup: React.FC<NavGroupProps> = ({
   const touchStartTimeRef = React.useRef<number>(0);
   const touchHandledRef = React.useRef<boolean>(false);
 
+  // Obtener la ruta actual usando useLocation para que React reaccione a cambios
+  const location = useLocation();
+  
   // Verificar si algún item hijo está activo
   const isChildActive = childPaths.some(
-    (path) => window.location.pathname === path,
+    (path) => location.pathname === path,
   );
 
   // Funciones para hover (solo desktop)
@@ -264,6 +267,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   // For mobile, always show full sidebar. For desktop, use isExpanded state
   const showFullContent = isMobile || isExpanded;
   const navigate = useNavigate();
+  const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
@@ -275,7 +279,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     '/dashboard/patients',
     '/patients',
   ];
-  const reportsPaths = ['/dashboard/stats', '/dashboard/reports'];
+  const reportsPaths = [
+    '/dashboard/stats',
+    '/dashboard/reports',
+    '/dashboard/triage-analytics',
+    '/dashboard/changelog',
+    '/prueba/stats',
+    '/prueba/reports',
+    '/prueba/triage-analytics',
+    '/prueba/changelog',
+  ];
 
   const [expandedGroups, setExpandedGroups] = React.useState<
     Record<string, boolean>
