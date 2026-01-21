@@ -274,12 +274,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible" onOpenAutoFocus={handleOpenAutoFocus}>
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]" onOpenAutoFocus={handleOpenAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4 py-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+				<div className="space-y-4 py-4 px-2 overflow-y-auto max-h-[calc(90vh-180px)]">
 					{/* Primera línea: Nombre Completo y Teléfono */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">

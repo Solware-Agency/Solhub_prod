@@ -400,14 +400,14 @@ export const PatientRelationshipManager = ({
 					)}
 				</DialogTrigger>
 			)}
-			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
 				<DialogHeader>
 					<DialogTitle>
 						{dependentToEdit ? 'Editar' : 'Agregar'} Dependiente
 					</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4 py-4">
+				<div className="space-y-4 py-4 px-2 overflow-y-auto max-h-[calc(90vh-180px)]">
 					{/* Tipo de dependiente */}
 					<div className="space-y-2">
 						<Label>Tipo de Dependiente</Label>

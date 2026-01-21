@@ -94,9 +94,9 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 		return (
 			<div className="">
 				{/* Patients cards - responsive for all screen sizes */}
-				<Card className="overflow-hidden">
+				<Card className="overflow-hidden h-[calc(100vh-280px)] md:h-[calc(100vh-240px)] flex flex-col">
 					{/* Sort filters header */}
-					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3">
+					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 flex-shrink-0">
 						<div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4">
 							<button
 								onClick={() => handleSort('nombre')}
@@ -137,7 +137,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 					</div>
 
 					{/* Cards grid - responsive */}
-					<div className="max-h-[450px] sm:max-h-[500px] md:max-h-[550px] overflow-auto">
+					<div className="flex-1 overflow-auto min-h-0">
 						{patientsData.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4">
 								{patientsData.map((patient: Patient) => (
@@ -158,7 +158,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 
 					{/* Pagination */}
 					{totalPages > 1 && (
-						<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+						<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
 							<div className="text-sm text-gray-700 dark:text-gray-300">
 								Página {currentPage} de {totalPages}
 							</div>
