@@ -37,6 +37,7 @@ export const PatientsPage = lazy(() => import('@features/patients/pages/Patients
 export const MedicalForm = lazy(() => import('@features/form/components/MedicalForm'))
 export const StandaloneChatPage = lazy(() => import('@features/ChatAI/pages/StandaloneChatPage'))
 export const TriageAnalyticsPage = lazy(() => import('@features/stats/components/TriageAnalyticsPage').then(module => ({ default: module.TriageAnalyticsPage })))
+export const WaitingRoomPage = lazy(() => import('@features/waiting-room/pages/WaitingRoomPage').then(module => ({ default: module.default })))
 
 // Form pages - lazy loaded
 export const DoctorsSection = lazy(() =>
