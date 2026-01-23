@@ -20,6 +20,7 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  Download,
 } from 'lucide-react';
 import type {
   MedicalCaseWithPatient,
@@ -1247,6 +1248,70 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       });
     };
 
+    const handleDownloadCase = async () => {
+      if (!currentCase) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró información del caso.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const pdfUrl = (currentCase as any)?.informepdf_url || (currentCase as any)?.informe_qr;
+      
+      if (!pdfUrl) {
+        toast({
+          title: '❌ Error',
+          description: 'No hay PDF disponible para descargar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      try {
+        setIsSaving(true);
+        
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error(`Error al descargar: ${response.status}`);
+        }
+
+        const sanitizedName =
+          currentCase.nombre ||
+          'Paciente'
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .replace(/\s+/g, '_')
+            .trim();
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${currentCase.code || currentCase.id}-${sanitizedName}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast({
+          title: '✅ PDF descargado',
+          description: 'El documento se ha descargado correctamente.',
+        });
+      } catch (error) {
+        console.error('Error al descargar el PDF:', error);
+        toast({
+          title: '❌ Error',
+          description: 'No se pudo descargar el PDF. Intenta nuevamente.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
     const getFieldLabel = (field: string): string => {
       const labels: Record<string, string> = {
         // Patient fields (new structure)
@@ -1422,9 +1487,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const notShow =
       profile?.role === 'residente' || profile?.role === 'citotecno';
     // const isResidente = profile?.role === 'residente'
-    // const isEmployee = profile?.role === 'employee'
+    const isEmployee = profile?.role === 'employee';
     // const isOwner = profile?.role === 'owner'
     // const isCitotecno = profile?.role === 'citotecno'
+    const isEmployeeSpt = isEmployee && isSpt;
 
     // Render modal content
     const modalContent = (
@@ -1457,9 +1523,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   isFullscreen
                     ? 'z-[99999999999999999]'
                     : 'z-[9999999999999999]'
-                } overflow-y-auto rounded-lg border-l border-input`}
+                } overflow-y-auto overflow-x-hidden rounded-lg border-l border-input`}
               >
-                <div className='sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10'>
+                <div className='sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10 overflow-x-hidden max-w-full'>
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2 sm:gap-3 flex-1 min-w-0'>
                       <div className='flex-1 min-w-0'>
@@ -1479,11 +1545,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       </button>
                     </div>
                   </div>
-                  <div className='flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2'>
+                  <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden'>
                     {currentCase.code && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help'>
+                          <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help flex-shrink-0'>
                             {currentCase.code}
                           </span>
                         </TooltipTrigger>
@@ -1496,7 +1562,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     )}
                     {!notShow && !isSpt && (
                       <span
-                        className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(
                           currentCase.payment_status,
                         )}`}
                       >
@@ -1507,13 +1573,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   </div>
                   {/* Action Buttons */}
                   {!notShow && (
-                    <div className='flex gap-2 mt-4'>
+                    <div className='flex flex-wrap gap-2 mt-4 max-w-full overflow-x-hidden'>
                       {isEditing ? (
                         <>
                           <button
                             onClick={handleSaveChanges}
                             disabled={isSaving}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer flex-shrink-0'
                           >
                             {isSaving ? (
                               <>
@@ -1529,7 +1595,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer flex-shrink-0'
                             disabled={isSaving}
                           >
                             <XCircle className='w-4 h-4' />
@@ -1540,14 +1606,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         <>
                           <button
                             onClick={handleEditClick}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 hover:scale-105 transition-all duration-200'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
                           >
                             <Edit className='w-4 h-4' />
                             Editar
                           </button>
                           <button
                             onClick={toggleChangelog}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 hover:scale-105 transition-all duration-200'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
                           >
                             <History className='w-4 h-4' />
                             {isChangelogOpen ? 'Ocultar' : 'Historial'}
@@ -1555,26 +1621,42 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           <button
                             onClick={handleSendEmail}
                             disabled={isSaving}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
+                            aria-label='Enviar correo'
                           >
                             {isSaving ? (
                               <>
                                 <Loader2 className='w-4 h-4 animate-spin' />
-                                Enviando...
+                                <span className='hidden sm:inline'>Enviando...</span>
                               </>
                             ) : (
                               <>
                                 <Send className='w-4 h-4' />
-                                Correo
+                                <span className='hidden sm:inline'>Correo</span>
                               </>
                             )}
                           </button>
+                          {isEmployeeSpt && (
+                            <button
+                              onClick={handleDownloadCase}
+                              disabled={isSaving}
+                              className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
+                              aria-label='Descargar caso'
+                            >
+                              {isSaving ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                              ) : (
+                                <Download className='w-4 h-4' />
+                              )}
+                            </button>
+                          )}
                           <button
                             onClick={handleSendWhatsApp}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Enviar WhatsApp'
                           >
                             <WhatsAppIcon className='w-4 h-4' />
-                            WhatsApp
+                            <span className='hidden sm:inline'>WhatsApp</span>
                           </button>
                         </>
                       )}

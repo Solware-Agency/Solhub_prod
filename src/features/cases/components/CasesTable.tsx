@@ -5,6 +5,7 @@ import {
   Search,
   Maximize2,
   Download,
+  X,
 } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
@@ -1367,8 +1368,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     variant='outline'
                     onClick={() => setIsFullscreen(false)}
                     className='text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    aria-label='Cerrar'
                   >
-                    Cerrar ✕
+                    <X className='w-4 h-4' />
                   </Button>
                 </div>
                 
@@ -1455,8 +1457,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                       variant='outline'
                       onClick={() => setIsFullscreen(false)}
                       className='hidden sm:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                      aria-label='Cerrar'
                     >
-                      <span>Cerrar</span> ✕
+                      <X className='w-4 h-4' />
                     </Button>
                   </div>
                 </div>

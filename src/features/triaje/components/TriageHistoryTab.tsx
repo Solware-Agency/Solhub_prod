@@ -207,6 +207,17 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
             </div>
           </div>
         )}
+
+        {/* Glicemia */}
+        {record.blood_glucose && (
+          <div className='flex items-start gap-2'>
+            <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0' />
+            <div>
+              <p className='text-xs text-gray-500 dark:text-gray-400'>Glicemia</p>
+              <p className='text-sm font-medium'>{record.blood_glucose} mg/dL</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Información clínica (si existe) */}

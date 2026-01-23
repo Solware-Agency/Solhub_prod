@@ -174,6 +174,11 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			return false
 		}
 
+		// Rol "prueba" (godmode) tiene acceso a todo
+		if (profile.role === 'prueba') {
+			return true
+		}
+
 		if (!requiredRole) {
 			return true // No specific role required
 		}

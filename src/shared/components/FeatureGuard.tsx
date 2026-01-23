@@ -1,4 +1,5 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { useUserProfile } from '@shared/hooks/useUserProfile';
 import type { LaboratoryFeatures } from '@/shared/types/types';
 
 interface FeatureGuardProps {
@@ -13,6 +14,12 @@ export function FeatureGuard({
   fallback = null,
 }: FeatureGuardProps) {
   const { laboratory } = useLaboratory();
+  const { profile } = useUserProfile();
+
+  // Rol "prueba" (godmode) tiene acceso a todo
+  if (profile?.role === 'prueba') {
+    return <>{children}</>;
+  }
 
   if (!laboratory?.features[feature]) {
     return <>{fallback}</>;
