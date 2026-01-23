@@ -1613,7 +1613,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           />
 
           {/* Generate Case Modal - Solo para admin y solo para inmunohistoquímica */}
-          {(profile?.role === 'residente' || profile?.role === 'owner') &&
+          {(profile?.role === 'residente' || profile?.role === 'owner' || profile?.role === 'prueba') &&
             selectedCaseForGenerate?.exam_type
               ?.toLowerCase()
               .includes('inmuno') && (
@@ -1921,7 +1921,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         />
 
         {/* Generate Case Modal - Solo para admin y solo para inmunohistoquímica */}
-        {(profile?.role === 'residente' || profile?.role === 'owner') &&
+        {(profile?.role === 'residente' || profile?.role === 'owner' || profile?.role === 'prueba') &&
           selectedCaseForGenerate?.exam_type
             ?.toLowerCase()
             .includes('inmuno') && (

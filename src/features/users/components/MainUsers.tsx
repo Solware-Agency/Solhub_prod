@@ -16,6 +16,7 @@ import {
 	Wand,
 	Microscope,
 	Shield,
+	Zap,
 } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -255,6 +256,8 @@ const MainUsers: React.FC = () => {
 				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'call_center':
 				return <Phone className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'prueba':
+				return <Zap className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			default:
 				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 		}
@@ -282,6 +285,8 @@ const MainUsers: React.FC = () => {
 				return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
 			case 'call_center':
 				return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+			case 'prueba':
+				return 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
 			default:
 				return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
 		}
@@ -379,6 +384,15 @@ const MainUsers: React.FC = () => {
 					hover: 'hover:bg-orange-100 dark:hover:bg-orange-900/30',
 					icon: 'text-orange-600 dark:text-orange-400',
 					text: 'text-orange-700 dark:text-orange-300',
+				}
+			case 'prueba':
+				return {
+					bg: 'bg-rose-50 dark:bg-rose-900/20',
+					bgActive: 'bg-rose-200 dark:bg-rose-800',
+					border: 'border-rose-400 dark:border-rose-600',
+					hover: 'hover:bg-rose-100 dark:hover:bg-rose-900/30',
+					icon: 'text-rose-600 dark:text-rose-400',
+					text: 'text-rose-700 dark:text-rose-300',
 				}
 			default:
 				return {

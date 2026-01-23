@@ -168,7 +168,7 @@ const RequestCaseModal: React.FC<GenerateCaseModalProps> = ({ case_, isOpen, onC
 								{caseType === 'inmunohistoquimica' && (
 									<div className="space-y-4">
 										{/* Sección de Inmunorreacciones - Para Residentes y Owners */}
-										{(profile?.role === 'residente' || profile?.role === 'owner') && (
+										{(profile?.role === 'residente' || profile?.role === 'owner' || profile?.role === 'prueba') && (
 											<div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
 												<div className="flex items-center gap-2 mb-3">
 													<Heart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
