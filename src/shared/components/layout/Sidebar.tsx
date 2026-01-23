@@ -413,7 +413,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className='flex flex-col justify-center gap-2'>
-          {(isOwner || isPrueba) && (
+          {isOwner && (
             <>
               <FeatureGuard feature='hasStats'>
                 <div className='py-1'>
@@ -979,7 +979,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           <FeatureGuard feature='hasChatAI'>
-            {(isOwner || isPatologo || isCitotecno || isPrueba) && (
+            {(isOwner || isPatologo || isCitotecno) && (
               <NavItem
                 to='/chat'
                 icon={<Brain className='stroke-2 size-5 shrink-0' />}
@@ -994,7 +994,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Pie fijo: Ajustes, tema y salir */}
       <div className='shrink-0 flex flex-col justify-center gap-1 border-t border-input pt-2 sm:pt-3'>
-        {(isOwner || isPrueba) && (
+        {isOwner && (
           <NavItem
             to='/dashboard/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}

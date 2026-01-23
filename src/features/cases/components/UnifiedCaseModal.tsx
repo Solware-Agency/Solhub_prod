@@ -1767,13 +1767,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         onChange={handleInputChange}
                       />
                       
-                      {/* Image URL field - Always visible for imagenologia/owner/prueba, visible for others only if URL exists */}
-                      {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || (currentCase as any).image_url) && (
+                      {/* Image URL field - Always visible for imagenologia/owner, visible for others only if URL exists */}
+                      {(profile?.role === 'imagenologia' || profile?.role === 'owner' || (currentCase as any).image_url) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Imagen:
                           </span>
-                          {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing ? (
+                          {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
                             <div className='sm:w-1/2'>
                               <Input
                                 id='image-url-input'

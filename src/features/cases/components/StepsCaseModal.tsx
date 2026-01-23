@@ -117,7 +117,6 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';
   const isMedicoTratante = profile?.role === 'medico_tratante';
-  const isPrueba = profile?.role === 'prueba';
   const isSpt = laboratory?.slug === 'spt';
 
   const isCitoAdmin =
@@ -151,14 +150,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const computedSteps = useMemo(() => {
     const stepsList = [];
 
-    // Paso 1: Datos del paciente - Disponible para owner, residente, citotecno, patologo, prueba
+    // Paso 1: Datos del paciente - Disponible para owner, residente, citotecno, patologo
     // Para SPT: también disponible para medico_tratante (flujo completo)
     // NO disponible para: employee, medicowner (ellos generan docs directamente)
-    const shouldSkipDataStep = isPrueba 
-      ? false 
-      : isSpt 
-        ? (isEmployee || isMedicowner)
-        : (isEmployee || isMedicowner || isMedicoTratante);
+    const shouldSkipDataStep = isSpt 
+      ? (isEmployee || isMedicowner)
+      : (isEmployee || isMedicowner || isMedicoTratante);
     
     if (!shouldSkipDataStep) {
       stepsList.push({
@@ -169,14 +166,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    // Paso 2: Marcar como completado - Disponible para owner, residente, citotecno, patologo, prueba
+    // Paso 2: Marcar como completado - Disponible para owner, residente, citotecno, patologo
     // Para SPT: también disponible para medico_tratante (flujo completo)
     // NO disponible para: employee, medicowner (ellos marcan como completado directamente)
-    const shouldSkipCompleteStep = isPrueba
-      ? false
-      : isSpt
-        ? (isEmployee || isMedicowner)
-        : (isEmployee || isMedicowner || isMedicoTratante);
+    const shouldSkipCompleteStep = isSpt
+      ? (isEmployee || isMedicowner)
+      : (isEmployee || isMedicowner || isMedicoTratante);
     
     if (!shouldSkipCompleteStep) {
       stepsList.push({
@@ -188,7 +183,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     if (
-      (isOwner || isCitotecno || isMedicowner || isPrueba) &&
+      (isOwner || isCitotecno || isMedicowner) &&
       isCitology &&
       laboratory?.features?.hasEvaluateCitology
     ) {
@@ -201,12 +196,9 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     // Paso de Aprobar: NO mostrar para medico_tratante en SPT (auto-aprueba)
-    // Prueba tiene acceso a todo
-    const shouldShowApproveStep = isPrueba 
-      ? true 
-      : isSpt && isMedicoTratante
-        ? false
-        : ((isCitotecno && isCitology) || isOwner || isMedicowner);
+    const shouldShowApproveStep = isSpt && isMedicoTratante
+      ? false
+      : ((isCitotecno && isCitology) || isOwner || isMedicowner);
     
     if (shouldShowApproveStep) {
       stepsList.push({
@@ -217,8 +209,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       });
     }
 
-    // Paso final: PDF - Siempre disponible para todos (excepto medicowner, a menos que sea prueba)
-    if (!isMedicowner || isPrueba) {
+    // Paso final: PDF - Siempre disponible para todos
+    if (!isMedicowner) {
       stepsList.push({
         id: 'pdf',
         title: 'PDF',
@@ -237,7 +229,6 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     isCitotecno,
     isMedicowner,
     isMedicoTratante,
-    isPrueba,
     isSpt,
     laboratory?.features?.hasEvaluateCitology,
   ]);
