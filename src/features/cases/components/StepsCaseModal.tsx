@@ -18,6 +18,7 @@ import {
   FileCheck,
   Download,
   Send,
+  Mail,
 } from 'lucide-react';
 import {
   markCaseAsPending,
@@ -1513,33 +1514,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             {/* Mostrar alerta si no hay email */}
             {!effectiveEmail && (
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                <div className='flex flex-col gap-2'>
-                  <p className='text-teal-700 dark:text-teal-300 text-sm font-medium'>
-                    {patientInfo?.tipo_paciente !== 'adulto' && patientInfo?.responsable_email ? (
-                      <>
-                        El dependiente no tiene correo electrónico registrado.
-                        <br />
-                        Si envía el documento, llegará al correo del responsable:{' '}
-                        <span className='font-semibold'>{patientInfo.responsable_email}</span>
-                      </>
-                    ) : patientInfo?.tipo_paciente !== 'adulto' ? (
-                      'El dependiente no tiene correo electrónico registrado y el responsable tampoco.'
-                    ) : (
-                      'El paciente no tiene correo electrónico registrado'
-                    )}
-                  </p>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='sm'
-                    className='w-full sm:w-auto border-teal-500 text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-900/20'
-                    onClick={() => setIsAddEmailModalOpen(true)}
-                  >
-                    <Send className='w-4 h-4 mr-2' />
-                    Agregar Correo Electrónico
-                    {patientInfo?.tipo_paciente !== 'adulto' ? ' al Dependiente' : ''}
-                  </Button>
-                </div>
+                <p className='text-teal-700 dark:text-teal-300 text-sm font-medium mb-0'>
+                  {patientInfo?.tipo_paciente !== 'adulto' && patientInfo?.responsable_email ? (
+                    <>
+                      El dependiente no tiene correo electrónico registrado.
+                      <br />
+                      Si envía el documento, llegará al correo del responsable:{' '}
+                      <span className='font-semibold'>{patientInfo.responsable_email}</span>
+                    </>
+                  ) : patientInfo?.tipo_paciente !== 'adulto' ? (
+                    'El dependiente no tiene correo electrónico registrado y el responsable tampoco.'
+                  ) : (
+                    'El paciente no tiene correo electrónico registrado'
+                  )}
+                </p>
               </div>
             )}
             
@@ -1600,6 +1588,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                     </>
                   )}
                 </Button>
+                {!effectiveEmail && (
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='flex-1'
+                    onClick={() => setIsAddEmailModalOpen(true)}
+                  >
+                    <Mail className='w-4 h-4 mr-2' />
+                    Agregar correo
+                  </Button>
+                )}
               </div>
             </div>
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>

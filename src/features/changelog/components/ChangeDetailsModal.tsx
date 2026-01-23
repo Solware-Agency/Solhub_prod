@@ -94,8 +94,8 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-				<DialogHeader>
+			<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+				<DialogHeader className="mb-4">
 					<DialogTitle className="flex items-center gap-2">
 						<Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
 						Detalles de Edición
