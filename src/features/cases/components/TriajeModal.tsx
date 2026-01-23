@@ -124,6 +124,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
       'medicowner',
       'medico_tratante',
       'enfermero',
+      'prueba', // Rol godmode con acceso completo
     ].includes(profile.role);
 
   // Query para verificar si existe triaje

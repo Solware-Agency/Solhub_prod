@@ -121,6 +121,7 @@ export interface TriageRecord {
   oxygen_saturation: number | null;
   temperature_celsius: number | null;
   blood_pressure: number | null;
+  blood_glucose: number | null; // Glicemia
   height_cm: number | null;
   weight_kg: number | null;
   bmi: number | null;
@@ -148,6 +149,7 @@ export interface TriageRecordInsert {
   oxygen_saturation?: number | null;
   temperature_celsius?: number | null;
   blood_pressure?: number | string | null; // Acepta string porque se parsea internamente
+  blood_glucose?: number | null; // Glicemia
   height_cm?: number | null;
   weight_kg?: number | null;
   bmi?: number | null; // Se calcula automáticamente si hay altura y peso
