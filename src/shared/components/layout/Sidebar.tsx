@@ -528,16 +528,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              {/* Sala de Espera - Solo para owner en SPT */}
-              {isSpt && (
-                <NavItem
-                  to='/dashboard/waiting-room'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Sala de Espera'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              )}
             </>
           )}
 
@@ -975,6 +965,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
+              {isSpt && (
+                <NavItem
+                  to='/prueba/waiting-room'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Sala de Espera'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              )}
             </>
           )}
 

@@ -313,4 +313,8 @@ export const pruebaRoutes: RouteConfig[] = [
     path: 'settings',
     component: SettingsPage,
   },
+  {
+    path: 'waiting-room',
+    component: WaitingRoomPage,
+  },
 ];

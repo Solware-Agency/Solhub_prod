@@ -99,34 +99,34 @@ const WaitingRoomPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Sala de Espera</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          <p className="hidden sm:block text-sm sm:text-base text-muted-foreground mt-1">
             Monitoreo en tiempo real de casos activos
           </p>
         </div>
 
         {/* Estadísticas */}
         {!statsLoading && stats && (
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4">
-            <Card className="px-3 py-1.5 sm:px-4 sm:py-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                <span className="text-xs sm:text-sm font-medium">Total: {stats.total}</span>
+          <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-3">
+            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Total: {stats.total}</span>
               </div>
             </Card>
-            <Card className="px-3 py-1.5 sm:px-4 sm:py-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <Badge variant="destructive" className="text-xs sm:text-sm mr-1 sm:mr-2">
+            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                <Badge variant="destructive" className="text-xs sm:text-sm mr-0.5 shrink-0">
                   {stats.pendiente_triaje}
                 </Badge>
-                <span className="text-xs sm:text-sm">Pendiente triaje</span>
+                <span className="text-xs sm:text-sm whitespace-nowrap">Pendiente triaje</span>
               </div>
             </Card>
-            <Card className="px-3 py-1.5 sm:px-4 sm:py-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <Badge variant="secondary" className="text-xs sm:text-sm mr-1 sm:mr-2">
+            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                <Badge variant="secondary" className="text-xs sm:text-sm mr-0.5 shrink-0">
                   {stats.esperando_consulta}
                 </Badge>
-                <span className="text-xs sm:text-sm">Esperando consulta</span>
+                <span className="text-xs sm:text-sm whitespace-nowrap">Esperando consulta</span>
               </div>
             </Card>
           </div>
@@ -138,12 +138,16 @@ const WaitingRoomPage: React.FC = () => {
         value={selectedBranch || 'todas'}
         onValueChange={(value) => setSelectedBranch(value === 'todas' ? null : value)}
       >
-        <TabsList>
-          <TabsTrigger value="todas">Todas las sedes</TabsTrigger>
+        <TabsList className="w-fit sm:w-fit md:w-fit flex-wrap">
+          <TabsTrigger value="todas">
+            <span className="hidden sm:inline">Todas las sedes</span>
+            <span className="sm:hidden">Todas</span>
+          </TabsTrigger>
           {branchesLoading ? (
             <TabsTrigger value="loading" disabled>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Cargando...
+              <span className="hidden sm:inline">Cargando...</span>
+              <span className="sm:hidden">...</span>
             </TabsTrigger>
           ) : (
             branches.map((branch) => (
