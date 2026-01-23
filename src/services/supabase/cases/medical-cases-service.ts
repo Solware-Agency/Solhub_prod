@@ -1080,6 +1080,7 @@ export const getCasesWithPatientInfo = async (
 export const getAllCasesWithPatientInfo = async (filters?: {
   searchTerm?: string;
   branch?: string;
+  branchFilter?: string[];
   dateFrom?: string;
   dateTo?: string;
   examType?: string;
@@ -1098,6 +1099,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   originFilter?: string[];
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
+  emailSentStatus?: boolean;
 }) => {
   try {
     // Si hay un término de búsqueda, intentar usar función optimizada primero
@@ -1159,6 +1161,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
               if (filters?.branch) {
                 filteredData = filteredData.filter(
                   (item) => item.branch === filters.branch,
+                );
+              }
+
+              if (filters?.branchFilter && filters.branchFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) => item.branch && filters.branchFilter!.includes(item.branch),
                 );
               }
 
@@ -1230,6 +1238,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
                 filteredData = filteredData.filter(
                   (item) =>
                     item.origin && filters.originFilter!.includes(item.origin),
+                );
+              }
+
+              if (filters?.emailSentStatus !== undefined) {
+                filteredData = filteredData.filter(
+                  (item) => item.email_sent === filters.emailSentStatus,
                 );
               }
 
@@ -1414,6 +1428,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
         }
 
+        if (filters?.branchFilter && filters.branchFilter.length > 0) {
+          filteredData = filteredData.filter(
+            (item) => item.branch && filters.branchFilter!.includes(item.branch),
+          );
+        }
+
         if (filters?.dateFrom) {
           filteredData = filteredData.filter(
             (item) => item.date >= filters.dateFrom!,
@@ -1488,6 +1508,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           filteredData = filteredData.filter(
             (item) =>
               item.origin && filters.originFilter!.includes(item.origin),
+          );
+        }
+
+        if (filters?.emailSentStatus !== undefined) {
+          filteredData = filteredData.filter(
+            (item) => item.email_sent === filters.emailSentStatus,
           );
         }
 
@@ -1574,6 +1600,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         query = query.eq('branch', filters.branch);
       }
 
+      // Si hay branchFilter (múltiples sedes), usar .in()
+      if (filters?.branchFilter && filters.branchFilter.length > 0) {
+        query = query.in('branch', filters.branchFilter);
+      }
+
       if (filters?.dateFrom) {
         // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
         query = query.filter('created_at', 'gte', filters.dateFrom);
@@ -1631,6 +1662,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       // Filtro por procedencia
       if (filters?.originFilter && filters.originFilter.length > 0) {
         query = query.in('origin', filters.originFilter);
+      }
+
+      // Filtro por email enviado
+      if (filters?.emailSentStatus !== undefined) {
+        query = query.eq('email_sent', filters.emailSentStatus);
       }
 
       // Si el usuario es residente, solo mostrar casos de biopsia
