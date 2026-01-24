@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Heart, Wind, Droplets, Thermometer, Activity, Users, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { X, Heart, Wind, Droplets, Thermometer, Activity, Users, TrendingUp, TrendingDown, Minus, FlaskConical } from 'lucide-react'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { format } from 'date-fns'
@@ -15,6 +15,7 @@ export type TriageStatType =
 	| 'temperature'
 	| 'bmi'
 	| 'bloodPressure'
+	| 'bloodGlucose'
 	| 'habits'
 
 interface TriageDetailPanelProps {
@@ -55,6 +56,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				return 'Índice de Masa Corporal'
 			case 'bloodPressure':
 				return 'Presión Arterial'
+			case 'bloodGlucose':
+				return 'Glicemia'
 			case 'habits':
 				return 'Hábitos Psicobiológicos'
 			default:
@@ -78,6 +81,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				return <Activity className="h-5 w-5 text-green-500" />
 			case 'bloodPressure':
 				return <Activity className="h-5 w-5 text-red-500" />
+			case 'bloodGlucose':
+				return <FlaskConical className="h-5 w-5 text-purple-500" />
 			case 'habits':
 				return <Activity className="h-5 w-5 text-purple-500" />
 			default:
@@ -762,6 +767,102 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 										<Line type="monotone" dataKey="avgSystolicBP" stroke="#ef4444" strokeWidth={2} name="Promedio Sistólica (mmHg)" />
 										<Line type="monotone" dataKey={() => 90} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
 										<Line type="monotone" dataKey={() => 120} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+					</div>
+				)
+
+			case 'bloodGlucose':
+				const bgAvg = stats.averages?.bloodGlucose
+				const bgRanges = stats.ranges?.bloodGlucose || { low: 0, normal: 0, high: 0 }
+				const bgTotal = bgRanges.low + bgRanges.normal + bgRanges.high
+				const bgNormalPct = bgTotal > 0 ? ((bgRanges.normal / bgTotal) * 100).toFixed(1) : '0'
+				const hyperglycemiaCount = bgRanges.high
+				const hypoglycemiaCount = bgRanges.low
+
+				return (
+					<div className="space-y-6">
+						{/* Resumen */}
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Análisis de Glicemia
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
+									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+										{bgAvg ? `${bgAvg.toFixed(1)} mg/dL` : 'N/A'}
+									</p>
+									<div className="mt-2">
+										{getTrend(bgAvg, 'avgBloodGlucose')}
+									</div>
+								</div>
+								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
+									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+										{bgRanges.normal}
+									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{bgNormalPct}% del total
+									</p>
+								</div>
+								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Anormales</p>
+									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+										{hyperglycemiaCount + hypoglycemiaCount}
+									</p>
+									<p className="text-xs text-red-600 dark:text-red-400 mt-1">
+										⚠️ Requiere atención
+									</p>
+								</div>
+							</div>
+
+							{/* Distribución detallada */}
+							<div className="space-y-4">
+								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+									Distribución por Rangos
+								</h4>
+								{[
+									{ label: `Hipoglicemia (< 70 mg/dL)`, value: bgRanges.low, color: '#ef4444' },
+									{ label: 'Normal (70-140 mg/dL)', value: bgRanges.normal, color: '#22c55e' },
+									{ label: `Hiperglicemia (> 140 mg/dL)`, value: bgRanges.high, color: '#eab308' },
+								].map((item) => {
+									const percentage = bgTotal > 0 ? (item.value / bgTotal) * 100 : 0
+									return (
+										<div key={item.label} className="space-y-2">
+											<div className="flex justify-between text-sm">
+												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
+												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
+											</div>
+											<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+												<div
+													className="h-3 rounded-full transition-all duration-300"
+													style={{ width: `${percentage}%`, backgroundColor: item.color }}
+												/>
+											</div>
+										</div>
+									)
+								})}
+							</div>
+						</div>
+
+						{/* Gráfica de tendencia */}
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Glicemia
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgBloodGlucose" stroke="#a855f7" strokeWidth={2} name="Promedio (mg/dL)" />
+										<Line type="monotone" dataKey={() => 70} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
+										<Line type="monotone" dataKey={() => 140} stroke="#eab308" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
 									</LineChart>
 								</ResponsiveContainer>
 							</div>

@@ -1133,7 +1133,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         : 'border-input'
                                     }`}
                                   >
-                                      <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
+                                      <div className='space-y-3 mb-3'>
+                                        {/* Checkbox y Estado de Pago */}
                                         <div className='flex items-center gap-2'>
                                           {caseItem.doc_aprobado ===
                                             'aprobado' && (
@@ -1152,11 +1153,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               className='mr-1'
                                             />
                                           )}
-                                          {caseItem.code && (
-                                            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
-                                              {caseItem.code}
-                                            </span>
-                                          )}
                                           {!isSpt && (
                                             <span
                                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
@@ -1168,62 +1164,84 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           )}
                                         </div>
 
-                                        <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
-                                          <Calendar className='h-4 w-4' />
-                                          {format(
-                                            new Date(
-                                              caseItem.created_at ||
-                                                caseItem.date,
-                                            ),
-                                            'dd/MM/yyyy',
-                                            { locale: es },
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Primera fila: Tipo de Examen, Médico Tratante, Sede, Imagen, Acciones */}
-                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3'>
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Tipo de Examen
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.exam_type}
-                                          </p>
-                                        </div>
-
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Médico Tratante
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.treating_doctor}
-                                          </p>
-                                        </div>
-
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Sede
-                                          </p>
-                                          <div className='mt-1'>
-                                            <BranchBadge
-                                              branch={caseItem.branch}
-                                            />
+                                        {/* Código y Fecha en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Código
+                                            </p>
+                                            {caseItem.code ? (
+                                              <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                                                {caseItem.code}
+                                              </span>
+                                            ) : (
+                                              <p className='text-sm font-medium text-gray-400'>
+                                                Sin código
+                                              </p>
+                                            )}
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Fecha
+                                            </p>
+                                            <p className='text-sm font-medium flex items-center gap-1'>
+                                              <Calendar className='h-4 w-4' />
+                                              {format(
+                                                new Date(
+                                                  caseItem.created_at ||
+                                                    caseItem.date,
+                                                ),
+                                                'dd/MM/yyyy',
+                                                { locale: es },
+                                              )}
+                                            </p>
                                           </div>
                                         </div>
 
-                                        {/* Imagen del caso */}
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Imagen
-                                          </p>
-                                          <div className='mt-1'>
-                                            <ImageButton imageUrl={(caseItem as any).image_url} />
+                                        {/* Tipo de Examen y Médico Tratante en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Tipo de Examen
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {caseItem.exam_type}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Médico Tratante
+                                            </p>
+                                            <p className='text-sm font-medium truncate'>
+                                              {caseItem.treating_doctor}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {/* Sede e Imagen en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Sede
+                                            </p>
+                                            <div className='mt-1'>
+                                              <BranchBadge
+                                                branch={caseItem.branch}
+                                              />
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Imagen
+                                            </p>
+                                            <div className='mt-1'>
+                                              <ImageButton imageUrl={(caseItem as any).image_url} />
+                                            </div>
                                           </div>
                                         </div>
 
                                         {/* Acciones */}
-                                        <div className='flex gap-2 items-center justify-center sm:justify-start md:justify-center'>
+                                        <div className='flex gap-2 items-center justify-start pt-2'>
                                           <Button
                                             onClick={() =>
                                               handleCheckAndDownloadPDF(
@@ -1378,9 +1396,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   key={caseItem.id}
                                   className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow'
                                 >
-                                  <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+                                  <div className='space-y-3'>
                                     {/* Representado */}
-                                    <div className='md:col-span-1'>
+                                    <div>
                                       <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                         Representado
                                       </p>
@@ -1389,83 +1407,94 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </p>
                                     </div>
 
-                                    {/* Código y Tipo */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Código
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {caseItem.code || 'Sin código'}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Tipo de Examen
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {caseItem.exam_type}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Fecha
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
-                                      </p>
-                                    </div>
-
-                                    {/* Médico y Sede */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Médico Tratante
-                                      </p>
-                                      <p className='text-sm font-medium truncate'>
-                                        {caseItem.treating_doctor}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Sede
-                                      </p>
-                                      <BranchBadge branch={caseItem.branch} className='text-xs' />
-                                    </div>
-
-                                    {/* Estado de Pago */}
-                                    {!isSpt && (
+                                    {/* Código y Fecha en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
                                       <div>
                                         <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Estado de Pago
-                                        </p>
-                                        <span
-                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                            caseItem.payment_status === 'Pagado'
-                                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                          }`}
-                                        >
-                                          {caseItem.payment_status}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Monto (si no es SPT) */}
-                                    {!isSpt && (
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Monto Total
+                                          Código
                                         </p>
                                         <p className='text-sm font-medium'>
-                                          {formatCurrency(caseItem.total_amount)}
+                                          {caseItem.code || 'Sin código'}
                                         </p>
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Fecha
+                                        </p>
+                                        <p className='text-sm font-medium'>
+                                          {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Tipo de Examen y Médico Tratante en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Tipo de Examen
+                                        </p>
+                                        <p className='text-sm font-medium'>
+                                          {caseItem.exam_type}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Médico Tratante
+                                        </p>
+                                        <p className='text-sm font-medium truncate'>
+                                          {caseItem.treating_doctor}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Sede e Imagen en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Sede
+                                        </p>
+                                        <BranchBadge branch={caseItem.branch} className='text-xs' />
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Imagen
+                                        </p>
+                                        <div className='mt-1'>
+                                          <ImageButton imageUrl={(caseItem as any).image_url} />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Estado de Pago y Monto Total (si no es SPT) */}
+                                    {!isSpt && (
+                                      <div className='grid grid-cols-2 gap-4'>
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                            Estado de Pago
+                                          </p>
+                                          <span
+                                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                              caseItem.payment_status === 'Pagado'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                            }`}
+                                          >
+                                            {caseItem.payment_status}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                            Monto Total
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {formatCurrency(caseItem.total_amount)}
+                                          </p>
+                                        </div>
                                       </div>
                                     )}
 
                                     {/* Acciones */}
-                                    <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
+                                    <div className='flex gap-2 items-center justify-start pt-2'>
                                       <Button
                                         onClick={() =>
                                           handleCheckAndDownloadPDF(caseItem)

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card'
-import { Activity, Heart, Wind, Droplets, Thermometer, TrendingUp, TrendingDown, Minus, Users } from 'lucide-react'
+import { Activity, Heart, Wind, Droplets, Thermometer, TrendingUp, TrendingDown, Minus, Users, FlaskConical } from 'lucide-react'
 import { getTriageStats, getTriageTrends } from '../services/triage-stats-service'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
@@ -383,24 +383,68 @@ export const TriageAnalyticsPage: React.FC = () => {
 						</div>
 					</CardContent>
 				</Card>
-			</div>
 
-			{/* Hábitos psicobiológicos - Full width */}
-			{(Object.keys(stats.habits.tabaco).length > 0 ||
-				Object.keys(stats.habits.cafe).length > 0 ||
-				Object.keys(stats.habits.alcohol).length > 0) && (
+				{/* Glicemia */}
 				<Card 
 					className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer'
-					onClick={() => handleCardClick('habits')}
+					onClick={() => handleCardClick('bloodGlucose')}
 				>
 					<CardHeader className='pb-3'>
-						<CardTitle className='text-sm font-medium flex items-center gap-2'>
-							<Activity className='h-4 w-4 text-purple-500' />
-							Hábitos Psicobiológicos
+						<CardTitle className='text-sm font-medium flex items-center justify-between'>
+							<span className='flex items-center gap-2'>
+								<FlaskConical className='h-4 w-4 text-purple-500' />
+								Glicemia
+							</span>
+							{getTrend(stats.averages.bloodGlucose, 'avgBloodGlucose')}
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+						<div className='text-2xl font-bold mb-4'>
+							{stats.averages.bloodGlucose ? `${stats.averages.bloodGlucose.toFixed(1)} mg/dL` : 'N/A'}
+						</div>
+						<div className='space-y-2'>
+							{[
+								{ label: 'Baja', value: stats.ranges.bloodGlucose.low, color: 'bg-red-500', textColor: 'text-red-700 dark:text-red-300' },
+								{ label: 'Normal', value: stats.ranges.bloodGlucose.normal, color: 'bg-green-500', textColor: 'text-green-700 dark:text-green-300' },
+								{ label: 'Alta', value: stats.ranges.bloodGlucose.high, color: 'bg-yellow-500', textColor: 'text-yellow-700 dark:text-yellow-300' }
+							].map((item) => {
+								const total = stats.ranges.bloodGlucose.low + stats.ranges.bloodGlucose.normal + stats.ranges.bloodGlucose.high
+								const percentage = total > 0 ? (item.value / total) * 100 : 0
+								return (
+									<div key={item.label} className='space-y-1'>
+										<div className='flex justify-between text-sm'>
+											<span className={item.textColor}>{item.label}</span>
+											<span className='font-medium'>{item.value} ({percentage.toFixed(0)}%)</span>
+										</div>
+										<div className='w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2'>
+											<div
+												className={`${item.color} h-2 rounded-full transition-all duration-300`}
+												style={{ width: `${percentage}%` }}
+											/>
+										</div>
+									</div>
+								)
+							})}
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Hábitos psicobiológicos - Ocupa 2 espacios */}
+				{(Object.keys(stats.habits.tabaco).length > 0 ||
+					Object.keys(stats.habits.cafe).length > 0 ||
+					Object.keys(stats.habits.alcohol).length > 0) && (
+					<Card 
+						className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer col-span-1 md:col-span-2 lg:col-span-2'
+						onClick={() => handleCardClick('habits')}
+					>
+						<CardHeader className='pb-3'>
+							<CardTitle className='text-sm font-medium flex items-center gap-2'>
+								<Activity className='h-4 w-4 text-purple-500' />
+								Hábitos Psicobiológicos
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
 								{/* Tabaco */}
 								{Object.keys(stats.habits.tabaco).length > 0 && (
 									<div>
@@ -536,16 +580,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 						</CardContent>
 					</Card>
 				)}
-
-			{/* Nota de privacidad */}
-			<Card className='hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg'>
-				<CardContent className='pt-6'>
-					<p className='text-xs text-muted-foreground'>
-						🔒 Todas las estadísticas son completamente anónimas. No se muestra información que permita identificar
-						pacientes individuales.
-					</p>
-				</CardContent>
-			</Card>
+			</div>
 		</div>
 
 		{/* Modal de detalles */}

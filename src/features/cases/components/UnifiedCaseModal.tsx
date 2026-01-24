@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
+  Phone,
 } from 'lucide-react';
 import type {
   MedicalCaseWithPatient,
@@ -1248,6 +1249,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       });
     };
 
+    const handleCall = () => {
+      if (!case_?.telefono) {
+        toast({
+          title: '❌ Error',
+          description: 'Este caso no tiene un número de teléfono asociado.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Format phone number (remove spaces, dashes, etc.)
+      const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || '';
+      const phoneLink = `tel:${cleanPhone}`;
+
+      window.location.href = phoneLink;
+
+      toast({
+        title: '📞 Llamando',
+        description: `Iniciando llamada a ${case_.telefono}.`,
+      });
+    };
+
     const handleDownloadCase = async () => {
       if (!currentCase) {
         toast({
@@ -1607,16 +1630,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           <button
                             onClick={handleEditClick}
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Editar caso'
                           >
                             <Edit className='w-4 h-4' />
-                            Editar
                           </button>
                           <button
                             onClick={toggleChangelog}
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
                           >
                             <History className='w-4 h-4' />
-                            {isChangelogOpen ? 'Ocultar' : 'Historial'}
                           </button>
                           <button
                             onClick={handleSendEmail}
@@ -1625,16 +1648,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             aria-label='Enviar correo'
                           >
                             {isSaving ? (
-                              <>
-                                <Loader2 className='w-4 h-4 animate-spin' />
-                                <span className='hidden sm:inline'>Enviando...</span>
-                              </>
+                              <Loader2 className='w-4 h-4 animate-spin' />
                             ) : (
-                              <>
-                                <Send className='w-4 h-4' />
-                                <span className='hidden sm:inline'>Correo</span>
-                              </>
+                              <Send className='w-4 h-4' />
                             )}
+                          </button>
+                          <button
+                            onClick={handleCall}
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Llamar'
+                          >
+                            <Phone className='w-4 h-4' />
                           </button>
                           {isEmployeeSpt && (
                             <button
@@ -1656,7 +1680,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             aria-label='Enviar WhatsApp'
                           >
                             <WhatsAppIcon className='w-4 h-4' />
-                            <span className='hidden sm:inline'>WhatsApp</span>
                           </button>
                         </>
                       )}

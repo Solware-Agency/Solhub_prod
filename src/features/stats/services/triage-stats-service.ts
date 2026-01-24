@@ -13,6 +13,7 @@ interface TriageRecordRaw {
 	temperature_celsius: number | null
 	bmi: number | null
 	blood_pressure: number | null
+	blood_glucose: number | null // Glicemia (mg/dL)
 	tabaco: number | null // Índice tabáquico (paquetes-año)
 	cafe: number | null // Tazas de café por día
 	alcohol: HabitLevel | null
@@ -29,6 +30,7 @@ export interface TriageStats {
 		bmi: number | null
 		systolicBP: number | null
 		diastolicBP: number | null
+		bloodGlucose: number | null
 	}
 	ranges: {
 		heartRate: { low: number; normal: number; high: number }
@@ -37,6 +39,7 @@ export interface TriageStats {
 		temperature: { low: number; normal: number; high: number }
 		bmi: { underweight: number; normal: number; overweight: number; obese: number }
 		bloodPressure: { low: number; normal: number; high: number }
+		bloodGlucose: { low: number; normal: number; high: number }
 	}
 	habits: {
 		tabaco: { [key: string]: number }
@@ -52,6 +55,7 @@ export interface TriageTrend {
 	avgOxygenSaturation: number | null
 	avgTemperature: number | null
 	avgSystolicBP: number | null
+	avgBloodGlucose: number | null
 	count: number
 }
 
@@ -96,6 +100,7 @@ export async function getTriageStats(
 						bmi: null,
 						systolicBP: null,
 						diastolicBP: null,
+						bloodGlucose: null,
 					},
 					ranges: {
 						heartRate: { low: 0, normal: 0, high: 0 },
@@ -104,6 +109,7 @@ export async function getTriageStats(
 						temperature: { low: 0, normal: 0, high: 0 },
 						bmi: { underweight: 0, normal: 0, overweight: 0, obese: 0 },
 						bloodPressure: { low: 0, normal: 0, high: 0 },
+						bloodGlucose: { low: 0, normal: 0, high: 0 },
 					},
 					habits: {
 						tabaco: {},
@@ -123,7 +129,8 @@ export async function getTriageStats(
 			t.oxygen_saturation !== null ||
 			t.temperature_celsius !== null ||
 			t.bmi !== null ||
-			t.blood_pressure !== null
+			t.blood_pressure !== null ||
+			t.blood_glucose !== null
 		)
 
 		// Calcular promedios
@@ -138,6 +145,9 @@ export async function getTriageStats(
 		// Si el formato es string "120/80", parsear (aunque debería ser un entero)
 		const systolicBPs = bloodPressures
 		const diastolicBPs: number[] = [] // No disponible si es un solo valor
+
+		// Extraer glicemia (mg/dL)
+		const bloodGlucoses = validRecords.map((t) => t.blood_glucose).filter((v): v is number => v !== null)
 
 		const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
 
@@ -179,6 +189,12 @@ export async function getTriageStats(
 			return 'normal'
 		}
 
+		const classifyBloodGlucose = (bg: number) => {
+			if (bg < 70) return 'low' // Hipoglicemia
+			if (bg > 140) return 'high' // Hiperglicemia
+			return 'normal' // Normal: 70-140 mg/dL
+		}
+
 		const hrRanges = { low: 0, normal: 0, high: 0 }
 		heartRates.forEach((hr) => {
 			const range = classifyHeartRate(hr)
@@ -213,6 +229,12 @@ export async function getTriageStats(
 		systolicBPs.forEach((bp) => {
 			const range = classifyBloodPressure(bp)
 			bpRanges[range]++
+		})
+
+		const bgRanges = { low: 0, normal: 0, high: 0 }
+		bloodGlucoses.forEach((bg) => {
+			const range = classifyBloodGlucose(bg)
+			bgRanges[range]++
 		})
 
 		// Contar hábitos
@@ -274,6 +296,7 @@ export async function getTriageStats(
 					bmi: avg(bmis),
 					systolicBP: avg(systolicBPs),
 					diastolicBP: avg(diastolicBPs),
+					bloodGlucose: avg(bloodGlucoses),
 				},
 				ranges: {
 					heartRate: hrRanges,
@@ -282,6 +305,7 @@ export async function getTriageStats(
 					temperature: tempRanges,
 					bmi: bmiRanges,
 					bloodPressure: bpRanges,
+					bloodGlucose: bgRanges,
 				},
 				habits: {
 					tabaco: countHabits('tabaco'),
@@ -310,7 +334,7 @@ export async function getTriageTrends(
 
 		const { data: triages, error } = await (supabase as any)
 			.from('triaje_records')
-			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, blood_pressure, measurement_date')
+			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, blood_pressure, blood_glucose, measurement_date')
 			.eq('laboratory_id', laboratoryId)
 			.gte('measurement_date', startDate.toISOString())
 			.lte('measurement_date', endDate.toISOString())
@@ -336,6 +360,7 @@ export async function getTriageTrends(
 					avgOxygenSaturation: null,
 					avgTemperature: null,
 					avgSystolicBP: null,
+					avgBloodGlucose: null,
 					count: 0,
 				}
 			}
@@ -358,6 +383,9 @@ export async function getTriageTrends(
 			if (t.blood_pressure !== null) {
 				day.avgSystolicBP = (day.avgSystolicBP || 0) + t.blood_pressure
 			}
+			if (t.blood_glucose !== null) {
+				day.avgBloodGlucose = (day.avgBloodGlucose || 0) + t.blood_glucose
+			}
 		})
 
 		// Calcular promedios - necesitamos contar cuántos valores no nulos hay por día
@@ -374,6 +402,7 @@ export async function getTriageTrends(
 			const oxygenSaturationValues = dayRecords.filter(r => r.oxygen_saturation !== null).map(r => r.oxygen_saturation!)
 			const temperatureValues = dayRecords.filter(r => r.temperature_celsius !== null).map(r => r.temperature_celsius!)
 			const bloodPressureValues = dayRecords.filter(r => r.blood_pressure !== null).map(r => r.blood_pressure!)
+			const bloodGlucoseValues = dayRecords.filter(r => r.blood_glucose !== null).map(r => r.blood_glucose!)
 
 			return {
 				...day,
@@ -382,6 +411,7 @@ export async function getTriageTrends(
 				avgOxygenSaturation: oxygenSaturationValues.length > 0 ? oxygenSaturationValues.reduce((a, b) => a + b, 0) / oxygenSaturationValues.length : null,
 				avgTemperature: temperatureValues.length > 0 ? temperatureValues.reduce((a, b) => a + b, 0) / temperatureValues.length : null,
 				avgSystolicBP: bloodPressureValues.length > 0 ? bloodPressureValues.reduce((a, b) => a + b, 0) / bloodPressureValues.length : null,
+				avgBloodGlucose: bloodGlucoseValues.length > 0 ? bloodGlucoseValues.reduce((a, b) => a + b, 0) / bloodGlucoseValues.length : null,
 			}
 		})
 

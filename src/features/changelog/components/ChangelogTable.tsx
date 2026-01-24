@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle } from 'lucide-react'
+import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Edit } from 'lucide-react'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useToast } from '@shared/hooks/use-toast'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { supabase } from '@/services/supabase/config/config'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
@@ -57,6 +58,7 @@ const ChangelogTable: React.FC = () => {
 		return translations[fieldName] || fieldLabel
 	}
 	useUserProfile()
+	const { laboratory } = useLaboratory()
 
 	// Realtime subscription for change logs
 	useEffect(() => {
@@ -401,7 +403,7 @@ const ChangelogTable: React.FC = () => {
 		} else {
 			return {
 				text: 'Edición',
-				icon: <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+				icon: <Edit className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
 				bgColor: 'bg-blue-100 dark:bg-blue-900/30',
 				textColor: 'text-blue-800 dark:text-blue-300',
 			}
@@ -594,7 +596,14 @@ const ChangelogTable: React.FC = () => {
 
 													{/* User */}
 													<td className="px-4 py-4">
-														<span className="text-sm text-gray-900 dark:text-gray-100">
+														<span 
+															className="text-sm"
+															style={{ 
+																color: log.user_display_name 
+																	? (laboratory?.branding?.primaryColor || undefined)
+																	: undefined 
+															}}
+														>
 															{log.user_display_name || log.user_email}
 														</span>
 													</td>
@@ -612,19 +621,11 @@ const ChangelogTable: React.FC = () => {
 																			Cédula: {log.patients.cedula}
 																		</span>
 																	)}
-																	<span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full w-fit">
-																		Paciente
-																	</span>
 																</>
 															) : (
-																<>
-																	<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																		{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
-																	</span>
-																	<span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full w-fit">
-																		Caso Médico
-																	</span>
-																</>
+																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																	{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
+																</span>
 															)}
 														</div>
 													</td>
@@ -771,19 +772,11 @@ const ChangelogTable: React.FC = () => {
 																		Cédula: {log.patients.cedula}
 																	</span>
 																)}
-																<span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full w-fit">
-																	Paciente
-																</span>
 															</>
 														) : (
-															<>
-																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																	{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
-																</span>
-																<span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full w-fit">
-																	Caso Médico
-																</span>
-															</>
+															<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
+															</span>
 														)}
 													</div>
 												</div>

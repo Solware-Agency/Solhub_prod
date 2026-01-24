@@ -5,6 +5,7 @@ import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 // Tipo compartido para datos de change log
 export type ChangeLogData = {
 	id: string
@@ -47,6 +48,8 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 	onClose,
 	changes,
 }) => {
+	const { laboratory } = useLaboratory()
+	
 	if (changes.length === 0) return null
 
 	// Obtener información común del primer cambio (todos tienen la misma sesión)
@@ -127,7 +130,14 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 										Usuario
 									</p>
-									<p className="text-sm text-gray-900 dark:text-gray-100">
+									<p 
+										className="text-sm"
+										style={{ 
+											color: firstChange.user_display_name 
+												? (laboratory?.branding?.primaryColor || undefined)
+												: undefined 
+										}}
+									>
 										{firstChange.user_display_name || firstChange.user_email}
 									</p>
 									<p className="text-xs text-gray-500 dark:text-gray-400">
@@ -151,15 +161,6 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											{entityId}
 										</p>
 									)}
-									<span
-										className={`text-xs px-2 py-1 rounded-full ${
-											firstChange.entity_type === 'patient'
-												? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-												: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-										}`}
-									>
-										{firstChange.entity_type === 'patient' ? 'Paciente' : 'Caso Médico'}
-									</span>
 								</div>
 							</div>
 

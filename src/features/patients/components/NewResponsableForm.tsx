@@ -287,7 +287,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										setNombre(value)
 									}
 								}}
-								placeholder="Nombre completo"
+								placeholder="john doe"
 							/>
 						</div>
 
@@ -303,7 +303,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										setTelefono(value)
 									}
 								}}
-								placeholder="Teléfono de contacto"
+								placeholder="0412-1234567"
 								maxLength={15}
 							/>
 						</div>
@@ -353,7 +353,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 								options={createDropdownOptions(['Masculino', 'Femenino'])}
 								value={gender}
 								onChange={(value) => setGender(value as 'Masculino' | 'Femenino' | '')}
-								placeholder="Seleccionar género"
+								placeholder="Seleccionar"
 								className="transition-none"
 								id="responsable-gender"
 							/>
@@ -451,12 +451,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
-							placeholder="Email (opcional)"
+							placeholder="Solwy@gmail.com"
 						/>
 					</div>
 				</div>
 
-				<DialogFooter>
+				<DialogFooter className="flex flex-row justify-end gap-2">
 					<Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
 						Cancelar
 					</Button>

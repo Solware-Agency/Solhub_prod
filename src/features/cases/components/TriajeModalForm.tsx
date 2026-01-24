@@ -203,7 +203,9 @@ const TriageInfoDisplay: React.FC<{
                     Presión
                   </p>
                   <p className='text-sm font-medium'>
-                    {record.blood_pressure} mmHg
+                    {typeof record.blood_pressure === 'string' 
+                      ? record.blood_pressure 
+                      : record.blood_pressure} mmHg
                   </p>
                 </div>
               </div>
@@ -810,17 +812,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       missingFields.push('Frecuencia Cardíaca');
     }
     
-    if (!hasValue(formData.frecuenciaRespiratoria)) {
-      missingFields.push('Frecuencia Respiratoria');
-    }
+    // FR (Frecuencia Respiratoria) - No es obligatorio
     
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('Saturación de Oxígeno');
     }
     
-    if (!hasValue(formData.temperatura)) {
-      missingFields.push('Temperatura');
-    }
+    // Temperatura - No es obligatorio
     
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('Presión Arterial');

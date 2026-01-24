@@ -1067,7 +1067,12 @@ const MainUsers: React.FC = () => {
 									<tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">
 										<td className="px-6 py-4">
 											<div className="flex items-center justify-between gap-3">
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.display_name}</p>
+												<p 
+													className="text-sm font-medium"
+													style={{ color: laboratory?.branding?.primaryColor || undefined }}
+												>
+													{user.display_name}
+												</p>
 												<Tooltip>
 													<TooltipTrigger>
 														<Info className="size-4" />
@@ -1075,7 +1080,10 @@ const MainUsers: React.FC = () => {
 													<TooltipContent className="p-3 max-w-lg w-auto">
 														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
 															{user.display_name && (
-																<div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 whitespace-nowrap">
+																<div 
+																	className="font-semibold text-sm mb-1 whitespace-nowrap"
+																	style={{ color: laboratory?.branding?.primaryColor || undefined }}
+																>
 																	{user.display_name}
 																</div>
 															)}

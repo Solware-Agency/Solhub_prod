@@ -25,7 +25,7 @@ type ExtendedDatabase = Database & {
           respiratory_rate: number | null;
           oxygen_saturation: number | null;
           temperature_celsius: string | null;
-          blood_pressure: number | null;
+          blood_pressure: string | number | null;
           reason: string | null;
           personal_background: string | null;
           family_history: string | null;
@@ -52,7 +52,7 @@ type ExtendedDatabase = Database & {
           respiratory_rate?: number | null;
           oxygen_saturation?: number | null;
           temperature_celsius?: string | null;
-          blood_pressure?: number | null;
+          blood_pressure?: string | number | null;
           reason?: string | null;
           personal_background?: string | null;
           family_history?: string | null;
@@ -79,7 +79,7 @@ type ExtendedDatabase = Database & {
           respiratory_rate?: number | null;
           oxygen_saturation?: number | null;
           temperature_celsius?: string | null;
-          blood_pressure?: number | null;
+          blood_pressure?: string | number | null;
           reason?: string | null;
           personal_background?: string | null;
           family_history?: string | null;
@@ -120,7 +120,7 @@ export interface TriageRecord {
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
   temperature_celsius: number | null;
-  blood_pressure: number | null;
+  blood_pressure: string | number | null;
   blood_glucose: number | null; // Glicemia
   height_cm: number | null;
   weight_kg: number | null;
@@ -165,7 +165,7 @@ export interface TriageStatistics {
     height_cm: number | null;
     weight_kg: number | null;
     bmi: number | null;
-    blood_pressure: number | null;
+    blood_pressure: string | number | null;
     heart_rate: number | null;
     respiratory_rate: number | null;
     oxygen_saturation: number | null;
@@ -270,7 +270,7 @@ export const getSmokingRiskCategory = (smoking_index: number | null): string => 
  * Convertir presión arterial de formato "120/80" a número (toma el valor sistólico)
  * Si viene como número, lo devuelve tal cual
  */
-const parseBloodPressure = (value: string | number | null | undefined): number | null => {
+const parseBloodPressure = (value: string | number | null | undefined): string | number | null => {
   if (value === null || value === undefined || value === '') {
     return null;
   }
@@ -279,14 +279,25 @@ const parseBloodPressure = (value: string | number | null | undefined): number |
     return value;
   }
   
-  // Intentar parsear formato "120/80" o "120"
-  const match = value.toString().match(/^(\d+)(?:\/\d+)?/);
-  if (match) {
-    return parseInt(match[1], 10);
+  const stringValue = value.toString().trim();
+  
+  // Si contiene "/", guardar el string completo (formato sistólica/diastólica)
+  if (stringValue.includes('/')) {
+    // Validar que tenga el formato correcto (números separados por /)
+    const match = stringValue.match(/^\d+\/\d+$/);
+    if (match) {
+      return stringValue; // Devolver el string completo
+    }
+    // Si no coincide el formato exacto, intentar limpiar espacios
+    const cleaned = stringValue.replace(/\s+/g, '');
+    const cleanedMatch = cleaned.match(/^\d+\/\d+$/);
+    if (cleanedMatch) {
+      return cleaned;
+    }
   }
   
-  // Si no coincide, intentar parsear como número directo
-  const parsed = parseFloat(value);
+  // Si no tiene "/", intentar parsear como número
+  const parsed = parseFloat(stringValue);
   return isNaN(parsed) ? null : Math.round(parsed);
 };
 
@@ -414,21 +425,20 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
   if (!data.heart_rate || data.heart_rate <= 0) {
     missingFields.push('FC (Frecuencia Cardíaca)');
   }
-  if (!data.respiratory_rate || data.respiratory_rate <= 0) {
-    missingFields.push('FR (Frecuencia Respiratoria)');
-  }
+  // FR (Frecuencia Respiratoria) - No es obligatorio
   if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0 || data.oxygen_saturation > 100) {
     missingFields.push('SpO₂ (Saturación de Oxígeno)');
   }
-  if (!data.temperature_celsius || data.temperature_celsius <= 0) {
-    missingFields.push('Temperatura');
-  }
+  // Temperatura - No es obligatorio
   
   // Validar presión arterial (puede ser string o number)
   const bloodPressureValue = typeof data.blood_pressure === 'string' 
     ? parseBloodPressure(data.blood_pressure)
     : data.blood_pressure;
-  if (!bloodPressureValue || bloodPressureValue <= 0) {
+  // Si es string (formato "123/123"), se considera válido
+  // Si es number, debe ser mayor a 0
+  if (bloodPressureValue === null || 
+      (typeof bloodPressureValue === 'number' && bloodPressureValue <= 0)) {
     missingFields.push('Presión Arterial');
   }
   
