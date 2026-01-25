@@ -54,6 +54,7 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import { ImageButton } from '@shared/components/ui/ImageButton';
+import { PDFButton } from '@shared/components/ui/PDFButton';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -1282,6 +1283,23 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           >
                                             <Eye className='w-4 h-4' />
                                           </Button>
+                                          {/* Botón para ver PDF subido - visible para todos si existe */}
+                                          {(caseItem as any).uploaded_pdf_url && (
+                                            <PDFButton
+                                              pdfUrl={(caseItem as any).uploaded_pdf_url}
+                                              size='sm'
+                                              variant='default'
+                                            />
+                                          )}
+                                          {/* Botón para ver imagen - si existe */}
+                                          {(caseItem as any).image_url && (
+                                            <Button
+                                              onClick={() => window.open((caseItem as any).image_url, '_blank')}
+                                              disabled={isSaving}
+                                            >
+                                              <Eye className='h-4 w-4' />
+                                            </Button>
+                                          )}
                                         </div>
                                       </div>
 

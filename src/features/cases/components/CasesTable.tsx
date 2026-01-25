@@ -1361,9 +1361,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
             {/* Fixed Header with Controls */}
             <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
-              <div className='flex flex-col gap-2 sm:gap-4'>
+              <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
                 {/* Close button - Above search and filters in responsive */}
-                <div className='flex justify-end sm:hidden w-full'>
+                <div className='flex justify-end md:hidden w-full'>
                   <Button
                     variant='outline'
                     onClick={() => setIsFullscreen(false)}
@@ -1375,7 +1375,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 </div>
                 
                 {/* Search Row */}
-                <div className='w-full'>
+                <div className='flex-1 w-full md:w-auto'>
                   <div className='relative'>
                     <Input
                       type='text'
@@ -1393,7 +1393,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 </div>
 
                 {/* Buttons Row - Below search on mobile, beside on desktop */}
-                <div className='flex flex-wrap items-center gap-2 sm:gap-3'>
+                <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
                   {/* Unified Filters Modal */}
                   <FiltersModal
                     isOpen={isFiltersModalOpen}
@@ -1457,7 +1457,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   <Button
                     variant='outline'
                     onClick={() => setIsFullscreen(false)}
-                    className='hidden sm:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    className='hidden md:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
                     aria-label='Cerrar'
                   >
                     <X className='w-4 h-4' />
@@ -1683,9 +1683,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
           {/* Search and Filter Controls */}
           <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
-            <div className='flex flex-col gap-2 sm:gap-4'>
+            <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
               {/* Search Row */}
-              <div className='w-full'>
+              <div className='flex-1 w-full md:w-auto'>
                 <div className='relative'>
                   <Input
                     type='text'
@@ -1703,7 +1703,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               </div>
 
               {/* Buttons Row - Below search on mobile, beside on desktop */}
-              <div className='flex flex-wrap items-center gap-2 sm:gap-3'>
+              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
                 {/* Unified Filters Modal */}
                 <FiltersModal
                   isOpen={isFiltersModalOpen}

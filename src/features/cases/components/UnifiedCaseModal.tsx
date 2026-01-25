@@ -71,6 +71,8 @@ import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
 import { ImageButton } from '@shared/components/ui/ImageButton';
+import { PDFButton } from '@shared/components/ui/PDFButton';
+import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -1796,8 +1798,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Imagen:
                           </span>
-                          {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
-                            <div className='sm:w-1/2'>
+                          <div className='sm:w-1/2 flex items-center gap-2'>
+                            {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
                               <Input
                                 id='image-url-input'
                                 name='image_url'
@@ -1808,17 +1810,23 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                   setImageUrl(e.target.value);
                                   setEditedCase({ ...editedCase, image_url: e.target.value });
                                 }}
-                                className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
+                                className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
                               />
-                            </div>
-                          ) : (
-                            <div className='sm:w-1/2'>
-                              <ImageButton imageUrl={(currentCase as any).image_url} className='w-full' />
-                            </div>
-                          )}
+                            ) : (
+                              <ImageButton imageUrl={(currentCase as any).image_url} className='flex-1' />
+                            )}
+                            {/* Botón para ver PDF subido - visible para todos si existe */}
+                            {(currentCase as any).uploaded_pdf_url && (
+                              <PDFButton 
+                                pdfUrl={(currentCase as any).uploaded_pdf_url} 
+                                size='sm'
+                                variant='outline'
+                              />
+                            )}
+                          </div>
                         </div>
                       )}
-                      
+
                       {/* Botón Ver más/Ver menos */}
                       <div className='flex justify-center pt-2'>
                         <Button
@@ -2219,6 +2227,41 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           )}
                         </div>
                       )}
+
+                      {/* PDF Subido - Solo para SPT, roles: laboratorio, owner, prueba (godmode) */}
+                      {/* Visible en la sección de Información Médica */}
+                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          PDF Adjunto:
+                        </span>
+                        <div className='sm:flex sm:justify-end sm:flex-1'>
+                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba') ? (
+                            <CasePDFUpload
+                              caseId={currentCase.id}
+                              currentPdfUrl={(currentCase as any).uploaded_pdf_url}
+                              onPdfUpdated={async () => {
+                                // Refrescar el caso después de subir/eliminar PDF
+                                if (refetchCaseData) {
+                                  await refetchCaseData();
+                                }
+                                if (onSave) {
+                                  onSave();
+                                }
+                              }}
+                            />
+                          ) : (currentCase as any).uploaded_pdf_url ? (
+                            <PDFButton 
+                              pdfUrl={(currentCase as any).uploaded_pdf_url} 
+                              size='sm'
+                              variant='outline'
+                            />
+                          ) : (
+                            <span className='text-sm text-gray-500 dark:text-gray-400'>
+                              Sin PDF adjunto
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </InfoSection>
 
