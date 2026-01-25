@@ -709,6 +709,7 @@ export interface MedicalRecord {
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
   image_url?: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 // =====================================================================

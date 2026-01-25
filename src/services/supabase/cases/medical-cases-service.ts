@@ -109,6 +109,7 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 export interface MedicalCaseInsert {
@@ -244,6 +245,7 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -296,6 +298,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;

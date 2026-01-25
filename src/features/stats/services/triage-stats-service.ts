@@ -5,6 +5,73 @@ import type { HabitLevel } from '@/services/supabase/triage/triage-service'
 // Ejecutar: npx supabase gen types typescript --local > src/types/supabase.ts
 // para actualizar los tipos después de migrar la BD
 
+/**
+ * Extrae el valor sistólico de la presión arterial
+ * Puede venir como string "120/80" o como número
+ * Retorna null si el valor es inválido
+ */
+function parseSystolicBP(value: string | number | null | undefined): number | null {
+	if (value === null || value === undefined) return null
+	
+	// Si es número, validar y devolverlo
+	if (typeof value === 'number') {
+		// Validar que sea un número razonable (entre 40 y 300 mmHg)
+		if (value >= 40 && value <= 300) {
+			return value
+		}
+		return null
+	}
+	
+	// Si es string, parsear
+	const stringValue = value.toString().trim()
+	
+	// Si tiene formato "120/80", extraer la parte sistólica (antes de /)
+	if (stringValue.includes('/')) {
+		const parts = stringValue.split('/')
+		const systolic = parseFloat(parts[0])
+		if (!isNaN(systolic) && systolic >= 40 && systolic <= 300) {
+			return Math.round(systolic)
+		}
+		return null
+	}
+	
+	// Si no tiene "/", intentar parsear como número
+	const parsed = parseFloat(stringValue)
+	if (!isNaN(parsed) && parsed >= 40 && parsed <= 300) {
+		return Math.round(parsed)
+	}
+	
+	return null
+}
+
+/**
+ * Parsea el valor de glicemia (blood glucose)
+ * Puede venir como string o como número desde Supabase
+ * Retorna null si el valor es inválido
+ */
+function parseBloodGlucose(value: string | number | null | undefined): number | null {
+	if (value === null || value === undefined) return null
+	
+	// Si es número, validar y devolverlo
+	if (typeof value === 'number') {
+		// Validar que sea un número razonable (entre 0 y 1000 mg/dL)
+		if (value >= 0 && value <= 1000) {
+			return value
+		}
+		return null
+	}
+	
+	// Si es string, parsear
+	const stringValue = value.toString().trim()
+	const parsed = parseFloat(stringValue)
+	
+	if (!isNaN(parsed) && parsed >= 0 && parsed <= 1000) {
+		return parsed
+	}
+	
+	return null
+}
+
 // Interfaz para los datos de historia clínica (subset mínimo para estadísticas)
 interface TriageRecordRaw {
 	heart_rate: number | null
@@ -12,8 +79,8 @@ interface TriageRecordRaw {
 	oxygen_saturation: number | null
 	temperature_celsius: number | null
 	bmi: number | null
-	blood_pressure: number | null
-	blood_glucose: number | null // Glicemia (mg/dL)
+	blood_pressure: string | number | null // Puede ser string "120/80" o número
+	blood_glucose: string | number | null // Glicemia (mg/dL) - puede venir como string desde Supabase
 	tabaco: number | null // Índice tabáquico (paquetes-año)
 	cafe: number | null // Tazas de café por día
 	alcohol: HabitLevel | null
@@ -70,7 +137,7 @@ export async function getTriageStats(
 	try {
 		let query = (supabase as any)
 			.from('triaje_records')
-			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, bmi, blood_pressure, tabaco, cafe, alcohol, measurement_date')
+			.select('heart_rate, respiratory_rate, oxygen_saturation, temperature_celsius, bmi, blood_pressure, blood_glucose, tabaco, cafe, alcohol, measurement_date')
 			.eq('laboratory_id', laboratoryId)
 
 		if (startDate) {
@@ -140,14 +207,17 @@ export async function getTriageStats(
 		const temperatures = validRecords.map((t) => t.temperature_celsius).filter((v): v is number => v !== null)
 		const bmis = validRecords.map((t) => t.bmi).filter((v): v is number => v !== null)
 
-		// Extraer presión arterial (entero en mmHg)
-		const bloodPressures = records.map((t) => t.blood_pressure).filter((v): v is number => v !== null)
-		// Si el formato es string "120/80", parsear (aunque debería ser un entero)
-		const systolicBPs = bloodPressures
+		// Extraer presión arterial y parsear correctamente
+		// Puede venir como string "120/80" o como número
+		const systolicBPs = records
+			.map((t) => parseSystolicBP(t.blood_pressure))
+			.filter((v): v is number => v !== null)
 		const diastolicBPs: number[] = [] // No disponible si es un solo valor
 
-		// Extraer glicemia (mg/dL)
-		const bloodGlucoses = validRecords.map((t) => t.blood_glucose).filter((v): v is number => v !== null)
+		// Extraer glicemia (mg/dL) - parsear correctamente ya que puede venir como string
+		const bloodGlucoses = validRecords
+			.map((t) => parseBloodGlucose(t.blood_glucose))
+			.filter((v): v is number => v !== null)
 
 		const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
 
@@ -266,6 +336,7 @@ export async function getTriageStats(
 							category = 'No toma'
 						} else if (cups <= 2) {
 							category = 'Bajo (1-2 tazas)'
+
 						} else if (cups <= 4) {
 							category = 'Moderado (3-4 tazas)'
 						} else if (cups <= 6) {
@@ -380,11 +451,13 @@ export async function getTriageTrends(
 			if (t.temperature_celsius !== null) {
 				day.avgTemperature = (day.avgTemperature || 0) + t.temperature_celsius
 			}
-			if (t.blood_pressure !== null) {
-				day.avgSystolicBP = (day.avgSystolicBP || 0) + t.blood_pressure
+			const systolicBP = parseSystolicBP(t.blood_pressure)
+			if (systolicBP !== null) {
+				day.avgSystolicBP = (day.avgSystolicBP || 0) + systolicBP
 			}
-			if (t.blood_glucose !== null) {
-				day.avgBloodGlucose = (day.avgBloodGlucose || 0) + t.blood_glucose
+			const bloodGlucose = parseBloodGlucose(t.blood_glucose)
+			if (bloodGlucose !== null) {
+				day.avgBloodGlucose = (day.avgBloodGlucose || 0) + bloodGlucose
 			}
 		})
 
@@ -401,8 +474,12 @@ export async function getTriageTrends(
 			const respiratoryRateValues = dayRecords.filter(r => r.respiratory_rate !== null).map(r => r.respiratory_rate!)
 			const oxygenSaturationValues = dayRecords.filter(r => r.oxygen_saturation !== null).map(r => r.oxygen_saturation!)
 			const temperatureValues = dayRecords.filter(r => r.temperature_celsius !== null).map(r => r.temperature_celsius!)
-			const bloodPressureValues = dayRecords.filter(r => r.blood_pressure !== null).map(r => r.blood_pressure!)
-			const bloodGlucoseValues = dayRecords.filter(r => r.blood_glucose !== null).map(r => r.blood_glucose!)
+			const bloodPressureValues = dayRecords
+				.map(r => parseSystolicBP(r.blood_pressure))
+				.filter((v): v is number => v !== null)
+			const bloodGlucoseValues = dayRecords
+				.map(r => parseBloodGlucose(r.blood_glucose))
+				.filter((v): v is number => v !== null)
 
 			return {
 				...day,
