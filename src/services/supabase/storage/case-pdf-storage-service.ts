@@ -7,7 +7,7 @@ import type { PostgrestError } from '@supabase/supabase-js'
  */
 
 const BUCKET_NAME = 'case-pdfs'
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB en bytes
+const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB en bytes
 const ALLOWED_EXTENSIONS = ['.pdf']
 const ALLOWED_MIME_TYPES = ['application/pdf']
 

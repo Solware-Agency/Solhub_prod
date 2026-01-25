@@ -104,7 +104,7 @@ USING (
 -- =====================================================
 
 COMMENT ON POLICY "Users can upload case PDFs" ON storage.objects IS 
-  'Permite a roles laboratorio, owner y prueba (godmode) en SPT subir PDFs de casos (PDF, máx 50MB)';
+  'Permite a roles laboratorio, owner y prueba (godmode) en SPT subir PDFs de casos (PDF, máx 30MB)';
 
 COMMENT ON POLICY "Users can update case PDFs" ON storage.objects IS 
   'Permite a roles laboratorio, owner y prueba (godmode) en SPT actualizar PDFs de casos';
