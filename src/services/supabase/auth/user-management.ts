@@ -502,6 +502,140 @@ export const updateUserToAdmin = async (
 }
 
 /**
+ * Eliminar usuario del sistema
+ * Elimina el perfil de la tabla profiles y el usuario de auth.users
+ * NO elimina los casos o pacientes enlazados a ese usuario
+ */
+export const deleteUser = async (
+	userId: string,
+): Promise<{
+	success: boolean
+	error: PostgrestError | Error | null
+}> => {
+	try {
+		console.log(`Eliminando usuario ${userId}`)
+
+		// 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+		const {
+			data: { user: currentUser },
+		} = await supabase.auth.getUser()
+		if (!currentUser) {
+			throw new Error('Usuario no autenticado')
+		}
+
+		const { data: currentProfile, error: currentProfileError } = await supabase
+			.from('profiles')
+			.select('laboratory_id')
+			.eq('id', currentUser.id)
+			.single() as { data: { laboratory_id?: string } | null; error: PostgrestError | null }
+
+		if (currentProfileError || !currentProfile?.laboratory_id) {
+			throw new Error('Usuario no tiene laboratorio asignado')
+		}
+
+		// 🔐 MULTI-TENANT: Verificar que el usuario a eliminar pertenece al mismo laboratorio
+		const { data: targetProfile, error: targetProfileError } = await supabase
+			.from('profiles')
+			.select('id, laboratory_id, email')
+			.eq('id', userId)
+			.single() as { data: { id: string; laboratory_id?: string; email: string } | null; error: PostgrestError | null }
+
+		if (targetProfileError || !targetProfile) {
+			console.error('Error obteniendo perfil del usuario a eliminar:', targetProfileError)
+			return {
+				success: false,
+				error: new Error('No se encontró el perfil del usuario a eliminar'),
+			}
+		}
+
+		// Validar que el usuario a eliminar tiene laboratory_id
+		if (!targetProfile.laboratory_id) {
+			console.error('El usuario a eliminar no tiene laboratory_id:', targetProfile)
+			return {
+				success: false,
+				error: new Error('El usuario a eliminar no tiene laboratorio asignado'),
+			}
+		}
+
+		// 🔐 MULTI-TENANT: Validar que ambos usuarios pertenecen al mismo laboratorio
+		if (targetProfile.laboratory_id !== currentProfile.laboratory_id) {
+			console.error('Laboratory mismatch:', {
+				currentUser: currentProfile.laboratory_id,
+				targetUser: targetProfile.laboratory_id,
+			})
+			return {
+				success: false,
+				error: new Error('No puedes eliminar usuarios de otro laboratorio'),
+			}
+		}
+
+		// No permitir que un usuario se elimine a sí mismo
+		if (userId === currentUser.id) {
+			return {
+				success: false,
+				error: new Error('No puedes eliminar tu propio usuario'),
+			}
+		}
+
+		// Paso 1: Eliminar el perfil de la tabla profiles manualmente
+		// Esto NO eliminará los casos/pacientes porque no hay CASCADE en esas relaciones
+		const { error: deleteProfileError } = await supabase
+			.from('profiles')
+			.delete()
+			.eq('id', userId)
+			.eq('laboratory_id', currentProfile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+
+		if (deleteProfileError) {
+			console.error('Error eliminando perfil:', deleteProfileError)
+			return {
+				success: false,
+				error: deleteProfileError,
+			}
+		}
+
+		// Paso 2: Eliminar el usuario de auth.users usando función RPC
+		// La función RPC tiene SECURITY DEFINER para acceder a auth.users
+		const { data: deleteResult, error: deleteAuthError } = await supabase.rpc('delete_user_from_auth', {
+			p_user_id: userId,
+		})
+
+		if (deleteAuthError) {
+			console.error('Error eliminando usuario de auth:', deleteAuthError)
+			// Si falla la eliminación de auth, el perfil ya fue eliminado
+			// Esto es un estado inconsistente, pero el usuario no podrá autenticarse
+			return {
+				success: false,
+				error: new Error(`Error al eliminar usuario de autenticación: ${deleteAuthError.message}`),
+			}
+		}
+
+		// Verificar el resultado de la función RPC
+		if (deleteResult && typeof deleteResult === 'object' && 'success' in deleteResult) {
+			const result = deleteResult as { success: boolean; error?: string; message?: string }
+			if (!result.success) {
+				console.error('Error en función RPC delete_user_from_auth:', result.error)
+				return {
+					success: false,
+					error: new Error(result.error || 'Error al eliminar usuario de autenticación'),
+				}
+			}
+		}
+
+		console.log(`Usuario ${userId} eliminado exitosamente`)
+		return {
+			success: true,
+			error: null,
+		}
+	} catch (error) {
+		console.error('Error inesperado eliminando usuario:', error)
+		return {
+			success: false,
+			error: error as Error,
+		}
+	}
+}
+
+/**
  * Helper para obtener el nombre del campo de firma según el número
  */
 function getSignatureFieldName(signatureNumber: number): 'signature_url' | 'signature_url_2' | 'signature_url_3' {
