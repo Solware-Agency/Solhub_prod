@@ -287,7 +287,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										setNombre(value)
 									}
 								}}
-								placeholder="john doe"
+								placeholder="John Doe"
 							/>
 						</div>
 

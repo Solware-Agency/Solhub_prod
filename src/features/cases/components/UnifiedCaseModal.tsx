@@ -273,6 +273,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
     const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
+    const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
     // Image URL state for imagenologia role
     const [imageUrl, setImageUrl] = useState('');
@@ -1019,8 +1020,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
-        // Save image URL for imagenologia role
-        if (profile?.role === 'imagenologia' && imageUrl) {
+        // Save image URL for imagenologia/owner/prueba roles
+        if ((profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && imageUrl) {
           const { error: imageUrlError } = await supabase
             .from('medical_records_clean')
             .update({ image_url: imageUrl })
@@ -1550,7 +1551,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     : 'z-[9999999999999999]'
                 } overflow-y-auto overflow-x-hidden rounded-lg border-l border-input`}
               >
-                <div className='sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10 overflow-x-hidden max-w-full'>
+                <div className={`sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 ${
+                  isFullscreen
+                    ? 'z-[99999999999999999]'
+                    : 'z-[9999999999999999]'
+                } overflow-x-hidden max-w-full`}>
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2 sm:gap-3 flex-1 min-w-0'>
                       <div className='flex-1 min-w-0'>
@@ -1604,6 +1609,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           <button
                             onClick={handleSaveChanges}
                             disabled={isSaving}
+                            title='Guarda todos los cambios realizados en el caso'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer flex-shrink-0'
                           >
                             {isSaving ? (
@@ -1620,6 +1626,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleCancelEdit}
+                            title='Cancela la edición y descarta todos los cambios'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer flex-shrink-0'
                             disabled={isSaving}
                           >
@@ -1631,6 +1638,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         <>
                           <button
                             onClick={handleEditClick}
+                            title='Editar información del caso'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label='Editar caso'
                           >
@@ -1638,6 +1646,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={toggleChangelog}
+                            title={isChangelogOpen ? 'Ocultar historial de cambios' : 'Ver historial de cambios del caso'}
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
                           >
@@ -1646,6 +1655,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           <button
                             onClick={handleSendEmail}
                             disabled={isSaving}
+                            title='Enviar informe por correo electrónico'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
                             aria-label='Enviar correo'
                           >
@@ -1657,6 +1667,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleCall}
+                            title='Llamar al paciente por teléfono'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label='Llamar'
                           >
@@ -1666,6 +1677,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             <button
                               onClick={handleDownloadCase}
                               disabled={isSaving}
+                              title='Descargar el PDF del informe del caso'
                               className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
                               aria-label='Descargar caso'
                             >
@@ -1678,6 +1690,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           )}
                           <button
                             onClick={handleSendWhatsApp}
+                            title='Enviar mensaje por WhatsApp al paciente'
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label='Enviar WhatsApp'
                           >
@@ -1792,40 +1805,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         onChange={handleInputChange}
                       />
                       
-                      {/* Image URL field - Always visible for imagenologia/owner, visible for others only if URL exists */}
-                      {(profile?.role === 'imagenologia' || profile?.role === 'owner' || (currentCase as any).image_url) && (
-                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                            Imagen:
-                          </span>
-                          <div className='sm:w-1/2 flex items-center gap-2'>
-                            {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
-                              <Input
-                                id='image-url-input'
-                                name='image_url'
-                                type='url'
-                                placeholder='https://ejemplo.com/imagen.jpg'
-                                value={imageUrl}
-                                onChange={(e) => {
-                                  setImageUrl(e.target.value);
-                                  setEditedCase({ ...editedCase, image_url: e.target.value });
-                                }}
-                                className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
-                              />
-                            ) : (
-                              <ImageButton imageUrl={(currentCase as any).image_url} className='flex-1' />
-                            )}
-                            {/* Botón para ver PDF subido - visible para todos si existe */}
-                            {(currentCase as any).uploaded_pdf_url && (
-                              <PDFButton 
-                                pdfUrl={(currentCase as any).uploaded_pdf_url} 
-                                size='sm'
-                                variant='outline'
-                              />
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {/* Botón Ver más/Ver menos */}
                       <div className='flex justify-center pt-2'>
@@ -1861,7 +1840,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             <div className='sm:w-1/2 sm:text-right'>
                               {responsableData?.responsable ? (
                                 <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                                  {responsableData.responsable.nombre} - {responsableData.responsable.cedula}
+                                  {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
                                 </span>
                               ) : (
                                 <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
@@ -2261,6 +2240,59 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </span>
                           )}
                         </div>
+                      </div>
+
+                      {/* Image URL field - Visible for all roles if image exists, editable only for imagenologia/owner/prueba */}
+                      {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
+                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          Imagen:
+                        </span>
+                        <div className='sm:flex sm:justify-end sm:flex-1'>
+                          {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing ? (
+                            <Input
+                              id='image-url-input'
+                              name='image_url'
+                              type='url'
+                              placeholder='https://ejemplo.com/imagen.jpg'
+                              value={imageUrl}
+                              onChange={(e) => {
+                                setImageUrl(e.target.value);
+                                setEditedCase({ ...editedCase, image_url: e.target.value });
+                              }}
+                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
+                            />
+                          ) : (currentCase as any).image_url ? (
+                            <ImageButton imageUrl={(currentCase as any).image_url} />
+                          ) : (
+                            <span className='text-sm text-gray-500 dark:text-gray-400'>
+                              Sin imagen
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Comentarios */}
+                      <div className='py-2 border-t border-gray-200 dark:border-gray-700 pt-3'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          Comentarios:
+                        </span>
+                        {isEditing ? (
+                          <Textarea
+                            id='comments-textarea'
+                            name='comments'
+                            value={editedCase.comments || ''}
+                            onChange={(e) =>
+                              handleInputChange('comments', e.target.value)
+                            }
+                            className='mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                            placeholder='Agregar comentarios adicionales...'
+                          />
+                        ) : (
+                          <p className='text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border'>
+                            {currentCase.comments || 'Sin comentarios'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </InfoSection>
@@ -2796,53 +2828,61 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   </FeatureGuard>
 
                   {/* Additional Information */}
-                  <InfoSection title='Información Adicional' icon={FileText}>
-                    <div className='space-y-1'>
-                      <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3'>
-                        <p className='text-teal-400 text-sm'>
-                          Este caso fue creado por{' '}
-                          <span className='font-semibold'>
-                            {creatorData?.displayName || 'Usuario del sistema'}
-                          </span>
-                        </p>
+                  <div className='bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <div className='flex items-center gap-2'>
+                        <FileText className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+                        <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                          Información Adicional
+                        </h3>
                       </div>
-                      <InfoRow
-                        label='Fecha de creación'
-                        value={new Date(
-                          currentCase.created_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
-                      <InfoRow
-                        label='Última actualización'
-                        value={new Date(
-                          currentCase.updated_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
-                      <div className='py-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Comentarios:
-                        </span>
-                        {isEditing ? (
-                          <Textarea
-                            id='comments-textarea'
-                            name='comments'
-                            value={editedCase.comments || ''}
-                            onChange={(e) =>
-                              handleInputChange('comments', e.target.value)
-                            }
-                            className='mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            placeholder='Agregar comentarios adicionales...'
-                          />
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+                        className='text-sm text-primary hover:text-primary/80'
+                      >
+                        {showAdditionalInfo ? (
+                          <>
+                            Ver menos
+                            <ChevronUp className='ml-1 h-4 w-4' />
+                          </>
                         ) : (
-                          <p className='text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border'>
-                            {currentCase.comments || 'Sin comentarios'}
-                          </p>
+                          <>
+                            Ver más
+                            <ChevronDown className='ml-1 h-4 w-4' />
+                          </>
                         )}
-                      </div>
+                      </Button>
                     </div>
-                  </InfoSection>
+                    {showAdditionalInfo && (
+                      <div className='space-y-1'>
+                        <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3'>
+                          <p className='text-teal-400 text-sm'>
+                            Este caso fue creado por{' '}
+                            <span className='font-semibold'>
+                              {creatorData?.displayName || 'Usuario del sistema'}
+                            </span>
+                          </p>
+                        </div>
+                        <InfoRow
+                          label='Fecha de creación'
+                          value={new Date(
+                            currentCase.created_at || '',
+                          ).toLocaleDateString('es-ES')}
+                          editable={false}
+                        />
+                        <InfoRow
+                          label='Última actualización'
+                          value={new Date(
+                            currentCase.updated_at || '',
+                          ).toLocaleDateString('es-ES')}
+                          editable={false}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   {/* Bottom Action Buttons */}
                   {!notShow && (

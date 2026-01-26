@@ -562,17 +562,12 @@ const ChangelogTable: React.FC = () => {
 											</th>
 											<th className="px-4 py-3 text-left">
 												<div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-													Acción
+													Resumen
 												</div>
 											</th>
 											<th className="px-4 py-3 text-left">
 												<div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-															Resumen
-														</div>
-													</th>
-													<th className="px-4 py-3 text-left">
-														<div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-															Acción
+													Acción
 												</div>
 											</th>
 										</tr>
@@ -627,16 +622,6 @@ const ChangelogTable: React.FC = () => {
 																	{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
 																</span>
 															)}
-														</div>
-													</td>
-
-													{/* Action Type */}
-													<td className="px-4 py-4">
-														<div
-															className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
-														>
-															{actionInfo.icon}
-															<span>{actionInfo.text}</span>
 														</div>
 													</td>
 

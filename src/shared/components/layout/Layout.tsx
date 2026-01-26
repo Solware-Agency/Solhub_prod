@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useDarkMode } from '@shared/hooks/useDarkMode'
@@ -15,6 +15,48 @@ const Layout: React.FC = () => {
 
 	const [sidebarOpen, setSidebarOpen] = useState(false)
 	const [sidebarExpanded, setSidebarExpanded] = useState(false) // New state for hover expansion
+	const [hasOverlayOpen, setHasOverlayOpen] = useState(false)
+
+	// Verificar si hay un overlay abierto (modal, etc.)
+	useEffect(() => {
+		const checkOverlay = () => {
+			// Verificar clase has-overlay-open
+			const hasOverlayClass = document.body.classList.contains('has-overlay-open')
+			
+			// Verificar si hay algún Dialog de Radix abierto
+			const hasRadixDialog = document.querySelector('[data-radix-dialog-content][data-state="open"]') !== null ||
+			                         document.querySelector('[data-state="open"][role="dialog"]') !== null
+			
+			// Verificar si el modal de detalles del caso está visible (buscar el panel con z-index muy alto)
+			const hasCaseModal = document.querySelector('[class*="z-[9999999999999999"]') !== null ||
+			                      document.querySelector('[class*="z-\\[99999999999999999\\]"]') !== null
+			
+			setHasOverlayOpen(hasOverlayClass || hasRadixDialog || hasCaseModal)
+		}
+		
+		// Verificar inicialmente
+		checkOverlay()
+		
+		// Observar cambios en las clases del body y en el DOM para detectar cambios en modales
+		const observer = new MutationObserver(() => {
+			// Usar setTimeout para asegurar que se detecte después de que se actualice la clase
+			setTimeout(checkOverlay, 0)
+		})
+		observer.observe(document.body, {
+			attributes: true,
+			attributeFilter: ['class'],
+			subtree: true,
+			childList: true
+		})
+		
+		// También verificar periódicamente como fallback
+		const interval = setInterval(checkOverlay, 100)
+		
+		return () => {
+			observer.disconnect()
+			clearInterval(interval)
+		}
+	}, [])
 
 	const toggleSidebar = () => {
 		setSidebarOpen(!sidebarOpen)
@@ -70,11 +112,11 @@ const Layout: React.FC = () => {
 				</div>
 			)}
 
-			{/* Mobile menu button - hidden in fullscreen mode */}
-			{!isFullscreenMode && (
+			{/* Mobile menu button - hidden in fullscreen mode and when overlay is open */}
+			{!isFullscreenMode && !hasOverlayOpen && (
 				<button
 					onClick={toggleSidebar}
-					className="mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-50"
+					className="mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-20"
 				>
 					<Menu className="h-5 w-5 text-gray-600 dark:text-gray-400 " />
 				</button>

@@ -187,7 +187,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 							<FormControl>
 								<AutocompleteInput
 									fieldName="fullName"
-									placeholder="john doe"
+									placeholder="John Doe"
 									iconRight={<User className="h-4 w-4 text-muted-foreground" />}
 									{...field}
 									onChange={(e) => {

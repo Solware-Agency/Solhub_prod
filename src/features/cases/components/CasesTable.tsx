@@ -3,7 +3,6 @@ import {
   ChevronUp,
   ChevronDown,
   Search,
-  Maximize2,
   Download,
   X,
 } from 'lucide-react';
@@ -1763,16 +1762,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   <span className='hidden sm:inline'>Exportar</span>
                 </Button>
 
-                {/* Fullscreen Button */}
-                <Button
-                  onClick={() => setIsFullscreen(true)}
-                  variant='outline'
-                  className='flex items-center gap-2 cursor-pointer'
-                  title='Expandir'
-                >
-                  <Maximize2 className='w-4 h-4' />
-                  <span className='hidden sm:inline'>Expandir</span>
-                </Button>
               </div>
             </div>
           </div>

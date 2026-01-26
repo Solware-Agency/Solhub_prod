@@ -729,16 +729,23 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
           {/* Modal */}
           {!isEditing && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'
-              onClick={onClose}
-            >
-              <div
-                className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input'
+            <div className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'>
+              {/* Overlay de fondo con opacidad desde el inicio */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className='fixed inset-0 bg-black/50'
+                onClick={onClose}
+              />
+              {/* Contenido del modal con animación */}
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input relative z-10'
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -792,7 +799,34 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   </span>
                                 )}
                                 {(() => {
-                                  // Si hay edad, mostrarla
+                                  // Calcular edad desde fecha_nacimiento si existe
+                                  const calculatedAge = patient.fecha_nacimiento
+                                    ? calculateAgeFromFechaNacimiento(patient.fecha_nacimiento)
+                                    : null;
+                                  
+                                  // Si hay fecha_nacimiento, mostrar edad calculada + fecha
+                                  if (patient.fecha_nacimiento && calculatedAge) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • {calculatedAge} ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Si hay error formateando, mostrar solo la edad
+                                      return (
+                                        <span className='ml-3'>
+                                          • {calculatedAge}
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  
+                                  // Si no hay fecha_nacimiento pero hay edad directa, mostrarla
                                   if (patient.edad) {
                                     return (
                                       <span className='ml-3'>
@@ -800,17 +834,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </span>
                                     );
                                   }
-                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
-                                  const calculatedAge = calculateAgeFromFechaNacimiento(
-                                    patient.fecha_nacimiento
-                                  );
-                                  if (calculatedAge) {
-                                    return (
-                                      <span className='ml-3'>
-                                        • {calculatedAge}
-                                      </span>
-                                    );
+                                  
+                                  // Si hay fecha_nacimiento pero no se pudo calcular edad, intentar mostrar solo la fecha
+                                  if (patient.fecha_nacimiento) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Ignorar error
+                                    }
                                   }
+                                  
                                   return null;
                                 })()}
                               </>
@@ -823,7 +864,34 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   </span>
                                 )}
                                 {(() => {
-                                  // Si hay edad, mostrarla
+                                  // Calcular edad desde fecha_nacimiento si existe
+                                  const calculatedAge = patient.fecha_nacimiento
+                                    ? calculateAgeFromFechaNacimiento(patient.fecha_nacimiento)
+                                    : null;
+                                  
+                                  // Si hay fecha_nacimiento, mostrar edad calculada + fecha
+                                  if (patient.fecha_nacimiento && calculatedAge) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • {calculatedAge} ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Si hay error formateando, mostrar solo la edad
+                                      return (
+                                        <span className='ml-3'>
+                                          • {calculatedAge}
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  
+                                  // Si no hay fecha_nacimiento pero hay edad directa, mostrarla
                                   if (patient.edad) {
                                     return (
                                       <span className='ml-3'>
@@ -831,17 +899,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </span>
                                     );
                                   }
-                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
-                                  const calculatedAge = calculateAgeFromFechaNacimiento(
-                                    patient.fecha_nacimiento
-                                  );
-                                  if (calculatedAge) {
-                                    return (
-                                      <span className='ml-3'>
-                                        • {calculatedAge}
-                                      </span>
-                                    );
+                                  
+                                  // Si hay fecha_nacimiento pero no se pudo calcular edad, intentar mostrar solo la fecha
+                                  if (patient.fecha_nacimiento) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Ignorar error
+                                    }
                                   }
+                                  
                                   return null;
                                 })()}
                               </>
@@ -1584,8 +1659,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                     </Tabs>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           )}
 
           {/* Render EditPatientInfoModal outside the history modal to prevent z-index issues */}

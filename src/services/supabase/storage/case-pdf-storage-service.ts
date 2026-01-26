@@ -78,8 +78,26 @@ export async function uploadCasePDF(
 			}
 		}
 
-		// Construir path: {laboratory_id}/{case_id}/uploaded.pdf
-		const filePath = `${laboratoryId}/${caseId}/uploaded.pdf`
+		// Sanitizar el nombre del archivo original para usarlo en el path
+		// Mantener el nombre original pero sanitizar caracteres especiales para seguridad
+		const originalFileName = file.name
+		// Sanitizar: mantener alfanuméricos, guiones, guiones bajos, puntos y espacios
+		// Reemplazar caracteres especiales problemáticos con guiones bajos
+		const sanitizedFileName = originalFileName
+			.replace(/[^a-zA-Z0-9._\s-]/g, '_') // Reemplazar caracteres especiales
+			.replace(/_{2,}/g, '_') // Reemplazar múltiples guiones bajos
+			.replace(/^_+|_+$/g, '') // Eliminar guiones bajos al inicio/final
+			.trim()
+		
+		// Asegurar que termine en .pdf
+		const finalFileName = sanitizedFileName.endsWith('.pdf') 
+			? sanitizedFileName 
+			: sanitizedFileName 
+				? `${sanitizedFileName}.pdf`
+				: 'documento.pdf'
+
+		// Construir path: {laboratory_id}/{case_id}/{nombre_original_sanitizado}
+		const filePath = `${laboratoryId}/${caseId}/${finalFileName}`
 
 		// Leer el archivo como ArrayBuffer para validar que sea un PDF válido
 		const arrayBuffer = await file.arrayBuffer()
@@ -114,8 +132,8 @@ export async function uploadCasePDF(
 			}
 		}
 		
-		// Crear un nuevo File con el tipo correcto
-		const pdfFile = new File([arrayBuffer], 'uploaded.pdf', {
+		// Crear un nuevo File con el nombre original sanitizado
+		const pdfFile = new File([arrayBuffer], finalFileName, {
 			type: 'application/pdf',
 			lastModified: file.lastModified
 		})
@@ -258,13 +276,13 @@ export async function deleteCasePDF(
 			}
 		}
 
-		// Reconstruir el path: {laboratory_id}/{case_id}/uploaded.pdf
+		// Reconstruir el path: {laboratory_id}/{case_id}/{nombre_archivo}
 		const filePath = urlParts.slice(bucketIndex + 1).join('/')
 		
-		// Verificar que el path sea correcto
-		const expectedPath = `${laboratoryId}/${caseId}/uploaded.pdf`
-		if (filePath !== expectedPath) {
-			console.warn(`Advertencia: El path del archivo (${filePath}) no coincide con el esperado (${expectedPath})`)
+		// Verificar que el path comience con el laboratorio y caso correctos
+		const expectedPathPrefix = `${laboratoryId}/${caseId}/`
+		if (!filePath.startsWith(expectedPathPrefix)) {
+			console.warn(`Advertencia: El path del archivo (${filePath}) no coincide con el prefijo esperado (${expectedPathPrefix})`)
 		}
 
 		// Eliminar archivo de Supabase Storage

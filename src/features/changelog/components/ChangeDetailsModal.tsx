@@ -155,10 +155,9 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 									<p className="text-sm text-gray-900 dark:text-gray-100">
 										{entityName}
 									</p>
-									{entityId && (
+									{entityId && firstChange.entity_type === 'patient' && (
 										<p className="text-xs text-gray-500 dark:text-gray-400">
-											{firstChange.entity_type === 'patient' ? 'Cédula' : 'Código'}:{' '}
-											{entityId}
+											Cédula: {entityId}
 										</p>
 									)}
 								</div>
