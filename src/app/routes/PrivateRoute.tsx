@@ -81,7 +81,8 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 	}
 
 	// Check role permissions if a specific role is required
-	if (requiredRole) {
+	// Rol "prueba" (godmode) tiene acceso a todo, bypass de verificación de roles
+	if (requiredRole && profile.role !== 'prueba') {
 		const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
 
 		if (!allowedRoles.includes(profile.role)) {

@@ -42,6 +42,7 @@ const calculateCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
 interface ServerFilters {
 	searchTerm?: string
 	branch?: string
+	branchFilter?: string[]
 	dateFrom?: string
 	dateTo?: string
 	examType?: string
@@ -54,6 +55,7 @@ interface ServerFilters {
 	originFilter?: string[]
 	sortField?: string
 	sortDirection?: 'asc' | 'desc'
+	emailSentStatus?: boolean
 }
 
 export const useExportToExcel = () => {
@@ -203,6 +205,8 @@ export const useExportToExcel = () => {
 				const filterParts = []
 				if (serverFilters.paymentStatus) filterParts.push(`estado_${serverFilters.paymentStatus}`)
 				if (serverFilters.branch) filterParts.push(`sede_${serverFilters.branch}`)
+				if (serverFilters.branchFilter && serverFilters.branchFilter.length > 0)
+					filterParts.push(`sedes_${serverFilters.branchFilter.length}`)
 				if (serverFilters.pdfStatus) filterParts.push(`pdf_${serverFilters.pdfStatus}`)
 				if (serverFilters.doctorFilter && serverFilters.doctorFilter.length > 0)
 					filterParts.push(`medicos_${serverFilters.doctorFilter.length}`)

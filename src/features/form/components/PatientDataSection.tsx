@@ -166,7 +166,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 										options={createDropdownOptions(['Masculino', 'Femenino'])}
 										value={field.value as string}
 										onChange={field.onChange}
-										placeholder="Género"
+										placeholder="Seleccionar"
 										className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 										id="patient-gender"
 									/>
@@ -187,7 +187,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 							<FormControl>
 								<AutocompleteInput
 									fieldName="fullName"
-									placeholder="Nombre y Apellido"
+									placeholder="John Doe"
 									iconRight={<User className="h-4 w-4 text-muted-foreground" />}
 									{...field}
 									onChange={(e) => {
@@ -301,7 +301,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									fieldName="email"
 									type="email"
 									iconRight={<Mail className="h-4 w-4 text-muted-foreground" />}
-									placeholder="email@ejemplo.com"
+									placeholder="Solwy@gmail.com"
 									{...field}
 									className={inputStyles + ' transition-none'}
 								/>

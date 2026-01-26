@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@shared/components/ui/card'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useAuth } from '@app/providers/AuthContext'
 import EyeTrackingComponent from './RobotTraking'
 import { FileText, Users, History, Settings, LogOut, FolderInput } from 'lucide-react'
@@ -126,6 +127,7 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 const ReceptionistHomePage: React.FC = () => {
 	const navigate = useNavigate()
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 	const { signOut } = useAuth()
 
 	const handleLogout = async () => {
@@ -172,7 +174,12 @@ const ReceptionistHomePage: React.FC = () => {
 							</h1>
 							<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
 								{profile?.display_name && (
-									<span className="text-sm sm:text-md text-primary">{profile.display_name}</span>
+									<span 
+										className="text-sm sm:text-md"
+										style={{ color: laboratory?.branding?.primaryColor || undefined }}
+									>
+										{profile.display_name}
+									</span>
 								)}
 							</div>
 						</div>

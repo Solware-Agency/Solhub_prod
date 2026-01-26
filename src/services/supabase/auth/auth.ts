@@ -565,6 +565,10 @@ export const updateUserProfile = async (
 export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'	): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
+		// Rol "prueba" (godmode) tiene acceso a todo
+		if (profile?.role === 'prueba') {
+			return true
+		}
 		return profile?.role === role || false
 	} catch (err) {
 		console.error('Error checking user role:', err)

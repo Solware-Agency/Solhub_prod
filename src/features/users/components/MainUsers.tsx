@@ -16,6 +16,7 @@ import {
 	Wand,
 	Microscope,
 	Shield,
+	Trash2,
 } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -27,6 +28,7 @@ import {
 	updateUserBranch,
 	canManageUsers,
 	updateUserApprovalStatus,
+	deleteUser,
 } from '@/services/supabase/auth/user-management'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
@@ -89,12 +91,20 @@ const MainUsers: React.FC = () => {
 	const [branchFilter, setbranchFilter] = useState<string>('')
 	const [approvalFilter, setApprovalFilter] = useState<string>('')
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-	const [availableRoles, setAvailableRoles] = useState<Array<{value: string; label: string}>>([])
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [deleteCooldown, setDeleteCooldown] = useState(0)
+	const [availableRoles, setAvailableRoles] = useState<Array<{ value: string; label: string }>>([])
 
 	const [userToUpdate, setUserToUpdate] = useState<{
 		id: string
 		email: string
 		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
+	} | null>(null)
+
+	const [userToDelete, setUserToDelete] = useState<{
+		id: string
+		email: string
+		display_name?: string | null
 	} | null>(null)
 
 	// Obtener opciones de branches desde la configuración del laboratorio
@@ -142,56 +152,56 @@ const MainUsers: React.FC = () => {
 		queryKey: ['users'],
 		queryFn: async (): Promise<UserProfile[]> => {
 			try {
-        // ðŸ” MULTI-TENANT: Obtener laboratory_id del usuario actual
-        const {
-          data: { user: currentAuthUser },
-        } = await supabase.auth.getUser();
-        if (!currentAuthUser) {
-          throw new Error('Usuario no autenticado');
-        }
+				// ðŸ” MULTI-TENANT: Obtener laboratory_id del usuario actual
+				const {
+					data: { user: currentAuthUser },
+				} = await supabase.auth.getUser();
+				if (!currentAuthUser) {
+					throw new Error('Usuario no autenticado');
+				}
 
-        const { data: currentProfile, error: currentProfileError } =
-          await supabase
-            .from('profiles')
-            .select('laboratory_id')
-            .eq('id', currentAuthUser.id)
-            .single() as { data: { laboratory_id?: string } | null; error: any | null };
+				const { data: currentProfile, error: currentProfileError } =
+					await supabase
+						.from('profiles')
+						.select('laboratory_id')
+						.eq('id', currentAuthUser.id)
+						.single() as { data: { laboratory_id?: string } | null; error: any | null };
 
-        if (currentProfileError || !currentProfile?.laboratory_id) {
-          throw new Error('Usuario no tiene laboratorio asignado');
-        }
+				if (currentProfileError || !currentProfile?.laboratory_id) {
+					throw new Error('Usuario no tiene laboratorio asignado');
+				}
 
-        // ðŸ” MULTI-TENANT: Filtrar perfiles por laboratory_id
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('laboratory_id', currentProfile.laboratory_id)
-          .order('created_at', { ascending: false });
+				// ðŸ” MULTI-TENANT: Filtrar perfiles por laboratory_id
+				const { data: profiles, error: profilesError } = await supabase
+					.from('profiles')
+					.select('*')
+					.eq('laboratory_id', currentProfile.laboratory_id)
+					.order('created_at', { ascending: false });
 
-        if (profilesError) throw profilesError;
+				if (profilesError) throw profilesError;
 
-        // Simular contraseñas para demostración (en un sistema real, nunca se deberí­an mostrar contraseñ±as)
-        // Esto es solo para fines de demostración
-        const usersWithPasswords =
-          profiles?.map((profile) => ({
-            ...profile,
-            email_confirmed_at: undefined, // Placeholder
-            last_sign_in_at: undefined, // Placeholder
-            password: '********', // Contraseña simulada para demostración
-            role: profile.role as
-              | 'owner'
-              | 'employee'
-              | 'residente'
-              | 'citotecno'
-              | 'patologo'
-              | 'medicowner', // Asegurar que el tipo sea correcto
-            created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
-            updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
-            estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
-          })) || [];
+				// Simular contraseñas para demostración (en un sistema real, nunca se deberí­an mostrar contraseñ±as)
+				// Esto es solo para fines de demostración
+				const usersWithPasswords =
+					profiles?.map((profile) => ({
+						...profile,
+						email_confirmed_at: undefined, // Placeholder
+						last_sign_in_at: undefined, // Placeholder
+						password: '********', // Contraseña simulada para demostración
+						role: profile.role as
+							| 'owner'
+							| 'employee'
+							| 'residente'
+							| 'citotecno'
+							| 'patologo'
+							| 'medicowner', // Asegurar que el tipo sea correcto
+						created_at: profile.created_at || new Date().toISOString(), // Asegurar que created_at no sea null
+						updated_at: profile.updated_at || new Date().toISOString(), // Asegurar que updated_at no sea null
+						estado: (profile.estado as 'pendiente' | 'aprobado') || undefined, // Asegurar que el tipo sea correcto
+					})) || [];
 
-        return usersWithPasswords;
-      } catch (error) {
+				return usersWithPasswords;
+			} catch (error) {
 				console.error('Error fetching users:', error)
 				throw error
 			}
@@ -504,10 +514,9 @@ const MainUsers: React.FC = () => {
 				throw error
 			}
 
-		toast({
-			title: '✅ Rol actualizado',
-			description: `El rol del usuario ha sido cambiado a ${
-				{
+			toast({
+				title: '✅ Rol actualizado',
+				description: `El rol del usuario ha sido cambiado a ${{
 					owner: 'Propietario',
 					residente: 'Residente',
 					employee: 'Recepcionista',
@@ -517,9 +526,9 @@ const MainUsers: React.FC = () => {
 					medico_tratante: 'Médico Tratante',
 					enfermero: 'Enfermero',
 				}[newRole]
-			}.`,
-			className: 'bg-green-100 border-green-400 text-green-800',
-		})			// Refrescar la lista de usuarios
+					}.`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})			// Refrescar la lista de usuarios
 			refetch()
 		} catch (error) {
 			console.error('Error updating user role:', error)
@@ -541,10 +550,9 @@ const MainUsers: React.FC = () => {
 				throw error
 			}
 
-		toast({
-			title: '✅ Rol actualizado',
-			description: `El rol del usuario ha sido cambiado a ${
-				{
+			toast({
+				title: '✅ Rol actualizado',
+				description: `El rol del usuario ha sido cambiado a ${{
 					owner: 'Propietario',
 					residente: 'Residente',
 					employee: 'Recepcionista',
@@ -554,9 +562,9 @@ const MainUsers: React.FC = () => {
 					medico_tratante: 'Médico Tratante',
 					enfermero: 'Enfermero',
 				}[userToUpdate.newRole]
-			}.`,
-			className: 'bg-green-100 border-green-400 text-green-800',
-		})			// Refrescar la lista de usuarios
+					}.`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})			// Refrescar la lista de usuarios
 			refetch()
 		} catch (error) {
 			console.error('Error updating user role:', error)
@@ -657,6 +665,81 @@ const MainUsers: React.FC = () => {
 			toast({
 				title: '❌ Error al actualizar',
 				description: 'Hubo un problema al cambiar el estado de aprobación. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		}
+	}
+
+	const handleDeleteClick = (user: UserProfile) => {
+		// Verificar permisos antes de permitir eliminación
+		if (!canManage) {
+			toast({
+				title: '❌ Sin permisos',
+				description: 'No tienes permisos para eliminar usuarios.',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		// No permitir que un usuario se elimine a sí mismo
+		if (user.id === currentUser?.id) {
+			toast({
+				title: '❌ Acción no permitida',
+				description: 'No puedes eliminar tu propio usuario.',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		setUserToDelete({
+			id: user.id,
+			email: user.email,
+			display_name: user.display_name,
+		})
+		setDeleteDialogOpen(true)
+		setDeleteCooldown(5) // Iniciar cooldown de 5 segundos
+	}
+
+	// Efecto para el cooldown del botón de eliminar
+	useEffect(() => {
+		if (deleteCooldown > 0) {
+			const timer = setTimeout(() => {
+				setDeleteCooldown(deleteCooldown - 1)
+			}, 1000)
+			return () => clearTimeout(timer)
+		}
+	}, [deleteCooldown])
+
+	const handleConfirmDelete = async () => {
+		if (!userToDelete || deleteCooldown > 0) {
+			return
+		}
+
+		try {
+			const { success, error } = await deleteUser(userToDelete.id)
+
+			if (error || !success) {
+				throw error || new Error('Error al eliminar usuario')
+			}
+
+			toast({
+				title: '✅ Usuario eliminado',
+				description: `El usuario ${userToDelete.display_name || userToDelete.email} ha sido eliminado exitosamente. Los casos y pacientes enlazados se mantienen intactos.`,
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
+
+			// Refrescar la lista de usuarios
+			refetch()
+
+			// Cerrar diálogo y limpiar estado
+			setDeleteDialogOpen(false)
+			setUserToDelete(null)
+			setDeleteCooldown(0)
+		} catch (error) {
+			console.error('Error eliminando usuario:', error)
+			toast({
+				title: '❌ Error al eliminar',
+				description: error instanceof Error ? error.message : 'Hubo un problema al eliminar el usuario. Inténtalo de nuevo.',
 				variant: 'destructive',
 			})
 		}
@@ -797,7 +880,7 @@ const MainUsers: React.FC = () => {
 										const roleValue = role.value as UserRole
 										const instruction = ROLE_INSTRUCTIONS[roleValue]
 										if (!instruction) return null
-										
+
 										return (
 											<li key={roleValue}>
 												<strong>{role.label}{roleValue !== 'call_center' ? 's' : ''}:</strong> {instruction}
@@ -860,72 +943,68 @@ const MainUsers: React.FC = () => {
 
 					{/* Segunda línea: Todos los botones de tipos de usuarios */}
 					<div className="flex items-center gap-2 flex-wrap overflow-x-auto">
-							{/* Total Usuarios */}
-							<div
-								onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
-								className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${
-									profile?.role === 'residente'
-										? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-										: 'cursor-pointer'
-								} ${
-									roleFilter === '' || roleFilter === 'all'
-										? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
-										: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
+						{/* Total Usuarios */}
+						<div
+							onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
+							className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${profile?.role === 'residente'
+								? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+								: 'cursor-pointer'
+								} ${roleFilter === '' || roleFilter === 'all'
+									? 'bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600'
+									: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
 								}`}
-							>
-								<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
-									<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
-								</div>
+						>
+							<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+							<div className="flex flex-col min-w-0">
+								<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
+								<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
 							</div>
+						</div>
 
-							{/* Todos los roles disponibles */}
-							{(() => {
-								// Asegurar que "owner" siempre esté incluido
-								const rolesToShow = [...availableRoles]
-								const hasOwner = rolesToShow.some(r => r.value === 'owner')
-								if (!hasOwner) {
-									rolesToShow.unshift({
-										value: 'owner',
-										label: 'Propietario'
-									})
-								}
-
-								return rolesToShow.map((role) => {
-									const colors = getRoleCardColor(role.value)
-									const IconComponent = getRoleIcon(role.value)
-									const isActive = roleFilter === role.value
-									const count = stats[role.value] || 0
-
-									return (
-										<div
-											key={role.value}
-											onClick={() => {
-												if (profile?.role === 'residente' && role.value !== 'residente') return
-												setRoleFilter(isActive ? '' : role.value)
-											}}
-											className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${
-												profile?.role === 'residente' && role.value !== 'residente'
-													? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
-													: 'cursor-pointer'
-											} ${
-												isActive
-													? `${colors.bgActive} border-2 ${colors.border}`
-													: `${colors.bg} ${colors.hover}`
-											}`}
-										>
-											{IconComponent}
-											<div className="flex flex-col min-w-0">
-												<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
-													{role.label}
-												</span>
-												<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
-											</div>
-										</div>
-									)
+						{/* Todos los roles disponibles */}
+						{(() => {
+							// Asegurar que "owner" siempre esté incluido
+							const rolesToShow = [...availableRoles]
+							const hasOwner = rolesToShow.some(r => r.value === 'owner')
+							if (!hasOwner) {
+								rolesToShow.unshift({
+									value: 'owner',
+									label: 'Propietario'
 								})
-							})()}
+							}
+
+							return rolesToShow.map((role) => {
+								const colors = getRoleCardColor(role.value)
+								const IconComponent = getRoleIcon(role.value)
+								const isActive = roleFilter === role.value
+								const count = stats[role.value] || 0
+
+								return (
+									<div
+										key={role.value}
+										onClick={() => {
+											if (profile?.role === 'residente' && role.value !== 'residente') return
+											setRoleFilter(isActive ? '' : role.value)
+										}}
+										className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${profile?.role === 'residente' && role.value !== 'residente'
+											? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
+											: 'cursor-pointer'
+											} ${isActive
+												? `${colors.bgActive} border-2 ${colors.border}`
+												: `${colors.bg} ${colors.hover}`
+											}`}
+									>
+										{IconComponent}
+										<div className="flex flex-col min-w-0">
+											<span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+												{role.label}
+											</span>
+											<span className={`text-sm font-bold ${colors.text}`}>{count}</span>
+										</div>
+									</div>
+								)
+							})
+						})()}
 					</div>
 				</div>
 			</Card>
@@ -941,30 +1020,41 @@ const MainUsers: React.FC = () => {
 									key={user.id}
 									className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700"
 								>
-									{/* Email */}
-									<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-										<Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-										<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
-											{user.email}
-										</p>
-									</div>
+									<div className="flex items-center justify-between">
 
-									{/* Display Name */}
-									{user.display_name && (
-										<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-											<User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-											<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
-												{user.display_name}
-											</p>
+										<div >
+
+											{/* Email */}
+											<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+												<Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+												<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
+													{user.email}
+												</p>
+											</div>
+
+											{/* Display Name */}
+											{user.display_name && (
+												<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+													<User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+													<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
+														{user.display_name}
+													</p>
+												</div>
+											)}
+
+											{/* Fecha de registro */}
+											<div className="flex items-center text gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+												<Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+												<p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+													Registrado: {format(new Date(user.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+												</p>
+											</div>
 										</div>
-									)}
-
-									{/* Fecha de registro */}
-									<div className="flex items-center text gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-										<Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-										<p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-											Registrado: {format(new Date(user.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
-										</p>
+										<div>
+											<Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-500" onClick={() => handleDeleteClick(user)}>
+												<Trash2 className="w-3 h-3" />
+											</Button>
+										</div>
 									</div>
 
 									{/* Selector de aprobación */}
@@ -999,21 +1089,21 @@ const MainUsers: React.FC = () => {
 											>
 												Cambiar Rol:
 											</label>
-										<CustomDropdown
-											id={`user-role-${user.id}`}
-											defaultValue={user.role}
-											onChange={(value) =>
-												handleRoleChange(
-													user.id,
-													value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
-												)
-											}
-											options={availableRoles}
-											placeholder="Seleccionar rol"
-											className="w-full"
-										/>
-									</div>
-								)}									{/* Selector de sede */}
+											<CustomDropdown
+												id={`user-role-${user.id}`}
+												defaultValue={user.role}
+												onChange={(value) =>
+													handleRoleChange(
+														user.id,
+														value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+													)
+												}
+												options={availableRoles}
+												placeholder="Seleccionar rol"
+												className="w-full"
+											/>
+										</div>
+									)}									{/* Selector de sede */}
 									{canManage && (
 										<div className="mt-3">
 											<label
@@ -1060,6 +1150,11 @@ const MainUsers: React.FC = () => {
 									<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Fecha de Registro
 									</th>
+									{canManage && (
+										<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Acciones
+										</th>
+									)}
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -1067,7 +1162,12 @@ const MainUsers: React.FC = () => {
 									<tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">
 										<td className="px-6 py-4">
 											<div className="flex items-center justify-between gap-3">
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.display_name}</p>
+												<p
+													className="text-sm font-medium"
+													style={{ color: laboratory?.branding?.primaryColor || undefined }}
+												>
+													{user.display_name}
+												</p>
 												<Tooltip>
 													<TooltipTrigger>
 														<Info className="size-4" />
@@ -1075,7 +1175,10 @@ const MainUsers: React.FC = () => {
 													<TooltipContent className="p-3 max-w-lg w-auto">
 														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
 															{user.display_name && (
-																<div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 whitespace-nowrap">
+																<div
+																	className="font-semibold text-sm mb-1 whitespace-nowrap"
+																	style={{ color: laboratory?.branding?.primaryColor || undefined }}
+																>
 																	{user.display_name}
 																</div>
 															)}
@@ -1120,19 +1223,19 @@ const MainUsers: React.FC = () => {
 											</div>
 										</td>
 										<td className="px-6 py-4">
-												{canManage && user.id !== currentUser?.id ? (
-													<CustomDropdown
-														defaultValue={user.role}
-														onChange={(value) =>
-															handleRoleChange(
-																user.id,
-																value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
-															)
-														}
-														options={availableRoles}
-														placeholder="Seleccionar rol"
-														className="w-40"
-													/>
+											{canManage && user.id !== currentUser?.id ? (
+												<CustomDropdown
+													defaultValue={user.role}
+													onChange={(value) =>
+														handleRoleChange(
+															user.id,
+															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+														)
+													}
+													options={availableRoles}
+													placeholder="Seleccionar rol"
+													className="w-40"
+												/>
 											) : (
 												<span
 													className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(
@@ -1143,8 +1246,8 @@ const MainUsers: React.FC = () => {
 													{user.role === 'owner'
 														? 'Propietario'
 														: user.role === 'residente'
-														? 'Residente'
-														: 'Recepcionista'}
+															? 'Residente'
+															: 'Recepcionista'}
 												</span>
 											)}
 										</td>
@@ -1199,6 +1302,14 @@ const MainUsers: React.FC = () => {
 										<td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
 											{format(new Date(user.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
 										</td>
+										{canManage && (
+											<td className="flex justify-center items-center text-center px-6 py-4 group">
+												<Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-500" onClick={() => handleDeleteClick(user)}>
+													<Trash2 className="w-3 h-3" />
+												</Button>
+											</td>
+										)}
+
 									</tr>
 								))}
 							</tbody>
@@ -1234,6 +1345,58 @@ const MainUsers: React.FC = () => {
 							Cancelar
 						</Button>
 						<Button onClick={confirmRoleChange}>Confirmar</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Diálogo de confirmación para eliminar usuario */}
+			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="text-red-600 dark:text-red-400">⚠️ Eliminar Usuario</DialogTitle>
+						<DialogDescription className="space-y-2">
+							<p className="font-semibold text-gray-900 dark:text-gray-100">
+								¿Estás seguro que deseas eliminar al usuario?
+							</p>
+							<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+								<p className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">
+									{userToDelete?.display_name || userToDelete?.email}
+								</p>
+								<p className="text-xs text-red-700 dark:text-red-400">
+									{userToDelete?.email}
+								</p>
+							</div>
+							<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mt-2">
+								<p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+									⚠️ Advertencia
+								</p>
+								<ul className="text-xs text-yellow-700 dark:text-yellow-400 list-disc list-inside space-y-1">
+									<li>Esta acción eliminará permanentemente el usuario del sistema</li>
+									<li>Se eliminará el perfil y la cuenta de autenticación</li>
+									<li>Los casos médicos y pacientes enlazados se mantendrán intactos</li>
+									<li>Esta acción no se puede deshacer</li>
+								</ul>
+							</div>
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className="mt-4">
+						<Button
+							variant="outline"
+							onClick={() => {
+								setDeleteDialogOpen(false)
+								setUserToDelete(null)
+								setDeleteCooldown(0)
+							}}
+						>
+							Cancelar
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleConfirmDelete}
+							disabled={deleteCooldown > 0}
+						>
+							{deleteCooldown > 0 ? `Esperar ${deleteCooldown}s` : 'Eliminar Usuario'}
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

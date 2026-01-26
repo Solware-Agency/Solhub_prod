@@ -109,6 +109,7 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 export interface MedicalCaseInsert {
@@ -244,6 +245,7 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -296,6 +298,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;
@@ -1080,6 +1083,7 @@ export const getCasesWithPatientInfo = async (
 export const getAllCasesWithPatientInfo = async (filters?: {
   searchTerm?: string;
   branch?: string;
+  branchFilter?: string[];
   dateFrom?: string;
   dateTo?: string;
   examType?: string;
@@ -1098,6 +1102,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   originFilter?: string[];
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
+  emailSentStatus?: boolean;
 }) => {
   try {
     // Si hay un término de búsqueda, intentar usar función optimizada primero
@@ -1159,6 +1164,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
               if (filters?.branch) {
                 filteredData = filteredData.filter(
                   (item) => item.branch === filters.branch,
+                );
+              }
+
+              if (filters?.branchFilter && filters.branchFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) => item.branch && filters.branchFilter!.includes(item.branch),
                 );
               }
 
@@ -1230,6 +1241,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
                 filteredData = filteredData.filter(
                   (item) =>
                     item.origin && filters.originFilter!.includes(item.origin),
+                );
+              }
+
+              if (filters?.emailSentStatus !== undefined) {
+                filteredData = filteredData.filter(
+                  (item) => item.email_sent === filters.emailSentStatus,
                 );
               }
 
@@ -1414,6 +1431,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
         }
 
+        if (filters?.branchFilter && filters.branchFilter.length > 0) {
+          filteredData = filteredData.filter(
+            (item) => item.branch && filters.branchFilter!.includes(item.branch),
+          );
+        }
+
         if (filters?.dateFrom) {
           filteredData = filteredData.filter(
             (item) => item.date >= filters.dateFrom!,
@@ -1488,6 +1511,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           filteredData = filteredData.filter(
             (item) =>
               item.origin && filters.originFilter!.includes(item.origin),
+          );
+        }
+
+        if (filters?.emailSentStatus !== undefined) {
+          filteredData = filteredData.filter(
+            (item) => item.email_sent === filters.emailSentStatus,
           );
         }
 
@@ -1574,6 +1603,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         query = query.eq('branch', filters.branch);
       }
 
+      // Si hay branchFilter (múltiples sedes), usar .in()
+      if (filters?.branchFilter && filters.branchFilter.length > 0) {
+        query = query.in('branch', filters.branchFilter);
+      }
+
       if (filters?.dateFrom) {
         // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
         query = query.filter('created_at', 'gte', filters.dateFrom);
@@ -1631,6 +1665,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       // Filtro por procedencia
       if (filters?.originFilter && filters.originFilter.length > 0) {
         query = query.in('origin', filters.originFilter);
+      }
+
+      // Filtro por email enviado
+      if (filters?.emailSentStatus !== undefined) {
+        query = query.eq('email_sent', filters.emailSentStatus);
       }
 
       // Si el usuario es residente, solo mostrar casos de biopsia
@@ -2002,7 +2041,7 @@ export const deleteMedicalCase = async (
     // Primero verificar que el caso existe y obtener más información
     const { data: existingCase, error: fetchError } = await supabase
       .from('medical_records_clean')
-      .select('id, code, patient_id, exam_type')
+      .select('id, code, patient_id, exam_type, uploaded_pdf_url')
       .eq('id', caseId)
       .single();
 
@@ -2061,6 +2100,32 @@ export const deleteMedicalCase = async (
       // Continue with deletion even if logging fails
     } else {
       console.log('✅ Changelog de eliminación registrado');
+    }
+
+    // Eliminar el PDF adjunto si existe
+    if (existingCase.uploaded_pdf_url) {
+      try {
+        const { deleteCasePDF } = await import('../storage/case-pdf-storage-service');
+        
+        // Obtener laboratory_id del usuario
+        const laboratoryId = await getUserLaboratoryId();
+        
+        const { error: pdfDeleteError } = await deleteCasePDF(
+          caseId,
+          existingCase.uploaded_pdf_url,
+          laboratoryId
+        );
+        
+        if (pdfDeleteError) {
+          console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', pdfDeleteError);
+          // Continuar con la eliminación del caso aunque falle la eliminación del PDF
+        } else {
+          console.log('✅ PDF adjunto eliminado exitosamente');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', error);
+        // Continuar con la eliminación del caso aunque falle la eliminación del PDF
+      }
     }
 
     // Eliminar el caso médico

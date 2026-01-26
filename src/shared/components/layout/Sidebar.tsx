@@ -271,6 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
+  const isSpt = laboratory?.slug === 'spt';
 
   // Definir las rutas de cada grupo
   const clinicalPaths = [
@@ -964,6 +965,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
+              {isSpt && (
+                <NavItem
+                  to='/prueba/waiting-room'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Sala de Espera'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              )}
             </>
           )}
 

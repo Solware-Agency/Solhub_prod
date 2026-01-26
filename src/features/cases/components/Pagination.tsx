@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
 
 interface PaginationProps {
 	currentPage: number
@@ -17,13 +16,9 @@ interface PaginationProps {
 const Pagination: React.FC<PaginationProps> = ({
 	currentPage,
 	totalPages,
-	itemsPerPage,
-	pageSizeOptions,
-	onItemsPerPageChange,
 	onGoToPage,
 	onNext,
 	onPrev,
-	totalItems = 0,
 }) => {
 	const pageNumbers = useMemo(() => {
 		if (totalPages <= 1) return []
@@ -38,48 +33,12 @@ const Pagination: React.FC<PaginationProps> = ({
 		return pages
 	}, [currentPage, totalPages])
 
-	// Calcular el rango de casos mostrados en la página actual
-	const startItem = (currentPage - 1) * itemsPerPage + 1
-	const endItem = Math.min(currentPage * itemsPerPage, totalItems)
-
-	// Formatear números con separadores de miles
-	const formatNumber = (num: number) => num.toLocaleString('es-ES')
-
 	// if (totalPages <= 1) return null
 
 	return (
-		<div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
-			{/* Información de casos mostrados */}
-			<div className="text-sm text-gray-600 dark:text-gray-400 order-3 sm:order-1">
-				{totalItems > 0 ? (
-					<span>
-						Mostrando <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNumber(startItem)}</span>{' '}
-						- <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNumber(endItem)}</span> de{' '}
-						<span className="font-semibold text-gray-900 dark:text-gray-100">{formatNumber(totalItems)}</span> casos
-						encontrados
-					</span>
-				) : (
-					<span>No hay casos para mostrar</span>
-				)}
-			</div>
-
-			{/* Selector de cantidad por página */}
-			<div className="flex items-center gap-2 order-1 sm:order-2">
-				<div className="flex items-center gap-2">
-					<span className="text-sm text-gray-600 dark:text-gray-400">Mostrar:</span>
-					<div className="min-w-[80px]">
-						<CustomDropdown
-							options={pageSizeOptions}
-							value={String(itemsPerPage)}
-							onChange={(val) => onItemsPerPageChange(Number(val))}
-							data-testid="pagination-size"
-						/>
-					</div>
-				</div>
-			</div>
-
+		<div className="flex flex-col sm:flex-row items-center justify-center gap-4 p-4">
 			{/* Controles de paginación */}
-			<div className="flex items-center gap-2 order-2 sm:order-3">
+			<div className="flex items-center gap-2">
 				<div className="flex items-center gap-1">
 					<button
 						onClick={onPrev}

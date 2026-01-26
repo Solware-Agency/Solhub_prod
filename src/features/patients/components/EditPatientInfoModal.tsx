@@ -222,29 +222,30 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 		<AnimatePresence>
 			{isOpen && (
 				<div className="fixed inset-0 z-[99999] flex items-center justify-center">
-					{/* Backdrop */}
+					{/* Overlay de fondo con opacidad desde el inicio */}
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2 }}
 						onClick={onClose}
-						className="absolute inset-0 bg-black/50"
+						className="fixed inset-0 bg-black/50"
 					/>
 
-					{/* Modal */}
+					{/* Contenido del modal con animación */}
 					<motion.div
-						initial={{ opacity: 0, scale: 0.95 }}
-						animate={{ opacity: 1, scale: 1 }}
-						exit={{ opacity: 0, scale: 0.95 }}
+						initial={{ scale: 0.95 }}
+						animate={{ scale: 1 }}
+						exit={{ scale: 0.95 }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
 						className="relative z-10 w-full max-w-4xl mx-4"
 					>
 						<div
-							className="bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
+							className="bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
 							onClick={(e) => e.stopPropagation()}
 						>
 							{/* Header */}
-							<div className="sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
+							<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10">
 								<div className="flex items-center justify-between">
 									<div>
 										<div>

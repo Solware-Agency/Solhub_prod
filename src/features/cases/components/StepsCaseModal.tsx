@@ -4,7 +4,10 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Tables } from '@shared/types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@shared/components/ui/button';
+import { Input } from '@shared/components/ui/input';
 import { supabase } from '@/services/supabase/config/config';
+import { updatePatient } from '@/services/supabase/patients/patients-service';
+import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import {
   X,
   User,
@@ -15,6 +18,7 @@ import {
   FileCheck,
   Download,
   Send,
+  Mail,
 } from 'lucide-react';
 import {
   markCaseAsPending,
@@ -92,6 +96,14 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+  const [isAddEmailModalOpen, setIsAddEmailModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [patientInfo, setPatientInfo] = useState<{
+    tipo_paciente?: string;
+    responsable_email?: string | null;
+  } | null>(null);
+  const [effectiveEmail, setEffectiveEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const { profile } = useUserProfile();
   const { user } = useAuth();
@@ -297,6 +309,60 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     })();
   }, [isOpen, case_?.id]);
 
+  // Cargar información del paciente y responsable
+  useEffect(() => {
+    const loadPatientInfo = async () => {
+      if (!isOpen || !case_?.id) return;
+
+      try {
+        const { data: caseData, error: caseError } = await supabase
+          .from('medical_records_clean')
+          .select('patient_id')
+          .eq('id', case_.id)
+          .single();
+
+        if (caseError || !caseData?.patient_id) return;
+
+        // Obtener info del paciente
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .select('tipo_paciente, email')
+          .eq('id', caseData.patient_id)
+          .single();
+
+        if (patientError || !patientData) return;
+
+        const tipoPaciente = patientData.tipo_paciente || 'adulto';
+        let responsableEmail: string | null = null;
+
+        // Si es dependiente, obtener el email del responsable usando el servicio
+        if (tipoPaciente !== 'adulto') {
+          const responsableInfo = await getResponsableByDependiente(caseData.patient_id);
+          responsableEmail = responsableInfo?.responsable?.email || null;
+        }
+
+        setPatientInfo({
+          tipo_paciente: tipoPaciente,
+          responsable_email: responsableEmail,
+        });
+
+        // Si es dependiente sin email y el responsable tiene email, usar el del responsable
+        if (tipoPaciente !== 'adulto' && !patientData.email && responsableEmail) {
+          case_.email = responsableEmail;
+          setEffectiveEmail(responsableEmail);
+        } else if (patientData.email) {
+          setEffectiveEmail(patientData.email);
+        } else {
+          setEffectiveEmail(null);
+        }
+      } catch (error) {
+        console.error('Error al cargar info del paciente:', error);
+      }
+    };
+
+    loadPatientInfo();
+  }, [isOpen, case_?.id]);
+
   // Actualizar el paso activo cuando el modal se abra y el documento esté aprobado
   useEffect(() => {
     if (isOpen) {
@@ -310,6 +376,69 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       setActiveStep((prev) => prev + 1);
     } else {
       handleFinish();
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim()) {
+      toast({
+        title: '⚠️ Email requerido',
+        description: 'Por favor ingresa un correo electrónico válido.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      toast({
+        title: '⚠️ Email inválido',
+        description: 'Por favor ingresa un correo electrónico con formato válido.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsUpdatingEmail(true);
+
+      // Obtener el patient_id del caso
+      const { data: caseData, error: caseError } = await supabase
+        .from('medical_records_clean')
+        .select('patient_id')
+        .eq('id', case_.id)
+        .single();
+
+      if (caseError || !caseData?.patient_id) {
+        throw new Error('No se pudo obtener el ID del paciente');
+      }
+
+      // Actualizar el email del paciente
+      await updatePatient(caseData.patient_id, { email: newEmail }, user?.id);
+
+      // Actualizar el estado local
+      case_.email = newEmail;
+
+      toast({
+        title: '✅ Email actualizado',
+        description: 'El correo electrónico se ha guardado correctamente.',
+      });
+
+      setIsAddEmailModalOpen(false);
+      setNewEmail('');
+      
+      // Refrescar datos llamando onSuccess
+      onSuccess();
+    } catch (error) {
+      console.error('Error al actualizar email:', error);
+      toast({
+        title: '❌ Error',
+        description: error instanceof Error ? error.message : 'No se pudo actualizar el email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -1383,29 +1512,22 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             className='space-y-4'
           >
             {/* Mostrar alerta si no hay email */}
-            {!case_.email && (
+            {!effectiveEmail && (
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                <div className='flex flex-col gap-2'>
-                  <p className='text-teal-700 dark:text-teal-300 text-sm font-medium'>
-                    El paciente no tiene correo electrónico registrado
-                  </p>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='sm'
-                    className='w-full sm:w-auto border-teal-500 text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-900/20'
-                    onClick={() => {
-                      // TODO: Abrir modal para agregar email
-                      toast({
-                        title: 'Funcionalidad en desarrollo',
-                        description: 'Próximamente podrás agregar el correo desde aquí',
-                      });
-                    }}
-                  >
-                    <Send className='w-4 h-4 mr-2' />
-                    Agregar Correo Electrónico
-                  </Button>
-                </div>
+                <p className='text-teal-700 dark:text-teal-300 text-sm font-medium mb-0'>
+                  {patientInfo?.tipo_paciente !== 'adulto' && patientInfo?.responsable_email ? (
+                    <>
+                      El dependiente no tiene correo electrónico registrado.
+                      <br />
+                      Si envía el documento, llegará al correo del responsable:{' '}
+                      <span className='font-semibold'>{patientInfo.responsable_email}</span>
+                    </>
+                  ) : patientInfo?.tipo_paciente !== 'adulto' ? (
+                    'El dependiente no tiene correo electrónico registrado y el responsable tampoco.'
+                  ) : (
+                    'El paciente no tiene correo electrónico registrado'
+                  )}
+                </p>
               </div>
             )}
             
@@ -1466,6 +1588,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                     </>
                   )}
                 </Button>
+                {!effectiveEmail && (
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='flex-1'
+                    onClick={() => setIsAddEmailModalOpen(true)}
+                  >
+                    <Mail className='w-4 h-4 mr-2' />
+                    Agregar correo
+                  </Button>
+                )}
               </div>
             </div>
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
@@ -1685,12 +1818,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       </AnimatePresence>
 
       {/* Send Email Modal */}
-      {case_?.email && case_?.informe_qr && (
+      {effectiveEmail && case_?.informe_qr && (
         <SendEmailModal
           isOpen={isSendEmailModalOpen}
           onClose={() => setIsSendEmailModalOpen(false)}
           onSend={handleConfirmSendEmail}
-          primaryEmail={case_.email}
+          primaryEmail={effectiveEmail}
           patientName={case_.full_name || 'Paciente'}
           caseCode={case_.code || case_.id || 'N/A'}
           isSending={isSending}
@@ -1718,6 +1851,63 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             </Button>
             <Button onClick={handleCheckAndDownloadPDF} disabled={isSaving}>
               NO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para agregar email */}
+      <Dialog open={isAddEmailModalOpen} onOpenChange={setIsAddEmailModalOpen}>
+        <DialogContent className={isFullscreen ? 'z-[999999999999999999]' : ''}>
+          <DialogHeader>
+            <DialogTitle>Agregar Correo Electrónico</DialogTitle>
+            <DialogDescription>
+              Ingresa el correo electrónico del paciente para poder enviar el documento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <label htmlFor='email' className='text-sm font-medium'>
+                Correo Electrónico
+              </label>
+              <Input
+                id='email'
+                type='email'
+                placeholder='ejemplo@correo.com'
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleUpdateEmail();
+                  }
+                }}
+                disabled={isUpdatingEmail}
+              />
+            </div>
+          </div>
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setIsAddEmailModalOpen(false);
+                setNewEmail('');
+              }}
+              disabled={isUpdatingEmail}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleUpdateEmail}
+              disabled={isUpdatingEmail || !newEmail.trim()}
+            >
+              {isUpdatingEmail ? (
+                <>
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2' />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

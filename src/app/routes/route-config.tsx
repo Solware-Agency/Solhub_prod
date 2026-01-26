@@ -13,6 +13,7 @@ import {
   SettingsPage,
   ReceptionistHomePage,
   TriageAnalyticsPage,
+  WaitingRoomPage,
 } from './lazy-routes';
 
 export interface RouteConfig {
@@ -75,6 +76,10 @@ export const dashboardRoutes: RouteConfig[] = [
   {
     path: 'settings',
     component: SettingsPage,
+  },
+  {
+    path: 'waiting-room',
+    component: WaitingRoomPage,
   },
 ];
 
@@ -307,5 +312,9 @@ export const pruebaRoutes: RouteConfig[] = [
   {
     path: 'settings',
     component: SettingsPage,
+  },
+  {
+    path: 'waiting-room',
+    component: WaitingRoomPage,
   },
 ];

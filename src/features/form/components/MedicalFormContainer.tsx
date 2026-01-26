@@ -17,6 +17,7 @@ import {
   validateRegistrationData,
 } from '@services/supabase/cases/registration-service';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 
@@ -339,6 +340,7 @@ export function MedicalFormContainer() {
 
 	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 
 	return (
 		<>
@@ -364,7 +366,12 @@ export function MedicalFormContainer() {
 								<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 							</div>
 						</div>
-						<h3 className="text-sm text-primary font-semibold mt-2 sm:mt-3">Bienvenido, {profile?.display_name}</h3>
+						<h3 className="text-sm font-semibold mt-2 sm:mt-3">
+							Bienvenido,{' '}
+							<span style={{ color: laboratory?.branding?.primaryColor || undefined }}>
+								{profile?.display_name}
+							</span>
+						</h3>
 					</div>
 				</div>
 				<Form {...form}>

@@ -3,8 +3,8 @@ import {
   ChevronUp,
   ChevronDown,
   Search,
-  Maximize2,
   Download,
+  X,
 } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
@@ -1360,105 +1360,107 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
             {/* Fixed Header with Controls */}
             <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
-              <div className='flex flex-col gap-2 sm:gap-4'>
+              <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
                 {/* Close button - Above search and filters in responsive */}
-                <div className='flex justify-end sm:hidden w-full'>
+                <div className='flex justify-end md:hidden w-full'>
                   <Button
                     variant='outline'
                     onClick={() => setIsFullscreen(false)}
                     className='text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    aria-label='Cerrar'
                   >
-                    Cerrar ✕
+                    <X className='w-4 h-4' />
                   </Button>
                 </div>
                 
-                {/* Search and Filters Row */}
-                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-                  <div className='flex flex-wrap items-center gap-2 sm:gap-3 w-full'>
-                    {/* Search - Acortada */}
-                    <div className='flex-1 min-w-[200px] relative'>
-                      <Input
-                        type='text'
-                        placeholder='Buscar por nombre, código, cédula, estudio o médico'
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        onKeyDown={handleSearchKeyDown}
-                      />
-                      {isSearching && (
-                        <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
-                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Unified Filters Modal */}
-                    <FiltersModal
-                      isOpen={isFiltersModalOpen}
-                      onOpenChange={setIsFiltersModalOpen}
-                      statusFilter={tempStatusFilter}
-                      onStatusFilterChange={handleTempStatusFilterChange}
-                      branchFilter={tempBranchFilter}
-                      onBranchFilterChange={handleTempBranchFilterChange}
-                      dateRange={tempDateRange}
-                      onDateRangeChange={handleTempDateRangeChange}
-                      showPdfReadyOnly={tempShowPdfReadyOnly}
-                      onPdfFilterToggle={handleTempPdfFilterToggle}
-                      selectedDoctors={tempSelectedDoctors}
-                      onDoctorFilterChange={handleTempDoctorFilterChange}
-                      selectedOrigins={tempSelectedOrigins}
-                      onOriginFilterChange={handleTempOriginFilterChange}
-                      citologyPositiveFilter={tempCitologyPositiveFilter}
-                      onCitologyPositiveFilterToggle={
-                        handleTempCitologyPositiveFilterToggle
-                      }
-                      citologyNegativeFilter={tempCitologyNegativeFilter}
-                      onCitologyNegativeFilterToggle={
-                        handleTempCitologyNegativeFilterToggle
-                      }
-                      pendingCasesFilter={tempPendingCasesFilter}
-                      onPendingCasesFilterChange={
-                        handleTempPendingCasesFilterChange
-                      }
-                      pdfStatusFilter={tempPdfStatusFilter}
-                      onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
-                      examTypeFilter={tempExamTypeFilter}
-                      onExamTypeFilterChange={handleTempExamTypeFilterChange}
-                      consultaFilter={tempConsultaFilter}
-                      onConsultaFilterChange={handleTempConsultaFilterChange}
-                      documentStatusFilter={tempDocumentStatusFilter}
-                      onDocumentStatusFilterChange={
-                        handleTempDocumentStatusFilterChange
-                      }
-                      emailSentStatusFilter={tempEmailSentStatusFilter}
-                      onEmailSentStatusFilterChange={
-                        handleTempEmailSentStatusFilterChange
-                      }
-                      statusOptions={statusOptions}
-                      branchOptions={branchOptions}
-                      cases={cases}
-                      onApplyFilters={handleApplyFilters}
-                      onClearAllFilters={handleClearAllFilters}
+                {/* Search Row */}
+                <div className='flex-1 w-full md:w-auto'>
+                  <div className='relative'>
+                    <Input
+                      type='text'
+                      placeholder='Buscar por nombre, código, cédula, estudio o médico'
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
                     />
-                    {/* Export Button */}
-                    <Button
-                      variant='outline'
-                      className='flex items-center gap-2 cursor-pointer'
-                      title='Exportar'
-                      onClick={handleExportToExcel}
-                    >
-                      <Download className='w-4 h-4' />
-                      <span className='hidden sm:inline'>Exportar</span>
-                    </Button>
-
-                    {/* Close button - Hidden on mobile, visible on desktop */}
-                    <Button
-                      variant='outline'
-                      onClick={() => setIsFullscreen(false)}
-                      className='hidden sm:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
-                    >
-                      <span>Cerrar</span> ✕
-                    </Button>
+                    {isSearching && (
+                      <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
+                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Buttons Row - Below search on mobile, beside on desktop */}
+                <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
+                  {/* Unified Filters Modal */}
+                  <FiltersModal
+                    isOpen={isFiltersModalOpen}
+                    onOpenChange={setIsFiltersModalOpen}
+                    statusFilter={tempStatusFilter}
+                    onStatusFilterChange={handleTempStatusFilterChange}
+                    branchFilter={tempBranchFilter}
+                    onBranchFilterChange={handleTempBranchFilterChange}
+                    dateRange={tempDateRange}
+                    onDateRangeChange={handleTempDateRangeChange}
+                    showPdfReadyOnly={tempShowPdfReadyOnly}
+                    onPdfFilterToggle={handleTempPdfFilterToggle}
+                    selectedDoctors={tempSelectedDoctors}
+                    onDoctorFilterChange={handleTempDoctorFilterChange}
+                    selectedOrigins={tempSelectedOrigins}
+                    onOriginFilterChange={handleTempOriginFilterChange}
+                    citologyPositiveFilter={tempCitologyPositiveFilter}
+                    onCitologyPositiveFilterToggle={
+                      handleTempCitologyPositiveFilterToggle
+                    }
+                    citologyNegativeFilter={tempCitologyNegativeFilter}
+                    onCitologyNegativeFilterToggle={
+                      handleTempCitologyNegativeFilterToggle
+                    }
+                    pendingCasesFilter={tempPendingCasesFilter}
+                    onPendingCasesFilterChange={
+                      handleTempPendingCasesFilterChange
+                    }
+                    pdfStatusFilter={tempPdfStatusFilter}
+                    onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
+                    examTypeFilter={tempExamTypeFilter}
+                    onExamTypeFilterChange={handleTempExamTypeFilterChange}
+                    consultaFilter={tempConsultaFilter}
+                    onConsultaFilterChange={handleTempConsultaFilterChange}
+                    documentStatusFilter={tempDocumentStatusFilter}
+                    onDocumentStatusFilterChange={
+                      handleTempDocumentStatusFilterChange
+                    }
+                    emailSentStatusFilter={tempEmailSentStatusFilter}
+                    onEmailSentStatusFilterChange={
+                      handleTempEmailSentStatusFilterChange
+                    }
+                    statusOptions={statusOptions}
+                    branchOptions={branchOptions}
+                    cases={cases}
+                    onApplyFilters={handleApplyFilters}
+                    onClearAllFilters={handleClearAllFilters}
+                  />
+                  {/* Export Button */}
+                  <Button
+                    variant='outline'
+                    className='flex items-center gap-2 cursor-pointer'
+                    title='Exportar'
+                    onClick={handleExportToExcel}
+                  >
+                    <Download className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Exportar</span>
+                  </Button>
+
+                  {/* Close button - Hidden on mobile, visible on desktop */}
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsFullscreen(false)}
+                    className='hidden md:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    aria-label='Cerrar'
+                  >
+                    <X className='w-4 h-4' />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1680,11 +1682,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
           {/* Search and Filter Controls */}
           <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
-            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-              {/* Search and Filters Row */}
-              <div className='flex flex-wrap items-center gap-2 sm:gap-3 w-full'>
-                {/* Search - Acortada */}
-                <div className='flex-1 min-w-[200px] relative'>
+            <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
+              {/* Search Row */}
+              <div className='flex-1 w-full md:w-auto'>
+                <div className='relative'>
                   <Input
                     type='text'
                     placeholder='Buscar por nombre, código, cédula, estudio o médico'
@@ -1698,7 +1699,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     </div>
                   )}
                 </div>
+              </div>
 
+              {/* Buttons Row - Below search on mobile, beside on desktop */}
+              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
                 {/* Unified Filters Modal */}
                 <FiltersModal
                   isOpen={isFiltersModalOpen}
@@ -1755,19 +1759,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onClick={handleExportToExcel}
                 >
                   <Download className='w-4 h-4' />
-                  Exportar
+                  <span className='hidden sm:inline'>Exportar</span>
                 </Button>
 
-                {/* Fullscreen Button */}
-                <Button
-                  onClick={() => setIsFullscreen(true)}
-                  variant='outline'
-                  className='flex items-center gap-2 cursor-pointer'
-                  title='Expandir'
-                >
-                  <Maximize2 className='w-4 h-4' />
-                  Expandir
-                </Button>
               </div>
             </div>
           </div>

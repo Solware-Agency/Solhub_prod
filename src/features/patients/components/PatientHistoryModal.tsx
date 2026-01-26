@@ -54,6 +54,7 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import { ImageButton } from '@shared/components/ui/ImageButton';
+import { PDFButton } from '@shared/components/ui/PDFButton';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -728,20 +729,27 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
           {/* Modal */}
           {!isEditing && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'
-              onClick={onClose}
-            >
-              <div
-                className='bg-white/80 dark:bg-black backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input'
+            <div className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'>
+              {/* Overlay de fondo con opacidad desde el inicio */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className='fixed inset-0 bg-black/50'
+                onClick={onClose}
+              />
+              {/* Contenido del modal con animación */}
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input relative z-10'
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className='sticky top-0 bg-white/80 dark:bg-black backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10 rounded-lg'>
+                <div className='sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-4 sm:p-6 z-10 rounded-lg'>
                   <div className='flex items-center justify-between'>
                     <div>
                       <div>
@@ -765,7 +773,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 {/* Content */}
                 <div className='flex-1 overflow-hidden flex flex-col'>
                   {/* Patient Info */}
-                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-black flex-shrink-0'>
+                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] flex-shrink-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
                       <div className='flex items-center gap-3'>
                         <div className='p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full'>
@@ -791,7 +799,34 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   </span>
                                 )}
                                 {(() => {
-                                  // Si hay edad, mostrarla
+                                  // Calcular edad desde fecha_nacimiento si existe
+                                  const calculatedAge = patient.fecha_nacimiento
+                                    ? calculateAgeFromFechaNacimiento(patient.fecha_nacimiento)
+                                    : null;
+                                  
+                                  // Si hay fecha_nacimiento, mostrar edad calculada + fecha
+                                  if (patient.fecha_nacimiento && calculatedAge) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • {calculatedAge} ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Si hay error formateando, mostrar solo la edad
+                                      return (
+                                        <span className='ml-3'>
+                                          • {calculatedAge}
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  
+                                  // Si no hay fecha_nacimiento pero hay edad directa, mostrarla
                                   if (patient.edad) {
                                     return (
                                       <span className='ml-3'>
@@ -799,17 +834,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </span>
                                     );
                                   }
-                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
-                                  const calculatedAge = calculateAgeFromFechaNacimiento(
-                                    patient.fecha_nacimiento
-                                  );
-                                  if (calculatedAge) {
-                                    return (
-                                      <span className='ml-3'>
-                                        • {calculatedAge}
-                                      </span>
-                                    );
+                                  
+                                  // Si hay fecha_nacimiento pero no se pudo calcular edad, intentar mostrar solo la fecha
+                                  if (patient.fecha_nacimiento) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Ignorar error
+                                    }
                                   }
+                                  
                                   return null;
                                 })()}
                               </>
@@ -822,7 +864,34 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   </span>
                                 )}
                                 {(() => {
-                                  // Si hay edad, mostrarla
+                                  // Calcular edad desde fecha_nacimiento si existe
+                                  const calculatedAge = patient.fecha_nacimiento
+                                    ? calculateAgeFromFechaNacimiento(patient.fecha_nacimiento)
+                                    : null;
+                                  
+                                  // Si hay fecha_nacimiento, mostrar edad calculada + fecha
+                                  if (patient.fecha_nacimiento && calculatedAge) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • {calculatedAge} ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Si hay error formateando, mostrar solo la edad
+                                      return (
+                                        <span className='ml-3'>
+                                          • {calculatedAge}
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  
+                                  // Si no hay fecha_nacimiento pero hay edad directa, mostrarla
                                   if (patient.edad) {
                                     return (
                                       <span className='ml-3'>
@@ -830,17 +899,24 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </span>
                                     );
                                   }
-                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
-                                  const calculatedAge = calculateAgeFromFechaNacimiento(
-                                    patient.fecha_nacimiento
-                                  );
-                                  if (calculatedAge) {
-                                    return (
-                                      <span className='ml-3'>
-                                        • {calculatedAge}
-                                      </span>
-                                    );
+                                  
+                                  // Si hay fecha_nacimiento pero no se pudo calcular edad, intentar mostrar solo la fecha
+                                  if (patient.fecha_nacimiento) {
+                                    try {
+                                      const fechaNac = new Date(patient.fecha_nacimiento);
+                                      if (!isNaN(fechaNac.getTime())) {
+                                        const fechaFormateada = format(fechaNac, 'dd/MM/yyyy', { locale: es });
+                                        return (
+                                          <span className='ml-3'>
+                                            • ({fechaFormateada})
+                                          </span>
+                                        );
+                                      }
+                                    } catch (error) {
+                                      // Ignorar error
+                                    }
                                   }
+                                  
                                   return null;
                                 })()}
                               </>
@@ -1133,7 +1209,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         : 'border-input'
                                     }`}
                                   >
-                                      <div className='flex flex-col sm:flex-row sm:items-center gap-3 mb-3'>
+                                      <div className='space-y-3 mb-3'>
+                                        {/* Checkbox y Estado de Pago */}
                                         <div className='flex items-center gap-2'>
                                           {caseItem.doc_aprobado ===
                                             'aprobado' && (
@@ -1152,11 +1229,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               className='mr-1'
                                             />
                                           )}
-                                          {caseItem.code && (
-                                            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
-                                              {caseItem.code}
-                                            </span>
-                                          )}
                                           {!isSpt && (
                                             <span
                                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
@@ -1168,62 +1240,84 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           )}
                                         </div>
 
-                                        <div className='sm:ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1'>
-                                          <Calendar className='h-4 w-4' />
-                                          {format(
-                                            new Date(
-                                              caseItem.created_at ||
-                                                caseItem.date,
-                                            ),
-                                            'dd/MM/yyyy',
-                                            { locale: es },
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Primera fila: Tipo de Examen, Médico Tratante, Sede, Imagen, Acciones */}
-                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3'>
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Tipo de Examen
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.exam_type}
-                                          </p>
-                                        </div>
-
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Médico Tratante
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {caseItem.treating_doctor}
-                                          </p>
-                                        </div>
-
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Sede
-                                          </p>
-                                          <div className='mt-1'>
-                                            <BranchBadge
-                                              branch={caseItem.branch}
-                                            />
+                                        {/* Código y Fecha en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Código
+                                            </p>
+                                            {caseItem.code ? (
+                                              <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                                                {caseItem.code}
+                                              </span>
+                                            ) : (
+                                              <p className='text-sm font-medium text-gray-400'>
+                                                Sin código
+                                              </p>
+                                            )}
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Fecha
+                                            </p>
+                                            <p className='text-sm font-medium flex items-center gap-1'>
+                                              <Calendar className='h-4 w-4' />
+                                              {format(
+                                                new Date(
+                                                  caseItem.created_at ||
+                                                    caseItem.date,
+                                                ),
+                                                'dd/MM/yyyy',
+                                                { locale: es },
+                                              )}
+                                            </p>
                                           </div>
                                         </div>
 
-                                        {/* Imagen del caso */}
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Imagen
-                                          </p>
-                                          <div className='mt-1'>
-                                            <ImageButton imageUrl={(caseItem as any).image_url} />
+                                        {/* Tipo de Examen y Médico Tratante en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Tipo de Examen
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {caseItem.exam_type}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Médico Tratante
+                                            </p>
+                                            <p className='text-sm font-medium truncate'>
+                                              {caseItem.treating_doctor}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {/* Sede e Imagen en la misma línea */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Sede
+                                            </p>
+                                            <div className='mt-1'>
+                                              <BranchBadge
+                                                branch={caseItem.branch}
+                                              />
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Imagen
+                                            </p>
+                                            <div className='mt-1'>
+                                              <ImageButton imageUrl={(caseItem as any).image_url} />
+                                            </div>
                                           </div>
                                         </div>
 
                                         {/* Acciones */}
-                                        <div className='flex gap-2 items-center justify-center sm:justify-start md:justify-center'>
+                                        <div className='flex gap-2 items-center justify-start pt-2'>
                                           <Button
                                             onClick={() =>
                                               handleCheckAndDownloadPDF(
@@ -1264,6 +1358,23 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           >
                                             <Eye className='w-4 h-4' />
                                           </Button>
+                                          {/* Botón para ver PDF subido - visible para todos si existe */}
+                                          {(caseItem as any).uploaded_pdf_url && (
+                                            <PDFButton
+                                              pdfUrl={(caseItem as any).uploaded_pdf_url}
+                                              size='sm'
+                                              variant='default'
+                                            />
+                                          )}
+                                          {/* Botón para ver imagen - si existe */}
+                                          {(caseItem as any).image_url && (
+                                            <Button
+                                              onClick={() => window.open((caseItem as any).image_url, '_blank')}
+                                              disabled={isSaving}
+                                            >
+                                              <Eye className='h-4 w-4' />
+                                            </Button>
+                                          )}
                                         </div>
                                       </div>
 
@@ -1378,9 +1489,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                   key={caseItem.id}
                                   className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow'
                                 >
-                                  <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+                                  <div className='space-y-3'>
                                     {/* Representado */}
-                                    <div className='md:col-span-1'>
+                                    <div>
                                       <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                         Representado
                                       </p>
@@ -1389,83 +1500,94 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </p>
                                     </div>
 
-                                    {/* Código y Tipo */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Código
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {caseItem.code || 'Sin código'}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Tipo de Examen
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {caseItem.exam_type}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Fecha
-                                      </p>
-                                      <p className='text-sm font-medium'>
-                                        {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
-                                      </p>
-                                    </div>
-
-                                    {/* Médico y Sede */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Médico Tratante
-                                      </p>
-                                      <p className='text-sm font-medium truncate'>
-                                        {caseItem.treating_doctor}
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Sede
-                                      </p>
-                                      <BranchBadge branch={caseItem.branch} className='text-xs' />
-                                    </div>
-
-                                    {/* Estado de Pago */}
-                                    {!isSpt && (
+                                    {/* Código y Fecha en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
                                       <div>
                                         <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Estado de Pago
-                                        </p>
-                                        <span
-                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                            caseItem.payment_status === 'Pagado'
-                                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                          }`}
-                                        >
-                                          {caseItem.payment_status}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Monto (si no es SPT) */}
-                                    {!isSpt && (
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Monto Total
+                                          Código
                                         </p>
                                         <p className='text-sm font-medium'>
-                                          {formatCurrency(caseItem.total_amount)}
+                                          {caseItem.code || 'Sin código'}
                                         </p>
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Fecha
+                                        </p>
+                                        <p className='text-sm font-medium'>
+                                          {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Tipo de Examen y Médico Tratante en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Tipo de Examen
+                                        </p>
+                                        <p className='text-sm font-medium'>
+                                          {caseItem.exam_type}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Médico Tratante
+                                        </p>
+                                        <p className='text-sm font-medium truncate'>
+                                          {caseItem.treating_doctor}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Sede e Imagen en la misma línea */}
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Sede
+                                        </p>
+                                        <BranchBadge branch={caseItem.branch} className='text-xs' />
+                                      </div>
+                                      <div>
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                          Imagen
+                                        </p>
+                                        <div className='mt-1'>
+                                          <ImageButton imageUrl={(caseItem as any).image_url} />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Estado de Pago y Monto Total (si no es SPT) */}
+                                    {!isSpt && (
+                                      <div className='grid grid-cols-2 gap-4'>
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                            Estado de Pago
+                                          </p>
+                                          <span
+                                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                              caseItem.payment_status === 'Pagado'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                            }`}
+                                          >
+                                            {caseItem.payment_status}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                            Monto Total
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {formatCurrency(caseItem.total_amount)}
+                                          </p>
+                                        </div>
                                       </div>
                                     )}
 
                                     {/* Acciones */}
-                                    <div className='md:col-start-4 md:row-start-1 md:row-span-2 sm:col-span-2 col-span-1 flex gap-2 items-center justify-center'>
+                                    <div className='flex gap-2 items-center justify-start pt-2'>
                                       <Button
                                         onClick={() =>
                                           handleCheckAndDownloadPDF(caseItem)
@@ -1537,8 +1659,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                     </Tabs>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           )}
 
           {/* Render EditPatientInfoModal outside the history modal to prevent z-index issues */}

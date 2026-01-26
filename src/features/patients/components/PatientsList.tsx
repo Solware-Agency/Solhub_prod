@@ -210,7 +210,7 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
 					{patient.nombre}
 				</p>
 				<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-					Cédula: {patient.cedula || 'No disponible'}
+					CI: {patient.cedula || 'No disponible'}
 				</p>
 			</div>
 

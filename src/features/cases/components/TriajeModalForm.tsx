@@ -60,6 +60,7 @@ interface TriajeFormData {
   talla: string;
   peso: string;
   presionArterial: string;
+  glicemia: string;
   imc: string;
   antecedentesFamiliares: string;
   antecedentesPersonales: string;
@@ -202,7 +203,9 @@ const TriageInfoDisplay: React.FC<{
                     Presión
                   </p>
                   <p className='text-sm font-medium'>
-                    {record.blood_pressure} mmHg
+                    {typeof record.blood_pressure === 'string' 
+                      ? record.blood_pressure 
+                      : record.blood_pressure} mmHg
                   </p>
                 </div>
               </div>
@@ -258,6 +261,21 @@ const TriageInfoDisplay: React.FC<{
                   </p>
                   <p className='text-sm font-medium'>
                     {record.temperature_celsius}°C
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Glicemia */}
+            {record.blood_glucose && (
+              <div className='flex items-start gap-2'>
+                <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0' />
+                <div>
+                  <p className='text-xs text-gray-500 dark:text-gray-400'>
+                    Glicemia
+                  </p>
+                  <p className='text-sm font-medium'>
+                    {record.blood_glucose} mg/dL
                   </p>
                 </div>
               </div>
@@ -434,6 +452,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     talla: '',
     peso: '',
     presionArterial: '',
+    glicemia: '',
     imc: '',
     antecedentesFamiliares: '',
     antecedentesPersonales: '',
@@ -571,6 +590,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
           temperatura: existingTriage.temperature_celsius?.toString() || '',
           presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
           talla: existingTriage.height_cm?.toString() || '',
           peso: existingTriage.weight_kg?.toString() || '',
           imc: existingTriage.bmi?.toString() || '',
@@ -585,6 +605,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
           temperatura: existingTriage.temperature_celsius?.toString() || '',
           presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
           talla: existingTriage.height_cm?.toString() || '',
           peso: existingTriage.weight_kg?.toString() || '',
           imc: existingTriage.bmi?.toString() || '',
@@ -791,17 +812,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       missingFields.push('Frecuencia Cardíaca');
     }
     
-    if (!hasValue(formData.frecuenciaRespiratoria)) {
-      missingFields.push('Frecuencia Respiratoria');
-    }
+    // FR (Frecuencia Respiratoria) - No es obligatorio
     
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('Saturación de Oxígeno');
     }
     
-    if (!hasValue(formData.temperatura)) {
-      missingFields.push('Temperatura');
-    }
+    // Temperatura - No es obligatorio
     
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('Presión Arterial');
@@ -1025,6 +1042,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           ? parseFloat(formData.temperatura)
           : null,
         blood_pressure: formData.presionArterial || null,
+        blood_glucose: formData.glicemia
+          ? parseFloat(formData.glicemia)
+          : null,
         height_cm: formData.talla ? parseFloat(formData.talla) : null,
         weight_kg: formData.peso ? parseFloat(formData.peso) : null,
       };
@@ -1682,6 +1702,34 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     value={formData.presionArterial}
                     onChange={(e) =>
                       handleInputChange('presionArterial', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[120px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Droplets className='h-4 w-4 text-yellow-600 dark:text-yellow-400' />
+                    Glicemia
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Glicemia (glucosa en sangre)</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='mg/dL'
+                    value={formData.glicemia}
+                    onChange={(e) =>
+                      handleNumericInput('glicemia', e.target.value)
                     }
                     disabled={loading}
                     className={inputStyles}
