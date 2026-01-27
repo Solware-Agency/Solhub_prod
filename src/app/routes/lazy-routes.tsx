@@ -199,3 +199,11 @@ export const PrivateRoute = lazy(() =>
     'PrivateRoute'
   )
 )
+
+// Test components - lazy loaded
+export const ErrorBoundaryTest = lazy(() =>
+  lazyRetry(
+    () => import('@features/test/components/ErrorBoundaryTest').then((module) => ({ default: module.ErrorBoundaryTest })),
+    'ErrorBoundaryTest'
+  )
+)

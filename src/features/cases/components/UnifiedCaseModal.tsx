@@ -71,7 +71,7 @@ import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
-import { ImageButton } from '@shared/components/ui/ImageButton';
+import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls';
 import { PDFButton } from '@shared/components/ui/PDFButton';
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
@@ -276,8 +276,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
     const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
-    // Image URL state for imagenologia role
-    const [imageUrl, setImageUrl] = useState('');
+    // Image URLs state for imagenologia role (hasta 10 imágenes)
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
 
     // Payment editing states
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -554,50 +554,55 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Initialize edited case when currentCase changes or when entering edit mode
     useEffect(() => {
-      if (currentCase && isEditing) {
-        // Initialize with current case data - separating patient and case data
-        setEditedCase({
-          // Patient data
-          nombre: currentCase.nombre,
-          cedula: currentCase.cedula,
-          telefono: currentCase.telefono,
-          patient_email: currentCase.patient_email,
-          edad: currentCase.edad,
-          // Case data
-          exam_type: currentCase.exam_type,
-          treating_doctor: currentCase.treating_doctor,
-          origin: currentCase.origin,
-          branch: currentCase.branch,
-          comments: currentCase.comments,
-          // Financial data
-          total_amount: currentCase.total_amount,
-          exchange_rate: currentCase.exchange_rate,
-        });
-        
-        // Initialize image URL for imagenologia role
-        setImageUrl((currentCase as any).image_url || '');
+      if (currentCase) {
+        // Initialize image URLs for imagenologia role (siempre, no solo en edición)
+        // Priorizar images_urls (nuevo), fallback a image_url (legacy)
+        const caseImages = (currentCase as any).images_urls || 
+                          ((currentCase as any).image_url ? [(currentCase as any).image_url] : []);
+        setImageUrls(caseImages);
 
-        // Initialize payment methods from current case
-        const methods: PaymentMethod[] = [];
-        for (let i = 1; i <= 4; i++) {
-          const method = currentCase[
-            `payment_method_${i}` as keyof MedicalCaseWithPatient
-          ] as string;
-          const amount = currentCase[
-            `payment_amount_${i}` as keyof MedicalCaseWithPatient
-          ] as number;
-          const reference = currentCase[
-            `payment_reference_${i}` as keyof MedicalCaseWithPatient
-          ] as string;
+        if (isEditing) {
+          // Initialize with current case data - separating patient and case data
+          setEditedCase({
+            // Patient data
+            nombre: currentCase.nombre,
+            cedula: currentCase.cedula,
+            telefono: currentCase.telefono,
+            patient_email: currentCase.patient_email,
+            edad: currentCase.edad,
+            // Case data
+            exam_type: currentCase.exam_type,
+            treating_doctor: currentCase.treating_doctor,
+            origin: currentCase.origin,
+            branch: currentCase.branch,
+            comments: currentCase.comments,
+            // Financial data
+            total_amount: currentCase.total_amount,
+            exchange_rate: currentCase.exchange_rate,
+          });
 
-          if (method && amount) {
-            methods.push({ method, amount, reference: reference || '' });
+          // Initialize payment methods from current case
+          const methods: PaymentMethod[] = [];
+          for (let i = 1; i <= 4; i++) {
+            const method = currentCase[
+              `payment_method_${i}` as keyof MedicalCaseWithPatient
+            ] as string;
+            const amount = currentCase[
+              `payment_amount_${i}` as keyof MedicalCaseWithPatient
+            ] as number;
+            const reference = currentCase[
+              `payment_reference_${i}` as keyof MedicalCaseWithPatient
+            ] as string;
+
+            if (method && amount) {
+              methods.push({ method, amount, reference: reference || '' });
+            }
           }
+          setPaymentMethods(methods);
+        } else {
+          setEditedCase({});
+          setPaymentMethods([]);
         }
-        setPaymentMethods(methods);
-      } else {
-        setEditedCase({});
-        setPaymentMethods([]);
       }
     }, [currentCase, isEditing]);
 
@@ -1021,24 +1026,24 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
-        // Save image URL for imagenologia/owner/prueba roles
-        if ((profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && imageUrl) {
-          const { error: imageUrlError } = await supabase
+        // Save image URLs for imagenologia/owner/prueba roles
+        if ((profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && imageUrls.length > 0) {
+          const { error: imageUrlsError } = await supabase
             .from('medical_records_clean')
-            .update({ image_url: imageUrl })
+            .update({ images_urls: imageUrls })
             .eq('id', currentCase.id);
             
-          if (imageUrlError) {
-            console.error('Error saving image URL:', imageUrlError);
+          if (imageUrlsError) {
+            console.error('Error saving image URLs:', imageUrlsError);
             toast({
-              title: '❌ Error al guardar URL',
-              description: 'No se pudo guardar la URL de la imagen.',
+              title: '❌ Error al guardar URLs',
+              description: 'No se pudieron guardar las URLs de las imágenes.',
               variant: 'destructive',
             });
           } else {
             toast({
-              title: '✅ URL de imagen guardada',
-              description: 'La URL de la imagen se ha guardado correctamente.',
+              title: '✅ URLs de imágenes guardadas',
+              description: `Se ${imageUrls.length === 1 ? 'ha' : 'han'} guardado ${imageUrls.length} ${imageUrls.length === 1 ? 'imagen' : 'imágenes'} correctamente.`,
               className: 'bg-green-100 border-green-400 text-green-800',
             });
           }
@@ -1055,7 +1060,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         setPaymentMethods([]);
         setIsAddingNewPayment(false);
         setNewPaymentMethod({ method: '', amount: 0, reference: '' });
-        setImageUrl(''); // Clear image URL
+        setImageUrls([]); // Clear image URLs
 
         // Call onSave callback if provided
         if (onSave) {
@@ -2232,14 +2237,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* PDF Subido - Solo para SPT, roles: laboratorio, owner, prueba (godmode) */}
+                      {/* PDF Subido - Solo para SPT, roles: laboratorio, employee, owner, prueba (godmode) */}
                       {/* Visible en la sección de Información Médica */}
                       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                         <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                           PDF Adjunto:
                         </span>
                         <div className='sm:flex sm:justify-end sm:flex-1'>
-                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba') ? (
+                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'employee' || profile?.role === 'owner' || profile?.role === 'prueba') ? (
                             <CasePDFUpload
                               caseId={currentCase.id}
                               currentPdfUrl={(currentCase as any).uploaded_pdf_url}
@@ -2267,33 +2272,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
-                      {/* Image URL field - Visible for all roles if image exists, editable only for imagenologia/owner/prueba */}
+                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba */}
                       {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Imagen:
+                      <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                          Imágenes (Imagenología):
                         </span>
-                        <div className='sm:flex sm:justify-end sm:flex-1'>
-                          {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing ? (
-                            <Input
-                              id='image-url-input'
-                              name='image_url'
-                              type='url'
-                              placeholder='https://ejemplo.com/imagen.jpg'
-                              value={imageUrl}
-                              onChange={(e) => {
-                                setImageUrl(e.target.value);
-                                setEditedCase({ ...editedCase, image_url: e.target.value });
-                              }}
-                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
-                            />
-                          ) : (currentCase as any).image_url ? (
-                            <ImageButton imageUrl={(currentCase as any).image_url} />
-                          ) : (
-                            <span className='text-sm text-gray-500 dark:text-gray-400'>
-                              Sin imagen
-                            </span>
-                          )}
+                        <div className='w-full'>
+                          <MultipleImageUrls
+                            images={imageUrls}
+                            onChange={setImageUrls}
+                            maxImages={10}
+                            isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing}
+                          />
                         </div>
                       </div>
 

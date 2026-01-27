@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio'>
 }
 
 /**
@@ -90,13 +90,16 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 			console.debug('PrivateRoute debug - allowedRoles:', allowedRoles, 'profile.role:', profile.role)
 
 			// Redirect based on actual user role to their proper home
-			switch (profile.role) {
+			const userRole = profile.role as string
+			switch (userRole) {
 				case 'owner':
 					return <Navigate to="/dashboard/home" replace />
 				case 'prueba':
 					return <Navigate to="/prueba/home" replace />
 				case 'medicowner':
 					return <Navigate to="/dashboard/home" replace />
+				case 'laboratorio':
+					return <Navigate to="/laboratorio/home" replace />
 				// Cada rol va a su propia ruta de home (que renderiza el mismo componente)
 				case 'residente':
 					return <Navigate to="/medic/home" replace />

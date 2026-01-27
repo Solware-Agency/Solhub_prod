@@ -242,6 +242,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           googledocs_url: string | null;
           id: string;
           image_url: string | null;
+          images_urls: string[] | null;
           ims: string | null;
           laboratory_id: string;
           informe_qr: string | null;
@@ -291,6 +292,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           googledocs_url?: string | null;
           id?: string;
           image_url?: string | null;
+          images_urls?: string[] | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
@@ -340,6 +342,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           googledocs_url?: string | null;
           id?: string;
           image_url?: string | null;
+          images_urls?: string[] | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
@@ -428,7 +431,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado: string;
           id: string;
           phone: string | null;
-          role: string;
+          role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url: string | null;
           signature_url_2: string | null;
           signature_url_3: string | null;
@@ -443,7 +446,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado?: string;
           id: string;
           phone?: string | null;
-          role?: string;
+          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -458,7 +461,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado?: string;
           id?: string;
           phone?: string | null;
-          role?: string;
+          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -769,7 +772,8 @@ export interface MedicalRecord {
   ki67?: string | null;
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
-  image_url?: string | null; // URL de imagen para imagenología
+  image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
+  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
   uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
@@ -962,6 +966,6 @@ export interface ProfileWithLaboratory {
   email_lower: string | null;
   estado: string;
   phone: string | null;
-  role: string;
+  role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
   updated_at: string | null;
 }

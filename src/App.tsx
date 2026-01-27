@@ -27,7 +27,7 @@ import {
   PrivateRoute,
   StandaloneChatPage,
 } from '@app/routes/lazy-routes';
-import { imagenologiaRoutes } from '@app/routes/route-config';
+import { imagenologiaRoutes, laboratorioRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
 import {
   dashboardRoutes,
@@ -306,6 +306,36 @@ function App() {
                           <FeatureRoute
                             feature={routeConfig.feature}
                             fallbackPath='/imagenologia/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}                </Route>
+
+                <Route
+                  path='/laboratorio'
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <PrivateRoute requiredRole='laboratorio'>
+                        <Layout />
+                      </PrivateRoute>
+                    </Suspense>
+                  }
+                >
+                  {/* Nested routes for laboratorio */}
+                  <Route index element={<ReceptionistHomePage />} />
+                  {laboratorioRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/laboratorio/cases'
                           >
                             <Component />
                           </FeatureRoute>

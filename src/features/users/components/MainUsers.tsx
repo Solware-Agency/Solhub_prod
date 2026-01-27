@@ -17,6 +17,7 @@ import {
 	Microscope,
 	Shield,
 	Trash2,
+	TestTube,
 } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -60,6 +61,7 @@ const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
 	enfermero: 'Los enfermeros tienen acceso para atención y seguimiento de pacientes.',
 	medico_tratante: 'Los médicos tratantes son responsables del tratamiento del paciente y pueden ver casos relacionados.',
 	imagenologia: 'Los usuarios de imagenología gestionan estudios de imagen y radiología.',
+	laboratorio: 'El personal de laboratorio puede ver pacientes y casos, enviar informes y adjuntar PDFs de resultados.',
 	prueba: 'Rol de prueba con acceso completo sin restricciones.',
 	call_center: 'El personal de call center puede visualizar y enviar casos, además de editar información básica de pacientes.',
 }
@@ -67,12 +69,12 @@ const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
 interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio'
 	created_at: string
 	updated_at: string
 	email_confirmed_at?: string
 	last_sign_in_at?: string
-	password?: string // Campo para almacenar la contraseñ±a (solo para visualizacin)
+	password?: string // Campo para almacenar la contraseña (solo para visualización)
 	assigned_branch?: string | null
 	display_name?: string | null
 	estado?: 'pendiente' | 'aprobado'
@@ -263,6 +265,8 @@ const MainUsers: React.FC = () => {
 				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'imagenologia':
 				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+			case 'laboratorio':
+				return <TestTube className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			case 'call_center':
 				return <Phone className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
 			default:
@@ -290,6 +294,8 @@ const MainUsers: React.FC = () => {
 				return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
 			case 'imagenologia':
 				return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+			case 'laboratorio':
+				return 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300'
 			case 'call_center':
 				return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
 			default:
@@ -380,6 +386,15 @@ const MainUsers: React.FC = () => {
 					hover: 'hover:bg-cyan-100 dark:hover:bg-cyan-900/30',
 					icon: 'text-cyan-600 dark:text-cyan-400',
 					text: 'text-cyan-700 dark:text-cyan-300',
+				}
+			case 'laboratorio':
+				return {
+					bg: 'bg-lime-50 dark:bg-lime-900/20',
+					bgActive: 'bg-lime-200 dark:bg-lime-800',
+					border: 'border-lime-400 dark:border-lime-600',
+					hover: 'hover:bg-lime-100 dark:hover:bg-lime-900/30',
+					icon: 'text-lime-600 dark:text-lime-400',
+					text: 'text-lime-700 dark:text-lime-300',
 				}
 			case 'call_center':
 				return {
@@ -977,7 +992,7 @@ const MainUsers: React.FC = () => {
 								const colors = getRoleCardColor(role.value)
 								const IconComponent = getRoleIcon(role.value)
 								const isActive = roleFilter === role.value
-								const count = stats[role.value] || 0
+								const count = (stats as any)[role.value] || 0
 
 								return (
 									<div

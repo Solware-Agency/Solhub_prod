@@ -1,6 +1,6 @@
 import { supabase } from '@/services/supabase/config/config'
 
-export type UserRole = 'owner' | 'admin' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante' | 'imagenologia' | 'prueba' | 'call_center'
+export type UserRole = 'owner' | 'admin' | 'employee' | 'laboratorio' | 'residente' | 'citotecno' | 'patologo' | 'enfermero' | 'medico_tratante' | 'imagenologia' | 'prueba' | 'call_center'
 
 export interface RoleOption {
 	value: UserRole
@@ -24,6 +24,11 @@ export const ROLE_LABELS: Record<UserRole, RoleOption> = {
 		value: 'employee',
 		label: 'Recepcionista',
 		description: 'Registro y edición de casos médicos',
+	},
+	laboratorio: {
+		value: 'laboratorio',
+		label: 'Laboratorio',
+		description: 'Ver pacientes y casos, enviar informes y adjuntar PDFs',
 	},
 	residente: {
 		value: 'residente',

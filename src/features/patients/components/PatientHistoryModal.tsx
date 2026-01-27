@@ -158,6 +158,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   };
 
   const [previewingCaseId, setPreviewingCaseId] = useState<string | null>(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
 
   // Verificar si el paciente es un representado (menor o animal)
   const isRepresentado = patient ? ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal') : false;
@@ -267,6 +268,76 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       supabase.removeChannel(channel);
     };
   }, [isOpen, patient?.id, refetch]);
+
+  // Obtener URL firmada fresca cuando se abre el preview
+  useEffect(() => {
+    if (!previewingCaseId) {
+      setPreviewPdfUrl(null);
+      return;
+    }
+
+    const getSignedUrl = async () => {
+      try {
+        const case_ = data?.find((c) => c.id === previewingCaseId) ||
+                      dependentsCases?.find((c) => c.id === previewingCaseId);
+        
+        if (!case_?.informepdf_url) {
+          setPreviewPdfUrl(null);
+          return;
+        }
+
+        // Extraer el path del bucket desde la URL
+        const url = case_.informepdf_url;
+        let bucketPath = '';
+
+        // Intentar extraer el path dependiendo del formato de URL
+        if (url.includes('/storage/v1/object/sign/')) {
+          // URL firmada de Supabase
+          const parts = url.split('/storage/v1/object/sign/')[1];
+          if (parts) {
+            bucketPath = parts.split('?')[0];
+          }
+        } else if (url.includes('/storage/v1/object/public/')) {
+          // URL pública de Supabase
+          const parts = url.split('/storage/v1/object/public/')[1];
+          if (parts) {
+            bucketPath = parts;
+          }
+        } else {
+          // Asumir que es la URL completa y usarla directamente
+          setPreviewPdfUrl(url);
+          return;
+        }
+
+        if (!bucketPath) {
+          setPreviewPdfUrl(url);
+          return;
+        }
+
+        // Separar bucket name del path
+        const [bucketName, ...pathParts] = bucketPath.split('/');
+        const filePath = pathParts.join('/');
+
+        // Obtener nueva URL firmada con 1 hora de expiración
+        const { data: signedData, error } = await supabase.storage
+          .from(bucketName)
+          .createSignedUrl(filePath, 3600); // 1 hora
+
+        if (error) {
+          console.error('Error getting signed URL:', error);
+          setPreviewPdfUrl(url); // Fallback a URL original
+          return;
+        }
+
+        setPreviewPdfUrl(signedData.signedUrl);
+      } catch (error) {
+        console.error('Error processing PDF URL:', error);
+        setPreviewPdfUrl(null);
+      }
+    };
+
+    getSignedUrl();
+  }, [previewingCaseId, data, dependentsCases]);
 
   // Filter cases based on search term - usando nueva estructura
   const filteredCases = React.useMemo(() => {
@@ -1165,6 +1236,74 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           </div>
                         </div>
 
+                        {/* Image Gallery - Todas las imágenes con miniaturas */}
+                        {filteredCases && Array.isArray(filteredCases) && filteredCases.length > 0 && (() => {
+                          try {
+                            // Recopilar todas las imágenes de todos los casos (priorizar images_urls array)
+                            const allImages: Array<{url: string; caseCode: string; caseId: string; index: number}> = [];
+                            filteredCases.forEach((caseItem: any) => {
+                              if (!caseItem) return;
+                              
+                              const caseImages = (caseItem.images_urls && Array.isArray(caseItem.images_urls) && caseItem.images_urls.length > 0) 
+                                ? caseItem.images_urls 
+                                : (caseItem.image_url ? [caseItem.image_url] : []);
+                              
+                              caseImages.forEach((url: string, index: number) => {
+                                if (url && typeof url === 'string') {
+                                  allImages.push({
+                                    url,
+                                    caseCode: caseItem.code || 'Sin código',
+                                    caseId: caseItem.id,
+                                    index: index + 1
+                                  });
+                                }
+                              });
+                            });
+                            
+                            if (allImages.length === 0) return null;
+                            
+                            return (
+                              <div className='px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-50/50 dark:bg-gray-800/30'>
+                                <div className='flex items-center gap-2 mb-3'>
+                                  <Eye className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                                  <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
+                                    Galería de Imágenes ({allImages.length})
+                                  </h3>
+                                </div>
+                                <div className='flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent'>
+                                  {allImages.map((image, idx) => (
+                                    <div
+                                      key={`${image.caseId}-${image.index}-${idx}`}
+                                      className='flex-shrink-0 group cursor-pointer'
+                                      onClick={() => window.open(image.url, '_blank')}
+                                    >
+                                      <div className='relative w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-lg'>
+                                        <img
+                                          src={image.url}
+                                          alt={`${image.caseCode} #${image.index}`}
+                                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-200'
+                                          loading='lazy'
+                                        />
+                                        <div className='absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center'>
+                                          <Eye className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200' />
+                                        </div>
+                                        <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2'>
+                                          <p className='text-xs text-white font-medium truncate'>
+                                            #{image.index} {image.caseCode}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          } catch (error) {
+                            console.error('Error rendering image gallery:', error);
+                            return null;
+                          }
+                        })()}
+
                         {/* Cases List */}
                         <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
                           {isLoading ? (
@@ -1715,29 +1854,36 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 </DialogTitle>
               </DialogHeader>
               <div className='flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900'>
-                {(() => {
-                  const case_ = filteredCases?.find((c) => c.id === previewingCaseId) ||
-                                filteredDependentsCases?.find((c) => c.id === previewingCaseId);
-                  return case_?.informepdf_url ? (
-                    <iframe
-                      src={case_.informepdf_url}
-                      className='w-full h-full border-0'
-                      title='Vista previa del PDF'
-                      style={{
-                        minHeight: 'calc(90vh - 80px)',
-                      }}
-                    />
-                  ) : (
-                    <div className='flex items-center justify-center h-full'>
-                      <div className='text-center'>
-                        <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
-                        <p className='text-gray-500 dark:text-gray-400'>
-                          No hay PDF disponible para previsualizar
-                        </p>
-                      </div>
+                {previewPdfUrl ? (
+                  <iframe
+                    src={previewPdfUrl}
+                    className='w-full h-full border-0'
+                    title='Vista previa del PDF'
+                    style={{
+                      minHeight: 'calc(90vh - 80px)',
+                    }}
+                  />
+                ) : (
+                  <div className='flex items-center justify-center h-full'>
+                    <div className='text-center'>
+                      {previewingCaseId ? (
+                        <>
+                          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4'></div>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            Cargando PDF...
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            No hay PDF disponible para previsualizar
+                          </p>
+                        </>
+                      )}
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
               </div>
             </DialogContent>
           </Dialog>
