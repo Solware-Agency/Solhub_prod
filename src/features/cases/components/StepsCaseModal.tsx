@@ -32,6 +32,7 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { getDownloadUrl } from '@/services/utils/download-utils';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 import {
   Dialog,
   DialogContent,
@@ -1266,6 +1267,16 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           console.error('Error actualizando email_sent:', updateError);
           // No mostramos error al usuario ya que el email se envió exitosamente
         }
+
+        // Registrar el envío en email_send_logs
+        await logEmailSend({
+          case_id: case_.id,
+          recipient_email: emails.to,
+          cc_emails: emails.cc,
+          bcc_emails: emails.bcc,
+          laboratory_id: case_.laboratory_id || laboratory?.id || '',
+          status: 'success',
+        });
       }
 
       // Cerrar el modal de envío
@@ -1281,6 +1292,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       onSuccess();
     } catch (error) {
       console.error('Error enviando correo:', error);
+      
+      // Registrar el error en email_send_logs
+      if (case_?.id) {
+        await logEmailSend({
+          case_id: case_.id,
+          recipient_email: emails.to,
+          cc_emails: emails.cc,
+          bcc_emails: emails.bcc,
+          laboratory_id: case_.laboratory_id || laboratory?.id || '',
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Error desconocido',
+        });
+      }
+
       toast({
         title: '❌ Error',
         description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
@@ -1826,6 +1851,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           primaryEmail={effectiveEmail}
           patientName={case_.full_name || 'Paciente'}
           caseCode={case_.code || case_.id || 'N/A'}
+          caseId={case_.id}
           isSending={isSending}
         />
       )}

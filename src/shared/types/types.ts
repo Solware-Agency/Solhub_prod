@@ -6,8 +6,11 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = {
-  // Allows to automatically instantiate createClient with right options
+export type Database = {  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: '12.2.3 (519615d)';
@@ -115,6 +118,64 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      email_send_logs: {
+        Row: {
+          case_id: string;
+          created_at: string | null;
+          error_message: string | null;
+          id: string;
+          laboratory_id: string;
+          recipient_email: string;
+          sent_at: string;
+          sent_by_user_id: string | null;
+          status: string;
+        };
+        Insert: {
+          case_id: string;
+          created_at?: string | null;
+          error_message?: string | null;
+          id?: string;
+          laboratory_id: string;
+          recipient_email: string;
+          sent_at?: string;
+          sent_by_user_id?: string | null;
+          status: string;
+        };
+        Update: {
+          case_id?: string;
+          created_at?: string | null;
+          error_message?: string | null;
+          id?: string;
+          laboratory_id?: string;
+          recipient_email?: string;
+          sent_at?: string;
+          sent_by_user_id?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'email_send_logs_case_id_fkey';
+            columns: ['case_id'];
+            isOneToOne: false;
+            referencedRelation: 'medical_records_clean';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'email_send_logs_laboratory_id_fkey';
+            columns: ['laboratory_id'];
+            isOneToOne: false;
+            referencedRelation: 'laboratories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'email_send_logs_sent_by_user_id_fkey';
+            columns: ['sent_by_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       immuno_requests: {
         Row: {

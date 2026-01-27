@@ -46,6 +46,7 @@ import { usePDFDownload } from '@shared/hooks/usePDFDownload';
 import { useToast } from '@shared/hooks/use-toast';
 import JSZip from 'jszip';
 import TriageHistoryTab from '@features/triaje/components/TriageHistoryTab';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 
 import type { Patient } from '@/services/supabase/patients/patients-service';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
@@ -605,9 +606,31 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             .update({ email_sent: true })
             .eq('id', caseItem.id);
 
+          // Registrar el envío en email_send_logs
+          await logEmailSend({
+            case_id: caseItem.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: caseItem.laboratory_id || laboratory?.id || '',
+            status: 'success',
+          });
+
           successCount++;
         } catch (error) {
           console.error(`Error enviando email para caso ${caseItem.code}:`, error);
+          
+          // Registrar el error en email_send_logs
+          await logEmailSend({
+            case_id: caseItem.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: caseItem.laboratory_id || laboratory?.id || '',
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Error desconocido',
+          });
+          
           errorCount++;
           errors.push(`Caso ${caseItem.code || 'N/A'}`);
         }

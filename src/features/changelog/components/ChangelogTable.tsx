@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Edit } from 'lucide-react'
+import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Mail, MailX, Edit } from 'lucide-react'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -80,14 +80,14 @@ const ChangelogTable: React.FC = () => {
 					.from('profiles')
 					.select('laboratory_id')
 					.eq('id', user.id)
-					.single()
+				.single() as { data: { laboratory_id?: string } | null; error: any | null }
 
-				if (!profile?.laboratory_id) {
-					console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
-					return
-				}
+			if (!profile?.laboratory_id) {
+				console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
+				return
+			}
 
-				console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
+			console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
 
 				channel = supabase
 					.channel('realtime-changelog', {
@@ -101,7 +101,7 @@ const ChangelogTable: React.FC = () => {
 							event: '*', // INSERT | UPDATE | DELETE
 							schema: 'public',
 							table: 'change_logs',
-							filter: `laboratory_id=eq.${profile.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
+							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
 						},
 						(payload) => {
 							console.log('🔄 [ChangelogTable] Cambio detectado en change_logs:', {
@@ -118,6 +118,30 @@ const ChangelogTable: React.FC = () => {
 							})
 
 							console.log('✅ [ChangelogTable] Queries invalidadas, refetch automático')
+						},
+					)
+					.on(
+						'postgres_changes',
+						{
+							event: '*', // INSERT | UPDATE | DELETE
+							schema: 'public',
+							table: 'email_send_logs',
+							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
+						},
+						(payload) => {
+							console.log('📧 [ChangelogTable] Cambio detectado en email_send_logs:', {
+								event: payload.eventType,
+								table: payload.table,
+								new: payload.new,
+							})
+
+							// Invalidar queries para forzar refetch
+							queryClient.invalidateQueries({
+								queryKey: ['change-logs'],
+								exact: false,
+							})
+
+							console.log('✅ [ChangelogTable] Queries invalidadas (email logs), refetch automático')
 						},
 					)
 					.subscribe((status) => {
@@ -335,7 +359,7 @@ const ChangelogTable: React.FC = () => {
         .from('profiles')
         .select('laboratory_id')
         .eq('id', user.id)
-        .single();
+			.single() as { data: { laboratory_id?: string } | null; error: any | null };
 
       if (profileError || !userProfile?.laboratory_id) {
         throw new Error('Usuario no tiene laboratorio asignado');
@@ -346,7 +370,7 @@ const ChangelogTable: React.FC = () => {
         .from('change_logs')
         .delete()
         .eq('id', logToDelete)
-        .eq('laboratory_id', userProfile.laboratory_id); // 🔐 VALIDACIÓN MULTI-TENANT
+        .eq('laboratory_id', userProfile.laboratory_id!); // 🔐 VALIDACIÓN MULTI-TENANT
 
       if (error) {
         throw error;
@@ -399,6 +423,21 @@ const ChangelogTable: React.FC = () => {
 				icon: <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />,
 				bgColor: 'bg-red-100 dark:bg-red-900/30',
 				textColor: 'text-red-800 dark:text-red-300',
+			}
+		} else if (log.field_name === 'email_sent') {
+			// Verificar si es un error (deleted_record_info contiene el mensaje de error)
+			const isError = log.deleted_record_info && log.deleted_record_info.trim() !== ''
+			return {
+				text: isError ? 'Email (Error)' : 'Email Enviado',
+				icon: isError 
+					? <MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+					: <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
+				bgColor: isError 
+					? 'bg-orange-100 dark:bg-orange-900/30'
+					: 'bg-purple-100 dark:bg-purple-900/30',
+				textColor: isError
+					? 'text-orange-800 dark:text-orange-300'
+					: 'text-purple-800 dark:text-purple-300',
 			}
 		} else {
 			return {
@@ -575,7 +614,7 @@ const ChangelogTable: React.FC = () => {
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 												{groupedLogs.map((group: GroupedChangeLog) => {
 													const log = group.firstChange
-											const actionInfo = getActionTypeInfo(log)
+
 
 											return (
 												<tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">

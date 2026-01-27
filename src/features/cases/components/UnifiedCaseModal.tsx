@@ -42,6 +42,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 import {
   createDropdownOptions,
   FormDropdown,
@@ -1194,6 +1195,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             console.error('Error actualizando email_sent:', updateError);
             // No mostramos error al usuario ya que el email se envió exitosamente
           }
+
+          // Registrar el envío en email_send_logs
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'success',
+          });
         }
 
         const recipientCount = 1 + emails.cc.length + emails.bcc.length;
@@ -1212,6 +1223,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         }
       } catch (error) {
         console.error('Error enviando correo:', error);
+        
+        // Registrar el error en email_send_logs
+        if (case_?.id) {
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Error desconocido',
+          });
+        }
+
         toast({
           title: '❌ Error',
           description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
@@ -2964,6 +2989,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             primaryEmail={case_.patient_email || ''}
             patientName={case_.nombre || ''}
             caseCode={case_.code || case_.id || ''}
+            caseId={case_.id}
             isSending={isSaving}
           />
         )}

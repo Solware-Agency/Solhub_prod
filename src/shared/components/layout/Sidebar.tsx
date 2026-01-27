@@ -855,26 +855,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           {isPrueba && (
             <>
               <FeatureGuard feature='hasStats'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/home'
-                    icon={<Home className='stroke-2 size-5 shrink-0' />}
-                    label='Inicio'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <FeatureGuard feature='hasForm'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/medical-form'
-                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
-                    label='Formulario'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/medical-form'
+                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                  label='Formulario'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <NavGroup
                 icon={

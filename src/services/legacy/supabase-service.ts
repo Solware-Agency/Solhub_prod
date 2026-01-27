@@ -586,7 +586,7 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
     }
 
     // 🔐 MULTI-TENANT: Filtrar change logs por laboratory_id
-    const { data, error } = await supabase
+    const { data: changeLogs, error: changeLogsError } = await supabase
       .from(CHANGE_LOG_TABLE)
       .select(
         `
@@ -605,15 +605,42 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
       )
       .eq('laboratory_id', profile.laboratory_id) // 🔐 FILTRO MULTI-TENANT
       .order('changed_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .limit(limit * 2); // Obtenemos más para poder mezclar con email logs
 
-    if (error) {
-      console.error('Error fetching all change logs:', error);
-      return { data: null, error };
+    if (changeLogsError) {
+      console.error('Error fetching change logs:', changeLogsError);
+      return { data: null, error: changeLogsError };
     }
 
-    // Transform the data to handle deleted records and return a strongly-typed array
-    const transformedData: ChangeLogJoined[] | undefined = data?.map(
+    // 📧 Obtener email_send_logs también
+    const { data: emailLogs, error: emailLogsError } = await supabase
+      .from('email_send_logs')
+      .select(
+        `
+				*,
+				medical_records_clean(
+					id,
+					code,
+					patient_id
+				),
+				sent_by_user:profiles!email_send_logs_sent_by_user_id_fkey(
+					id,
+					display_name,
+					email
+				)
+			`,
+      )
+      .eq('laboratory_id', profile.laboratory_id)
+      .order('sent_at', { ascending: false })
+      .limit(limit * 2);
+
+    if (emailLogsError) {
+      console.error('Error fetching email logs:', emailLogsError);
+      // No retornamos error, simplemente continuamos sin email logs
+    }
+
+    // Transform change logs
+    const transformedChangeLogs: ChangeLogJoined[] = (changeLogs || []).map(
       (row: unknown) => {
         const log = row as Record<string, unknown>;
         const result: ChangeLogJoined = {
@@ -636,10 +663,6 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
             (log['deleted_record_info'] as string | null) ?? null,
           change_session_id:
             (log['change_session_id'] as string | null) ?? null,
-          // Debug: verificar que change_session_id se está recuperando
-          // ...(process.env.NODE_ENV === 'development' && {
-          //   _debug_change_session_id: log['change_session_id'],
-          // }),
           medical_records_clean:
             (log['medical_records_clean'] as
               | {
@@ -665,7 +688,6 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
           !result.patient_id &&
           result.deleted_record_info
         ) {
-          // Handle deleted records - try to determine if it was a patient or medical case
           if (result.entity_type === 'patient') {
             return {
               ...result,
@@ -690,7 +712,38 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
       },
     );
 
-    return { data: transformedData, error: null };
+    // 📧 Transform email logs to ChangeLogJoined format
+    const transformedEmailLogs: ChangeLogJoined[] = (emailLogs || []).map(
+      (emailLog: any) => ({
+        id: `email_${emailLog.id}`,
+        medical_record_id: emailLog.case_id,
+        patient_id: null,
+        entity_type: 'email_send',
+        user_id: emailLog.sent_by_user_id || 'system',
+        user_email: emailLog.sent_by_user?.email || 'sistema@solhub.com',
+        user_display_name: emailLog.sent_by_user?.display_name || 'Sistema',
+        field_name: 'email_sent',
+        field_label: emailLog.status === 'success' ? 'Envío de Email' : 'Envío de Email (Fallido)',
+        old_value: null,
+        new_value: emailLog.recipient_email,
+        changed_at: emailLog.sent_at,
+        created_at: emailLog.created_at,
+        deleted_record_info: emailLog.error_message,
+        change_session_id: null,
+        medical_records_clean: emailLog.medical_records_clean,
+        patients: undefined,
+      }),
+    );
+
+    // Combinar y ordenar todos los logs por fecha
+    const allLogs = [...transformedChangeLogs, ...transformedEmailLogs].sort(
+      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
+
+    // Aplicar paginación después de combinar
+    const paginatedData = allLogs.slice(offset, offset + limit);
+
+    return { data: paginatedData, error: null };
   } catch (error) {
     console.error('Error fetching all change logs:', error);
     return { data: null, error };
