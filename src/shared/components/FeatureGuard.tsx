@@ -1,4 +1,5 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { useUserProfile } from '@shared/hooks/useUserProfile';
 import type { LaboratoryFeatures } from '@/shared/types/types';
 
 interface FeatureGuardProps {
@@ -13,7 +14,10 @@ export function FeatureGuard({
   fallback = null,
 }: FeatureGuardProps) {
   const { laboratory } = useLaboratory();
+  const { profile } = useUserProfile();
 
+  // El rol "prueba" respeta las features del laboratorio igual que otros roles
+  // Solo tiene bypass en rutas protegidas por roles (PrivateRoute)
   if (!laboratory?.features[feature]) {
     return <>{fallback}</>;
   }

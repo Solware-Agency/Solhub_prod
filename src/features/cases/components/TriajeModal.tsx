@@ -124,6 +124,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
       'medicowner',
       'medico_tratante',
       'enfermero',
+      'prueba', // Rol godmode con acceso completo
     ].includes(profile.role);
 
   // Query para verificar si existe triaje
@@ -180,6 +181,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     }
   }, [isOpen]);
 
+  // Reset forceEditMode when case changes (e.g., opening modal for different patient)
+  React.useEffect(() => {
+    setForceEditMode(false);
+  }, [case_?.id]);
+
   if (!isOpen || !case_) {
     return null;
   }
@@ -188,7 +194,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   if (error || queryError) {
     return ReactDOM.createPortal(
       <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
-        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+        <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error
           </h3>
@@ -237,23 +243,27 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className={`bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto ${
+              className={`bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto ${
                 isFullscreen ? 'h-[90vh]' : ''
               }`}
             >
               {/* Header */}
-              <div className='flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
-                <div className='flex-1'>
-                  <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100'>
-                    Historia Clínica
-                  </h2>
-                  <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                    {existingTriage && !forceEditMode
-                      ? 'Historia clínica registrada para el caso seleccionado'
-                      : 'Complete los datos de historia clínica para el caso seleccionado'}
-                  </p>
+              <div className='p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
+                <div className='flex items-start justify-between gap-4'>
+                  <div className='flex-1 min-w-0'>
+                    <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap'>
+                      Historia Clínica
+                    </h2>
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0'
+                    aria-label='Cerrar modal'
+                  >
+                    <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
+                  </button>
                 </div>
-                <div className='flex items-center gap-4 flex-shrink-0'>
+                <div className='flex items-center justify-end gap-3 sm:gap-4 mt-6'>
                   <div className='text-right'>
                     <p className='text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100'>
                       {case_.nombre || 'Sin nombre'}
@@ -270,19 +280,12 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                     <Button
                       onClick={() => setForceEditMode(true)}
                       variant='outline'
-                      className='flex items-center gap-2'
+                      className='flex items-center gap-2 flex-shrink-0'
                     >
                       <Edit className='w-4 h-4' />
                       Editar Historia Clínica
                     </Button>
                   )}
-                  <button
-                    onClick={onClose}
-                    className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
-                    aria-label='Cerrar modal'
-                  >
-                    <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
-                  </button>
                 </div>
               </div>
 
@@ -342,7 +345,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     // Fallback: renderizar sin portal si hay error
     return (
       <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
-        <div className='bg-white dark:bg-background rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
+        <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error
           </h3>

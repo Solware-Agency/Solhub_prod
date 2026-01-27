@@ -1,13 +1,14 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle } from 'lucide-react'
+import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, Stethoscope, MapPin } from 'lucide-react'
 import { Button } from '@shared/components/ui/button'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
+import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
-import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber, formatCurrencyWithSymbol } from '@shared/utils/number-utils'
 
 export type StatType =
 	| 'totalRevenue'
@@ -19,6 +20,12 @@ export type StatType =
 	| 'uniquePatients'
 	| 'branchRevenue'
 	| 'examTypes'
+	| 'revenueTrend'
+	| 'branchDistribution'
+	| 'currencyDistribution'
+	| 'remainingAmount'
+	| 'originRevenue'
+	| 'doctorRevenue'
 
 interface StatDetailPanelProps {
 	isOpen: boolean
@@ -62,6 +69,18 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return 'Ingresos por Sede'
 			case 'examTypes':
 				return 'Tipos de Exámenes'
+			case 'revenueTrend':
+				return 'Tendencia de Ingresos'
+			case 'branchDistribution':
+				return 'Distribución por Sede'
+			case 'currencyDistribution':
+				return 'Distribución por Moneda'
+			case 'remainingAmount':
+				return 'Casos por Cobrar'
+			case 'originRevenue':
+				return 'Ingreso por Procedencia'
+			case 'doctorRevenue':
+				return 'Ingreso por Médico Tratante'
 			default:
 				return 'Detalles'
 		}
@@ -685,6 +704,529 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 					</div>
 				)
 
+			case 'revenueTrend':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tendencia de Ingresos Mensuales</h3>
+							<div className="h-64 flex items-end justify-between gap-1">
+								{stats.salesTrendByMonth &&
+									stats.salesTrendByMonth.map((month: any) => {
+										const maxRevenue = Math.max(...stats.salesTrendByMonth.map((m: any) => m.revenue))
+										const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0
+										const isSelected = month.isSelected
+
+										return (
+											<div
+												key={month.month}
+												className={`flex-1 rounded-t-sm transition-transform duration-200 ${
+													isSelected
+														? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
+														: 'bg-gradient-to-t from-blue-500 to-blue-300'
+												}`}
+												style={{ height: `${Math.max(height, 10)}%` }}
+												title={`${month.month}: ${formatCurrency(month.revenue)}`}
+											></div>
+										)
+									})}
+							</div>
+							<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+								{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((m) => (
+									<span key={m}>{m}</span>
+								))}
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tabla de Ingresos por Mes</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead>
+										<tr className="border-b border-gray-200 dark:border-gray-700">
+											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Mes</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.salesTrendByMonth &&
+											stats.salesTrendByMonth.map((month: any, index: number) => {
+												const totalRevenue = stats.salesTrendByMonth.reduce((sum: number, m: any) => sum + m.revenue, 0)
+												const percentage = totalRevenue > 0 ? (month.revenue / totalRevenue) * 100 : 0
+												const prevMonth = index > 0 ? stats.salesTrendByMonth[index - 1] : null
+												const growth = prevMonth && prevMonth.revenue > 0 
+													? ((month.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 
+													: null
+
+												return (
+													<tr
+														key={month.month}
+														className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+															month.isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''
+														}`}
+													>
+														<td className="py-2 px-2">
+															<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{month.month}</span>
+														</td>
+														<td className="py-2 px-2 text-right">
+															<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																{formatCurrency(month.revenue)}
+															</span>
+														</td>
+														<td className="py-2 px-2 text-right">
+															<div className="flex items-center justify-end gap-2">
+																<span className="text-sm text-gray-600 dark:text-gray-400">{percentage.toFixed(1)}%</span>
+																{growth !== null && (
+																	<span
+																		className={`text-xs flex items-center ${
+																			growth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+																		}`}
+																	>
+																		{growth >= 0 ? (
+																			<TrendingUp className="w-3 h-3 mr-1" />
+																		) : (
+																			<TrendingDown className="w-3 h-3 mr-1" />
+																		)}
+																		{Math.abs(growth).toFixed(1)}%
+																	</span>
+																)}
+															</div>
+														</td>
+													</tr>
+												)
+											})}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				)
+
+			case 'branchDistribution':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Distribución por Sede</h3>
+							{stats.revenueByBranch && (
+								<CustomPieChart
+									data={stats.revenueByBranch.map((branch: any) => ({
+										branch: branch.branch,
+										revenue: branch.revenue,
+										percentage: branch.percentage,
+									}))}
+									total={stats.monthlyRevenue || 0}
+									isLoading={isLoading}
+								/>
+							)}
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tabla Detallada por Sede</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead>
+										<tr className="border-b border-gray-200 dark:border-gray-700">
+											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Sede</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.revenueByBranch &&
+											stats.revenueByBranch
+												.sort((a: any, b: any) => b.revenue - a.revenue)
+												.map((branch: any) => {
+													const maxRevenue = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
+													const percentage = maxRevenue > 0 ? (branch.revenue / maxRevenue) * 100 : 0
+
+													return (
+														<tr
+															key={branch.branch}
+															className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+														>
+															<td className="py-2 px-2">
+																<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+																	{branch.branch || 'Sin Sede'}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																	{formatCurrency(branch.revenue)}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<div className="flex items-center justify-end gap-2">
+																	<span className="text-sm text-gray-600 dark:text-gray-400">
+																		{branch.percentage.toFixed(1)}%
+																	</span>
+																	<div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+																		<div
+																			className="bg-blue-500 h-2 rounded-full"
+																			style={{ width: `${percentage}%` }}
+																		></div>
+																	</div>
+																</div>
+															</td>
+														</tr>
+													)
+												})}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				)
+
+			case 'currencyDistribution':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Distribución por Moneda</h3>
+							<CurrencyDonutChart
+								bolivaresTotal={stats?.monthlyRevenueBolivares || 0}
+								dollarsTotal={stats?.monthlyRevenueDollars || 0}
+								isLoading={isLoading}
+							/>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Desglose Detallado</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+									<div className="flex items-center gap-3 mb-2">
+										<div className="w-3 h-3 bg-green-500 rounded-full"></div>
+										<p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Bolívares (VES)</p>
+									</div>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrencyWithSymbol(stats?.monthlyRevenueBolivares || 0, 'VES ')}
+									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{stats?.monthlyRevenue && stats.monthlyRevenue > 0
+											? ((stats.monthlyRevenueBolivares || 0) / stats.monthlyRevenue * 100).toFixed(1)
+											: 0}% del total
+									</p>
+								</div>
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<div className="flex items-center gap-3 mb-2">
+										<div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+										<p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dólares (USD)</p>
+									</div>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrencyWithSymbol(stats?.monthlyRevenueDollars || 0, 'USD ')}
+									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{stats?.monthlyRevenue && stats.monthlyRevenue > 0
+											? ((stats.monthlyRevenueDollars || 0) / stats.monthlyRevenue * 100).toFixed(1)
+											: 0}% del total
+									</p>
+								</div>
+							</div>
+							<div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+								<div className="flex items-center justify-between">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Ingresos</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(stats?.monthlyRevenue || 0)}
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				)
+
+			case 'remainingAmount':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen de Casos por Cobrar</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+									<div className="flex items-center gap-2 mb-2">
+										<AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+										<p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Monto por Cobrar</p>
+									</div>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(stats?.pendingPayments || 0)}
+									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{stats?.monthlyRevenue && stats.monthlyRevenue > 0
+											? ((stats.pendingPayments || 0) / stats.monthlyRevenue * 100).toFixed(1)
+											: 0}% del total de ingresos
+									</p>
+								</div>
+								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+									<div className="flex items-center gap-2 mb-2">
+										<XCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+										<p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Casos Incompletos</p>
+									</div>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(stats?.incompleteCases || 0)}
+									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{stats?.totalCases && stats.totalCases > 0
+											? ((stats.incompleteCases || 0) / stats.totalCases * 100).toFixed(1)
+											: 0}% del total de casos
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Análisis de Pagos Pendientes</h3>
+							<div className="space-y-4">
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto Pendiente</span>
+										<span className="text-sm font-bold text-red-700 dark:text-red-300">
+											{formatCurrency(stats?.pendingPayments || 0)}
+										</span>
+									</div>
+									<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+										<div
+											className="bg-red-500 h-3 rounded-full"
+											style={{
+												width: `${
+													stats?.monthlyRevenue && stats.monthlyRevenue > 0
+														? Math.min(((stats.pendingPayments || 0) / stats.monthlyRevenue) * 100, 100)
+														: 0
+												}%`,
+											}}
+										></div>
+									</div>
+								</div>
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Casos Incompletos</span>
+										<span className="text-sm font-bold text-orange-700 dark:text-orange-300">
+											{formatNumber(stats?.incompleteCases || 0)}
+										</span>
+									</div>
+									<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+										<div
+											className="bg-orange-500 h-3 rounded-full"
+											style={{
+												width: `${
+													stats?.totalCases && stats.totalCases > 0
+														? ((stats.incompleteCases || 0) / stats.totalCases) * 100
+														: 0
+												}%`,
+											}}
+										></div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos del Período</p>
+									<p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(stats?.monthlyRevenue || 0)}
+									</p>
+								</div>
+								<div className="text-right">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
+									<p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(stats?.totalCases || 0)}
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				)
+
+			case 'originRevenue':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingreso por Procedencia</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead>
+										<tr className="border-b border-gray-200 dark:border-gray-700">
+											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Procedencia</th>
+											<th className="text-center py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Casos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.revenueByOrigin &&
+											stats.revenueByOrigin
+												.sort((a: any, b: any) => b.revenue - a.revenue)
+												.map((origin: any) => {
+													const maxRevenue = Math.max(...stats.revenueByOrigin.map((o: any) => o.revenue))
+													const percentage = maxRevenue > 0 ? (origin.revenue / maxRevenue) * 100 : 0
+
+													return (
+														<tr
+															key={origin.origin}
+															className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+														>
+															<td className="py-2 px-2">
+																<div className="flex items-center gap-2">
+																	<MapPin className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{origin.origin}</span>
+																</div>
+															</td>
+															<td className="py-2 px-2 text-center">
+																<span className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+																	{origin.cases}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																	{formatCurrency(origin.revenue)}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<div className="flex items-center justify-end gap-2">
+																	<span className="text-sm text-gray-600 dark:text-gray-400">
+																		{origin.percentage.toFixed(1)}%
+																	</span>
+																	<div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+																		<div
+																			className="bg-purple-500 h-2 rounded-full"
+																			style={{ width: `${percentage}%` }}
+																		></div>
+																	</div>
+																</div>
+															</td>
+														</tr>
+													)
+												})}
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Procedencias</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.revenueByOrigin?.length || 0}
+									</p>
+								</div>
+								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.revenueByOrigin?.reduce((sum: number, o: any) => sum + o.cases, 0) || 0}
+									</p>
+								</div>
+								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(
+											stats.revenueByOrigin?.reduce((sum: number, o: any) => sum + o.revenue, 0) || 0
+										)}
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				)
+
+			case 'doctorRevenue':
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingreso por Médico Tratante</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead>
+										<tr className="border-b border-gray-200 dark:border-gray-700">
+											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Médico</th>
+											<th className="text-center py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Casos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.topTreatingDoctors &&
+											stats.topTreatingDoctors
+												.sort((a: any, b: any) => b.revenue - a.revenue)
+												.map((doctor: any, index: number) => {
+													const maxRevenue = Math.max(...stats.topTreatingDoctors.map((d: any) => d.revenue))
+													const percentage = maxRevenue > 0 ? (doctor.revenue / maxRevenue) * 100 : 0
+													const totalRevenue = stats.totalRevenue || stats.monthlyRevenue || 0
+													const revenuePercentage = totalRevenue > 0 ? (doctor.revenue / totalRevenue) * 100 : 0
+
+													return (
+														<tr
+															key={doctor.doctor}
+															className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+														>
+															<td className="py-2 px-2">
+																<div className="flex items-center gap-2">
+																	<div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+																		<Stethoscope className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+																	</div>
+																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+																		{index + 1}. {doctor.doctor}
+																	</span>
+																</div>
+															</td>
+															<td className="py-2 px-2 text-center">
+																<span className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+																	{doctor.cases}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																	{formatCurrency(doctor.revenue)}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<div className="flex items-center justify-end gap-2">
+																	<span className="text-sm text-gray-600 dark:text-gray-400">
+																		{revenuePercentage.toFixed(1)}%
+																	</span>
+																	<div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+																		<div
+																			className="bg-blue-500 h-2 rounded-full"
+																			style={{ width: `${percentage}%` }}
+																		></div>
+																	</div>
+																</div>
+															</td>
+														</tr>
+													)
+												})}
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Médicos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.topTreatingDoctors?.length || 0}
+									</p>
+								</div>
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.cases, 0) || 0}
+									</p>
+								</div>
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(
+											stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.revenue, 0) || 0
+										)}
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				)
+
 			case 'examTypes':
 				return (
 					<div className="space-y-6">
@@ -693,9 +1235,12 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								Distribución por Tipo de Examen
 							</h3>
 							<div className="space-y-4">
-								{stats.topExamTypes &&
-									stats.topExamTypes.map((exam: any, index: number) => {
+								{stats.revenueByExamType &&
+									stats.revenueByExamType.map((exam: any, index: number) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
+										const totalRevenue = stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+										const percentage = totalRevenue > 0 ? (exam.revenue / totalRevenue) * 100 : 0
+
 										return (
 											<div key={exam.examType} className="flex items-center justify-between">
 												<div className="flex items-center gap-2">
@@ -704,10 +1249,10 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												</div>
 												<div className="flex flex-col items-end">
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatNumber(exam.count)}
+														{formatCurrency(exam.revenue)}
 													</span>
 													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{formatCurrency(exam.revenue)}
+														{formatNumber(exam.count)} casos • {percentage.toFixed(1)}%
 													</span>
 												</div>
 											</div>
@@ -717,36 +1262,92 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos por Tipo de Examen</h3>
-							</div>
-							<div className="space-y-4">
-								{stats.revenueByExamType &&
-									stats.revenueByExamType.slice(0, 5).map((exam: any) => {
-										const maxRevenue = Math.max(...stats.revenueByExamType.map((e: any) => e.revenue))
-										const percentage = maxRevenue > 0 ? (exam.revenue / maxRevenue) * 100 : 0
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tabla Detallada de Tipos de Exámenes</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead>
+										<tr className="border-b border-gray-200 dark:border-gray-700">
+											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Tipo de Examen</th>
+											<th className="text-center py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Casos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+										</tr>
+									</thead>
+									<tbody>
+										{stats.revenueByExamType &&
+											stats.revenueByExamType
+												.slice()
+												.sort((a: any, b: any) => b.count - a.count) // Sort by count descending (most requested first)
+												.map((exam: any, index: number) => {
+													const totalRevenue = stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+													const percentage = totalRevenue > 0 ? (exam.revenue / totalRevenue) * 100 : 0
+													const maxRevenue = Math.max(...stats.revenueByExamType.map((e: any) => e.revenue))
+													const barPercentage = maxRevenue > 0 ? (exam.revenue / maxRevenue) * 100 : 0
 
-										return (
-											<div key={exam.examType}>
-												<div className="flex items-center justify-between mb-1">
-													<span className="text-sm text-gray-600 dark:text-gray-400">{exam.examType}</span>
-													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatCurrency(exam.revenue)}
-													</span>
-												</div>
-												<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-													<div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
-												</div>
-												<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-													<span>{formatNumber(exam.count)} casos</span>
-													<span>
-														{stats.monthlyRevenue > 0 ? ((exam.revenue / stats.monthlyRevenue) * 100).toFixed(1) : 0}%
-														del total del mes
-													</span>
-												</div>
-											</div>
-										)
-									})}
+													return (
+														<tr
+															key={exam.examType}
+															className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+														>
+															<td className="py-2 px-2">
+																<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+																	{exam.examType}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-center">
+																<span className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+																	{exam.count}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																	{formatCurrency(exam.revenue)}
+																</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<div className="flex items-center justify-end gap-2">
+																	<span className="text-sm text-gray-600 dark:text-gray-400">
+																		{percentage.toFixed(1)}%
+																	</span>
+																	<div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+																		<div
+																			className="bg-blue-500 h-2 rounded-full"
+																			style={{ width: `${barPercentage}%` }}
+																		></div>
+																	</div>
+																</div>
+															</td>
+														</tr>
+													)
+												})}
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Tipos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.revenueByExamType?.length || 0}
+									</p>
+								</div>
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{stats.revenueByExamType?.reduce((sum: number, e: any) => sum + e.count, 0) || 0}
+									</p>
+								</div>
+								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatCurrency(
+											stats.revenueByExamType?.reduce((sum: number, e: any) => sum + e.revenue, 0) || 0
+										)}
+									</p>
+								</div>
 							</div>
 						</div>
 					</div>

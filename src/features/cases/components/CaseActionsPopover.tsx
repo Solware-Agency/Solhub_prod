@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
-import { Eye, FileText, FlaskConical, ClipboardList, MoreVertical } from 'lucide-react';
+import { FileText, FlaskConical, ClipboardList, MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { cn } from '@shared/lib/utils';
 
 interface CaseActionsPopoverProps {
   case_: MedicalCaseWithPatient;
-  onView: (case_: MedicalCaseWithPatient) => void;
   onGenerate: (case_: MedicalCaseWithPatient) => void;
   onReactions?: (case_: MedicalCaseWithPatient) => void;
   onTriaje?: (case_: MedicalCaseWithPatient) => void;
@@ -18,7 +17,6 @@ interface CaseActionsPopoverProps {
 
 const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
   case_,
-  onView,
   onGenerate,
   onReactions,
   onTriaje,
@@ -66,16 +64,6 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
         align="end"
         sideOffset={8}
       >
-        <button
-          onClick={() => handleAction(() => onView(case_))}
-          className={cn(
-            'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
-          )}
-        >
-          <Eye className='w-4 h-4 flex-shrink-0' />
-          <span className='truncate'>Ver</span>
-        </button>
-
         {canShowGenerate && (
           <FeatureGuard feature='hasCaseGenerator'>
             <button
@@ -111,7 +99,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
               )}
             >
               <ClipboardList className='w-4 h-4 flex-shrink-0' />
-              <span className='truncate'>Historia Clínica</span>
+              <span className='truncate'>Historia</span>
             </button>
           </FeatureGuard>
         )}

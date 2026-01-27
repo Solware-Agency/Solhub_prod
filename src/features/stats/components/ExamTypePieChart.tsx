@@ -8,9 +8,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 interface ExamTypePieChartProps {
 	startDate?: Date
 	endDate?: Date
+	onClick?: () => void
 }
 
-const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate }) => {
+const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate, onClick }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
@@ -41,17 +42,26 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 	// Calculate total revenue
 	const totalRevenue = stats?.revenueByExamType?.reduce((sum, item) => sum + item.revenue, 0) || 0
 
-	// Prepare data for pie chart with percentages
+	// Prepare data for pie chart with percentages, sorted by count (most requested first)
 	const pieData =
-		stats?.revenueByExamType?.map((item, index) => ({
-			...item,
-			percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
-			color: getExamTypeColor(index),
-		})) || []
+		stats?.revenueByExamType
+			?.slice()
+			.sort((a, b) => b.count - a.count) // Sort by count descending (most requested first)
+			.map((item, index) => ({
+				...item,
+				percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+				color: getExamTypeColor(index),
+			})) || []
+
+	// Always show top 3
+	const displayedData = pieData.slice(0, 3)
 
 	if (isLoading) {
 		return (
-			<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+			<Card 
+				className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+				onClick={onClick}
+			>
 				<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 					<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 						Tipos de Exámenes Más Solicitados{' '}
@@ -73,7 +83,10 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 	}
 
 	return (
-		<Card className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full">
+		<Card 
+			className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg h-full cursor-pointer"
+			onClick={onClick}
+		>
 			<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 				<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
 					Exámenes Más Solicitados{' '}
@@ -94,7 +107,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 							<ResponsiveContainer width="100%" height="100%">
 								<PieChart>
 									<Pie
-										data={pieData}
+										data={displayedData}
 										cx="50%"
 										cy="50%"
 										labelLine={false}
@@ -107,23 +120,27 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 										strokeLinecap="round" // Bordes redondeados
 										paddingAngle={0} // Espacio adicional entre segmentos
 									>
-										{pieData.map((entry, index) => (
-											<Cell
-												key={`cell-${index}`}
-												fill={entry.color}
-												className="cursor-pointer"
-												strokeWidth={0}
-												style={{
-													opacity: hoveredIndex === index || hoveredIndex === null ? 1 : 0.6,
-													filter: hoveredIndex === index ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
-													transform: hoveredIndex === index ? 'scale(1.05)' : 'scale(1)',
-													transformOrigin: 'center',
-													transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-												}}
-												onMouseEnter={() => setHoveredIndex(index)}
-												onMouseLeave={() => setHoveredIndex(null)}
-											/>
-										))}
+										{displayedData.map((entry, index) => {
+											// Find the original index in pieData for hover state
+											const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
+											return (
+												<Cell
+													key={`cell-${index}`}
+													fill={entry.color}
+													className="cursor-pointer"
+													strokeWidth={0}
+													style={{
+														opacity: hoveredIndex === originalIndex || hoveredIndex === null ? 1 : 0.6,
+														filter: hoveredIndex === originalIndex ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
+														transform: hoveredIndex === originalIndex ? 'scale(1.05)' : 'scale(1)',
+														transformOrigin: 'center',
+														transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+													}}
+													onMouseEnter={() => setHoveredIndex(originalIndex)}
+													onMouseLeave={() => setHoveredIndex(null)}
+												/>
+											)
+										})}
 									</Pie>
 								</PieChart>
 							</ResponsiveContainer>
@@ -141,48 +158,52 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate 
 
 						{/* Leyenda personalizada - Estilo original del SVG */}
 						<div className="flex flex-col">
-							{pieData.map((entry, index) => (
-								<div
-									key={entry.examType}
-									className={`flex items-center justify-between transition-all duration-300 cursor-pointer p-2 rounded-lg ${
-										hoveredIndex === index ? 'scale-105' : ''
-									}`}
-									onMouseEnter={() => setHoveredIndex(index)}
-									onMouseLeave={() => setHoveredIndex(null)}
-								>
-									<div className="flex items-center gap-2">
-										<div
-											className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
-												hoveredIndex === index ? 'scale-125' : ''
-											}`}
-											style={{ backgroundColor: entry.color }}
-										>
-											{getExamTypeIcon(entry.examType)}
-										</div>
-										<div>
-											<span
-												className={` flex items-center gap-2 text-sm transition-all duration-300 ${
-													hoveredIndex === index
-														? 'text-gray-900 dark:text-gray-100 font-medium'
-														: 'text-gray-600 dark:text-gray-400'
-												}`}
-											>
-												{entry.examType}
-												<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
-											</span>
-										</div>
-									</div>
-									<span
-										className={`text-sm transition-all duration-300 ${
-											hoveredIndex === index
-												? 'text-gray-900 dark:text-gray-100 font-semibold'
-												: 'text-gray-700 dark:text-gray-300 font-medium'
+							{displayedData.map((entry, index) => {
+								// Find the original index in pieData for hover state
+								const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
+								return (
+									<div
+										key={entry.examType}
+										className={`flex items-center justify-between transition-all duration-300 cursor-pointer p-2 rounded-lg ${
+											hoveredIndex === originalIndex ? 'scale-105' : ''
 										}`}
+										onMouseEnter={() => setHoveredIndex(originalIndex)}
+										onMouseLeave={() => setHoveredIndex(null)}
 									>
-										{Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
-									</span>
-								</div>
-							))}
+										<div className="flex items-center gap-2">
+											<div
+												className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+													hoveredIndex === originalIndex ? 'scale-125' : ''
+												}`}
+												style={{ backgroundColor: entry.color }}
+											>
+												{getExamTypeIcon(entry.examType)}
+											</div>
+											<div>
+												<span
+													className={` flex items-center gap-2 text-sm transition-all duration-300 ${
+														hoveredIndex === originalIndex
+															? 'text-gray-900 dark:text-gray-100 font-medium'
+															: 'text-gray-600 dark:text-gray-400'
+													}`}
+												>
+													{entry.examType}
+													<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
+												</span>
+											</div>
+										</div>
+										<span
+											className={`text-sm transition-all duration-300 ${
+												hoveredIndex === originalIndex
+													? 'text-gray-900 dark:text-gray-100 font-semibold'
+													: 'text-gray-700 dark:text-gray-300 font-medium'
+											}`}
+										>
+											{Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
+										</span>
+									</div>
+								)
+							})}
 						</div>
 					</div>
 				) : (

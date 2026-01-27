@@ -25,11 +25,35 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 
 	// Year picker functionality
 	const currentYear = new Date().getFullYear()
+	const currentMonthNum = new Date().getMonth()
+	const currentDay = new Date().getDate()
 	const startYear = 1900 // Allow selection from 1900
-	const endYear = currentYear + 10
+	const endYear = currentYear // No permitir años futuros
+
+	// Verificar si hay una función disabled para saber si debemos restringir fechas futuras
+	const hasDisabledProp = !!props.disabled
+	const isDateDisabled = (date: Date) => {
+		if (props.disabled) {
+			if (typeof props.disabled === 'function') {
+				return props.disabled(date)
+			}
+		}
+		return false
+	}
 
 	const handleYearSelect = (year: number) => {
-		const newDate = new Date(year, currentMonth.getMonth(), 1)
+		// Si el año es futuro, no permitir seleccionarlo
+		if (year > currentYear) {
+			return
+		}
+		
+		// Si el año es el actual, asegurarse de que el mes no sea futuro
+		let month = currentMonth.getMonth()
+		if (year === currentYear && month > currentMonthNum) {
+			month = currentMonthNum
+		}
+		
+		const newDate = new Date(year, month, 1)
 		// Update internal state if not controlled
 		if (!props.month) {
 			setInternalMonth(newDate)
@@ -59,6 +83,19 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 
 	const handleNextMonth = () => {
 		const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+		const today = new Date()
+		today.setHours(0, 0, 0, 0)
+		
+		// Si hay una función disabled que restringe fechas futuras, no permitir avanzar a meses futuros
+		if (hasDisabledProp && isDateDisabled(nextMonth)) {
+			return
+		}
+		
+		// Si el mes siguiente es futuro, no permitir avanzar
+		if (nextMonth > today) {
+			return
+		}
+		
 		// Update internal state if not controlled
 		if (!props.month) {
 			setInternalMonth(nextMonth)
@@ -71,7 +108,13 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 		const selectedYear = currentMonth.getFullYear()
 
 		return (
-			<div className="absolute top-0 left-0 right-0 bottom-0 bg-white dark:bg-background z-100 rounded-md border shadow-lg p-3 sm:p-4">
+			<div 
+				className="absolute top-0 left-0 right-0 bottom-0 bg-white dark:bg-background z-100 rounded-md border shadow-lg p-3 sm:p-4"
+				style={{
+					overscrollBehavior: 'contain',
+					touchAction: 'pan-y'
+				}}
+			>
 				<div className="flex items-center justify-between mb-3 sm:mb-4">
 					<h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">Seleccionar Año</h3>
 					<button
@@ -82,22 +125,45 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 					</button>
 				</div>
 
-				<div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto">
-					{years.map((year) => (
-						<button
-							key={year}
-							onClick={() => handleYearSelect(year)}
-							className={`p-1.5 sm:p-2 text-xs sm:text-sm font-medium rounded-md transition-transform duration-200 hover:scale-105 ${
-								year === selectedYear
-									? 'bg-primary text-primary-foreground shadow-md'
-									: year === currentYear
-									? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-500'
-									: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-							}`}
-						>
-							{year}
-						</button>
-					))}
+				<div 
+					className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto"
+					style={{
+						WebkitOverflowScrolling: 'touch',
+						overscrollBehavior: 'contain',
+						touchAction: 'pan-y',
+						willChange: 'scroll-position'
+					}}
+					onTouchStart={(e) => {
+						// Prevenir que el scroll se propague al body
+						e.stopPropagation()
+					}}
+					onTouchMove={(e) => {
+						// Prevenir que el scroll se propague al body
+						e.stopPropagation()
+					}}
+				>
+					{years.map((year) => {
+						const isFutureYear = year > currentYear
+						const isFutureMonth = year === currentYear && currentMonth.getMonth() > currentMonthNum
+						const isDisabled = isFutureYear || (hasDisabledProp && isFutureMonth)
+						
+						return (
+							<button
+								key={year}
+								onClick={() => !isDisabled && handleYearSelect(year)}
+								disabled={isDisabled}
+								className={cn(
+									"p-1.5 sm:p-2 text-xs sm:text-sm font-medium rounded-md transition-transform duration-200 hover:scale-105",
+									isDisabled && "opacity-30 cursor-not-allowed",
+									!isDisabled && year === selectedYear && 'bg-primary text-primary-foreground shadow-md',
+									!isDisabled && year === currentYear && 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-500',
+									!isDisabled && year !== selectedYear && year !== currentYear && 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+								)}
+							>
+								{year}
+							</button>
+						)
+					})}
 				</div>
 
 				<div className="mt-3 sm:mt-4 flex justify-center gap-1.5 sm:gap-2">
@@ -120,6 +186,21 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 
 	// Custom caption component with year picker y flechas de mes
 	const CustomCaption = ({ displayMonth }: { displayMonth: Date }) => {
+		const today = new Date()
+		today.setHours(0, 0, 0, 0)
+		const nextMonth = new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1)
+		nextMonth.setHours(0, 0, 0, 0)
+		
+		// Verificar si el mes siguiente está deshabilitado
+		let isNextMonthDisabled = false
+		if (hasDisabledProp) {
+			isNextMonthDisabled = isDateDisabled(nextMonth)
+		}
+		// También deshabilitar si el mes siguiente es futuro
+		if (nextMonth > today) {
+			isNextMonthDisabled = true
+		}
+		
 		return (
 			<div className="flex justify-center pt-1 relative items-center gap-1 sm:gap-2">
 				<button
@@ -137,7 +218,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 				</button>
 				<button
 					onClick={handleNextMonth}
-					className="absolute right-0 p-0.5 sm:p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+					disabled={isNextMonthDisabled}
+					className={cn(
+						"absolute right-0 p-0.5 sm:p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800",
+						isNextMonthDisabled && "opacity-50 cursor-not-allowed"
+					)}
 					aria-label="Mes siguiente"
 				>
 					<ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />

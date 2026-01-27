@@ -5,6 +5,45 @@
 
 import { supabase } from '../config/config';
 // import type { Database } from '@shared/types/types' // No longer used
+import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils';
+
+// =====================================================================
+// FUNCIONES HELPER
+// =====================================================================
+
+/**
+ * Obtener laboratory_id del usuario autenticado
+ * Helper function para multi-tenant
+ */
+const getUserLaboratoryId = async (): Promise<string> => {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id;
+
+    if (!laboratoryId) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    return laboratoryId;
+  } catch (error) {
+    console.error('Error obteniendo laboratory_id:', error);
+    throw error;
+  }
+};
 
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
@@ -70,6 +109,7 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 export interface MedicalCaseInsert {
@@ -205,6 +245,7 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -257,6 +298,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;
@@ -264,6 +306,7 @@ export interface MedicalCaseWithPatient {
   edad: string | null;
   telefono: string | null;
   patient_email: string | null;
+  fecha_nacimiento?: string | null; // Fecha de nacimiento del paciente
 }
 
 // =====================================================================
@@ -497,6 +540,7 @@ export const getCasesWithPatientInfo = async (
     dateFrom?: string;
     dateTo?: string;
     examType?: string;
+    consulta?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
     userRole?:
       | 'owner'
@@ -681,6 +725,13 @@ export const getCasesWithPatientInfo = async (
         });
       }
 
+      // Filtro por tipo de consulta (especialidad médica)
+      if (filters?.consulta) {
+        combinedResults = combinedResults.filter((item: any) => {
+          return item.consulta === filters.consulta;
+        });
+      }
+
       if (filters?.paymentStatus) {
         combinedResults = combinedResults.filter(
           (item: any) => item.payment_status === filters.paymentStatus,
@@ -840,11 +891,16 @@ export const getCasesWithPatientInfo = async (
     }
 
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.examType) {
@@ -858,6 +914,11 @@ export const getCasesWithPatientInfo = async (
         exactExamType = 'Biopsia';
       }
       query = query.eq('exam_type', exactExamType);
+    }
+
+    // Filtro por tipo de consulta (especialidad médica)
+    if (filters?.consulta) {
+      query = query.eq('consulta', filters.consulta);
     }
 
     if (filters?.paymentStatus) {
@@ -1022,6 +1083,7 @@ export const getCasesWithPatientInfo = async (
 export const getAllCasesWithPatientInfo = async (filters?: {
   searchTerm?: string;
   branch?: string;
+  branchFilter?: string[];
   dateFrom?: string;
   dateTo?: string;
   examType?: string;
@@ -1040,24 +1102,201 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   originFilter?: string[];
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
+  emailSentStatus?: boolean;
 }) => {
   try {
-    // Si hay un término de búsqueda, usar una aproximación diferente para evitar problemas de parsing
+    // Si hay un término de búsqueda, intentar usar función optimizada primero
     if (filters?.searchTerm) {
       const cleanSearchTerm = filters.searchTerm.trim();
-      console.log(
-        '🔍 [DEBUG] Término de búsqueda original:',
-        filters.searchTerm,
-      );
-      console.log('🔍 [DEBUG] Término de búsqueda limpio:', cleanSearchTerm);
 
       if (cleanSearchTerm) {
+        // Intentar usar función SQL optimizada con pg_trgm
+        try {
+          const laboratoryId = await getUserLaboratoryId();
+          const { data: optimizedResults, error: optimizedError } = await supabase.rpc(
+            'search_medical_cases_optimized',
+            {
+              search_term: cleanSearchTerm,
+              lab_id: laboratoryId,
+              result_limit: 1000, // Límite alto para obtener todos los resultados relevantes
+            },
+          );
+
+          if (!optimizedError && optimizedResults && optimizedResults.length > 0) {
+            // Obtener los IDs de los casos encontrados
+            const caseIds = optimizedResults.map((r: any) => r.id);
+
+            // Obtener los casos completos con información del paciente
+            const { data: fullCases, error: fullCasesError } = await supabase
+              .from('medical_records_clean')
+              .select(
+                `
+                *,
+                patients(
+                  cedula,
+                  nombre,
+                  edad,
+                  telefono,
+                  email,
+                  fecha_nacimiento
+                )
+              `,
+              )
+              .in('id', caseIds)
+              .order('created_at', { ascending: false });
+
+            if (!fullCasesError && fullCases) {
+              // Transformar los datos
+              const transformedData = fullCases.map((item: any) => ({
+                ...item,
+                cedula: item.patients?.cedula || '',
+                nombre: item.patients?.nombre || '',
+                edad: item.patients?.edad || null,
+                telefono: item.patients?.telefono || null,
+                patient_email: item.patients?.email || null,
+                fecha_nacimiento: item.patients?.fecha_nacimiento || null,
+                version: item.version || null,
+              })) as MedicalCaseWithPatient[];
+
+              // Aplicar otros filtros si existen (misma lógica que el método tradicional)
+              let filteredData = transformedData;
+
+              if (filters?.branch) {
+                filteredData = filteredData.filter(
+                  (item) => item.branch === filters.branch,
+                );
+              }
+
+              if (filters?.branchFilter && filters.branchFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) => item.branch && filters.branchFilter!.includes(item.branch),
+                );
+              }
+
+              if (filters?.dateFrom) {
+                filteredData = filteredData.filter(
+                  (item) => item.date >= filters.dateFrom!,
+                );
+              }
+
+              if (filters?.dateTo) {
+                filteredData = filteredData.filter(
+                  (item) => item.date <= filters.dateTo!,
+                );
+              }
+
+              if (filters?.examType) {
+                let exactExamType = filters.examType;
+                if (filters.examType === 'inmunohistoquimica') {
+                  exactExamType = 'Inmunohistoquímica';
+                } else if (filters.examType === 'citologia') {
+                  exactExamType = 'Citología';
+                } else if (filters.examType === 'biopsia') {
+                  exactExamType = 'Biopsia';
+                }
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === exactExamType,
+                );
+              }
+
+              if (filters?.paymentStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.payment_status === filters.paymentStatus,
+                );
+              }
+
+              if (filters?.documentStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.doc_aprobado === filters.documentStatus,
+                );
+              }
+
+              if (filters?.pdfStatus) {
+                if (filters.pdfStatus === 'pendientes') {
+                  filteredData = filteredData.filter(
+                    (item) => item.pdf_en_ready === false,
+                  );
+                } else if (filters.pdfStatus === 'faltantes') {
+                  filteredData = filteredData.filter(
+                    (item) => item.pdf_en_ready === true,
+                  );
+                }
+              }
+
+              if (filters?.citoStatus) {
+                filteredData = filteredData.filter(
+                  (item) => item.cito_status === filters.citoStatus,
+                );
+              }
+
+              if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.treating_doctor &&
+                    filters.doctorFilter!.includes(item.treating_doctor),
+                );
+              }
+
+              if (filters?.originFilter && filters.originFilter.length > 0) {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.origin && filters.originFilter!.includes(item.origin),
+                );
+              }
+
+              if (filters?.emailSentStatus !== undefined) {
+                filteredData = filteredData.filter(
+                  (item) => item.email_sent === filters.emailSentStatus,
+                );
+              }
+
+              if (filters?.userRole === 'residente') {
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === 'Biopsia',
+                );
+              }
+
+              if (filters?.userRole === 'citotecno') {
+                filteredData = filteredData.filter(
+                  (item) => item.exam_type === 'Citología',
+                );
+              }
+
+              if (filters?.userRole === 'patologo') {
+                filteredData = filteredData.filter(
+                  (item) =>
+                    item.exam_type === 'Biopsia' ||
+                    item.exam_type === 'Inmunohistoquímica',
+                );
+              }
+
+              // Aplicar ordenamiento si existe
+              if (filters?.sortField && filters?.sortDirection) {
+                filteredData.sort((a, b) => {
+                  const aValue = (a as any)[filters.sortField!];
+                  const bValue = (b as any)[filters.sortField!];
+                  if (filters.sortDirection === 'asc') {
+                    return aValue > bValue ? 1 : -1;
+                  } else {
+                    return aValue < bValue ? 1 : -1;
+                  }
+                });
+              }
+
+              return filteredData;
+            }
+          }
+        } catch (optimizedError) {
+          console.warn(
+            '⚠️ Búsqueda optimizada falló, usando método tradicional:',
+            optimizedError,
+          );
+          // Continuar con método tradicional como fallback
+        }
+
+        // FALLBACK: Método tradicional (múltiples queries con ILIKE)
         // Escapar caracteres especiales
         const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
-        console.log(
-          '🔍 [DEBUG] Término de búsqueda escapado:',
-          escapedSearchTerm,
-        );
 
         // Hacer múltiples consultas separadas y combinar resultados
         const searchPromises = [
@@ -1192,6 +1431,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
         }
 
+        if (filters?.branchFilter && filters.branchFilter.length > 0) {
+          filteredData = filteredData.filter(
+            (item) => item.branch && filters.branchFilter!.includes(item.branch),
+          );
+        }
+
         if (filters?.dateFrom) {
           filteredData = filteredData.filter(
             (item) => item.date >= filters.dateFrom!,
@@ -1266,6 +1511,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           filteredData = filteredData.filter(
             (item) =>
               item.origin && filters.originFilter!.includes(item.origin),
+          );
+        }
+
+        if (filters?.emailSentStatus !== undefined) {
+          filteredData = filteredData.filter(
+            (item) => item.email_sent === filters.emailSentStatus,
           );
         }
 
@@ -1352,12 +1603,22 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         query = query.eq('branch', filters.branch);
       }
 
+      // Si hay branchFilter (múltiples sedes), usar .in()
+      if (filters?.branchFilter && filters.branchFilter.length > 0) {
+        query = query.in('branch', filters.branchFilter);
+      }
+
       if (filters?.dateFrom) {
-        query = query.gte('date', filters.dateFrom);
+        // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+        query = query.filter('created_at', 'gte', filters.dateFrom);
       }
 
       if (filters?.dateTo) {
-        query = query.lte('date', filters.dateTo);
+        // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+        const nextDay = new Date(filters.dateTo);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split('T')[0];
+        query = query.filter('created_at', 'lt', nextDayStr);
       }
 
       if (filters?.examType) {
@@ -1404,6 +1665,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       // Filtro por procedencia
       if (filters?.originFilter && filters.originFilter.length > 0) {
         query = query.in('origin', filters.originFilter);
+      }
+
+      // Filtro por email enviado
+      if (filters?.emailSentStatus !== undefined) {
+        query = query.eq('email_sent', filters.emailSentStatus);
       }
 
       // Si el usuario es residente, solo mostrar casos de biopsia
@@ -1528,6 +1794,9 @@ export const updateMedicalCase = async (
 
 /**
  * Registrar cambios de caso médico en change_logs
+ * 
+ * IMPORTANTE: Esta función se ejecuta dentro de la misma promesa del update
+ * para mitigar fallos parciales (si el update falla, el log no se registra)
  */
 const logMedicalCaseChanges = async (
   caseId: string,
@@ -1546,6 +1815,11 @@ const logMedicalCaseChanges = async (
 
     const userEmail = profile?.email || user.user?.email || 'unknown';
     const userDisplayName = profile?.display_name || 'Usuario';
+
+    // Generar session_id único para esta sesión de edición (por submit, no por modal)
+    // Esto agrupa todos los cambios del mismo submit en una sola sesión
+    const changeSessionId = generateChangeSessionId();
+    const changedAt = new Date().toISOString();
 
     // Crear logs para cada campo que cambió
     const changes = [];
@@ -1570,25 +1844,30 @@ const logMedicalCaseChanges = async (
       descripcion_macroscopica: 'Descripción Macroscópica',
       diagnostico: 'Diagnóstico',
       comentario: 'Comentario',
+      consulta: 'Tipo de Consulta',
+      image_url: 'URL de Imagen',
     };
 
-    // Detectar cambios
+    // Detectar cambios con normalización (evita falsos positivos)
     for (const [field, newValue] of Object.entries(newData)) {
-      if (field === 'updated_at') continue;
+      if (field === 'updated_at' || field === 'version') continue;
 
       const oldValue = oldData[field as keyof MedicalCase];
 
-      if (oldValue !== newValue) {
+      // Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
+      if (hasRealChange(oldValue, newValue)) {
         changes.push({
           medical_record_id: caseId,
           entity_type: 'medical_case',
           field_name: field,
           field_label: fieldLabels[field] || field,
-          old_value: String(oldValue || ''),
-          new_value: String(newValue || ''),
+          old_value: formatValueForLog(oldValue),
+          new_value: formatValueForLog(newValue),
           user_id: userId,
           user_email: userEmail,
           user_display_name: userDisplayName,
+          change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
+          changed_at: changedAt, // Mismo timestamp para todos
         });
       }
     }
@@ -1599,14 +1878,16 @@ const logMedicalCaseChanges = async (
 
       if (error) {
         console.error('Error registrando cambios del caso médico:', error);
+        // No lanzar error para no romper el flujo del update
       } else {
         console.log(
-          `✅ ${changes.length} cambios registrados para el caso médico`,
+          `✅ ${changes.length} cambios registrados para el caso médico (session: ${changeSessionId})`,
         );
       }
     }
   } catch (error) {
     console.error('Error en logMedicalCaseChanges:', error);
+    // No lanzar error para no romper el flujo del update
   }
 };
 
@@ -1628,7 +1909,8 @@ export const findCaseByCode = async (
 					nombre,
 					edad,
 					telefono,
-					email
+					email,
+					fecha_nacimiento
 				)
 			`,
       )
@@ -1652,6 +1934,7 @@ export const findCaseByCode = async (
       edad: (data as any).patients?.edad || null,
       telefono: (data as any).patients?.telefono || null,
       patient_email: (data as any).patients?.email || null,
+      fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
       version: (data as any).version || null,
       image_url: (data as any).image_url || null,
@@ -1685,11 +1968,16 @@ export const getMedicalCasesStats = async (filters?: {
 
     // Aplicar filtros
     if (filters?.dateFrom) {
-      query = query.gte('date', filters.dateFrom);
+      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
+      query = query.filter('created_at', 'gte', filters.dateFrom);
     }
 
     if (filters?.dateTo) {
-      query = query.lte('date', filters.dateTo);
+      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
+      const nextDay = new Date(filters.dateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('created_at', 'lt', nextDayStr);
     }
 
     if (filters?.branch) {
@@ -1753,7 +2041,7 @@ export const deleteMedicalCase = async (
     // Primero verificar que el caso existe y obtener más información
     const { data: existingCase, error: fetchError } = await supabase
       .from('medical_records_clean')
-      .select('id, code, patient_id, exam_type')
+      .select('id, code, patient_id, exam_type, uploaded_pdf_url')
       .eq('id', caseId)
       .single();
 
@@ -1812,6 +2100,32 @@ export const deleteMedicalCase = async (
       // Continue with deletion even if logging fails
     } else {
       console.log('✅ Changelog de eliminación registrado');
+    }
+
+    // Eliminar el PDF adjunto si existe
+    if (existingCase.uploaded_pdf_url) {
+      try {
+        const { deleteCasePDF } = await import('../storage/case-pdf-storage-service');
+        
+        // Obtener laboratory_id del usuario
+        const laboratoryId = await getUserLaboratoryId();
+        
+        const { error: pdfDeleteError } = await deleteCasePDF(
+          caseId,
+          existingCase.uploaded_pdf_url,
+          laboratoryId
+        );
+        
+        if (pdfDeleteError) {
+          console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', pdfDeleteError);
+          // Continuar con la eliminación del caso aunque falle la eliminación del PDF
+        } else {
+          console.log('✅ PDF adjunto eliminado exitosamente');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', error);
+        // Continuar con la eliminación del caso aunque falle la eliminación del PDF
+      }
     }
 
     // Eliminar el caso médico

@@ -21,6 +21,7 @@ import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { useState, Suspense } from 'react'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
@@ -39,6 +40,7 @@ function MainHome() {
 	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
 	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end, selectedYear)
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 	const [selectedStat, setSelectedStat] = useState<any>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 
@@ -141,7 +143,12 @@ function MainHome() {
 									</h1>
 									<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
 										{profile?.display_name && (
-											<span className="text-sm sm:text-md text-primary">{profile.display_name}</span>
+											<span 
+												className="text-sm sm:text-md"
+												style={{ color: laboratory?.branding?.primaryColor || undefined }}
+											>
+												{profile.display_name}
+											</span>
 										)}
 									</div>
 								</div>

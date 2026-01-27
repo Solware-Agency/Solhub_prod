@@ -20,7 +20,7 @@ import {
   FolderSearch,
   Activity,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
@@ -96,10 +96,15 @@ const NavGroup: React.FC<NavGroupProps> = ({
   const [hoverTimeout, setHoverTimeout] = React.useState<NodeJS.Timeout | null>(
     null,
   );
+  const touchStartTimeRef = React.useRef<number>(0);
+  const touchHandledRef = React.useRef<boolean>(false);
 
+  // Obtener la ruta actual usando useLocation para que React reaccione a cambios
+  const location = useLocation();
+  
   // Verificar si algún item hijo está activo
   const isChildActive = childPaths.some(
-    (path) => window.location.pathname === path,
+    (path) => location.pathname === path,
   );
 
   // Funciones para hover (solo desktop)
@@ -129,10 +134,47 @@ const NavGroup: React.FC<NavGroupProps> = ({
     setHoverTimeout(timeout);
   };
 
+  // Función para touch (mobile)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    touchStartTimeRef.current = Date.now();
+    touchHandledRef.current = false;
+    // Prevenir que el evento se propague al overlay
+    e.stopPropagation();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    // Prevenir que el evento se propague al overlay
+    e.stopPropagation();
+    
+    const touchDuration = Date.now() - touchStartTimeRef.current;
+    
+    // Solo procesar si fue un toque rápido (menos de 300ms) y no se ha manejado ya
+    if (touchDuration < 300 && !touchHandledRef.current) {
+      e.preventDefault();
+      touchHandledRef.current = true;
+      onToggle();
+    }
+  };
+
   // Función para click (mobile y desktop)
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevenir que el evento se propague al overlay en mobile
     if (isMobile) {
-      // En mobile, solo funciona con clicks
+      e.stopPropagation();
+    }
+    
+    // En mobile, si ya se manejó el touch, ignorar el click
+    if (isMobile && touchHandledRef.current) {
+      e.preventDefault();
+      touchHandledRef.current = false; // Reset para el próximo toque
+      return;
+    }
+
+    if (isMobile) {
+      // En mobile, solo funciona con clicks si no se manejó el touch
       onToggle();
     } else {
       // En desktop, también permitir clicks para mayor flexibilidad
@@ -167,6 +209,8 @@ const NavGroup: React.FC<NavGroupProps> = ({
         }`}
         title={!showFullContent ? label : undefined}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className='flex gap-3 items-center min-w-0'>
           {icon}
@@ -223,9 +267,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   // For mobile, always show full sidebar. For desktop, use isExpanded state
   const showFullContent = isMobile || isExpanded;
   const navigate = useNavigate();
+  const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
+  const isSpt = laboratory?.slug === 'spt';
 
   // Definir las rutas de cada grupo
   const clinicalPaths = [
@@ -234,7 +280,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     '/dashboard/patients',
     '/patients',
   ];
-  const reportsPaths = ['/dashboard/stats', '/dashboard/reports'];
+  const reportsPaths = [
+    '/dashboard/stats',
+    '/dashboard/reports',
+    '/dashboard/triage-analytics',
+    '/dashboard/changelog',
+    '/prueba/stats',
+    '/prueba/reports',
+    '/prueba/triage-analytics',
+    '/prueba/changelog',
+  ];
 
   const [expandedGroups, setExpandedGroups] = React.useState<
     Record<string, boolean>
@@ -581,6 +636,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isResidente && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/medic/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               {/* <NavItem
 								to="/medic/form"
 								icon={<FileText className="stroke-2 size-5 shrink-0" />}
@@ -616,6 +680,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isCitotecno && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/cito/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/cito/cases'
@@ -630,6 +703,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isPatologo && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/patolo/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/patolo/cases'
@@ -644,6 +726,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isImagenologia && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/imagenologia/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/imagenologia/cases'
@@ -667,6 +758,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isMedicoTratante && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/medico-tratante/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/medico-tratante/cases'
@@ -690,6 +790,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isEnfermero && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/enfermero/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/enfermero/cases'
@@ -713,6 +822,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {isCallCenter && (
             <>
+              <div className='py-1'>
+                <NavItem
+                  to='/call-center/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/call-center/cases'
@@ -737,26 +855,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           {isPrueba && (
             <>
               <FeatureGuard feature='hasStats'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/home'
-                    icon={<Home className='stroke-2 size-5 shrink-0' />}
-                    label='Inicio'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <FeatureGuard feature='hasForm'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/medical-form'
-                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
-                    label='Formulario'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/medical-form'
+                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                  label='Formulario'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <NavGroup
                 icon={
@@ -847,6 +961,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
+              {isSpt && (
+                <NavItem
+                  to='/prueba/waiting-room'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Sala de Espera'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              )}
             </>
           )}
 
@@ -949,6 +1073,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isCallCenter && (
           <NavItem
             to='/call-center/settings'
+            icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
+            label='Ajustes'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
+        )}
+
+        {isImagenologia && (
+          <NavItem
+            to='/imagenologia/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
             label='Ajustes'
             showFullContent={showFullContent}

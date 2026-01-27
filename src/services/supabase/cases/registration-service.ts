@@ -154,15 +154,16 @@ export const registerMedicalCase = async (
 		const profileWithLab = profile as { assigned_branch?: string | null; laboratory_id?: string } | null
 
 		// Obtener el slug del laboratorio actual
+		// Nota: Usamos 'as never' porque 'laboratories' no está en los tipos generados de Supabase
 		let laboratorySlug: string | null = null
 		if (profileWithLab?.laboratory_id) {
-			const { data: labData } = await supabase
+			const { data: labData } = await (supabase as any)
 				.from('laboratories')
 				.select('slug')
 				.eq('id', profileWithLab.laboratory_id)
 				.single()
 			
-			laboratorySlug = labData?.slug || null
+			laboratorySlug = (labData as { slug?: string } | null)?.slug || null
 		}
 
 		// Preparar datos del paciente y del caso
@@ -532,123 +533,139 @@ export const searchPatientForForm = async (cedula: string) => {
 }
 
 /**
+ * Tipo para errores de validación mapeados a campos
+ */
+export interface ValidationErrors {
+  [fieldName: string]: string; // Nombre del campo -> mensaje de error
+}
+
+/**
  * Validar datos antes del registro
+ * 
+ * NOTA: La mayoría de las validaciones de campos se hacen en Zod (form-schema.ts)
+ * Esta función solo valida lógica de negocio compleja que no se puede hacer en Zod:
+ * - Validación de pagos y conversión de monedas
+ * - Validaciones que requieren datos externos
+ * 
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
- * @param laboratorySlug - Slug del laboratorio (opcional, para validaciones específicas por lab)
+ * @returns Objeto con errores mapeados a nombres de campos y array de mensajes para retrocompatibilidad
  */
 export const validateRegistrationData = (
-  formData: FormValues,
-  exchangeRate?: number,
-  moduleConfig?: ModuleConfig | null,
-  laboratorySlug?: string | null,
-): string[] => {
-  const errors: string[] = [];
+	formData: FormValues,
+	exchangeRate?: number,
+	moduleConfig?: ModuleConfig | null,
+): { fieldErrors: ValidationErrors; errorMessages: string[] } => {
+	const fieldErrors: ValidationErrors = {}
+	const errorMessages: string[] = []
 
-  // Validaciones obligatorias (siempre requeridas)
-  if (!formData.idType) {
-    errors.push('El tipo de cédula es obligatorio');
-  }
-  if (!formData.idNumber && formData.idType !== 'S/C') {
-    errors.push('El número de cédula es obligatorio');
-  }
+	// Validaciones obligatorias básicas (siempre requeridas)
+	// NOTA: Estas también están en Zod, pero las mantenemos aquí como validación de seguridad
+	if (!formData.idType) {
+		const errorMsg = 'El tipo de cédula es obligatorio'
+		fieldErrors.idType = errorMsg
+		errorMessages.push(errorMsg)
+	}
+	if (!formData.idNumber && formData.idType !== 'S/C') {
+		const errorMsg = 'El número de cédula es obligatorio'
+		fieldErrors.idNumber = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  if (!formData.fullName) {
-    errors.push('El nombre completo es obligatorio');
-  }
+	if (!formData.fullName) {
+		const errorMsg = 'El nombre completo es obligatorio'
+		fieldErrors.fullName = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  if (!formData.phone) {
-    errors.push('El teléfono es obligatorio');
-  }
+	if (!formData.phone) {
+		const errorMsg = 'El teléfono es obligatorio'
+		fieldErrors.phone = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar examType solo si está habilitado y es requerido
-  const examTypeConfig = moduleConfig?.fields?.examType;
-  if (examTypeConfig?.enabled && examTypeConfig?.required && !formData.examType) {
-    errors.push('El tipo de examen es obligatorio');
-  }
+	// Validar examType y consulta: Al menos uno debe estar presente
+	// Para SPT: examType o consulta son suficientes para generar código
+	const consultaValue = (formData as any).consulta
+	const hasExamType = formData.examType && formData.examType.trim() !== ''
+	const hasConsulta = consultaValue && consultaValue.trim() !== ''
 
-  // Validar origin solo si está habilitado y es requerido
-  const originConfig = moduleConfig?.fields?.procedencia;
-  if (originConfig?.enabled && originConfig?.required && !formData.origin) {
-    errors.push('El origen es obligatorio');
-  }
+	if (!hasExamType && !hasConsulta) {
+		const errorMsg = 'Debe seleccionar al menos el tipo de examen o la consulta'
+		fieldErrors.examType = errorMsg // Mostrar error en examType, pero afecta ambos campos
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar médico tratante solo si está habilitado y es requerido
-  const doctorConfig = moduleConfig?.fields?.medicoTratante;
-  if (
-    doctorConfig?.enabled &&
-    doctorConfig?.required &&
-    !formData.treatingDoctor &&
-    !formData.doctorName
-  ) {
-    errors.push('El doctor tratante es obligatorio');
-  }
+	// Validar branch: SIEMPRE obligatorio
+	if (!formData.branch && !formData.patientBranch) {
+		const errorMsg = 'La sede es obligatoria'
+		fieldErrors.branch = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar sampleType solo si está habilitado y es requerido
-  const sampleTypeConfig = moduleConfig?.fields?.sampleType;
-  if (sampleTypeConfig?.enabled && sampleTypeConfig?.required && !formData.sampleType) {
-    errors.push('El tipo de muestra es obligatorio');
-  }
+	// Validar consulta solo si está habilitado y es requerido en la configuración del módulo
+	// (Esta validación adicional solo aplica si la configuración específica lo requiere,
+	//  además de la validación de "al menos uno")
+	const consultaConfig = moduleConfig?.fields?.consulta
 
-  // Validar numberOfSamples solo si está habilitado y es requerido
-  const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples;
-  if (
-    numberOfSamplesConfig?.enabled &&
-    numberOfSamplesConfig?.required &&
-    (!formData.numberOfSamples || formData.numberOfSamples < 1)
-  ) {
-    errors.push('El número de muestras es obligatorio');
-  }
+	if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
+		const errorMsg = 'La consulta (especialidad médica) es obligatoria'
+		fieldErrors.consulta = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar branch solo si está habilitado y es requerido
-  const branchConfig = moduleConfig?.fields?.branch;
-  if (branchConfig?.enabled && branchConfig?.required && !formData.branch && !formData.patientBranch) {
-    errors.push('La sede es obligatoria');
-  }
+	// Validar otros campos según configuración (solo si están habilitados y son requeridos)
+	const originConfig = moduleConfig?.fields?.procedencia
+	if (originConfig?.enabled && originConfig?.required && !formData.origin) {
+		const errorMsg = 'El origen es obligatorio'
+		fieldErrors.origin = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar consulta solo si está habilitado y es requerido en la configuración del módulo
-  const consultaConfig = moduleConfig?.fields?.consulta;
-  const consultaValue = (formData as any).consulta; // Usar as any temporalmente hasta actualizar tipos
-  if (consultaConfig?.enabled && consultaConfig?.required && !consultaValue) {
-    errors.push('La consulta (especialidad médica) es obligatoria');
-  }
+	const doctorConfig = moduleConfig?.fields?.medicoTratante
+	if (doctorConfig?.enabled && doctorConfig?.required && !formData.treatingDoctor && !formData.doctorName) {
+		const errorMsg = 'El doctor tratante es requerido'
+		fieldErrors.treatingDoctor = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validación especial para SPT: al menos uno de examType o consulta debe estar presente
-  // Solo aplica si ambos campos están habilitados (aunque no sean required individualmente)
-  // IMPORTANTE: Esta validación solo se ejecuta en onSubmit, no durante el llenado del formulario
-  const isSPT = laboratorySlug?.toLowerCase() === 'spt';
-  if (isSPT && examTypeConfig?.enabled && consultaConfig?.enabled) {
-    // Solo validar si el formulario tiene datos básicos completos (indicando que el usuario está listo para enviar)
-    // Si falta información básica del paciente, no validar examType/consulta aún
-    const hasBasicPatientData = formData.fullName && formData.idNumber && formData.phone;
-    if (hasBasicPatientData && !formData.examType && !consultaValue) {
-      errors.push('Debe seleccionar al menos un Tipo de Examen o una Consulta');
-    }
-  }
+	const sampleTypeConfig = moduleConfig?.fields?.sampleType
+	if (sampleTypeConfig?.enabled && sampleTypeConfig?.required && !formData.sampleType) {
+		const errorMsg = 'El tipo de muestra es obligatorio'
+		fieldErrors.sampleType = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Solo validar totalAmount si hay pagos (labs con módulo de pagos)
-  const hasPayments =
-    formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
-  if (hasPayments && formData.totalAmount <= 0) {
-    errors.push('El monto total debe ser mayor a 0 cuando hay pagos');
-  }
+	const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples
+	if (
+		numberOfSamplesConfig?.enabled &&
+		numberOfSamplesConfig?.required &&
+		(!formData.numberOfSamples || formData.numberOfSamples < 1)
+	) {
+		const errorMsg = 'El número de muestras es obligatorio'
+		fieldErrors.numberOfSamples = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-  // Validar pagos usando la función que convierte correctamente las monedas
-  if (hasPayments) {
-    // Validar que los pagos no excedan el monto total (con conversión de monedas)
-    const paymentValidation = validateFormPayments(
-      formData.payments || [],
-      formData.totalAmount,
-      exchangeRate,
-    );
+	// Validaciones complejas de negocio (pagos y conversión de monedas)
+	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
+	if (hasPayments && formData.totalAmount <= 0) {
+		const errorMsg = 'El monto total debe ser mayor a 0 cuando hay pagos'
+		fieldErrors.totalAmount = errorMsg
+		errorMessages.push(errorMsg)
+	}
 
-    if (!paymentValidation.isValid) {
-      errors.push(
-        paymentValidation.errorMessage || 'Error en la validación de pagos',
-      );
-    }
-  }
+	// Validar pagos usando la función que convierte correctamente las monedas
+	if (hasPayments) {
+		const paymentValidation = validateFormPayments(formData.payments || [], formData.totalAmount, exchangeRate)
 
-  return errors;
-};
+		if (!paymentValidation.isValid) {
+			const errorMsg = paymentValidation.errorMessage || 'Error en la validación de pagos'
+			fieldErrors.totalAmount = errorMsg
+			errorMessages.push(errorMsg)
+		}
+	}
+
+	return { fieldErrors, errorMessages }
+}

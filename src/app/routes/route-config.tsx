@@ -13,6 +13,7 @@ import {
   SettingsPage,
   ReceptionistHomePage,
   TriageAnalyticsPage,
+  WaitingRoomPage,
 } from './lazy-routes';
 
 export interface RouteConfig {
@@ -76,6 +77,10 @@ export const dashboardRoutes: RouteConfig[] = [
     path: 'settings',
     component: SettingsPage,
   },
+  {
+    path: 'waiting-room',
+    component: WaitingRoomPage,
+  },
 ];
 
 // Configuración de rutas para employee
@@ -118,6 +123,10 @@ export const employeeRoutes: RouteConfig[] = [
 // Configuración de rutas para medic/residente
 export const medicRoutes: RouteConfig[] = [
   {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
+  {
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
@@ -131,6 +140,10 @@ export const medicRoutes: RouteConfig[] = [
 // Configuración de rutas para imagenologia
 export const imagenologiaRoutes: RouteConfig[] = [
   {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
+  {
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
@@ -140,10 +153,18 @@ export const imagenologiaRoutes: RouteConfig[] = [
     feature: 'hasPatients',
     component: PatientsPage,
   },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
 ];
 
 // Configuración de rutas para citotecno
 export const citotecnoRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
   {
     path: 'cases',
     feature: 'hasCases',
@@ -158,6 +179,10 @@ export const citotecnoRoutes: RouteConfig[] = [
 // Configuración de rutas para patologo
 export const patologoRoutes: RouteConfig[] = [
   {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
+  {
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
@@ -170,6 +195,10 @@ export const patologoRoutes: RouteConfig[] = [
 
 // Configuración de rutas para medico_tratante
 export const medicoTratanteRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
   {
     path: 'cases',
     feature: 'hasCases',
@@ -189,6 +218,10 @@ export const medicoTratanteRoutes: RouteConfig[] = [
 // Configuración de rutas para enfermero
 export const enfermeroRoutes: RouteConfig[] = [
   {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
+  {
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
@@ -206,6 +239,10 @@ export const enfermeroRoutes: RouteConfig[] = [
 
 // Configuración de rutas para call_center
 export const callCenterRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
   {
     path: 'cases',
     feature: 'hasCases',
@@ -275,5 +312,9 @@ export const pruebaRoutes: RouteConfig[] = [
   {
     path: 'settings',
     component: SettingsPage,
+  },
+  {
+    path: 'waiting-room',
+    component: WaitingRoomPage,
   },
 ];

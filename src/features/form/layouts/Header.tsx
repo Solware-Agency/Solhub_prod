@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '@/services/supabase/auth/auth'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 function Header() {
 	const navigate = useNavigate()
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 
 	const handleLogout = async () => {
 		await signOut()
@@ -17,7 +19,12 @@ function Header() {
 					<h1 className="text-2xl sm:text-3xl font-bold">Formulario</h1>
 				</div>
 				{profile?.display_name && (
-					<span className="text-sm text-primary font-medium">Bienvenido, {profile.display_name}</span>
+					<span 
+						className="text-sm font-medium"
+						style={{ color: laboratory?.branding?.primaryColor || undefined }}
+					>
+						Bienvenido, {profile.display_name}
+					</span>
 				)}
 			</div>
 			<div className="flex items-center gap-4">

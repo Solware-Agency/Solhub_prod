@@ -29,6 +29,10 @@ export interface UserProfile {
 	estado?: 'pendiente' | 'aprobado'
 	// Debe alinear con BD (text)
 	phone?: string | null
+	laboratory_id?: string | null
+	signature_url?: string | null
+	signature_url_2?: string | null
+	signature_url_3?: string | null
 }
 
 // Sign up with email and password - ENHANCED WITH PROPER EMAIL VERIFICATION
@@ -561,6 +565,10 @@ export const updateUserProfile = async (
 export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'	): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
+		// Rol "prueba" (godmode) tiene acceso a todo
+		if (profile?.role === 'prueba') {
+			return true
+		}
 		return profile?.role === role || false
 	} catch (err) {
 		console.error('Error checking user role:', err)

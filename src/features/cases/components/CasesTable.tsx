@@ -3,9 +3,8 @@ import {
   ChevronUp,
   ChevronDown,
   Search,
-  Maximize2,
   Download,
-  MailCheck,
+  X,
 } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
@@ -22,19 +21,13 @@ import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmatio
 import RequestCaseModal from './RequestCaseModal';
 import UnifiedCaseModal from './UnifiedCaseModal';
 import HorizontalLinearStepper from './StepsCaseModal';
-import CaseActionsPopover from './CaseActionsPopover';
 import CaseCard from './CaseCard';
 import TriajeModal from './TriajeModal';
 import Pagination from './Pagination';
 import FiltersModal from './FiltersModal';
 import ActiveFiltersDisplay from './ActiveFiltersDisplay';
-import { getStatusColor } from './status';
-import { BranchBadge } from '@shared/components/ui/branch-badge';
-// import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
-import { formatCurrency } from '@shared/utils/number-utils';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
-import { formatDateFromISO } from '@shared/utils/date-utils';
 
 interface CasesTableProps {
   cases: UnifiedMedicalRecord[];
@@ -47,6 +40,7 @@ interface CasesTableProps {
   onCaseSelect?: (case_: UnifiedMedicalRecord) => void;
   onFiltersChange?: (filters: {
     examType?: string;
+    consulta?: string;
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
@@ -429,14 +423,18 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             currentFilters.citoStatus = 'negativo';
           }
           if (dateRange?.from) {
-            currentFilters.dateFrom = dateRange.from.toISOString();
+            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+            const year = dateRange.from.getFullYear();
+            const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
+            const day = String(dateRange.from.getDate()).padStart(2, '0');
+            currentFilters.dateFrom = `${year}-${month}-${day}`;
           }
           if (dateRange?.to) {
-            // Siempre ajustar dateTo al final del día (23:59:59.999)
-            // para incluir todos los registros del último día del rango
-            const endOfDay = new Date(dateRange.to);
-            endOfDay.setHours(23, 59, 59, 999);
-            currentFilters.dateTo = endOfDay.toISOString();
+            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+            const year = dateRange.to.getFullYear();
+            const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
+            const day = String(dateRange.to.getDate()).padStart(2, '0');
+            currentFilters.dateTo = `${year}-${month}-${day}`;
           }
 
           // Agregar el nuevo sort
@@ -556,6 +554,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setPdfStatusFilter('all');
       setExamTypeFilter('all');
       setDocumentStatusFilter('all');
+      setConsultaFilter('all');
       setEmailSentStatusFilter('all');
       // También limpiar los filtros temporales
       setTempStatusFilter('all');
@@ -643,14 +642,18 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           serverFilters.citoStatus = 'negativo';
         }
         if (tempDateRange?.from) {
-          serverFilters.dateFrom = tempDateRange.from.toISOString();
+          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+          const year = tempDateRange.from.getFullYear();
+          const month = String(tempDateRange.from.getMonth() + 1).padStart(2, '0');
+          const day = String(tempDateRange.from.getDate()).padStart(2, '0');
+          serverFilters.dateFrom = `${year}-${month}-${day}`;
         }
         if (tempDateRange?.to) {
-          // Siempre ajustar dateTo al final del día (23:59:59.999)
-          // para incluir todos los registros del último día del rango
-          const endOfDay = new Date(tempDateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          serverFilters.dateTo = endOfDay.toISOString();
+          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
+          const year = tempDateRange.to.getFullYear();
+          const month = String(tempDateRange.to.getMonth() + 1).padStart(2, '0');
+          const day = String(tempDateRange.to.getDate()).padStart(2, '0');
+          serverFilters.dateTo = `${year}-${month}-${day}`;
         }
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
@@ -674,6 +677,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempPendingCasesFilter,
       tempPdfStatusFilter,
       tempExamTypeFilter,
+      tempConsultaFilter,
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
       pagination,
@@ -886,6 +890,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         pendingCasesFilter !== 'all' ||
         pdfStatusFilter !== 'all' ||
         examTypeFilter !== 'all' ||
+        consultaFilter !== 'all' ||
         documentStatusFilter !== 'all' ||
         emailSentStatusFilter !== 'all' ||
         (searchTerm && searchTerm.trim() !== '') ||
@@ -1355,105 +1360,107 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
             {/* Fixed Header with Controls */}
             <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
-              <div className='flex flex-col gap-2 sm:gap-4'>
+              <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
                 {/* Close button - Above search and filters in responsive */}
-                <div className='flex justify-end sm:hidden w-full'>
+                <div className='flex justify-end md:hidden w-full'>
                   <Button
                     variant='outline'
                     onClick={() => setIsFullscreen(false)}
                     className='text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    aria-label='Cerrar'
                   >
-                    Cerrar ✕
+                    <X className='w-4 h-4' />
                   </Button>
                 </div>
                 
-                {/* Search and Filters Row */}
-                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-                  <div className='flex flex-wrap items-center gap-2 sm:gap-3 w-full'>
-                    {/* Search - Acortada */}
-                    <div className='flex-1 min-w-[200px] relative'>
-                      <Input
-                        type='text'
-                        placeholder='Buscar por nombre, código, cédula, estudio o médico'
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        onKeyDown={handleSearchKeyDown}
-                      />
-                      {isSearching && (
-                        <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
-                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Unified Filters Modal */}
-                    <FiltersModal
-                      isOpen={isFiltersModalOpen}
-                      onOpenChange={setIsFiltersModalOpen}
-                      statusFilter={tempStatusFilter}
-                      onStatusFilterChange={handleTempStatusFilterChange}
-                      branchFilter={tempBranchFilter}
-                      onBranchFilterChange={handleTempBranchFilterChange}
-                      dateRange={tempDateRange}
-                      onDateRangeChange={handleTempDateRangeChange}
-                      showPdfReadyOnly={tempShowPdfReadyOnly}
-                      onPdfFilterToggle={handleTempPdfFilterToggle}
-                      selectedDoctors={tempSelectedDoctors}
-                      onDoctorFilterChange={handleTempDoctorFilterChange}
-                      selectedOrigins={tempSelectedOrigins}
-                      onOriginFilterChange={handleTempOriginFilterChange}
-                      citologyPositiveFilter={tempCitologyPositiveFilter}
-                      onCitologyPositiveFilterToggle={
-                        handleTempCitologyPositiveFilterToggle
-                      }
-                      citologyNegativeFilter={tempCitologyNegativeFilter}
-                      onCitologyNegativeFilterToggle={
-                        handleTempCitologyNegativeFilterToggle
-                      }
-                      pendingCasesFilter={tempPendingCasesFilter}
-                      onPendingCasesFilterChange={
-                        handleTempPendingCasesFilterChange
-                      }
-                      pdfStatusFilter={tempPdfStatusFilter}
-                      onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
-                      examTypeFilter={tempExamTypeFilter}
-                      onExamTypeFilterChange={handleTempExamTypeFilterChange}
-                      consultaFilter={tempConsultaFilter}
-                      onConsultaFilterChange={handleTempConsultaFilterChange}
-                      documentStatusFilter={tempDocumentStatusFilter}
-                      onDocumentStatusFilterChange={
-                        handleTempDocumentStatusFilterChange
-                      }
-                      emailSentStatusFilter={tempEmailSentStatusFilter}
-                      onEmailSentStatusFilterChange={
-                        handleTempEmailSentStatusFilterChange
-                      }
-                      statusOptions={statusOptions}
-                      branchOptions={branchOptions}
-                      cases={cases}
-                      onApplyFilters={handleApplyFilters}
-                      onClearAllFilters={handleClearAllFilters}
+                {/* Search Row */}
+                <div className='flex-1 w-full md:w-auto'>
+                  <div className='relative'>
+                    <Input
+                      type='text'
+                      placeholder='Buscar por nombre, código, cédula, estudio o médico'
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
                     />
-                    {/* Export Button */}
-                    <Button
-                      variant='outline'
-                      className='flex items-center gap-2 cursor-pointer'
-                      title='Exportar'
-                      onClick={handleExportToExcel}
-                    >
-                      <Download className='w-4 h-4' />
-                      <span className='hidden sm:inline'>Exportar</span>
-                    </Button>
-
-                    {/* Close button - Hidden on mobile, visible on desktop */}
-                    <Button
-                      variant='outline'
-                      onClick={() => setIsFullscreen(false)}
-                      className='hidden sm:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
-                    >
-                      <span>Cerrar</span> ✕
-                    </Button>
+                    {isSearching && (
+                      <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
+                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Buttons Row - Below search on mobile, beside on desktop */}
+                <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
+                  {/* Unified Filters Modal */}
+                  <FiltersModal
+                    isOpen={isFiltersModalOpen}
+                    onOpenChange={setIsFiltersModalOpen}
+                    statusFilter={tempStatusFilter}
+                    onStatusFilterChange={handleTempStatusFilterChange}
+                    branchFilter={tempBranchFilter}
+                    onBranchFilterChange={handleTempBranchFilterChange}
+                    dateRange={tempDateRange}
+                    onDateRangeChange={handleTempDateRangeChange}
+                    showPdfReadyOnly={tempShowPdfReadyOnly}
+                    onPdfFilterToggle={handleTempPdfFilterToggle}
+                    selectedDoctors={tempSelectedDoctors}
+                    onDoctorFilterChange={handleTempDoctorFilterChange}
+                    selectedOrigins={tempSelectedOrigins}
+                    onOriginFilterChange={handleTempOriginFilterChange}
+                    citologyPositiveFilter={tempCitologyPositiveFilter}
+                    onCitologyPositiveFilterToggle={
+                      handleTempCitologyPositiveFilterToggle
+                    }
+                    citologyNegativeFilter={tempCitologyNegativeFilter}
+                    onCitologyNegativeFilterToggle={
+                      handleTempCitologyNegativeFilterToggle
+                    }
+                    pendingCasesFilter={tempPendingCasesFilter}
+                    onPendingCasesFilterChange={
+                      handleTempPendingCasesFilterChange
+                    }
+                    pdfStatusFilter={tempPdfStatusFilter}
+                    onPdfStatusFilterChange={handleTempPdfStatusFilterChange}
+                    examTypeFilter={tempExamTypeFilter}
+                    onExamTypeFilterChange={handleTempExamTypeFilterChange}
+                    consultaFilter={tempConsultaFilter}
+                    onConsultaFilterChange={handleTempConsultaFilterChange}
+                    documentStatusFilter={tempDocumentStatusFilter}
+                    onDocumentStatusFilterChange={
+                      handleTempDocumentStatusFilterChange
+                    }
+                    emailSentStatusFilter={tempEmailSentStatusFilter}
+                    onEmailSentStatusFilterChange={
+                      handleTempEmailSentStatusFilterChange
+                    }
+                    statusOptions={statusOptions}
+                    branchOptions={branchOptions}
+                    cases={cases}
+                    onApplyFilters={handleApplyFilters}
+                    onClearAllFilters={handleClearAllFilters}
+                  />
+                  {/* Export Button */}
+                  <Button
+                    variant='outline'
+                    className='flex items-center gap-2 cursor-pointer'
+                    title='Exportar'
+                    onClick={handleExportToExcel}
+                  >
+                    <Download className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Exportar</span>
+                  </Button>
+
+                  {/* Close button - Hidden on mobile, visible on desktop */}
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsFullscreen(false)}
+                    className='hidden md:flex items-center text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm border px-3 py-1 rounded-md transition-all duration-200'
+                    aria-label='Cerrar'
+                  >
+                    <X className='w-4 h-4' />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1675,11 +1682,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
           {/* Search and Filter Controls */}
           <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
-            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-              {/* Search and Filters Row */}
-              <div className='flex flex-wrap items-center gap-2 sm:gap-3 w-full'>
-                {/* Search - Acortada */}
-                <div className='flex-1 min-w-[200px] relative'>
+            <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
+              {/* Search Row */}
+              <div className='flex-1 w-full md:w-auto'>
+                <div className='relative'>
                   <Input
                     type='text'
                     placeholder='Buscar por nombre, código, cédula, estudio o médico'
@@ -1693,7 +1699,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     </div>
                   )}
                 </div>
+              </div>
 
+              {/* Buttons Row - Below search on mobile, beside on desktop */}
+              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
                 {/* Unified Filters Modal */}
                 <FiltersModal
                   isOpen={isFiltersModalOpen}
@@ -1750,19 +1759,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onClick={handleExportToExcel}
                 >
                   <Download className='w-4 h-4' />
-                  Exportar
+                  <span className='hidden sm:inline'>Exportar</span>
                 </Button>
 
-                {/* Fullscreen Button */}
-                <Button
-                  onClick={() => setIsFullscreen(true)}
-                  variant='outline'
-                  className='flex items-center gap-2 cursor-pointer'
-                  title='Expandir'
-                >
-                  <Maximize2 className='w-4 h-4' />
-                  Expandir
-                </Button>
               </div>
             </div>
           </div>

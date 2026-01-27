@@ -4,14 +4,13 @@
 // Componente para registrar un nuevo responsable (adulto) cuando no existe
 // =====================================================================
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -22,9 +21,7 @@ import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { UserPlus, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { createPatient } from '@services/supabase/patients/patients-service'
-import { createIdentification } from '@services/supabase/patients/identificaciones-service'
+import { createPatient, PatientError } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
 import { cn } from '@shared/lib/cn'
 import type { PatientProfile } from './PatientSearchAutocomplete'
@@ -56,6 +53,56 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 	const [gender, setGender] = useState<'Masculino' | 'Femenino' | ''>('')
 
 	const { toast } = useToast()
+
+	// =====================================================================
+	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
+	// =====================================================================
+
+	const calculateAgeFromDate = (birthDate: Date): { value: string; unidad: 'Años' | 'Meses' } => {
+		const today = new Date()
+		const birth = new Date(birthDate)
+
+		// Calcular años y meses
+		let years = today.getFullYear() - birth.getFullYear()
+		let months = today.getMonth() - birth.getMonth()
+		let days = today.getDate() - birth.getDate()
+
+		// Ajustar si el día de cumpleaños aún no ha llegado este año
+		if (days < 0) {
+			months--
+			// Obtener días del mes anterior
+			const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+			days += lastMonth.getDate()
+		}
+
+		// Ajustar si el mes de cumpleaños aún no ha llegado este año
+		if (months < 0) {
+			years--
+			months += 12
+		}
+
+		// Calcular meses totales para decidir formato
+		const totalMonths = years * 12 + months
+
+		// Si tiene 12 meses o más (1 año o más), mostrar en años
+		if (totalMonths >= 12) {
+			return { value: years.toString(), unidad: 'Años' }
+		}
+		// Si tiene menos de 12 meses pero más de 0 meses, mostrar en meses
+		else if (totalMonths >= 1) {
+			return { value: totalMonths.toString(), unidad: 'Meses' }
+		}
+		// Si tiene menos de 1 mes, mostrar como "0 Meses" (recién nacido)
+		else {
+			return { value: '0', unidad: 'Meses' }
+		}
+	}
+
+	// Calcular edad cuando hay fecha de nacimiento
+	const calculatedAge = useMemo(() => {
+		if (!fechaNacimiento) return null
+		return calculateAgeFromDate(fechaNacimiento)
+	}, [fechaNacimiento])
 
 	// =====================================================================
 	// HANDLERS
@@ -97,10 +144,17 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			// 1. Formatear cédula completa
 			const cedulaFormatted = `${cedulaTipo}-${cedulaNumero.trim()}`
 
-			// 2. Formatear edad si se proporcionó
-			const edadFormatted = edad ? `${edad} ${edadUnidad}` : null
+			// 2. Formatear edad: usar edad calculada si hay fecha, sino usar edad manual
+			const edadFormatted =
+				fechaNacimiento && calculatedAge
+					? `${calculatedAge.value} ${calculatedAge.unidad}`
+					: edad
+					? `${edad} ${edadUnidad}`
+					: null
 
 			// 3. Crear paciente responsable (adulto)
+			// NOTA: createPatient() ya hace el dual-write automáticamente a identificaciones,
+			//       no es necesario crear la identificación manualmente aquí
 			const nuevoPaciente = await createPatient({
 				cedula: cedulaFormatted,
 				nombre: nombre.trim(),
@@ -112,14 +166,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 				fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
 			} as any)
 
-			// 4. Crear identificación en la tabla identificaciones
-			await createIdentification({
-				paciente_id: nuevoPaciente.id,
-				tipo_documento: cedulaTipo,
-				numero: cedulaNumero.trim(),
-			})
-
-			// 5. Notificar éxito
+			// 4. Notificar éxito
 			toast({
 				title: '✅ Paciente registrado',
 				description: `${nombre.trim()} ha sido registrado correctamente`,
@@ -146,10 +193,41 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			}
 		} catch (error) {
 			console.error('Error creando responsable:', error)
+
+			let errorMessage = 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
+
+			if (error instanceof PatientError) {
+				// Usar códigos de error en lugar de mensajes
+				switch (error.code) {
+					case 'USER_NOT_AUTHENTICATED':
+						errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+						break
+					case 'USER_NO_LABORATORY':
+						errorMessage = 'No tienes un laboratorio asignado. Contacta al administrador.'
+						break
+					case 'PATIENT_DUPLICATE':
+						errorMessage = 'Ya existe un paciente con esta cédula.'
+						break
+					case 'PATIENT_REQUIRED_FIELD':
+						errorMessage = 'Por favor, completa todos los campos obligatorios.'
+						break
+					case 'DATABASE_ERROR':
+						errorMessage = 'Error al guardar en la base de datos. Por favor, intenta de nuevo.'
+						break
+					case 'UNKNOWN_ERROR':
+					default:
+						errorMessage = error.message || 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
+						break
+				}
+			} else if (error instanceof Error) {
+				// Fallback para errores que no son PatientError
+				errorMessage = error.message || 'No se pudo registrar el paciente. Por favor, intenta de nuevo.'
+			}
+
 			toast({
-				title: '❌ Error',
-				description: error instanceof Error ? error.message : 'Error al registrar paciente',
-				variant: 'destructive',
+				title: '❌ No se pudo registrar el paciente',
+				description: errorMessage,
+				variant: 'default',
 			})
 		} finally {
 			setIsSubmitting(false)
@@ -190,15 +268,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent 
-				className="max-w-2xl max-h-[90vh] overflow-visible"
-				onOpenAutoFocus={handleOpenAutoFocus}
-			>
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-visible bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]" onOpenAutoFocus={handleOpenAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>Registrar Nuevo Paciente</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4 py-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+				<div className="space-y-4 py-4 px-2 overflow-y-auto max-h-[calc(90vh-180px)]">
 					{/* Primera línea: Nombre Completo y Teléfono */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
@@ -212,12 +287,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										setNombre(value)
 									}
 								}}
-								placeholder="Nombre completo"
+								placeholder="John Doe"
 							/>
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="telefono">Teléfono</Label>
+							<Label htmlFor="telefono">Teléfono *</Label>
 							<Input
 								id="telefono"
 								value={telefono}
@@ -228,7 +303,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 										setTelefono(value)
 									}
 								}}
-								placeholder="Teléfono de contacto"
+								placeholder="0412-1234567"
 								maxLength={15}
 							/>
 						</div>
@@ -278,7 +353,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 								options={createDropdownOptions(['Masculino', 'Femenino'])}
 								value={gender}
 								onChange={(value) => setGender(value as 'Masculino' | 'Femenino' | '')}
-								placeholder="Seleccionar género"
+								placeholder="Seleccionar"
 								className="transition-none"
 								id="responsable-gender"
 							/>
@@ -288,18 +363,20 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha de Nacimiento</Label>
+							<Label>Fecha de Nacimiento *</Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
 										variant="outline"
 										className={cn(
-											'w-full justify-start text-left font-normal',
+											'w-full justify-start text-left font-normal min-w-0',
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{fechaNacimiento ? format(fechaNacimiento, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
+										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<span className="truncate">
+											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
+										</span>
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0">
@@ -314,7 +391,13 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 											}
 										}}
 										initialFocus
-										disabled={(date) => date > new Date()}
+										disabled={(date) => {
+											const today = new Date()
+											today.setHours(0, 0, 0, 0)
+											const dateToCompare = new Date(date)
+											dateToCompare.setHours(0, 0, 0, 0)
+											return dateToCompare > today
+										}}
 									/>
 								</PopoverContent>
 							</Popover>
@@ -325,26 +408,33 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 							<div className="flex gap-2 relative">
 								<Input
 									type="number"
-									value={edad}
+									value={fechaNacimiento && calculatedAge ? calculatedAge.value : edad}
 									onChange={(e) => {
 										if (!fechaNacimiento) {
 											setEdad(e.target.value)
 										}
 									}}
-									placeholder="Edad"
-									className={cn('flex-1', fechaNacimiento && 'opacity-50 cursor-not-allowed')}
+									placeholder={fechaNacimiento && calculatedAge ? 'Calculada automáticamente' : 'Edad'}
+									className={cn(
+										'flex-1',
+										fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+									)}
 									disabled={!!fechaNacimiento}
+									readOnly={!!fechaNacimiento}
 								/>
 								<FormDropdown
 									options={createDropdownOptions(['Años', 'Meses'])}
-									value={edadUnidad}
+									value={fechaNacimiento && calculatedAge ? calculatedAge.unidad : edadUnidad}
 									onChange={(value) => {
 										if (!fechaNacimiento) {
 											setEdadUnidad(value as 'Años' | 'Meses')
 										}
 									}}
 									placeholder="Unidad"
-									className="w-24 transition-none"
+									className={cn(
+										'w-24 transition-none',
+										fechaNacimiento && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800',
+									)}
 									disabled={!!fechaNacimiento}
 									direction="auto"
 									id="edad-unidad"
@@ -361,12 +451,12 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
-							placeholder="Email (opcional)"
+							placeholder="Solwy@gmail.com"
 						/>
 					</div>
 				</div>
 
-				<DialogFooter>
+				<DialogFooter className="flex flex-row justify-end gap-2">
 					<Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
 						Cancelar
 					</Button>

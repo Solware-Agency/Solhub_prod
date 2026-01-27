@@ -15,6 +15,14 @@ import {
   Ruler,
   FileText,
   Clock,
+  Coffee,
+  Cigarette,
+  Wine,
+  User,
+  Users,
+  Brain,
+  Stethoscope,
+  MessageSquare,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -52,6 +60,7 @@ interface TriajeFormData {
   talla: string;
   peso: string;
   presionArterial: string;
+  glicemia: string;
   imc: string;
   antecedentesFamiliares: string;
   antecedentesPersonales: string;
@@ -140,7 +149,7 @@ const TriageInfoDisplay: React.FC<{
       </div>
 
       {/* Grid de signos vitales */}
-      <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+      <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20'>
         <CardHeader className='p-4 sm:p-6'>
           <CardTitle className='text-base sm:text-lg'>Signos Vitales</CardTitle>
         </CardHeader>
@@ -194,7 +203,9 @@ const TriageInfoDisplay: React.FC<{
                     Presión
                   </p>
                   <p className='text-sm font-medium'>
-                    {record.blood_pressure} mmHg
+                    {typeof record.blood_pressure === 'string' 
+                      ? record.blood_pressure 
+                      : record.blood_pressure} mmHg
                   </p>
                 </div>
               </div>
@@ -254,31 +265,120 @@ const TriageInfoDisplay: React.FC<{
                 </div>
               </div>
             )}
+
+            {/* Glicemia */}
+            {record.blood_glucose && (
+              <div className='flex items-start gap-2'>
+                <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0' />
+                <div>
+                  <p className='text-xs text-gray-500 dark:text-gray-400'>
+                    Glicemia
+                  </p>
+                  <p className='text-sm font-medium'>
+                    {record.blood_glucose} mg/dL
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Información clínica */}
-      {(record.reason ||
-        record.personal_background ||
-        record.family_history ||
-        record.psychobiological_habits ||
-        record.tabaco !== null) && (
-        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+      {/* Motivo de consulta */}
+      {record.reason && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'>
           <CardHeader className='p-4 sm:p-6'>
-            <CardTitle className='text-base sm:text-lg'>
-              Información Clínica
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-green-700 dark:text-green-300'>
+              <MessageSquare className='h-5 w-5 text-green-600 dark:text-green-400' />
+              Motivo de consulta
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+            <p className='text-sm'>{record.reason}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Hábitos */}
+      {(record.psychobiological_habits ||
+        record.tabaco !== null ||
+        record.cafe !== null ||
+        record.alcohol) && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
+              <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
+              Hábitos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap items-end gap-x-4 gap-y-3'>
+            {record.psychobiological_habits && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Hábitos psicobiológicos
+                </p>
+                <p className='text-sm'>{record.psychobiological_habits}</p>
+              </div>
+            )}
+            {record.tabaco !== null && record.tabaco !== undefined && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Índice Tabáquico
+                </p>
+                <div className='flex items-center gap-2'>
+                  <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium inline-block ${
+                      record.tabaco === 0
+                        ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        : record.tabaco < 10
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : record.tabaco <= 20
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        : record.tabaco <= 40
+                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}
+                  >
+                    {getSmokingRiskCategory(record.tabaco)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {record.cafe !== null && record.cafe !== undefined && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Café (tazas/día)
+                </p>
+                <p className='text-sm font-medium'>
+                  {record.cafe} {record.cafe === 1 ? 'taza' : 'tazas'}
+                </p>
+              </div>
+            )}
+            {record.alcohol && (
+              <div className='flex-1 min-w-[150px]'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Alcohol
+                </p>
+                <p className='text-sm font-medium capitalize'>
+                  {record.alcohol === 'No' ? 'No' : record.alcohol}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Antecedentes */}
+      {(record.personal_background || record.family_history) && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
+              <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+              Antecedentes
             </CardTitle>
           </CardHeader>
           <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
-            {record.reason && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Motivo de consulta
-                </p>
-                <p className='text-sm'>{record.reason}</p>
-              </div>
-            )}
             {record.personal_background && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
@@ -295,55 +395,20 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{record.family_history}</p>
               </div>
             )}
-            {record.psychobiological_habits && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Hábitos psicobiológicos
-                </p>
-                <p className='text-sm'>{record.psychobiological_habits}</p>
-              </div>
-            )}
-            {record.tabaco !== null && record.tabaco !== undefined && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Índice Tabáquico
-                </p>
-                <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${
-                    record.tabaco === 0
-                      ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                      : record.tabaco < 10
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                      : record.tabaco <= 20
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                      : record.tabaco <= 40
-                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                  }`}
-                >
-                  {getSmokingRiskCategory(record.tabaco)}
-                </span>
-              </div>
-            )}
-            {record.cafe !== null && record.cafe !== undefined && (
-              <div>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Café (tazas/día)
-                </p>
-                <p className='text-sm font-medium'>
-                  {record.cafe} {record.cafe === 1 ? 'taza' : 'tazas'}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
 
       {/* Examen físico y comentarios */}
       {(record.examen_fisico || record.comment) && (
-        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
-          <CardContent className='p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
+              <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
+              Examen Físico y Observaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
             {record.examen_fisico && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1'>
@@ -387,6 +452,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     talla: '',
     peso: '',
     presionArterial: '',
+    glicemia: '',
     imc: '',
     antecedentesFamiliares: '',
     antecedentesPersonales: '',
@@ -524,6 +590,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
           temperatura: existingTriage.temperature_celsius?.toString() || '',
           presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
           talla: existingTriage.height_cm?.toString() || '',
           peso: existingTriage.weight_kg?.toString() || '',
           imc: existingTriage.bmi?.toString() || '',
@@ -538,6 +605,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
           temperatura: existingTriage.temperature_celsius?.toString() || '',
           presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
           talla: existingTriage.height_cm?.toString() || '',
           peso: existingTriage.weight_kg?.toString() || '',
           imc: existingTriage.bmi?.toString() || '',
@@ -572,6 +640,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) return false;
 
+    // Obtener tipo de paciente del case
+    const patientType = (case_ as any)?.tipo_paciente;
+    const isDependiente = patientType === 'menor' || patientType === 'animal';
+
     // Para enfermero: solo necesita signos vitales
     if (isEnfermero) {
       return !!(
@@ -585,7 +657,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       );
     }
 
-    // Para médico: necesita signos vitales + datos clínicos
+    // Para médico: lógica diferente según tipo de paciente
     if (isMedico) {
       const hasVitalSigns = !!(
         triage.heart_rate ||
@@ -608,6 +680,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         triage.alcohol
       );
 
+      // Para dependientes (menores/animales): solo necesitan signos vitales O datos clínicos
+      if (isDependiente) {
+        return hasVitalSigns || hasClinicalData;
+      }
+
+      // Para adultos: necesitan signos vitales Y datos clínicos
       return hasVitalSigns && hasClinicalData;
     }
 
@@ -647,6 +725,128 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     handleInputChange(field, numericValue);
   };
 
+  // Función para validar rangos de signos vitales
+  const validateVitalSignsRanges = (): { isValid: boolean; errorMessage: string } => {
+    const errors: string[] = [];
+    
+    // Validar Frecuencia Cardíaca (30-250 lpm)
+    if (formData.frecuenciaCardiaca) {
+      const fc = parseFloat(formData.frecuenciaCardiaca);
+      if (!isNaN(fc) && (fc < 30 || fc > 250)) {
+        errors.push('La frecuencia cardíaca debe estar entre 30 y 250 lpm.');
+      }
+    }
+    
+    // Validar Frecuencia Respiratoria (8-60 rpm)
+    if (formData.frecuenciaRespiratoria) {
+      const fr = parseFloat(formData.frecuenciaRespiratoria);
+      if (!isNaN(fr) && (fr < 8 || fr > 60)) {
+        errors.push('La frecuencia respiratoria debe estar entre 8 y 60 rpm.');
+      }
+    }
+    
+    // Validar Saturación de Oxígeno (50-100%)
+    if (formData.saturacionOxigeno) {
+      const sat = parseFloat(formData.saturacionOxigeno);
+      if (!isNaN(sat) && (sat < 50 || sat > 100)) {
+        errors.push('La saturación de oxígeno debe estar entre 50 y 100%.');
+      }
+    }
+    
+    // Validar Temperatura (32-43°C)
+    if (formData.temperatura) {
+      const temp = parseFloat(formData.temperatura);
+      if (!isNaN(temp) && (temp < 32 || temp > 43)) {
+        errors.push('La temperatura debe estar entre 32 y 43°C.');
+      }
+    }
+    
+    // Validar Peso (1-300 kg)
+    if (formData.peso) {
+      const peso = parseFloat(formData.peso);
+      if (!isNaN(peso) && (peso < 1 || peso > 300)) {
+        errors.push('El peso debe estar entre 1 y 300 kg.');
+      }
+    }
+    
+    // Validar Talla (30-250 cm)
+    if (formData.talla) {
+      const talla = parseFloat(formData.talla);
+      if (!isNaN(talla) && (talla < 30 || talla > 250)) {
+        errors.push('La talla debe estar entre 30 y 250 cm.');
+      }
+    }
+    
+    // Validar Presión Arterial (formato: sistólica/diastólica)
+    if (formData.presionArterial && formData.presionArterial.includes('/')) {
+      const [sistolica, diastolica] = formData.presionArterial.split('/').map(v => parseFloat(v.trim()));
+      if (!isNaN(sistolica) && (sistolica < 50 || sistolica > 250)) {
+        errors.push('La presión sistólica debe estar entre 50 y 250 mmHg.');
+      }
+      if (!isNaN(diastolica) && (diastolica < 30 || diastolica > 150)) {
+        errors.push('La presión diastólica debe estar entre 30 y 150 mmHg.');
+      }
+    }
+    
+    if (errors.length > 0) {
+      return {
+        isValid: false,
+        errorMessage: errors.join(' ')
+      };
+    }
+    
+    return { isValid: true, errorMessage: '' };
+  };
+
+  // Función para validar que todos los signos vitales obligatorios estén completos
+  const validateRequiredVitalSigns = (): { isValid: boolean; errorMessage: string } => {
+    const missingFields: string[] = [];
+    
+    // Helper para verificar si un campo tiene valor válido
+    const hasValue = (value: string | undefined | null): boolean => {
+      return value !== null && value !== undefined && value.trim().length > 0;
+    };
+    
+    // Verificar cada signo vital obligatorio
+    if (!hasValue(formData.frecuenciaCardiaca)) {
+      missingFields.push('Frecuencia Cardíaca');
+    }
+    
+    // FR (Frecuencia Respiratoria) - No es obligatorio
+    
+    if (!hasValue(formData.saturacionOxigeno)) {
+      missingFields.push('Saturación de Oxígeno');
+    }
+    
+    // Temperatura - No es obligatorio
+    
+    if (!hasValue(formData.presionArterial)) {
+      missingFields.push('Presión Arterial');
+    }
+    
+    if (!hasValue(formData.peso)) {
+      missingFields.push('Peso');
+    }
+    
+    if (!hasValue(formData.talla)) {
+      missingFields.push('Talla');
+    }
+    
+    // Si faltan campos, retornar mensaje específico
+    if (missingFields.length > 0) {
+      const fieldsText = missingFields.length === 1 
+        ? missingFields[0]
+        : missingFields.slice(0, -1).join(', ') + ' y ' + missingFields[missingFields.length - 1];
+        
+      return {
+        isValid: false,
+        errorMessage: `Es obligatorio completar todos los signos vitales. Falta(n): ${fieldsText}.`
+      };
+    }
+    
+    return { isValid: true, errorMessage: '' };
+  };
+
   // Función para validar que el formulario tenga datos antes de guardar
   const validateFormData = (): { isValid: boolean; errorMessage: string } => {
     // Helper para verificar si un campo tiene valor real (no vacío ni solo espacios)
@@ -675,7 +875,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital para poder guardar.',
+            'Debe ingresar los signos vitales completos para registrar en el sistema.',
         };
       }
       return { isValid: true, errorMessage: '' };
@@ -697,7 +897,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital y un dato clínico para poder guardar.',
+            'Debe ingresar los signos vitales completos y al menos un dato clínico para registrar en el sistema.',
         };
       }
 
@@ -705,7 +905,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un signo vital para poder guardar.',
+            'Debe ingresar los signos vitales completos para registrar en el sistema.',
         };
       }
 
@@ -747,6 +947,32 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       toast({
         title: '⚠️ Formulario incompleto',
         description: validation.errorMessage,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar que todos los signos vitales obligatorios estén completos
+    const requiredValidation = validateRequiredVitalSigns();
+    if (!requiredValidation.isValid) {
+      setError(requiredValidation.errorMessage);
+      toast({
+        title: '⚠️ Signos vitales incompletos',
+        description: requiredValidation.errorMessage,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar rangos de signos vitales
+    const rangeValidation = validateVitalSignsRanges();
+    if (!rangeValidation.isValid) {
+      setError(rangeValidation.errorMessage);
+      toast({
+        title: '❌ Valores fuera de rango',
+        description: rangeValidation.errorMessage,
         variant: 'destructive',
       });
       setLoading(false);
@@ -816,6 +1042,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           ? parseFloat(formData.temperatura)
           : null,
         blood_pressure: formData.presionArterial || null,
+        blood_glucose: formData.glicemia
+          ? parseFloat(formData.glicemia)
+          : null,
         height_cm: formData.talla ? parseFloat(formData.talla) : null,
         weight_kg: formData.peso ? parseFloat(formData.peso) : null,
       };
@@ -985,11 +1214,27 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       }
     } catch (err: unknown) {
       console.error('Error al registrar historia clínica:', err);
-      const msg = err instanceof Error ? err.message : '';
-      setError('Error al registrar la historia clínica. Inténtalo de nuevo.');
+      
+      let errorMessage = 'No se pudo guardar la historia clínica. Por favor, intenta de nuevo.';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('no autenticado')) {
+          errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (err.message.includes('laboratorio')) {
+          errorMessage = 'No tienes permisos para editar esta historia clínica.';
+        } else if (err.message.includes('patient')) {
+          errorMessage = 'El paciente asociado al caso no existe.';
+        } else if (err.message.includes('constraint') || err.message.includes('required')) {
+          errorMessage = 'Por favor, completa todos los campos obligatorios de la historia clínica.';
+        } else if (err.message.includes('signos vitales') || err.message.includes('vital')) {
+          errorMessage = 'Verifica que los signos vitales estén dentro de rangos válidos.';
+        }
+      }
+      
+      setError(errorMessage);
       toast({
-        title: '❌ Error al registrar historia clínica',
-        description: msg || 'Hubo un problema al guardar los datos de historia clínica.',
+        title: '❌ Error al guardar historia clínica',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -1038,9 +1283,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           {!showOnlyVitalSigns && (
             <div className='grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-3 sm:gap-4'>
               {/* Motivo de consulta - Izquierda */}
-              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'>
                 <CardHeader className='p-4 sm:p-6'>
-                  <CardTitle className='text-base sm:text-lg'>
+                  <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-green-700 dark:text-green-300'>
+                    <MessageSquare className='h-5 w-5 text-green-600 dark:text-green-400' />
                     Motivo de consulta
                   </CardTitle>
                 </CardHeader>
@@ -1059,16 +1305,18 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               </Card>
 
               {/* Hábitos - Derecha */}
-              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
                 <CardHeader className='p-4 sm:p-6'>
-                  <CardTitle className='text-base sm:text-lg'>
+                  <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
+                    <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
                     Hábitos
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
-                    <div>
-                      <label className='text-sm font-medium mb-2 block'>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                        <Cigarette className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                         ¿Fuma?
                       </label>
                       <select
@@ -1086,8 +1334,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         <option value='Si'>Sí</option>
                       </select>
                     </div>
-                    <div>
-                      <label className='text-sm font-medium mb-2 block'>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                        <Coffee className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                         Café (tazas/día)
                       </label>
                       <Input
@@ -1113,8 +1362,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         className={inputStyles}
                       />
                     </div>
-                    <div>
-                      <label className='text-sm font-medium mb-2 block'>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                        <Wine className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                         Alcohol
                       </label>
                       <select
@@ -1262,15 +1512,17 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
           {/* Sección: Antecedentes - Ocupa todo el ancho */}
           {!showOnlyVitalSigns && (
-            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
               <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
+                  <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
                   Antecedentes
                 </CardTitle>
               </CardHeader>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3'>
-                <div>
-                  <label className='text-base font-medium mb-2 block'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                     Antecedentes personales
                   </label>
                   <Textarea
@@ -1287,8 +1539,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
                   />
                 </div>
-                <div>
-                  <label className='text-base font-medium mb-2 block'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Users className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                     Antecedentes familiares
                   </label>
                   <Textarea
@@ -1305,8 +1558,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
                   />
                 </div>
-                <div>
-                  <label className='text-base font-medium mb-2 block'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Brain className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                     Hábitos psicobiológicos
                   </label>
                   <Textarea
@@ -1328,182 +1582,230 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           )}
 
           {/* Sección: Signos Vitales */}
-          <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
+          <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20'>
             <CardHeader className='p-4 sm:p-6'>
-              <CardTitle className='text-base sm:text-lg'>
+              <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-blue-700 dark:text-blue-300'>
+                <Activity className='h-5 w-5 text-blue-600 dark:text-blue-400' />
                 Signos Vitales
               </CardTitle>
             </CardHeader>
-            <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2 sm:gap-3'>
-              <div>
-                <label className='text-base font-medium mb-2 flex items-center gap-1'>
-                  FC
-                  <TooltipPrimitive.Root delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side='top'
-                      sideOffset={5}
-                      className='!z-[1000001]'
-                    >
-                      <p>Frecuencia cardíaca</p>
-                    </TooltipContent>
-                  </TooltipPrimitive.Root>
-                </label>
-                <Input
-                  type='text'
-                  placeholder='Latidos/min'
-                  value={formData.frecuenciaCardiaca}
-                  onChange={(e) =>
-                    handleNumericInput('frecuenciaCardiaca', e.target.value)
-                  }
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 flex items-center gap-1'>
-                  FR
-                  <TooltipPrimitive.Root delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side='top'
-                      sideOffset={5}
-                      className='!z-[1000001]'
-                    >
-                      <p>Frecuencia respiratoria</p>
-                    </TooltipContent>
-                  </TooltipPrimitive.Root>
-                </label>
-                <Input
-                  type='text'
-                  placeholder='Respiraciones/min'
-                  value={formData.frecuenciaRespiratoria}
-                  onChange={(e) =>
-                    handleNumericInput('frecuenciaRespiratoria', e.target.value)
-                  }
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 flex items-center gap-1'>
-                  SpO₂
-                  <TooltipPrimitive.Root delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side='top'
-                      sideOffset={5}
-                      className='!z-[1000001]'
-                    >
-                      <p>Saturación de oxígeno</p>
-                    </TooltipContent>
-                  </TooltipPrimitive.Root>
-                </label>
-                <Input
-                  type='text'
-                  placeholder='%'
-                  value={formData.saturacionOxigeno}
-                  onChange={(e) =>
-                    handleNumericInput('saturacionOxigeno', e.target.value)
-                  }
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 block'>
-                  Temperatura
-                </label>
-                <Input
-                  type='text'
-                  placeholder='°C'
-                  value={formData.temperatura}
-                  onChange={(e) =>
-                    handleNumericInput('temperatura', e.target.value)
-                  }
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 block'>
-                  Presión arterial
-                </label>
-                <Input
-                  type='text'
-                  placeholder='Ej: 120/80 mmHg'
-                  value={formData.presionArterial}
-                  onChange={(e) =>
-                    handleInputChange('presionArterial', e.target.value)
-                  }
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 block'>
-                  Talla
-                </label>
-                <Input
-                  type='text'
-                  placeholder='Cm'
-                  value={formData.talla}
-                  onChange={(e) => handleNumericInput('talla', e.target.value)}
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 block'>Peso</label>
-                <Input
-                  type='text'
-                  placeholder='Kg'
-                  value={formData.peso}
-                  onChange={(e) => handleNumericInput('peso', e.target.value)}
-                  disabled={loading}
-                  className={inputStyles}
-                />
-              </div>
-              <div>
-                <label className='text-base font-medium mb-2 flex items-center gap-1'>
-                  IMC
-                  <TooltipPrimitive.Root delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side='top'
-                      sideOffset={5}
-                      className='!z-[1000001]'
-                    >
-                      <p>Índice de masa corporal</p>
-                    </TooltipContent>
-                  </TooltipPrimitive.Root>
-                </label>
-                <Input
-                  type='text'
-                  placeholder='Kg/m²'
-                  value={formData.imc}
-                  readOnly
-                  disabled={loading}
-                  className={`${inputStyles} bg-muted cursor-not-allowed`}
-                />
+            <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+              <div className='flex flex-wrap items-end gap-3'>
+                <div className='flex-1 min-w-[120px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Heart className='h-4 w-4 text-pink-600 dark:text-pink-400' />
+                    FC
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Frecuencia cardíaca</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Latidos/min'
+                    value={formData.frecuenciaCardiaca}
+                    onChange={(e) =>
+                      handleNumericInput('frecuenciaCardiaca', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[120px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Wind className='h-4 w-4 text-cyan-600 dark:text-cyan-400' />
+                    FR
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Frecuencia respiratoria</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Respiraciones/min'
+                    value={formData.frecuenciaRespiratoria}
+                    onChange={(e) =>
+                      handleNumericInput('frecuenciaRespiratoria', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[100px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Droplets className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+                    SpO₂
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Saturación de oxígeno</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='%'
+                    value={formData.saturacionOxigeno}
+                    onChange={(e) =>
+                      handleNumericInput('saturacionOxigeno', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[120px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Thermometer className='h-4 w-4 text-orange-600 dark:text-orange-400' />
+                    Temperatura
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='°C'
+                    value={formData.temperatura}
+                    onChange={(e) =>
+                      handleNumericInput('temperatura', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[150px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Gauge className='h-4 w-4 text-red-600 dark:text-red-400' />
+                    Presión arterial
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Ej: 120/80 mmHg'
+                    value={formData.presionArterial}
+                    onChange={(e) =>
+                      handleInputChange('presionArterial', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[120px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Droplets className='h-4 w-4 text-yellow-600 dark:text-yellow-400' />
+                    Glicemia
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Glicemia (glucosa en sangre)</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='mg/dL'
+                    value={formData.glicemia}
+                    onChange={(e) =>
+                      handleNumericInput('glicemia', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[100px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Ruler className='h-4 w-4 text-indigo-600 dark:text-indigo-400' />
+                    Talla
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Cm'
+                    value={formData.talla}
+                    onChange={(e) => handleNumericInput('talla', e.target.value)}
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[100px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Scale className='h-4 w-4 text-purple-600 dark:text-purple-400' />
+                    Peso
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Kg'
+                    value={formData.peso}
+                    onChange={(e) => handleNumericInput('peso', e.target.value)}
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='flex-1 min-w-[100px]'>
+                  <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Activity className='h-4 w-4 text-green-600 dark:text-green-400' />
+                    IMC
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Índice de masa corporal</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
+                  </label>
+                  <Input
+                    type='text'
+                    placeholder='Kg/m²'
+                    value={formData.imc}
+                    readOnly
+                    disabled={loading}
+                    className={`${inputStyles} bg-muted cursor-not-allowed`}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Sección: Examen Físico y Observaciones */}
           {!showOnlyVitalSigns && (
-            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
-              <CardContent className='p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
-                <div>
-                  <label className='text-base font-medium mb-2 block'>
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
+                  <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
+                  Examen Físico y Observaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Stethoscope className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                     Examen físico
                   </label>
                   <Textarea
@@ -1517,8 +1819,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
                   />
                 </div>
-                <div>
-                  <label className='text-base font-medium mb-2 block'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                     Observaciones
                   </label>
                   <Textarea
@@ -1554,11 +1857,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           )}
 
           {/* Botones */}
-          <div className='flex gap-4 pt-4'>
+          <div className='flex flex-col sm:flex-row gap-4 pt-4'>
             <Button
               type='submit'
               disabled={loading}
-              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1'
+              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1 min-w-0'
             >
               {loading ? (
                 <>
@@ -1579,61 +1882,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             <Button
               type='button'
               onClick={() => {
-                if (isEditing && triageComplete) {
-                  // Si estamos editando y el triaje está completo, cancelar edición y volver a vista
-                  setIsEditing(false);
-                  // Recargar datos originales
-                  if (existingTriage && isMedico && !isEnfermero) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      frecuenciaCardiaca:
-                        existingTriage.heart_rate?.toString() || '',
-                      frecuenciaRespiratoria:
-                        existingTriage.respiratory_rate?.toString() || '',
-                      saturacionOxigeno:
-                        existingTriage.oxygen_saturation?.toString() || '',
-                      temperatura:
-                        existingTriage.temperature_celsius?.toString() || '',
-                      presionArterial:
-                        existingTriage.blood_pressure?.toString() || '',
-                      talla: existingTriage.height_cm?.toString() || '',
-                      peso: existingTriage.weight_kg?.toString() || '',
-                      imc: existingTriage.bmi?.toString() || '',
-                      motivoConsulta: existingTriage.reason || '',
-                      antecedentesPersonales:
-                        existingTriage.personal_background || '',
-                      antecedentesFamiliares:
-                        existingTriage.family_history || '',
-                      habitosPsicobiologicos:
-                        existingTriage.psychobiological_habits || '',
-                      examenFisico: existingTriage.examen_fisico || '',
-                      comentario: existingTriage.comment || '',
-                      cafe: existingTriage.cafe?.toString() || '',
-                      alcohol: existingTriage.alcohol || '',
-                      ...(existingTriage.tabaco !== null &&
-                      existingTriage.tabaco !== undefined
-                        ? {
-                            tabaco: existingTriage.tabaco > 0 ? 'Si' : 'No',
-                            indiceTabaquico:
-                              existingTriage.tabaco > 0
-                                ? `Índice: ${
-                                    existingTriage.tabaco
-                                  } paq/año (${getSmokingRiskCategory(
-                                    existingTriage.tabaco,
-                                  )})`
-                                : '',
-                          }
-                        : {}),
-                    }));
-                  }
-                } else {
-                  // Si no estamos editando o la historia clínica no está completa, cerrar modal
-                  onClose();
-                }
+                // Cerrar el modal inmediatamente cuando se cancela la edición
+                onClose();
               }}
               disabled={loading}
               variant='outline'
-              className='px-6'
+              className='px-6 flex-shrink-0 whitespace-nowrap'
             >
               {isEditing && triageComplete ? 'Cancelar edición' : 'Cancelar'}
             </Button>

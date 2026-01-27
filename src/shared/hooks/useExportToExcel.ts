@@ -42,6 +42,7 @@ const calculateCasePaymentStatus = (case_: UnifiedMedicalRecord) => {
 interface ServerFilters {
 	searchTerm?: string
 	branch?: string
+	branchFilter?: string[]
 	dateFrom?: string
 	dateTo?: string
 	examType?: string
@@ -54,6 +55,7 @@ interface ServerFilters {
 	originFilter?: string[]
 	sortField?: string
 	sortDirection?: 'asc' | 'desc'
+	emailSentStatus?: boolean
 }
 
 export const useExportToExcel = () => {
@@ -97,11 +99,12 @@ export const useExportToExcel = () => {
 					description: 'Por favor espera mientras obtenemos todos los casos filtrados.',
 				})
 
-				// Obtener TODOS los casos filtrados del servidor
-				const response = await getAllCasesWithPatientInfo(serverFilters)
-				const cases = response.data
+			// Obtener TODOS los casos filtrados del servidor
+			const response = await getAllCasesWithPatientInfo(serverFilters)
+			// La función puede retornar un array directamente o un objeto con propiedad data
+			const cases = Array.isArray(response) ? response : response.data
 
-				// Validar que cases sea un array válido
+			// Validar que cases sea un array válido
 				if (!cases || !Array.isArray(cases) || cases.length === 0) {
 					toast({
 						title: '❌ Sin datos para exportar',
@@ -124,6 +127,7 @@ export const useExportToExcel = () => {
 						'Registro': case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
 						'Nombre del Paciente': case_.nombre || '',
 						Cédula: case_.cedula || '',
+						Email: case_.patient_email || '',
 						Edad: ageDisplay,
 						Sede: case_.branch || '',
 						'Tipo de Estudio': case_.exam_type || '',
@@ -160,6 +164,7 @@ export const useExportToExcel = () => {
 					{ wch: 18 }, // Registro
 					{ wch: 25 }, // Nombre del Paciente
 					{ wch: 15 }, // Cédula
+					{ wch: 25 }, // Email
 					{ wch: 8 }, // Edad
 					{ wch: 10 }, // Sede
 					{ wch: 20 }, // Tipo de Estudio
@@ -200,6 +205,8 @@ export const useExportToExcel = () => {
 				const filterParts = []
 				if (serverFilters.paymentStatus) filterParts.push(`estado_${serverFilters.paymentStatus}`)
 				if (serverFilters.branch) filterParts.push(`sede_${serverFilters.branch}`)
+				if (serverFilters.branchFilter && serverFilters.branchFilter.length > 0)
+					filterParts.push(`sedes_${serverFilters.branchFilter.length}`)
 				if (serverFilters.pdfStatus) filterParts.push(`pdf_${serverFilters.pdfStatus}`)
 				if (serverFilters.doctorFilter && serverFilters.doctorFilter.length > 0)
 					filterParts.push(`medicos_${serverFilters.doctorFilter.length}`)

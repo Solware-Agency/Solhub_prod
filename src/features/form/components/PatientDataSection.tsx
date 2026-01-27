@@ -1,6 +1,6 @@
 import { type Control } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
-import { FormField, FormItem, FormLabel, FormControl } from '@shared/components/ui/form'
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@shared/components/ui/form'
 import { AutocompleteInput } from '@shared/components/ui/autocomplete-input'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
@@ -93,7 +93,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 						<FormField
 							control={control}
 							name="idType"
-							render={({ field }) => (
+							render={({ field, fieldState }) => (
 								<FormItem className="space-y-2 flex flex-col col-span-2">
 									<FormLabel className="whitespace-nowrap">Cédula *</FormLabel>
 									<FormControl>
@@ -108,17 +108,18 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 												}
 											}}
 											placeholder="Tipo"
-											className={inputStyles + ' transition-none'}
+											className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 											id="patient-id-type"
 										/>
 									</FormControl>
+									<FormMessage />
 								</FormItem>
 							)}
 						/>
 						<FormField
 							control={control}
 							name="idNumber"
-							render={({ field }) => (
+							render={({ field, fieldState }) => (
 								<FormItem className="flex flex-col col-span-3">
 									<FormLabel className="text-transparent">Unidad</FormLabel>
 									<FormControl>
@@ -140,9 +141,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 												inputStyles,
 												isLoadingPatient && 'border-blue-300 transition-none',
 												isIdDisabled && 'opacity-50 cursor-not-allowed',
+												fieldState.error && 'border-red-500 focus:border-red-500',
 											)}
 										/>
 									</FormControl>
+									<FormMessage />
 								</FormItem>
 							)}
 						/>
@@ -155,7 +158,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					<FormField
 						control={control}
 						name="gender"
-						render={({ field }) => (
+						render={({ field, fieldState }) => (
 							<FormItem className="space-y-2 flex flex-col col-span-full md:col-span-3">
 								<FormLabel>Género *</FormLabel>
 								<FormControl>
@@ -163,11 +166,12 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 										options={createDropdownOptions(['Masculino', 'Femenino'])}
 										value={field.value as string}
 										onChange={field.onChange}
-										placeholder="Género"
-										className={inputStyles + ' transition-none'}
+										placeholder="Seleccionar"
+										className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 										id="patient-gender"
 									/>
 								</FormControl>
+								<FormMessage />
 							</FormItem>
 						)}
 					/>
@@ -177,13 +181,13 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 				<FormField
 					control={control}
 					name="fullName"
-					render={({ field }) => (
+					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
 							<FormLabel>Nombre Completo *</FormLabel>
 							<FormControl>
 								<AutocompleteInput
 									fieldName="fullName"
-									placeholder="Nombre y Apellido"
+									placeholder="John Doe"
 									iconRight={<User className="h-4 w-4 text-muted-foreground" />}
 									{...field}
 									onChange={(e) => {
@@ -192,11 +196,10 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											field.onChange(e)
 										}
 									}}
-									className={inputStyles + ' transition-none'}
+									className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 								/>
 							</FormControl>
-							{/* Espaciador invisible para mantener altura consistente con el párrafo de cédula */}
-							<div className="min-h-[32px] sm:min-h-[36px]"></div>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>
@@ -205,7 +208,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 				<FormField
 					control={control}
 					name="phone"
-					render={({ field }) => (
+					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
 							<FormLabel>Teléfono *</FormLabel>
 							<FormControl>
@@ -222,11 +225,10 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											field.onChange(e)
 										}
 									}}
-									className={inputStyles + ' transition-none'}
+									className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 								/>
 							</FormControl>
-							{/* Espaciador invisible para mantener altura consistente con el párrafo de cédula */}
-							<div className="min-h-[32px] sm:min-h-[36px]"></div>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>
@@ -238,7 +240,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 						<FormField
 							control={control}
 							name="ageValue"
-							render={({ field }) => (
+							render={({ field, fieldState }) => (
 								<FormItem className="space-y-2 flex flex-col col-span-1">
 									<FormLabel>Edad</FormLabel>
 									<FormControl>
@@ -253,19 +255,21 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 												const value = e.target.value
 												field.onChange(value === '' ? 0 : Number(value))
 											}}
-											className={
+											className={cn(
 												inputStyles +
-												' transition-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-											}
+												' transition-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+												fieldState.error && 'border-red-500 focus:border-red-500',
+											)}
 										/>
 									</FormControl>
+									<FormMessage />
 								</FormItem>
 							)}
 						/>
 						<FormField
 							control={control}
 							name="ageUnit"
-							render={({ field }) => (
+							render={({ field, fieldState }) => (
 								<FormItem className="space-y-2 flex flex-col col-span-1">
 									<FormLabel className="text-transparent">Unidad</FormLabel>
 									<FormControl>
@@ -274,10 +278,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 											value={field.value}
 											onChange={field.onChange}
 											placeholder="Unidad"
-											className={inputStyles + ' transition-none'}
+											className={cn(inputStyles + ' transition-none', fieldState.error && 'border-red-500 focus:border-red-500')}
 											id="patient-age-unit"
 										/>
 									</FormControl>
+									<FormMessage />
 								</FormItem>
 							)}
 						/>
@@ -296,7 +301,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									fieldName="email"
 									type="email"
 									iconRight={<Mail className="h-4 w-4 text-muted-foreground" />}
-									placeholder="email@ejemplo.com"
+									placeholder="Solwy@gmail.com"
 									{...field}
 									className={inputStyles + ' transition-none'}
 								/>
@@ -309,7 +314,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 				<FormField
 					control={control}
 					name="registrationDate"
-					render={({ field }) => (
+					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col col-span-1">
 							<FormLabel>Fecha de Registro *</FormLabel>
 							<Popover open={isRegistrationDateCalendarOpen} onOpenChange={setIsRegistrationDateCalendarOpen}>
@@ -321,10 +326,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 												'w-full justify-start text-left font-normal',
 												!field.value && 'text-muted-foreground',
 												inputStyles + ' transition-none',
+												fieldState.error && 'border-red-500 focus:border-red-500',
 											)}
 										>
 											<CalendarIcon className="mr-2 h-4 w-4" />
-											{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Selecciona fecha</span>}
+											{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Fecha</span>}
 										</Button>
 									</FormControl>
 								</PopoverTrigger>
@@ -347,6 +353,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									/>
 								</PopoverContent>
 							</Popover>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>

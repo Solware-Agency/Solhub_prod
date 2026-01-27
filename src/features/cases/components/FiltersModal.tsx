@@ -1,19 +1,8 @@
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogTitle,
-  DialogDescription,
-} from '@shared/components/ui/dialog';
+import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@shared/components/ui/button';
-import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@shared/components/ui/tabs';
+import { Calendar as CalendarComponent } from '@shared/components/ui/calendar';
 import {
   Card,
   CardContent,
@@ -21,31 +10,43 @@ import {
   CardHeader,
   CardTitle,
 } from '@shared/components/ui/card';
+import { CustomDropdown } from '@shared/components/ui/custom-dropdown';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@shared/components/ui/dialog';
 import {
   Popover as DatePopover,
   PopoverContent as DatePopoverContent,
   PopoverTrigger as DatePopoverTrigger,
 } from '@shared/components/ui/popover';
-import { Calendar as CalendarComponent } from '@shared/components/ui/calendar';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@shared/components/ui/tabs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Filter,
-  Stethoscope,
   Calendar as CalendarIcon,
-  X,
-  Settings,
   CheckCircle,
-  XCircle,
+  Filter,
   MapPin,
+  Settings,
+  Stethoscope,
+  Trash2,
+  X,
+  XCircle,
 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
+import BranchFilterPanel from './BranchFilterPanel';
 import DoctorFilterPanel from './DoctorFilterPanel';
 import PatientOriginFilterPanel from './PatientOriginFilterPanel';
-import BranchFilterPanel from './BranchFilterPanel';
-import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
-import type { DateRange } from 'react-day-picker';
-import { useLaboratory } from '@/app/providers/LaboratoryContext';
-import { useMemo } from 'react';
 
 interface FiltersModalProps {
   isOpen: boolean;
@@ -130,12 +131,12 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 }) => {
   const { laboratory } = useLaboratory();
   const isSpt = laboratory?.slug === 'spt';
-  
+
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [showDoctorFilter, setShowDoctorFilter] = useState(false);
   const [showOriginFilter, setShowOriginFilter] = useState(false);
   const [showBranchFilter, setShowBranchFilter] = useState(false);
-  
+
   // Obtener tipos de examen del laboratorio
   const examTypeOptions = useMemo(() => {
     const examTypes = laboratory?.config?.examTypes || [];
@@ -157,29 +158,29 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   const consultaOptions = useMemo(() => {
     return [
       { value: 'Cardiología', label: 'Cardiología' },
-      { value: 'Cirugía General', label: 'Cirugía General' },
+      { value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
       { value: 'Dermatología', label: 'Dermatología' },
       { value: 'Endocrinología', label: 'Endocrinología' },
       { value: 'Gastroenterología', label: 'Gastroenterología' },
-      { value: 'Geriatría', label: 'Geriatría' },
       { value: 'Ginecología', label: 'Ginecología' },
-      { value: 'Hematología', label: 'Hematología' },
-      { value: 'Infectología', label: 'Infectología' },
-      { value: 'Medicina Familiar', label: 'Medicina Familiar' },
       { value: 'Medicina Interna', label: 'Medicina Interna' },
       { value: 'Nefrología', label: 'Nefrología' },
-      { value: 'Neumología', label: 'Neumología' },
+      { value: 'Neumonología', label: 'Neumonología' },
       { value: 'Neurología', label: 'Neurología' },
-      { value: 'Nutrición', label: 'Nutrición' },
-      { value: 'Oftalmología', label: 'Oftalmología' },
-      { value: 'Oncología', label: 'Oncología' },
+      { value: 'Neurocirugía', label: 'Neurocirugía' },
       { value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
       { value: 'Pediatría', label: 'Pediatría' },
-      { value: 'Psiquiatría', label: 'Psiquiatría' },
-      { value: 'Reumatología', label: 'Reumatología' },
+      { value: 'Psicología', label: 'Psicología' },
       { value: 'Traumatología', label: 'Traumatología' },
       { value: 'Urología', label: 'Urología' },
-      { value: 'Otra', label: 'Otra' },
+      { value: 'Oftalmología', label: 'Oftalmología' },
+      { value: 'Medicina General', label: 'Medicina General' },
+      { value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+      { value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+      { value: 'Fisioterapia', label: 'Fisioterapia' },
+      { value: 'Psiquiatría', label: 'Psiquiatría' },
+      { value: 'Optometría', label: 'Optometría' },
+      { value: 'Odontología', label: 'Odontología' },
     ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
   }, []);
 
@@ -234,12 +235,17 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-background'
+        className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'
       >
         <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
         <DialogDescription className="sr-only">
           Configure los filtros para buscar casos específicos
         </DialogDescription>
+        {/* Botón X para cerrar */}
+        <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden flex flex-col flex-1 min-h-0'>
           <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
             <TabsTrigger
@@ -301,13 +307,13 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   options={
                     isSpt
                       ? [
-                          { value: 'faltantes', label: 'PDF Generados' },
-                          { value: 'generados', label: 'PDF Faltantes' },
-                        ]
+                        { value: 'faltantes', label: 'PDF Generados' },
+                        { value: 'generados', label: 'PDF Faltantes' },
+                      ]
                       : [
-                          { value: 'pendientes', label: 'PDF Pendientes' },
-                          { value: 'faltantes', label: 'PDF Faltantes' },
-                        ]
+                        { value: 'pendientes', label: 'PDF Pendientes' },
+                        { value: 'faltantes', label: 'PDF Faltantes' },
+                      ]
                   }
                   value={pdfStatusFilter}
                   placeholder='Estado de PDF'
@@ -330,15 +336,15 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       <CalendarIcon className='w-4 h-4' />
                       {dateRange?.from && dateRange?.to
                         ? `${format(dateRange.from, 'dd/MM/yyyy', {
-                            locale: es,
-                          })} - ${format(dateRange.to, 'dd/MM/yyyy', {
-                            locale: es,
-                          })}`
+                          locale: es,
+                        })} - ${format(dateRange.to, 'dd/MM/yyyy', {
+                          locale: es,
+                        })}`
                         : dateRange?.from
-                        ? `Desde ${format(dateRange.from, 'dd/MM/yyyy', {
+                          ? `Desde ${format(dateRange.from, 'dd/MM/yyyy', {
                             locale: es,
                           })}`
-                        : 'Seleccionar rango de fechas'}
+                          : 'Seleccionar rango de fechas'}
                     </Button>
                   </DatePopoverTrigger>
                   <DatePopoverContent
@@ -552,12 +558,12 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       Rango:{' '}
                       {dateRange?.from && dateRange?.to
                         ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(
-                            dateRange.to,
-                            'dd/MM/yyyy',
-                          )}`
+                          dateRange.to,
+                          'dd/MM/yyyy',
+                        )}`
                         : dateRange?.from
-                        ? `Desde ${format(dateRange.from, 'dd/MM/yyyy')}`
-                        : `Hasta ${format(dateRange.to!, 'dd/MM/yyyy')}`}
+                          ? `Desde ${format(dateRange.from, 'dd/MM/yyyy')}`
+                          : `Hasta ${format(dateRange.to!, 'dd/MM/yyyy')}`}
                       <button
                         onClick={() => onDateRangeChange(undefined)}
                         className='ml-1 hover:text-purple-600 dark:hover:text-purple-200'
@@ -667,10 +673,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       {documentStatusFilter === 'faltante'
                         ? 'Faltante'
                         : documentStatusFilter === 'pendiente'
-                        ? 'Pendiente'
-                        : documentStatusFilter === 'aprobado'
-                        ? 'Aprobado'
-                        : 'Rechazado'}
+                          ? 'Pendiente'
+                          : documentStatusFilter === 'aprobado'
+                            ? 'Aprobado'
+                            : 'Rechazado'}
                       <button
                         onClick={() => onDocumentStatusFilterChange('all')}
                         className='ml-1 hover:text-cyan-600 dark:hover:text-cyan-200'
@@ -704,11 +710,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
                 {/* Filtro Citología Positiva */}
                 <Card
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    citologyPositiveFilter
-                      ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20'
-                      : 'hover:ring-1 hover:ring-green-300'
-                  }`}
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${citologyPositiveFilter
+                    ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20'
+                    : 'hover:ring-1 hover:ring-green-300'
+                    }`}
                   onClick={() => {
                     if (!citologyPositiveFilter) {
                       onCitologyPositiveFilterToggle();
@@ -722,11 +727,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   <CardHeader className='pb-3'>
                     <CardTitle className='flex items-center gap-2 text-lg'>
                       <CheckCircle
-                        className={`w-5 h-5 ${
-                          citologyPositiveFilter
-                            ? 'text-green-600'
-                            : 'text-gray-400'
-                        }`}
+                        className={`w-5 h-5 ${citologyPositiveFilter
+                          ? 'text-green-600'
+                          : 'text-gray-400'
+                          }`}
                       />
                       Citología Positiva
                     </CardTitle>
@@ -750,11 +754,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
                 {/* Filtro Citología Negativa */}
                 <Card
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    citologyNegativeFilter
-                      ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20'
-                      : 'hover:ring-1 hover:ring-red-300'
-                  }`}
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${citologyNegativeFilter
+                    ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20'
+                    : 'hover:ring-1 hover:ring-red-300'
+                    }`}
                   onClick={() => {
                     if (!citologyNegativeFilter) {
                       onCitologyNegativeFilterToggle();
@@ -768,11 +771,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   <CardHeader className='pb-3'>
                     <CardTitle className='flex items-center gap-2 text-lg'>
                       <XCircle
-                        className={`w-5 h-5 ${
-                          citologyNegativeFilter
-                            ? 'text-red-600'
-                            : 'text-gray-400'
-                        }`}
+                        className={`w-5 h-5 ${citologyNegativeFilter
+                          ? 'text-red-600'
+                          : 'text-gray-400'
+                          }`}
                       />
                       Citología Negativa
                     </CardTitle>
@@ -806,8 +808,8 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             disabled={!hasActiveFilters}
             className='font-bold'
           >
-            <X className='w-4 h-4 mr-2' />
-            Limpiar Todos los Filtros
+            <Trash2 className='w-4 h-4 mr-2' />
+            Limpiar
           </Button>
 
           <Button

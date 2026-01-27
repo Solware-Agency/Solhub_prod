@@ -4,18 +4,21 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Tables } from '@shared/types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@shared/components/ui/button';
+import { Input } from '@shared/components/ui/input';
 import { supabase } from '@/services/supabase/config/config';
+import { updatePatient } from '@/services/supabase/patients/patients-service';
+import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import {
   X,
   User,
   ArrowLeft,
   ArrowRight,
   Sparkles,
-  Heart,
   Shredder,
   FileCheck,
   Download,
   Send,
+  Mail,
 } from 'lucide-react';
 import {
   markCaseAsPending,
@@ -29,6 +32,7 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { getDownloadUrl } from '@/services/utils/download-utils';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +45,7 @@ import SendEmailModal from './SendEmailModal';
 
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
+import { useAuth } from '@app/providers/AuthContext';
 
 interface MedicalRecord {
   id?: string;
@@ -92,8 +97,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+  const [isAddEmailModalOpen, setIsAddEmailModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [patientInfo, setPatientInfo] = useState<{
+    tipo_paciente?: string;
+    responsable_email?: string | null;
+  } | null>(null);
+  const [effectiveEmail, setEffectiveEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -296,6 +310,60 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     })();
   }, [isOpen, case_?.id]);
 
+  // Cargar información del paciente y responsable
+  useEffect(() => {
+    const loadPatientInfo = async () => {
+      if (!isOpen || !case_?.id) return;
+
+      try {
+        const { data: caseData, error: caseError } = await supabase
+          .from('medical_records_clean')
+          .select('patient_id')
+          .eq('id', case_.id)
+          .single();
+
+        if (caseError || !caseData?.patient_id) return;
+
+        // Obtener info del paciente
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .select('tipo_paciente, email')
+          .eq('id', caseData.patient_id)
+          .single();
+
+        if (patientError || !patientData) return;
+
+        const tipoPaciente = patientData.tipo_paciente || 'adulto';
+        let responsableEmail: string | null = null;
+
+        // Si es dependiente, obtener el email del responsable usando el servicio
+        if (tipoPaciente !== 'adulto') {
+          const responsableInfo = await getResponsableByDependiente(caseData.patient_id);
+          responsableEmail = responsableInfo?.responsable?.email || null;
+        }
+
+        setPatientInfo({
+          tipo_paciente: tipoPaciente,
+          responsable_email: responsableEmail,
+        });
+
+        // Si es dependiente sin email y el responsable tiene email, usar el del responsable
+        if (tipoPaciente !== 'adulto' && !patientData.email && responsableEmail) {
+          case_.email = responsableEmail;
+          setEffectiveEmail(responsableEmail);
+        } else if (patientData.email) {
+          setEffectiveEmail(patientData.email);
+        } else {
+          setEffectiveEmail(null);
+        }
+      } catch (error) {
+        console.error('Error al cargar info del paciente:', error);
+      }
+    };
+
+    loadPatientInfo();
+  }, [isOpen, case_?.id]);
+
   // Actualizar el paso activo cuando el modal se abra y el documento esté aprobado
   useEffect(() => {
     if (isOpen) {
@@ -309,6 +377,69 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       setActiveStep((prev) => prev + 1);
     } else {
       handleFinish();
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim()) {
+      toast({
+        title: '⚠️ Email requerido',
+        description: 'Por favor ingresa un correo electrónico válido.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      toast({
+        title: '⚠️ Email inválido',
+        description: 'Por favor ingresa un correo electrónico con formato válido.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsUpdatingEmail(true);
+
+      // Obtener el patient_id del caso
+      const { data: caseData, error: caseError } = await supabase
+        .from('medical_records_clean')
+        .select('patient_id')
+        .eq('id', case_.id)
+        .single();
+
+      if (caseError || !caseData?.patient_id) {
+        throw new Error('No se pudo obtener el ID del paciente');
+      }
+
+      // Actualizar el email del paciente
+      await updatePatient(caseData.patient_id, { email: newEmail }, user?.id);
+
+      // Actualizar el estado local
+      case_.email = newEmail;
+
+      toast({
+        title: '✅ Email actualizado',
+        description: 'El correo electrónico se ha guardado correctamente.',
+      });
+
+      setIsAddEmailModalOpen(false);
+      setNewEmail('');
+      
+      // Refrescar datos llamando onSuccess
+      onSuccess();
+    } catch (error) {
+      console.error('Error al actualizar email:', error);
+      toast({
+        title: '❌ Error',
+        description: error instanceof Error ? error.message : 'No se pudo actualizar el email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -453,6 +584,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
         body: JSON.stringify({
           caseId: case_.id,
           patientId: caseData.patient_id,
+          userId: user?.id || profile?.id || null, // User ID de quien hace clic en "Rellenar datos"
         }),
       });
 
@@ -795,6 +927,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       const requestBody = {
         caseId: case_.id,
         patientId: caseData.patient_id,
+        userId: user?.id || profile?.id || null, // User ID de quien genera el PDF
       };
 
       console.log('Request body:', requestBody);
@@ -1134,6 +1267,16 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           console.error('Error actualizando email_sent:', updateError);
           // No mostramos error al usuario ya que el email se envió exitosamente
         }
+
+        // Registrar el envío en email_send_logs
+        await logEmailSend({
+          case_id: case_.id,
+          recipient_email: emails.to,
+          cc_emails: emails.cc,
+          bcc_emails: emails.bcc,
+          laboratory_id: case_.laboratory_id || laboratory?.id || '',
+          status: 'success',
+        });
       }
 
       // Cerrar el modal de envío
@@ -1149,6 +1292,20 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       onSuccess();
     } catch (error) {
       console.error('Error enviando correo:', error);
+      
+      // Registrar el error en email_send_logs
+      if (case_?.id) {
+        await logEmailSend({
+          case_id: case_.id,
+          recipient_email: emails.to,
+          cc_emails: emails.cc,
+          bcc_emails: emails.bcc,
+          laboratory_id: case_.laboratory_id || laboratory?.id || '',
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Error desconocido',
+        });
+      }
+
       toast({
         title: '❌ Error',
         description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
@@ -1188,10 +1345,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 {isNotRechazado ? (
                   <p className='text-teal-400 text-sm'>
-                    Para completar este paso, haz clic en el botón de arriba
-                    para ir a rellenar los datos del documento en Google Docs.
-                    Una vez que termines regresa a esta pestaña para continuar
-                    con el siguiente paso.
+                    Rellena los datos y regresa a esta pestaña para continuar.
                   </p>
                 ) : (
                   <p className='text-teal-400 text-sm'>
@@ -1240,7 +1394,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {isSpt && isMedicoTratante
                     ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
-                    : 'Para completar este paso, haz clic en el botón de arriba para marcar el documento como completado y espera por la aprobacion para continuar con el siguiente paso.'}
+                    : 'Marca el documento como completado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1295,7 +1449,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1367,7 +1521,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                 <p className='text-teal-400 text-sm'>
                   {docAprobado === 'faltante'
                     ? 'Esperando que se complete el documento'
-                    : 'Para completar este paso, revisa el documento y marca como aprobado para habilitar la descarga del PDF.'}
+                    : 'Marca el documento como aprobado y pasa al siguiente paso.'}
                 </p>
               </div>
             </div>
@@ -1382,6 +1536,26 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className='space-y-4'
           >
+            {/* Mostrar alerta si no hay email */}
+            {!effectiveEmail && (
+              <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
+                <p className='text-teal-700 dark:text-teal-300 text-sm font-medium mb-0'>
+                  {patientInfo?.tipo_paciente !== 'adulto' && patientInfo?.responsable_email ? (
+                    <>
+                      El dependiente no tiene correo electrónico registrado.
+                      <br />
+                      Si envía el documento, llegará al correo del responsable:{' '}
+                      <span className='font-semibold'>{patientInfo.responsable_email}</span>
+                    </>
+                  ) : patientInfo?.tipo_paciente !== 'adulto' ? (
+                    'El dependiente no tiene correo electrónico registrado y el responsable tampoco.'
+                  ) : (
+                    'El paciente no tiene correo electrónico registrado'
+                  )}
+                </p>
+              </div>
+            )}
+            
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
               {/* Activa el nodo de transformar a PDF y luego te redirecciona al PDF */}
               <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
@@ -1439,6 +1613,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                     </>
                   )}
                 </Button>
+                {!effectiveEmail && (
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='flex-1'
+                    onClick={() => setIsAddEmailModalOpen(true)}
+                  >
+                    <Mail className='w-4 h-4 mr-2' />
+                    Agregar correo
+                  </Button>
+                )}
               </div>
             </div>
             <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
@@ -1449,7 +1634,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                   ? docAprobado === 'pendiente'
                     ? 'Esperando aprobación del owner'
                     : 'Completa los pasos previos para habilitar la descarga'
-                  : 'Haz clic en el botón "Descargar PDF" y espera mientras preparamos tu documento. El proceso puede tardar unos segundos dependiendo de la carga del sistema.'}
+                  : 'Descarga el PDF del documento.'}
               </p>
             </div>
           </motion.div>
@@ -1512,7 +1697,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                           </h2>
                         </div>
                         <p className='text-sm text-black dark:text-indigo-100 truncate'>
-                          {case_ ? `Para ${case_.full_name}` : 'Nuevo caso'}
+                          {case_ ? case_.full_name : 'Nuevo caso'}
                         </p>
                       </div>
                     </div>
@@ -1618,41 +1803,36 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                         Anterior
                       </motion.button>
 
-                      <motion.button
-                        onClick={handleNext}
-                        disabled={isCompleting || isSaving || isGeneratingPDF}
-                        className='flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {isCompleting ? (
-                          <>
-                            <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                            <span className='hidden sm:inline'>
-                              Saliendo...
-                            </span>
-                          </>
-                        ) : isSaving || isGeneratingPDF ? (
-                          <>
-                            <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                            <span className='hidden sm:inline'>
-                              Cargando...
-                            </span>
-                          </>
-                        ) : activeStep === computedSteps.length - 1 ? (
-                          <>
-                            <Heart className='w-4 h-4' />
-                            <span className='hidden sm:inline'>
-                              Terminar Proceso
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className='hidden sm:inline'>Siguiente</span>
-                            <ArrowRight className='w-4 h-4' />
-                          </>
-                        )}
-                      </motion.button>
+                      {activeStep < computedSteps.length - 1 && (
+                        <motion.button
+                          onClick={handleNext}
+                          disabled={isCompleting || isSaving || isGeneratingPDF}
+                          className='flex items-center gap-2 px-6 py-2 bg-transparent border border-labPrimary text-gray-800 dark:text-white font-medium rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {isCompleting ? (
+                            <>
+                              <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                              <span className='hidden sm:inline'>
+                                Saliendo...
+                              </span>
+                            </>
+                          ) : isSaving || isGeneratingPDF ? (
+                            <>
+                              <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                              <span className='hidden sm:inline'>
+                                Cargando...
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className='hidden sm:inline'>Siguiente</span>
+                              <ArrowRight className='w-4 h-4' />
+                            </>
+                          )}
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1663,14 +1843,15 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       </AnimatePresence>
 
       {/* Send Email Modal */}
-      {case_?.email && case_?.informe_qr && (
+      {effectiveEmail && case_?.informe_qr && (
         <SendEmailModal
           isOpen={isSendEmailModalOpen}
           onClose={() => setIsSendEmailModalOpen(false)}
           onSend={handleConfirmSendEmail}
-          primaryEmail={case_.email}
+          primaryEmail={effectiveEmail}
           patientName={case_.full_name || 'Paciente'}
           caseCode={case_.code || case_.id || 'N/A'}
+          caseId={case_.id}
           isSending={isSending}
         />
       )}
@@ -1696,6 +1877,63 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             </Button>
             <Button onClick={handleCheckAndDownloadPDF} disabled={isSaving}>
               NO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para agregar email */}
+      <Dialog open={isAddEmailModalOpen} onOpenChange={setIsAddEmailModalOpen}>
+        <DialogContent className={isFullscreen ? 'z-[999999999999999999]' : ''}>
+          <DialogHeader>
+            <DialogTitle>Agregar Correo Electrónico</DialogTitle>
+            <DialogDescription>
+              Ingresa el correo electrónico del paciente para poder enviar el documento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <label htmlFor='email' className='text-sm font-medium'>
+                Correo Electrónico
+              </label>
+              <Input
+                id='email'
+                type='email'
+                placeholder='ejemplo@correo.com'
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleUpdateEmail();
+                  }
+                }}
+                disabled={isUpdatingEmail}
+              />
+            </div>
+          </div>
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setIsAddEmailModalOpen(false);
+                setNewEmail('');
+              }}
+              disabled={isUpdatingEmail}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleUpdateEmail}
+              disabled={isUpdatingEmail || !newEmail.trim()}
+            >
+              {isUpdatingEmail ? (
+                <>
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2' />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

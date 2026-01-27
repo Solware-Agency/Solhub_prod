@@ -9,7 +9,7 @@ import { PatientDataSection } from './PatientDataSection';
 import { ServiceSection } from './ServiceSection';
 import { PaymentSection } from './PaymentSection';
 import { CommentsSection } from './CommentsSection';
-import { FilePlus2, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useExchangeRate } from '@shared/hooks/useExchangeRate';
 import { useResetForm } from '@shared/hooks/useResetForm';
 import {
@@ -17,10 +17,9 @@ import {
   validateRegistrationData,
 } from '@services/supabase/cases/registration-service';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
-import { FeatureGuard } from '@shared/components/FeatureGuard';
-import { useModuleField } from '@shared/hooks/useModuleField';
-import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -60,19 +59,13 @@ export function MedicalFormContainer() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patientSectionResetKey, setPatientSectionResetKey] = useState(0)
 
-	// Verificar configuración del módulo para médico tratante
-	const medicoTratanteConfig = useModuleField('registrationForm', 'medicoTratante')
-
 	// Obtener configuración completa del módulo para pasar a registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
 
-	// Obtener laboratorio para validaciones específicas por lab (ej: consulta para SPT)
-	const { laboratory } = useLaboratory()
-
 	// Crear schema dinámico basado en la configuración del módulo
 	const dynamicFormSchema = useMemo(() => {
-		return createFormSchema(moduleConfig, laboratory?.slug)
-	}, [moduleConfig, laboratory?.slug])
+		return createFormSchema(moduleConfig)
+	}, [moduleConfig])
 
 	// Crear resolver dinámico que se actualiza cuando cambia el schema
 	const dynamicResolver = useMemo(() => {
@@ -82,8 +75,8 @@ export function MedicalFormContainer() {
 	const form = useForm<FormValues>({
 		resolver: dynamicResolver,
 		defaultValues: getInitialFormValues(),
-		mode: 'onSubmit', // Solo validar cuando se envía el formulario
-		reValidateMode: 'onChange', // Re-validar en onChange solo después del primer submit
+		mode: 'onChange', // Validar en tiempo real para feedback inmediato
+		reValidateMode: 'onChange', // Re-validar en onChange después del primer submit
 		shouldUnregister: false, // Mantener valores incluso cuando campos se desmonten
 	})
 
@@ -150,21 +143,64 @@ export function MedicalFormContainer() {
 				console.log('Datos de pagos:', data.payments)
 				console.log('Tasa de cambio:', exchangeRate)
 
+				// Normalizar datos para asegurar que todos los campos opcionales tengan valores por defecto (no undefined)
+				const normalizedData = {
+					...data,
+					examType: data.examType ?? '',
+					treatingDoctor: data.treatingDoctor ?? '',
+					origin: data.origin ?? '',
+					sampleType: data.sampleType ?? '',
+					branch: data.branch ?? '',
+					consulta: data.consulta ?? '',
+					relationship: data.relationship ?? '',
+					email: data.email ?? '',
+					numberOfSamples: data.numberOfSamples ?? 1,
+				}
+
 				// Validar datos antes del envío
-				// Pasar configuración completa del módulo y slug del laboratorio para validación condicional
-				const validationErrors = validateRegistrationData(data, exchangeRate, moduleConfig, laboratory?.slug)
-				if (validationErrors.length > 0) {
+				// Pasar configuración completa del módulo para validación
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig)
+				
+				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
+				if (Object.keys(validationResult.fieldErrors).length > 0) {
+					// Establecer errores en cada campo del formulario
+					Object.entries(validationResult.fieldErrors).forEach(([fieldName, errorMessage]) => {
+						form.setError(fieldName as keyof FormValues, {
+							type: 'manual',
+							message: errorMessage,
+						})
+
+					})
+					
+					// Mostrar toast con mensaje general
 					toast({
 						title: '❌ Error de validación',
-						description: validationErrors.join(', '),
+						description: validationResult.errorMessages.join(', '),
 						variant: 'destructive',
 					})
+					
+					// Scroll al primer campo con error
+					const firstErrorField = Object.keys(validationResult.fieldErrors)[0]
+					if (firstErrorField) {
+						const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+						                document.getElementById(`service-${firstErrorField}`) ||
+						                document.getElementById(`patient-${firstErrorField}`)
+						if (element) {
+							setTimeout(() => {
+								element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+								if ('focus' in element && typeof (element as any).focus === 'function') {
+									(element as any).focus()
+								}
+							}, 100)
+						}
+					}
+					
 					return
 				}
 
 				// Registrar caso médico con nueva estructura
 				// Pasar moduleConfig para manejar valores por defecto cuando campos están deshabilitados
-				const result = await registerMedicalCase(data, exchangeRate, moduleConfig)
+				const result = await registerMedicalCase(normalizedData, exchangeRate, moduleConfig)
 
 				if (result.error) {
 					console.error('Error al guardar con nueva estructura:', result.error)
@@ -225,11 +261,32 @@ export function MedicalFormContainer() {
 	const onError = useCallback(
 		(errors: any) => {
 			console.log('❌ Errores de validación del formulario:', errors)
-			toast({
-				title: '❌ Error de validación',
-				description: 'Por favor, revisa los campos marcados en rojo y completa todos los campos requeridos.',
-				variant: 'destructive',
-			})
+			
+			// Prioridad: Si falta el nombre del paciente, mostrar mensaje específico
+			if (errors.fullName) {
+				toast({
+					title: '⚠️ Paciente no seleccionado',
+					description: 'Por favor, seleccione o ingrese un paciente para continuar con el registro del caso.',
+					variant: 'destructive',
+				})
+			} else {
+				// Otros errores de validación
+				toast({
+					title: '❌ Error de validación',
+					description: 'Por favor, los campos en rojo son obligatorios.',
+					variant: 'destructive',
+				})
+			}
+			
+			// Scroll al primer campo con error
+			const firstErrorField = Object.keys(errors)[0]
+			if (firstErrorField) {
+				const element = document.getElementsByName(firstErrorField)[0]
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					element.focus()
+				}
+			}
 		},
 		[toast],
 	)
@@ -268,22 +325,6 @@ export function MedicalFormContainer() {
 		})
 	}, [form, toast])
 
-	// Memoize the new record handler to prevent unnecessary re-renders
-	const handleNewRecord = useCallback(() => {
-		form.reset(getInitialFormValues())
-		setUsdValue('')
-		setVesValue('')
-		setVesInputValue('')
-		setUsdFromVes('')
-		setIsSubmitted(false)
-		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
-		setPatientSectionResetKey((prev) => prev + 1)
-		toast({
-			title: ' Nuevo Registro',
-			description: 'Formulario listo para un nuevo registro.',
-		})
-	}, [form, toast])
-
 	// Listen for clear form events from parent components
 	useEffect(() => {
 		const handleClearFormEvent = () => {
@@ -299,6 +340,7 @@ export function MedicalFormContainer() {
 
 	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
 	const { profile } = useUserProfile()
+	const { laboratory } = useLaboratory()
 
 	return (
 		<>
@@ -324,7 +366,12 @@ export function MedicalFormContainer() {
 								<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 							</div>
 						</div>
-						<h3 className="text-sm text-primary font-semibold mt-2 sm:mt-3">Bienvenido, {profile?.display_name}</h3>
+						<h3 className="text-sm font-semibold mt-2 sm:mt-3">
+							Bienvenido,{' '}
+							<span style={{ color: laboratory?.branding?.primaryColor || undefined }}>
+								{profile?.display_name}
+							</span>
+						</h3>
 					</div>
 				</div>
 				<Form {...form}>
@@ -349,16 +396,6 @@ export function MedicalFormContainer() {
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />
-						{isSubmitted ? (
-							<Button
-								type="button"
-								onClick={handleNewRecord}
-								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
-							>
-								<FilePlus2 />
-								Nuevo Registro
-							</Button>
-						) : (
 							<Button
 								type="button"
 								onClick={handleButtonClick}
@@ -374,7 +411,6 @@ export function MedicalFormContainer() {
 									'Enviar'
 								)}
 							</Button>
-						)}
 					</form>
 				</Form>
 			</div>

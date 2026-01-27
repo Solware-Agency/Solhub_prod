@@ -18,6 +18,10 @@ import {
   Eye,
   Send,
   Copy,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Phone,
 } from 'lucide-react';
 import type {
   MedicalCaseWithPatient,
@@ -38,6 +42,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 import {
   createDropdownOptions,
   FormDropdown,
@@ -67,6 +72,8 @@ import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
 import { ImageButton } from '@shared/components/ui/ImageButton';
+import { PDFButton } from '@shared/components/ui/PDFButton';
+import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -133,6 +140,54 @@ function parseEdad(edad: string | null | undefined): {
   return { value: Number.isNaN(value) ? '' : value, unit };
 }
 
+// Helper to calculate age from fecha_nacimiento
+function calculateAgeFromFechaNacimiento(fechaNacimiento: string | null | undefined): string | null {
+  if (!fechaNacimiento) return null;
+  
+  try {
+    const fechaNac = new Date(fechaNacimiento);
+    const hoy = new Date();
+    
+    // Validar que la fecha sea válida
+    if (isNaN(fechaNac.getTime())) return null;
+    
+    // Validar que la fecha no sea en el futuro
+    if (fechaNac > hoy) return null;
+    
+    // Calcular diferencia en años y meses
+    let years = hoy.getFullYear() - fechaNac.getFullYear();
+    let months = hoy.getMonth() - fechaNac.getMonth();
+    
+    // Ajustar si el mes actual es menor que el mes de nacimiento
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // Ajustar si el día actual es menor que el día de nacimiento
+    if (months === 0 && hoy.getDate() < fechaNac.getDate()) {
+      years--;
+      months = 11;
+    }
+    
+    // Si tiene más de 1 año, mostrar en años
+    if (years >= 1) {
+      return `${years} Años`;
+    }
+    // Si tiene menos de 1 año pero más de 0 meses, mostrar en meses
+    else if (months >= 1) {
+      return `${months} Meses`;
+    }
+    // Si tiene menos de 1 mes, mostrar como "0 Meses" (recién nacido)
+    else {
+      return '0 Meses';
+    }
+  } catch (error) {
+    console.error('Error calculando edad desde fecha_nacimiento:', error);
+    return null;
+  }
+}
+
 // Stable InfoRow component to avoid remounts on each keystroke
 interface InfoRowProps {
   label: string;
@@ -143,6 +198,7 @@ interface InfoRowProps {
   isEditing?: boolean;
   editedValue?: string | number | null;
   onChange?: (field: string, value: unknown) => void;
+  disabled?: boolean;
 }
 
 const InfoRow: React.FC<InfoRowProps> = React.memo(
@@ -155,8 +211,9 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
     isEditing = false,
     editedValue,
     onChange,
+    disabled = false,
   }) => {
-    const isEditableField = Boolean(isEditing && editable && field && onChange);
+    const isEditableField = Boolean(isEditing && editable && field && onChange && !disabled);
     const displayValue = field ? editedValue ?? value : value;
 
     return (
@@ -173,6 +230,7 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
               value={String(displayValue ?? '')}
               onChange={(e) => onChange?.(field!, e.target.value)}
               className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+              disabled={disabled}
             />
           </div>
         ) : (
@@ -215,6 +273,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     // const [newPayment, setNewPayment] = useState({...})
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+    const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
+    const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
     // Image URL state for imagenologia role
     const [imageUrl, setImageUrl] = useState('');
@@ -541,6 +601,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     }, [currentCase, isEditing]);
 
+    // Resetear estado de edición cuando el modal se cierra
+    useEffect(() => {
+      if (!isOpen) {
+        setIsEditing(false);
+        setEditedCase({});
+        setPaymentMethods([]);
+        setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+        setIsAddingNewPayment(false);
+      }
+    }, [isOpen]);
+
     const handleEditClick = () => {
       if (!currentCase) return;
       setIsEditing(true);
@@ -552,6 +623,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       setPaymentMethods([]);
       setNewPaymentMethod({ method: '', amount: 0, reference: '' });
       setIsAddingNewPayment(false);
+    };
+
+    // Función wrapper para onClose que resetea el estado de edición
+    const handleClose = () => {
+      setIsEditing(false);
+      setEditedCase({});
+      setPaymentMethods([]);
+      setNewPaymentMethod({ method: '', amount: 0, reference: '' });
+      setIsAddingNewPayment(false);
+      onClose();
     };
 
     const handleDeleteClick = () => {
@@ -580,7 +661,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Close modals and panel
         setIsDeleteModalOpen(false);
-        onClose();
+        handleClose();
 
         // Call onDelete callback if provided
         if (onDelete) {
@@ -899,29 +980,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               'No se puede actualizar el paciente: patient_id no está disponible',
             );
           }
+          // updatePatient ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updatePatient(currentCase.patient_id, patientChanges, user.id);
-
-          // Registrar cambios en logs para el paciente
-          for (const change of patientChangeLogs) {
-            const changeLog = {
-              patient_id: currentCase.patient_id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'patient',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging patient change:', logError);
-          }
 
           toast({
             title: '✅ Datos del paciente actualizados',
@@ -933,28 +994,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos del caso si hay cambios
         if (Object.keys(caseChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, caseChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of caseChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError) console.error('Error logging case change:', logError);
-          }
 
           toast({
             title: '✅ Caso actualizado exitosamente',
@@ -967,29 +1009,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         // Actualizar datos financieros si hay cambios
         if (Object.keys(financialChanges).length > 0) {
+          // updateMedicalCase ya registra cambios automáticamente en change_logs
+          // (con agrupación por session_id y normalización)
           await updateMedicalCase(currentCase.id, financialChanges, user.id);
-
-          // Registrar cambios en logs para el caso
-          for (const change of financialChangeLogs) {
-            const changeLog = {
-              medical_record_id: currentCase.id,
-              user_id: user.id,
-              user_email: user.email || 'unknown@email.com',
-              user_display_name: user.user_metadata?.display_name || null,
-              field_name: change.field,
-              field_label: change.fieldLabel,
-              old_value: change.oldValue?.toString() || null,
-              new_value: change.newValue?.toString() || null,
-              changed_at: new Date().toISOString(),
-              entity_type: 'medical_case',
-            };
-
-            const { error: logError } = await supabase
-              .from('change_logs')
-              .insert(changeLog);
-            if (logError)
-              console.error('Error logging financial change:', logError);
-          }
 
           toast({
             title: '✅ Información financiera actualizada',
@@ -999,8 +1021,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
-        // Save image URL for imagenologia role
-        if (profile?.role === 'imagenologia' && imageUrl) {
+        // Save image URL for imagenologia/owner/prueba roles
+        if ((profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && imageUrl) {
           const { error: imageUrlError } = await supabase
             .from('medical_records_clean')
             .update({ image_url: imageUrl })
@@ -1041,10 +1063,26 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         }
       } catch (error) {
         console.error('Error updating case:', error);
+        
+        let errorMessage = 'No se pudieron guardar los cambios. Por favor, intenta de nuevo.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('no autenticado')) {
+            errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+          } else if (error.message.includes('laboratorio')) {
+            errorMessage = 'No tienes permisos para editar este caso.';
+          } else if (error.message.includes('not found')) {
+            errorMessage = 'El caso que intentas editar no existe.';
+          } else if (error.message.includes('constraint') || error.message.includes('required')) {
+            errorMessage = 'Por favor, completa todos los campos obligatorios del caso.';
+          } else if (error.message.includes('payment')) {
+            errorMessage = 'Hubo un problema al guardar los pagos. Verifica los montos ingresados.';
+          }
+        }
+        
         toast({
-          title: '❌ Error al guardar',
-          description:
-            'Hubo un problema al guardar los cambios. Inténtalo de nuevo.',
+          title: '❌ Error al guardar cambios',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
@@ -1157,6 +1195,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             console.error('Error actualizando email_sent:', updateError);
             // No mostramos error al usuario ya que el email se envió exitosamente
           }
+
+          // Registrar el envío en email_send_logs
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'success',
+          });
         }
 
         const recipientCount = 1 + emails.cc.length + emails.bcc.length;
@@ -1175,6 +1223,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         }
       } catch (error) {
         console.error('Error enviando correo:', error);
+        
+        // Registrar el error en email_send_logs
+        if (case_?.id) {
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Error desconocido',
+          });
+        }
+
         toast({
           title: '❌ Error',
           description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
@@ -1213,6 +1275,92 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         title: '📱 WhatsApp abierto',
         description: 'Se ha abierto WhatsApp con los detalles del caso.',
       });
+    };
+
+    const handleCall = () => {
+      if (!case_?.telefono) {
+        toast({
+          title: '❌ Error',
+          description: 'Este caso no tiene un número de teléfono asociado.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Format phone number (remove spaces, dashes, etc.)
+      const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || '';
+      const phoneLink = `tel:${cleanPhone}`;
+
+      window.location.href = phoneLink;
+
+      toast({
+        title: '📞 Llamando',
+        description: `Iniciando llamada a ${case_.telefono}.`,
+      });
+    };
+
+    const handleDownloadCase = async () => {
+      if (!currentCase) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró información del caso.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const pdfUrl = (currentCase as any)?.informepdf_url || (currentCase as any)?.informe_qr;
+      
+      if (!pdfUrl) {
+        toast({
+          title: '❌ Error',
+          description: 'No hay PDF disponible para descargar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      try {
+        setIsSaving(true);
+        
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error(`Error al descargar: ${response.status}`);
+        }
+
+        const sanitizedName =
+          currentCase.nombre ||
+          'Paciente'
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .replace(/\s+/g, '_')
+            .trim();
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${currentCase.code || currentCase.id}-${sanitizedName}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast({
+          title: '✅ PDF descargado',
+          description: 'El documento se ha descargado correctamente.',
+        });
+      } catch (error) {
+        console.error('Error al descargar el PDF:', error);
+        toast({
+          title: '❌ Error',
+          description: 'No se pudo descargar el PDF. Intenta nuevamente.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSaving(false);
+      }
     };
 
     const getFieldLabel = (field: string): string => {
@@ -1390,9 +1538,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const notShow =
       profile?.role === 'residente' || profile?.role === 'citotecno';
     // const isResidente = profile?.role === 'residente'
-    // const isEmployee = profile?.role === 'employee'
+    const isEmployee = profile?.role === 'employee';
     // const isOwner = profile?.role === 'owner'
     // const isCitotecno = profile?.role === 'citotecno'
+    const isEmployeeSpt = isEmployee && isSpt;
 
     // Render modal content
     const modalContent = (
@@ -1406,7 +1555,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={isEditing ? undefined : onClose}
+                onClick={isEditing ? undefined : handleClose}
                 className={`fixed inset-0 bg-black/50 ${
                   isFullscreen
                     ? 'z-[99999999999999999]'
@@ -1425,9 +1574,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   isFullscreen
                     ? 'z-[99999999999999999]'
                     : 'z-[9999999999999999]'
-                } overflow-y-auto rounded-lg border-l border-input`}
+                } overflow-y-auto overflow-x-hidden rounded-lg border-l border-input`}
               >
-                <div className='sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10'>
+                <div className={`sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 ${
+                  isFullscreen
+                    ? 'z-[99999999999999999]'
+                    : 'z-[9999999999999999]'
+                } overflow-x-hidden max-w-full`}>
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2 sm:gap-3 flex-1 min-w-0'>
                       <div className='flex-1 min-w-0'>
@@ -1439,7 +1592,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     {/* Botón X (derecha) */}
                     <div className='flex items-center gap-2 flex-shrink-0'>
                       <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className='p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none'
                         aria-label='Cerrar'
                       >
@@ -1447,11 +1600,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       </button>
                     </div>
                   </div>
-                  <div className='flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2'>
+                  <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden'>
                     {currentCase.code && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help'>
+                          <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help flex-shrink-0'>
                             {currentCase.code}
                           </span>
                         </TooltipTrigger>
@@ -1464,7 +1617,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     )}
                     {!notShow && !isSpt && (
                       <span
-                        className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(
                           currentCase.payment_status,
                         )}`}
                       >
@@ -1475,13 +1628,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   </div>
                   {/* Action Buttons */}
                   {!notShow && (
-                    <div className='flex gap-2 mt-4'>
+                    <div className='flex flex-wrap gap-2 mt-4 max-w-full overflow-x-hidden'>
                       {isEditing ? (
                         <>
                           <button
                             onClick={handleSaveChanges}
                             disabled={isSaving}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer'
+                            title='Guarda todos los cambios realizados en el caso'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer flex-shrink-0'
                           >
                             {isSaving ? (
                               <>
@@ -1497,7 +1651,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer'
+                            title='Cancela la edición y descarta todos los cambios'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer flex-shrink-0'
                             disabled={isSaving}
                           >
                             <XCircle className='w-4 h-4' />
@@ -1508,41 +1663,63 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         <>
                           <button
                             onClick={handleEditClick}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 hover:scale-105 transition-all duration-200'
+                            title='Editar información del caso'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Editar caso'
                           >
                             <Edit className='w-4 h-4' />
-                            Editar
                           </button>
                           <button
                             onClick={toggleChangelog}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 hover:scale-105 transition-all duration-200'
+                            title={isChangelogOpen ? 'Ocultar historial de cambios' : 'Ver historial de cambios del caso'}
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
                           >
                             <History className='w-4 h-4' />
-                            {isChangelogOpen ? 'Ocultar' : 'Historial'}
                           </button>
                           <button
                             onClick={handleSendEmail}
                             disabled={isSaving}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                            title='Enviar informe por correo electrónico'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
+                            aria-label='Enviar correo'
                           >
                             {isSaving ? (
-                              <>
-                                <Loader2 className='w-4 h-4 animate-spin' />
-                                Enviando...
-                              </>
+                              <Loader2 className='w-4 h-4 animate-spin' />
                             ) : (
-                              <>
-                                <Send className='w-4 h-4' />
-                                Correo
-                              </>
+                              <Send className='w-4 h-4' />
                             )}
                           </button>
                           <button
+                            onClick={handleCall}
+                            title='Llamar al paciente por teléfono'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Llamar'
+                          >
+                            <Phone className='w-4 h-4' />
+                          </button>
+                          {isEmployeeSpt && (
+                            <button
+                              onClick={handleDownloadCase}
+                              disabled={isSaving}
+                              title='Descargar el PDF del informe del caso'
+                              className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
+                              aria-label='Descargar caso'
+                            >
+                              {isSaving ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                              ) : (
+                                <Download className='w-4 h-4' />
+                              )}
+                            </button>
+                          )}
+                          <button
                             onClick={handleSendWhatsApp}
-                            className='inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 hover:scale-105 transition-all duration-200'
+                            title='Enviar mensaje por WhatsApp al paciente'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 flex-shrink-0'
+                            aria-label='Enviar WhatsApp'
                           >
                             <WhatsAppIcon className='w-4 h-4' />
-                            WhatsApp
                           </button>
                         </>
                       )}
@@ -1552,23 +1729,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
                 {/* Content */}
                 <div className='p-4 sm:p-6 space-y-6'>
-                  <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                    <p className='text-teal-400 text-sm'>
-                      Este caso fue creado por{' '}
-                      <span className='font-semibold'>
-                        {creatorData?.displayName || 'Usuario del sistema'}
-                      </span>{' '}
-                      el{' '}
-                      {currentCase.created_at
-                        ? format(
-                            new Date(currentCase.created_at),
-                            'dd/MM/yyyy',
-                            { locale: es },
-                          )
-                        : 'Fecha no disponible'}
-                    </p>
-                  </div>
-
                   {/* Changelog Section */}
                   {isChangelogOpen && !isEditing && (
                     <InfoSection title='Historial de Cambios' icon={History}>
@@ -1669,144 +1829,160 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         editedValue={editedCase.nombre ?? null}
                         onChange={handleInputChange}
                       />
-                      {/* Cédula - Mostrar información del responsable si es menor o animal */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
-                        </span>
-                        <div className='sm:w-1/2 sm:text-right'>
-                          {responsableData?.responsable ? (
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                              {responsableData.responsable.nombre} - {responsableData.responsable.cedula}
-                            </span>
-                          ) : (
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                              {currentCase.cedula || 'Sin cédula'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Edad:
-                        </span>
-                        {isEditing ? (
-                          <div className='sm:w-1/2 grid grid-cols-2 gap-2'>
-                            {(() => {
-                              const parsed = parseEdad(
-                                String(
-                                  editedCase.edad ?? currentCase.edad ?? '',
-                                ),
-                              );
-                              const ageValue = parsed.value;
-                              const ageUnit = parsed.unit;
-                              return (
-                                <>
-                                  <Input
-                                    id='edad-input'
-                                    name='edad'
-                                    type='number'
-                                    placeholder='0'
-                                    value={ageValue === '' ? '' : ageValue}
-                                    min={0}
-                                    max={150}
-                                    onChange={(e) => {
-                                      const newValue = e.target.value;
-                                      const numeric =
-                                        newValue === '' ? '' : Number(newValue);
-                                      const unitToUse = ageUnit || 'Años';
-                                      const newEdad =
-                                        newValue === ''
-                                          ? null
-                                          : `${numeric} ${unitToUse}`;
-                                      handleInputChange('edad', newEdad);
-                                    }}
-                                    className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                                  />
-                                  <CustomDropdown
-                                    id='edad-unit-dropdown'
-                                    options={createDropdownOptions([
-                                      'Meses',
-                                      'Años',
-                                    ])}
-                                    value={ageUnit || 'Años'}
-                                    onChange={(newUnit) => {
-                                      const parsedNow = parseEdad(
-                                        String(
-                                          editedCase.edad ??
-                                            currentCase.edad ??
-                                            '',
-                                        ),
-                                      );
-                                      const valueNow = parsedNow.value;
-                                      const valueToUse =
-                                        valueNow === '' ? '' : valueNow;
-                                      const newEdad =
-                                        valueToUse === ''
-                                          ? null
-                                          : `${valueToUse} ${newUnit}`;
-                                      handleInputChange('edad', newEdad);
-                                    }}
-                                    placeholder='Unidad'
-                                    className='text-sm'
-                                    direction='auto'
-                                  />
-                                </>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                            {currentCase.edad || 'Sin edad'}
-                          </span>
-                        )}
-                      </div>
-                      <InfoRow
-                        label='Teléfono'
-                        value={currentCase.telefono || ''}
-                        field='telefono'
-                        isEditing={isEditing}
-                        editedValue={editedCase.telefono ?? null}
-                        onChange={handleInputChange}
-                      />
-                      <InfoRow
-                        label='Email'
-                        value={currentCase.patient_email || 'N/A'}
-                        field='patient_email'
-                        type='email'
-                        isEditing={isEditing}
-                        editedValue={editedCase.patient_email ?? null}
-                        onChange={handleInputChange}
-                      />
                       
-                      {/* Image URL field - Always visible for imagenologia/owner, visible for others only if URL exists */}
-                      {(profile?.role === 'imagenologia' || profile?.role === 'owner' || (currentCase as any).image_url) && (
-                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                            URL de Imagen:
-                          </span>
-                          {(profile?.role === 'imagenologia' || profile?.role === 'owner') && isEditing ? (
-                            <div className='sm:w-1/2'>
-                              <Input
-                                id='image-url-input'
-                                name='image_url'
-                                type='url'
-                                placeholder='https://ejemplo.com/imagen.jpg'
-                                value={imageUrl}
-                                onChange={(e) => {
-                                  setImageUrl(e.target.value);
-                                  setEditedCase({ ...editedCase, image_url: e.target.value });
-                                }}
-                                className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800'
-                              />
-                            </div>
+
+                      {/* Botón Ver más/Ver menos */}
+                      <div className='flex justify-center pt-2'>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
+                          className='text-sm text-primary hover:text-primary/80'
+                        >
+                          {showFullPatientInfo ? (
+                            <>
+                              Ver menos
+                              <ChevronUp className='ml-1 h-4 w-4' />
+                            </>
                           ) : (
-                            <div className='sm:w-1/2'>
-                              <ImageButton imageUrl={(currentCase as any).image_url} className='w-full' />
-                            </div>
+                            <>
+                              Ver más
+                              <ChevronDown className='ml-1 h-4 w-4' />
+                            </>
                           )}
-                        </div>
+                        </Button>
+                      </div>
+                      
+                      {/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
+                      {showFullPatientInfo && (
+                        <>
+                          {/* Cédula - Mostrar información del responsable si es menor o animal */}
+                          <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
+                            </span>
+                            <div className='sm:w-1/2 sm:text-right'>
+                              {responsableData?.responsable ? (
+                                <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                                  {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
+                                </span>
+                              ) : (
+                                <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                                  {currentCase.cedula || 'Sin cédula'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
+                          <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              Edad:
+                            </span>
+                            {isEditing ? (
+                              <div className='sm:w-1/2 grid grid-cols-2 gap-2'>
+                                {(() => {
+                                  const parsed = parseEdad(
+                                    String(
+                                      editedCase.edad ?? currentCase.edad ?? '',
+                                    ),
+                                  );
+                                  const ageValue = parsed.value;
+                                  const ageUnit = parsed.unit;
+                                  return (
+                                    <>
+                                      <Input
+                                        id='edad-input'
+                                        name='edad'
+                                        type='number'
+                                        placeholder='0'
+                                        value={ageValue === '' ? '' : ageValue}
+                                        min={0}
+                                        max={150}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const numeric =
+                                            newValue === '' ? '' : Number(newValue);
+                                          const unitToUse = ageUnit || 'Años';
+                                          const newEdad =
+                                            newValue === ''
+                                              ? null
+                                              : `${numeric} ${unitToUse}`;
+                                          handleInputChange('edad', newEdad);
+                                        }}
+                                        className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                                      />
+                                      <CustomDropdown
+                                        id='edad-unit-dropdown'
+                                        options={createDropdownOptions([
+                                          'Meses',
+                                          'Años',
+                                        ])}
+                                        value={ageUnit || 'Años'}
+                                        onChange={(newUnit) => {
+                                          const parsedNow = parseEdad(
+                                            String(
+                                              editedCase.edad ??
+                                                currentCase.edad ??
+                                                '',
+                                            ),
+                                          );
+                                          const valueNow = parsedNow.value;
+                                          const valueToUse =
+                                            valueNow === '' ? '' : valueNow;
+                                          const newEdad =
+                                            valueToUse === ''
+                                              ? null
+                                              : `${valueToUse} ${newUnit}`;
+                                          handleInputChange('edad', newEdad);
+                                        }}
+                                        placeholder='Unidad'
+                                        className='text-sm'
+                                        direction='auto'
+                                      />
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                                {(() => {
+                                  // Si hay edad, mostrarla
+                                  if (currentCase.edad) {
+                                    return currentCase.edad;
+                                  }
+                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                  const calculatedAge = calculateAgeFromFechaNacimiento(
+                                    (currentCase as any).fecha_nacimiento
+                                  );
+                                  if (calculatedAge) {
+                                    return calculatedAge;
+                                  }
+                                  // Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
+                                  return 'Sin edad';
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                          <InfoRow
+                            label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
+                            value={currentCase.telefono || ''}
+                            field='telefono'
+                            isEditing={isEditing}
+                            editedValue={editedCase.telefono ?? null}
+                            onChange={handleInputChange}
+                            disabled={!!responsableData}
+                          />
+                          <InfoRow
+                            label='Email'
+                            value={currentCase.patient_email || 'N/A'}
+                            field='patient_email'
+                            type='email'
+                            isEditing={isEditing}
+                            editedValue={editedCase.patient_email ?? null}
+                            onChange={handleInputChange}
+                          />
+                        </>
                       )}
                       
                       {/* Note: relationship field not in new structure, could be added if needed */}
@@ -2055,6 +2231,94 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           )}
                         </div>
                       )}
+
+                      {/* PDF Subido - Solo para SPT, roles: laboratorio, owner, prueba (godmode) */}
+                      {/* Visible en la sección de Información Médica */}
+                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          PDF Adjunto:
+                        </span>
+                        <div className='sm:flex sm:justify-end sm:flex-1'>
+                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba') ? (
+                            <CasePDFUpload
+                              caseId={currentCase.id}
+                              currentPdfUrl={(currentCase as any).uploaded_pdf_url}
+                              onPdfUpdated={async () => {
+                                // Refrescar el caso después de subir/eliminar PDF
+                                if (refetchCaseData) {
+                                  await refetchCaseData();
+                                }
+                                if (onSave) {
+                                  onSave();
+                                }
+                              }}
+                            />
+                          ) : (currentCase as any).uploaded_pdf_url ? (
+                            <PDFButton 
+                              pdfUrl={(currentCase as any).uploaded_pdf_url} 
+                              size='sm'
+                              variant='outline'
+                            />
+                          ) : (
+                            <span className='text-sm text-gray-500 dark:text-gray-400'>
+                              Sin PDF adjunto
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Image URL field - Visible for all roles if image exists, editable only for imagenologia/owner/prueba */}
+                      {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
+                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          Imagen:
+                        </span>
+                        <div className='sm:flex sm:justify-end sm:flex-1'>
+                          {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing ? (
+                            <Input
+                              id='image-url-input'
+                              name='image_url'
+                              type='url'
+                              placeholder='https://ejemplo.com/imagen.jpg'
+                              value={imageUrl}
+                              onChange={(e) => {
+                                setImageUrl(e.target.value);
+                                setEditedCase({ ...editedCase, image_url: e.target.value });
+                              }}
+                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
+                            />
+                          ) : (currentCase as any).image_url ? (
+                            <ImageButton imageUrl={(currentCase as any).image_url} />
+                          ) : (
+                            <span className='text-sm text-gray-500 dark:text-gray-400'>
+                              Sin imagen
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Comentarios */}
+                      <div className='py-2 border-t border-gray-200 dark:border-gray-700 pt-3'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                          Comentarios:
+                        </span>
+                        {isEditing ? (
+                          <Textarea
+                            id='comments-textarea'
+                            name='comments'
+                            value={editedCase.comments || ''}
+                            onChange={(e) =>
+                              handleInputChange('comments', e.target.value)
+                            }
+                            className='mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                            placeholder='Agregar comentarios adicionales...'
+                          />
+                        ) : (
+                          <p className='text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border'>
+                            {currentCase.comments || 'Sin comentarios'}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </InfoSection>
 
@@ -2589,45 +2853,61 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   </FeatureGuard>
 
                   {/* Additional Information */}
-                  <InfoSection title='Información Adicional' icon={FileText}>
-                    <div className='space-y-1'>
-                      <InfoRow
-                        label='Fecha de creación'
-                        value={new Date(
-                          currentCase.created_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
-                      <InfoRow
-                        label='Última actualización'
-                        value={new Date(
-                          currentCase.updated_at || '',
-                        ).toLocaleDateString('es-ES')}
-                        editable={false}
-                      />
-                      <div className='py-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Comentarios:
-                        </span>
-                        {isEditing ? (
-                          <Textarea
-                            id='comments-textarea'
-                            name='comments'
-                            value={editedCase.comments || ''}
-                            onChange={(e) =>
-                              handleInputChange('comments', e.target.value)
-                            }
-                            className='mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                            placeholder='Agregar comentarios adicionales...'
-                          />
-                        ) : (
-                          <p className='text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border'>
-                            {currentCase.comments || 'Sin comentarios'}
-                          </p>
-                        )}
+                  <div className='bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <div className='flex items-center gap-2'>
+                        <FileText className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+                        <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                          Información Adicional
+                        </h3>
                       </div>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+                        className='text-sm text-primary hover:text-primary/80'
+                      >
+                        {showAdditionalInfo ? (
+                          <>
+                            Ver menos
+                            <ChevronUp className='ml-1 h-4 w-4' />
+                          </>
+                        ) : (
+                          <>
+                            Ver más
+                            <ChevronDown className='ml-1 h-4 w-4' />
+                          </>
+                        )}
+                      </Button>
                     </div>
-                  </InfoSection>
+                    {showAdditionalInfo && (
+                      <div className='space-y-1'>
+                        <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3'>
+                          <p className='text-teal-400 text-sm'>
+                            Este caso fue creado por{' '}
+                            <span className='font-semibold'>
+                              {creatorData?.displayName || 'Usuario del sistema'}
+                            </span>
+                          </p>
+                        </div>
+                        <InfoRow
+                          label='Fecha de creación'
+                          value={new Date(
+                            currentCase.created_at || '',
+                          ).toLocaleDateString('es-ES')}
+                          editable={false}
+                        />
+                        <InfoRow
+                          label='Última actualización'
+                          value={new Date(
+                            currentCase.updated_at || '',
+                          ).toLocaleDateString('es-ES')}
+                          editable={false}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   {/* Bottom Action Buttons */}
                   {!notShow && (
@@ -2709,6 +2989,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             primaryEmail={case_.patient_email || ''}
             patientName={case_.nombre || ''}
             caseCode={case_.code || case_.id || ''}
+            caseId={case_.id}
             isSending={isSaving}
           />
         )}

@@ -206,7 +206,7 @@ function App() {
                   }
                 >
                   {/* Nested routes that will render in the Outlet */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {medicRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -216,7 +216,7 @@ function App() {
                         element={
                           <FeatureRoute
                             feature={routeConfig.feature}
-                            fallbackPath='/medic/cases'
+                            fallbackPath='/medic/home'
                           >
                             <Component />
                           </FeatureRoute>
@@ -235,7 +235,7 @@ function App() {
                   }
                 >
                   {/* Nested routes that will render in the Outlet */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {citotecnoRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -264,7 +264,7 @@ function App() {
                   }
                 >
                   {/* Nested routes that will render in the Outlet */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {patologoRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -274,7 +274,7 @@ function App() {
                         element={
                           <FeatureRoute
                             feature={routeConfig.feature}
-                            fallbackPath='/patolo/cases'
+                            fallbackPath='/patolo/home'
                           >
                             <Component />
                           </FeatureRoute>
@@ -293,7 +293,7 @@ function App() {
                   }
                 >
                   {/* Nested routes for imagenologia */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {imagenologiaRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -322,7 +322,7 @@ function App() {
                   }
                 >
                   {/* Nested routes that will render in the Outlet */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {medicoTratanteRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -332,7 +332,7 @@ function App() {
                         element={
                           <FeatureRoute
                             feature={routeConfig.feature}
-                            fallbackPath='/medico-tratante/cases'
+                            fallbackPath='/medico-tratante/home'
                           >
                             <Component />
                           </FeatureRoute>
@@ -380,7 +380,7 @@ function App() {
                   }
                 >
                   {/* Nested routes that will render in the Outlet */}
-                  <Route index element={<CasesPage />} />
+                  <Route index element={<ReceptionistHomePage />} />
                   {callCenterRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
@@ -390,7 +390,7 @@ function App() {
                         element={
                           <FeatureRoute
                             feature={routeConfig.feature}
-                            fallbackPath='/call-center/cases'
+                            fallbackPath='/call-center/home'
                           >
                             <Component />
                           </FeatureRoute>

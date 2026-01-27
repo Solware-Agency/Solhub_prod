@@ -83,7 +83,7 @@ export const PaymentSection = memo(({
 					</Tooltip>
 			</CardHeader>
 			<CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+				<div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 sm:gap-4">
 					<PaymentHeader
 						control={control}
 						inputStyles={inputStyles}
@@ -103,23 +103,23 @@ export const PaymentSection = memo(({
 					/>
 
 					{/* Estado de pago - aparece en la misma línea */}
-					<div className="flex items-center justify-center">
+					<div className="flex items-center justify-center md:justify-start">
 						{/* Mensaje de error cuando monto total es 0 */}
 						{totalAmount === 0 && (
-							<div className="dark:bg-red-900 bg-red-900 text-red-200 border border-red-700 rounded-lg px-4 py-3 text-sm font-semibold">
-								<div className="flex items-center">
-									<span className="mr-1">⚠️</span>
-									El monto total debe ser mayor a 0,01
+							<div className="dark:bg-red-900 bg-red-900 text-red-200 border border-red-700 rounded-lg px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+								<div className="flex items-center gap-1">
+									<span>⚠️</span>
+									<span>El monto total debe ser mayor a 0,01</span>
 								</div>
 							</div>
 						)}
 
 						{/* Alerta de monto pendiente */}
 						{totalAmount > 0 && !isPaymentComplete && missingAmount && missingAmount > 0 && (
-							<div className="dark:bg-red-900 bg-red-900 text-red-200 border border-red-700 rounded-lg px-4 py-3 text-sm font-semibold">
+							<div className="dark:bg-red-900 bg-red-900 text-red-200 border border-red-700 rounded-lg px-2 sm:px-3 py-2 text-xs font-semibold w-full max-w-full">
 								<div className="flex items-center">Monto pendiente: ${missingAmount.toFixed(2)}</div>
 								{exchangeRate && (
-									<div className="mt-1 text-sm text-red-300 font-normal">
+									<div className="mt-1 text-xs text-red-300 font-normal">
 										Equivalente: Bs {(missingAmount * exchangeRate).toFixed(2)}
 									</div>
 								)}
@@ -128,7 +128,7 @@ export const PaymentSection = memo(({
 
 						{/* Mensaje de pago completado */}
 						{totalAmount > 0 && isPaymentComplete && (
-							<div className="bg-green-900/70 text-green-200 border border-green-700 rounded-lg px-3 py-2 text-xs font-semibold">
+							<div className="bg-green-900/70 text-green-200 border border-green-700 rounded-lg px-2 sm:px-3 py-2 text-xs font-semibold w-full max-w-full">
 								<div className="flex items-center">
 									<span className="mr-1">✅</span>
 									Pago completado

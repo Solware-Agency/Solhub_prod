@@ -33,6 +33,9 @@ export function FeatureRoute({
 
   const { profile } = useUserProfile()
 
+  // El rol "prueba" respeta las features del laboratorio igual que otros roles
+  // Solo tiene bypass en rutas protegidas por roles (PrivateRoute)
+  
   // Si no hay laboratorio o la feature no está habilitada
   if (!laboratory?.features[feature]) {
     // Para la feature de informes también evaluamos permisos por rol
