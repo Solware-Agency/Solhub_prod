@@ -1,49 +1,201 @@
 import { lazy } from 'react'
 
+/**
+ * Utility para retry en lazy loading
+ * Reintenta cargar un módulo si falla (útil para errores de red o chunks)
+ */
+const lazyRetry = (
+  componentImport: () => Promise<any>,
+  name: string,
+  retries = 3,
+  interval = 1000
+) => {
+  return new Promise<any>((resolve, reject) => {
+    const attemptLoad = (attemptsLeft: number) => {
+      componentImport()
+        .then(resolve)
+        .catch((error) => {
+          console.warn(`⚠️ Failed to load ${name}, attempts left: ${attemptsLeft}`, error)
+          
+          if (attemptsLeft === 0) {
+            reject(error)
+            return
+          }
+
+          setTimeout(() => {
+            attemptLoad(attemptsLeft - 1)
+          }, interval)
+        })
+    }
+
+    attemptLoad(retries)
+  })
+}
+
 // Auth pages - lazy loaded
 export const LoginPage = lazy(() =>
-	import('@features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })),
+  lazyRetry(
+    () => import('@features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })),
+    'LoginPage'
+  )
 )
 export const RegisterPage = lazy(() =>
-	import('@features/auth/pages/RegisterPage').then((module) => ({ default: module.RegisterPage })),
+  lazyRetry(
+    () => import('@features/auth/pages/RegisterPage').then((module) => ({ default: module.RegisterPage })),
+    'RegisterPage'
+  )
 )
 export const ForgotPasswordPage = lazy(() =>
-	import('@features/auth/pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })),
+  lazyRetry(
+    () => import('@features/auth/pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })),
+    'ForgotPasswordPage'
+  )
 )
-export const PasswordResetPage = lazy(() => import('@features/auth/pages/PasswordResetPage'))
-export const NewPasswordPage = lazy(() => import('@features/auth/pages/NewPasswordPage'))
+export const PasswordResetPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/auth/pages/PasswordResetPage'),
+    'PasswordResetPage'
+  )
+)
+export const NewPasswordPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/auth/pages/NewPasswordPage'),
+    'NewPasswordPage'
+  )
+)
 export const NotFoundPage = lazy(() =>
-	import('@features/auth/pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
+  lazyRetry(
+    () => import('@features/auth/pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
+    'NotFoundPage'
+  )
 )
 
 // Auth other components - lazy loaded
-export const EmailVerificationNotice = lazy(() => import('@features/auth/other/EmailVerificationNotice'))
-export const PendingApprovalPage = lazy(() => import('@features/auth/other/PendingApprovalPage'))
-export const AuthCallback = lazy(() => import('@features/auth/other/AuthCallback'))
+export const EmailVerificationNotice = lazy(() => 
+  lazyRetry(
+    () => import('@features/auth/other/EmailVerificationNotice'),
+    'EmailVerificationNotice'
+  )
+)
+export const PendingApprovalPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/auth/other/PendingApprovalPage'),
+    'PendingApprovalPage'
+  )
+)
+export const AuthCallback = lazy(() => 
+  lazyRetry(
+    () => import('@features/auth/other/AuthCallback'),
+    'AuthCallback'
+  )
+)
 
 // Dashboard pages - lazy loaded
-export const Layout = lazy(() => import('@shared/components/layout/Layout'))
+export const Layout = lazy(() => 
+  lazyRetry(
+    () => import('@shared/components/layout/Layout'),
+    'Layout'
+  )
+)
 
-export const HomePage = lazy(() => import('@features/dashboard/components/HomePage'))
-export const StatsPage = lazy(() => import('@features/stats/pages/StatsPage'))
-export const ReceptionistHomePage = lazy(() => import('@features/dashboard/components/ReceptionistHomePage'))
-export const ReportsPage = lazy(() => import('@features/reports/pages/ReportsPage'))
-export const UsersPage = lazy(() => import('@features/users/pages/UsersPage'))
-export const CasesPage = lazy(() => import('@features/cases/pages/CasesPage'))
-export const SettingsPage = lazy(() => import('@features/settings/pages/SettingsPage'))
-export const ChangelogPage = lazy(() => import('@features/changelog/pages/ChangelogPage'))
+export const HomePage = lazy(() => 
+  lazyRetry(
+    () => import('@features/dashboard/components/HomePage'),
+    'HomePage'
+  )
+)
+export const StatsPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/stats/pages/StatsPage'),
+    'StatsPage'
+  )
+)
+export const ReceptionistHomePage = lazy(() => 
+  lazyRetry(
+    () => import('@features/dashboard/components/ReceptionistHomePage'),
+    'ReceptionistHomePage'
+  )
+)
+export const ReportsPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/reports/pages/ReportsPage'),
+    'ReportsPage'
+  )
+)
+export const UsersPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/users/pages/UsersPage'),
+    'UsersPage'
+  )
+)
+export const CasesPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/cases/pages/CasesPage'),
+    'CasesPage'
+  )
+)
+export const SettingsPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/settings/pages/SettingsPage'),
+    'SettingsPage'
+  )
+)
+export const ChangelogPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/changelog/pages/ChangelogPage'),
+    'ChangelogPage'
+  )
+)
 
-export const PatientsPage = lazy(() => import('@features/patients/pages/PatientsPage'))
-export const MedicalForm = lazy(() => import('@features/form/components/MedicalForm'))
-export const StandaloneChatPage = lazy(() => import('@features/ChatAI/pages/StandaloneChatPage'))
-export const TriageAnalyticsPage = lazy(() => import('@features/stats/components/TriageAnalyticsPage').then(module => ({ default: module.TriageAnalyticsPage })))
-export const WaitingRoomPage = lazy(() => import('@features/waiting-room/pages/WaitingRoomPage').then(module => ({ default: module.default })))
+export const PatientsPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/patients/pages/PatientsPage'),
+    'PatientsPage'
+  )
+)
+export const MedicalForm = lazy(() => 
+  lazyRetry(
+    () => import('@features/form/components/MedicalForm'),
+    'MedicalForm'
+  )
+)
+export const StandaloneChatPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/ChatAI/pages/StandaloneChatPage'),
+    'StandaloneChatPage'
+  )
+)
+export const TriageAnalyticsPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/stats/components/TriageAnalyticsPage').then(module => ({ default: module.TriageAnalyticsPage })),
+    'TriageAnalyticsPage'
+  )
+)
+export const WaitingRoomPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/waiting-room/pages/WaitingRoomPage').then(module => ({ default: module.default })),
+    'WaitingRoomPage'
+  )
+)
 
 // Form pages - lazy loaded
 export const DoctorsSection = lazy(() =>
-	import('@features/form/components/DoctorsSection').then((module) => ({ default: module.DoctorsSection })),
+  lazyRetry(
+    () => import('@features/form/components/DoctorsSection').then((module) => ({ default: module.DoctorsSection })),
+    'DoctorsSection'
+  )
 )
 
 // Routes - lazy loaded
-export const FormRoute = lazy(() => import('@app/routes/FormRoute'))
-export const PrivateRoute = lazy(() => import('@app/routes/PrivateRoute'))
+export const FormRoute = lazy(() => 
+  lazyRetry(
+    () => import('@app/routes/FormRoute'),
+    'FormRoute'
+  )
+)
+export const PrivateRoute = lazy(() => 
+  lazyRetry(
+    () => import('@app/routes/PrivateRoute'),
+    'PrivateRoute'
+  )
+)

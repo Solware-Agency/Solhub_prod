@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { Toaster } from '@shared/components/ui/toaster';
 import { DateRangeProvider } from '@app/providers/DateRangeContext';
+import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import {
   LoginPage,
   RegisterPage,
@@ -93,19 +94,20 @@ function RecoveryGate() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        <div className='App'>
-          <DateRangeProvider>
-            <Toaster />
-            <Suspense fallback={<LoadingSpinner />}>
-              <RecoveryGate />
-              <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <div className='App'>
+            <DateRangeProvider>
+              <Toaster />
+              <Suspense fallback={<LoadingSpinner />}>
+                <RecoveryGate />
+                <Routes>
                 {/* Public routes */}
                 <Route path='/' element={<LoginPage />} />
                 <Route path='/register' element={<RegisterPage />} />
@@ -462,6 +464,7 @@ function App() {
         </div>
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
