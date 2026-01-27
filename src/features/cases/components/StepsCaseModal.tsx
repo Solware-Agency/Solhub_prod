@@ -1216,6 +1216,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
       const emailBody = `Hola ${case_?.full_name},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
 
+      // Obtener imágenes del caso (priorizar images_urls array)
+      const caseImages = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) && (case_ as any).images_urls.length > 0
+        ? (case_ as any).images_urls
+        : ((case_ as any)?.image_url ? [(case_ as any).image_url] : []);
+
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
       const isDevelopment = import.meta.env.DEV;
       const apiUrl = isDevelopment
@@ -1236,6 +1241,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           message: emailBody,
           cc: emails.cc,
           bcc: emails.bcc,
+          imageUrls: caseImages, // Incluir imágenes
         }),
       });
 
