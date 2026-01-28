@@ -46,6 +46,7 @@ interface ServerFilters {
 	dateFrom?: string
 	dateTo?: string
 	examType?: string
+	consulta?: string
 	paymentStatus?: 'Incompleto' | 'Pagado'
 	userRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'
 	documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado'
