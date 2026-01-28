@@ -774,7 +774,7 @@ export interface MedicalRecord {
   archivo_adjunto_url?: string | null;
   image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
   images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
 }
 
 // =====================================================================

@@ -16,12 +16,6 @@ import {
   Users,
 } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@shared/components/ui/dialog';
-import {
   Tabs,
   TabsContent,
   TabsList,
@@ -54,8 +48,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
-import { ImageButton } from '@shared/components/ui/ImageButton';
-import { PDFButton } from '@shared/components/ui/PDFButton';
+import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -157,8 +150,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     setSelectedCases(new Set());
   };
 
-  const [previewingCaseId, setPreviewingCaseId] = useState<string | null>(null);
-  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [selectedCaseForModal, setSelectedCaseForModal] = useState<MedicalCaseWithPatient | null>(null);
 
   // Verificar si el paciente es un representado (menor o animal)
   const isRepresentado = patient ? ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal') : false;
@@ -269,75 +261,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     };
   }, [isOpen, patient?.id, refetch]);
 
-  // Obtener URL firmada fresca cuando se abre el preview
-  useEffect(() => {
-    if (!previewingCaseId) {
-      setPreviewPdfUrl(null);
-      return;
-    }
-
-    const getSignedUrl = async () => {
-      try {
-        const case_ = data?.find((c) => c.id === previewingCaseId) ||
-                      dependentsCases?.find((c) => c.id === previewingCaseId);
-        
-        if (!case_?.informepdf_url) {
-          setPreviewPdfUrl(null);
-          return;
-        }
-
-        // Extraer el path del bucket desde la URL
-        const url = case_.informepdf_url;
-        let bucketPath = '';
-
-        // Intentar extraer el path dependiendo del formato de URL
-        if (url.includes('/storage/v1/object/sign/')) {
-          // URL firmada de Supabase
-          const parts = url.split('/storage/v1/object/sign/')[1];
-          if (parts) {
-            bucketPath = parts.split('?')[0];
-          }
-        } else if (url.includes('/storage/v1/object/public/')) {
-          // URL pública de Supabase
-          const parts = url.split('/storage/v1/object/public/')[1];
-          if (parts) {
-            bucketPath = parts;
-          }
-        } else {
-          // Asumir que es la URL completa y usarla directamente
-          setPreviewPdfUrl(url);
-          return;
-        }
-
-        if (!bucketPath) {
-          setPreviewPdfUrl(url);
-          return;
-        }
-
-        // Separar bucket name del path
-        const [bucketName, ...pathParts] = bucketPath.split('/');
-        const filePath = pathParts.join('/');
-
-        // Obtener nueva URL firmada con 1 hora de expiración
-        const { data: signedData, error } = await supabase.storage
-          .from(bucketName)
-          .createSignedUrl(filePath, 3600); // 1 hora
-
-        if (error) {
-          console.error('Error getting signed URL:', error);
-          setPreviewPdfUrl(url); // Fallback a URL original
-          return;
-        }
-
-        setPreviewPdfUrl(signedData.signedUrl);
-      } catch (error) {
-        console.error('Error processing PDF URL:', error);
-        setPreviewPdfUrl(null);
-      }
-    };
-
-    getSignedUrl();
-  }, [previewingCaseId, data, dependentsCases]);
 
   // Filter cases based on search term - usando nueva estructura
   const filteredCases = React.useMemo(() => {
@@ -1068,18 +991,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           </button>
                         )}
                       </div>
-                      {isImagenologia && (
-                        <div className='flex items-center gap-2 ml-2'>
-                          <Button
-                            variant='outline'
-                            onClick={editPatient}
-                            title='Editar URL de imagen'
-                          >
-                            <Eye className='w-4 h-4 mr-2' />
-                            Editar URL de Imagen
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -1236,73 +1147,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Image Gallery - Todas las imágenes con miniaturas */}
-                        {filteredCases && Array.isArray(filteredCases) && filteredCases.length > 0 && (() => {
-                          try {
-                            // Recopilar todas las imágenes de todos los casos (priorizar images_urls array)
-                            const allImages: Array<{url: string; caseCode: string; caseId: string; index: number}> = [];
-                            filteredCases.forEach((caseItem: any) => {
-                              if (!caseItem) return;
-                              
-                              const caseImages = (caseItem.images_urls && Array.isArray(caseItem.images_urls) && caseItem.images_urls.length > 0) 
-                                ? caseItem.images_urls 
-                                : (caseItem.image_url ? [caseItem.image_url] : []);
-                              
-                              caseImages.forEach((url: string, index: number) => {
-                                if (url && typeof url === 'string') {
-                                  allImages.push({
-                                    url,
-                                    caseCode: caseItem.code || 'Sin código',
-                                    caseId: caseItem.id,
-                                    index: index + 1
-                                  });
-                                }
-                              });
-                            });
-                            
-                            if (allImages.length === 0) return null;
-                            
-                            return (
-                              <div className='px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-50/50 dark:bg-gray-800/30'>
-                                <div className='flex items-center gap-2 mb-3'>
-                                  <Eye className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                                  <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
-                                    Galería de Imágenes ({allImages.length})
-                                  </h3>
-                                </div>
-                                <div className='flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent'>
-                                  {allImages.map((image, idx) => (
-                                    <div
-                                      key={`${image.caseId}-${image.index}-${idx}`}
-                                      className='flex-shrink-0 group cursor-pointer'
-                                      onClick={() => window.open(image.url, '_blank')}
-                                    >
-                                      <div className='relative w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-lg'>
-                                        <img
-                                          src={image.url}
-                                          alt={`${image.caseCode} #${image.index}`}
-                                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-200'
-                                          loading='lazy'
-                                        />
-                                        <div className='absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center'>
-                                          <Eye className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200' />
-                                        </div>
-                                        <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2'>
-                                          <p className='text-xs text-white font-medium truncate'>
-                                            #{image.index} {image.caseCode}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          } catch (error) {
-                            console.error('Error rendering image gallery:', error);
-                            return null;
-                          }
-                        })()}
 
                         {/* Cases List */}
                         <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
@@ -1365,6 +1209,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                 (caseItem: MedicalCaseWithPatient) => (
                                   <div
                                     key={caseItem.id}
+                                    onClick={(e) => {
+                                      // Prevenir que el click se propague a los botones internos
+                                      if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
+                                        return;
+                                      }
+                                      setSelectedCaseForModal(caseItem);
+                                    }}
                                     className={`bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border rounded-lg p-4 transition-all duration-200 cursor-pointer hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/20 hover:border-primary/50 hover:bg-white/80 dark:hover:bg-background/50 hover:scale-[1.01] ${
                                       selectedCases.has(caseItem.id)
                                         ? 'border-primary border-2'
@@ -1391,19 +1242,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               className='mr-1'
                                             />
                                           )}
-                                          {!isSpt && (
-                                            <span
-                                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                                caseItem.payment_status,
-                                              )}`}
-                                            >
-                                              {caseItem.payment_status}
-                                            </span>
-                                          )}
                                         </div>
 
-                                        {/* Código y Fecha en la misma línea */}
-                                        <div className='grid grid-cols-2 gap-4'>
+                                        {/* Código, Fecha y Sede en la misma línea */}
+                                        <div className='grid grid-cols-3 gap-4'>
                                           <div>
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                               Código
@@ -1434,46 +1276,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               )}
                                             </p>
                                           </div>
-                                        </div>
-
-                                        {/* Tipo de Examen y Médico Tratante en la misma línea */}
-                                        <div className='grid grid-cols-2 gap-4'>
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                              Tipo de Examen
-                                            </p>
-                                            <p className='text-sm font-medium'>
-                                              {caseItem.exam_type}
-                                            </p>
-                                          </div>
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                              Médico Tratante
-                                            </p>
-                                            <p className='text-sm font-medium truncate'>
-                                              {caseItem.treating_doctor}
-                                            </p>
-                                          </div>
-                                        </div>
-
-                                        {/* Sede e Imagen en la misma línea */}
-                                        <div className='grid grid-cols-2 gap-4'>
                                           <div>
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                               Sede
                                             </p>
                                             <div className='mt-1'>
-                                              <BranchBadge
-                                                branch={caseItem.branch}
-                                              />
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                              Imagen
-                                            </p>
-                                            <div className='mt-1'>
-                                              <ImageButton imageUrl={(caseItem as any).image_url} />
+                                              <BranchBadge branch={caseItem.branch} />
                                             </div>
                                           </div>
                                         </div>
@@ -1508,9 +1316,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             )}
                                           </Button>
                                           <Button
-                                            onClick={() =>
-                                              setPreviewingCaseId(caseItem.id)
-                                            }
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedCaseForModal(caseItem);
+                                            }}
                                             disabled={
                                               isSaving ||
                                               !caseItem.informepdf_url ||
@@ -1520,77 +1329,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           >
                                             <Eye className='w-4 h-4' />
                                           </Button>
-                                          {/* Botón para ver PDF subido - visible para todos si existe */}
-                                          {(caseItem as any).uploaded_pdf_url && (
-                                            <PDFButton
-                                              pdfUrl={(caseItem as any).uploaded_pdf_url}
-                                              size='sm'
-                                              variant='default'
-                                            />
-                                          )}
-                                          {/* Botón para ver imagen - si existe */}
-                                          {(caseItem as any).image_url && (
-                                            <Button
-                                              onClick={() => window.open((caseItem as any).image_url, '_blank')}
-                                              disabled={isSaving}
-                                            >
-                                              <Eye className='h-4 w-4' />
-                                            </Button>
-                                          )}
                                         </div>
                                       </div>
-
-                                      {/* Resto de campos */}
-                                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 auto-rows-min'>
-                                        {/* Ocultar Monto Total para SPT */}
-                                        {!isSpt && (
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                              Monto Total
-                                            </p>
-                                            <p className='text-sm font-medium'>
-                                              {formatCurrency(
-                                                caseItem.total_amount,
-                                              )}
-                                            </p>
-                                          </div>
-                                        )}
-
-                                        {/* Ocultar Tipo de Muestra para SPT */}
-                                        {!isSpt && (
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                              Tipo de Muestra
-                                            </p>
-                                            <p className='text-sm font-medium'>
-                                              {caseItem.sample_type}
-                                            </p>
-                                          </div>
-                                        )}
-
-                                        {/* Ocultar Procedencia para SPT */}
-                                        {!isSpt && (
-                                          <div>
-                                            <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                              Procedencia
-                                            </p>
-                                            <p className='text-sm font-medium'>
-                                              {caseItem.origin}
-                                            </p>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {caseItem.diagnostico && (
-                                        <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                            Diagnóstico
-                                          </p>
-                                          <p className='text-sm mt-1'>
-                                            {caseItem.diagnostico}
-                                          </p>
-                                        </div>
-                                      )}
                                     </div>
                                 ),
                               )}
@@ -1649,21 +1389,18 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
                                 <div
                                   key={caseItem.id}
-                                  className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow'
+                                  onClick={(e) => {
+                                    // Prevenir que el click se propague a los botones internos
+                                    if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
+                                      return;
+                                    }
+                                    setSelectedCaseForModal(caseItem);
+                                  }}
+                                  className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer'
                                 >
                                   <div className='space-y-3'>
-                                    {/* Representado */}
-                                    <div>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                        Representado
-                                      </p>
-                                      <p className='text-sm font-medium text-blue-600 dark:text-blue-400'>
-                                        {caseItem.dependienteNombre}
-                                      </p>
-                                    </div>
-
-                                    {/* Código y Fecha en la misma línea */}
-                                    <div className='grid grid-cols-2 gap-4'>
+                                    {/* Código, Fecha y Sede en la misma línea */}
+                                    <div className='grid grid-cols-3 gap-4'>
                                       <div>
                                         <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                           Código
@@ -1680,80 +1417,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
                                         </p>
                                       </div>
-                                    </div>
-
-                                    {/* Tipo de Examen y Médico Tratante en la misma línea */}
-                                    <div className='grid grid-cols-2 gap-4'>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Tipo de Examen
-                                        </p>
-                                        <p className='text-sm font-medium'>
-                                          {caseItem.exam_type}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Médico Tratante
-                                        </p>
-                                        <p className='text-sm font-medium truncate'>
-                                          {caseItem.treating_doctor}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {/* Sede e Imagen en la misma línea */}
-                                    <div className='grid grid-cols-2 gap-4'>
                                       <div>
                                         <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                           Sede
                                         </p>
                                         <BranchBadge branch={caseItem.branch} className='text-xs' />
                                       </div>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Imagen
-                                        </p>
-                                        <div className='mt-1'>
-                                          <ImageButton imageUrl={(caseItem as any).image_url} />
-                                        </div>
-                                      </div>
                                     </div>
-
-                                    {/* Estado de Pago y Monto Total (si no es SPT) */}
-                                    {!isSpt && (
-                                      <div className='grid grid-cols-2 gap-4'>
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                            Estado de Pago
-                                          </p>
-                                          <span
-                                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                              caseItem.payment_status === 'Pagado'
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                            }`}
-                                          >
-                                            {caseItem.payment_status}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                            Monto Total
-                                          </p>
-                                          <p className='text-sm font-medium'>
-                                            {formatCurrency(caseItem.total_amount)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
 
                                     {/* Acciones */}
                                     <div className='flex gap-2 items-center justify-start pt-2'>
                                       <Button
-                                        onClick={() =>
-                                          handleCheckAndDownloadPDF(caseItem)
-                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCheckAndDownloadPDF(caseItem);
+                                        }}
                                         disabled={
                                           isGeneratingPDF ||
                                           isSaving ||
@@ -1775,9 +1453,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                         )}
                                       </Button>
                                       <Button
-                                        onClick={() =>
-                                          setPreviewingCaseId(caseItem.id)
-                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedCaseForModal(caseItem);
+                                        }}
                                         disabled={
                                           isSaving ||
                                           !caseItem.informepdf_url ||
@@ -1788,17 +1467,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       </Button>
                                     </div>
                                   </div>
-
-                                  {caseItem.diagnostico && (
-                                    <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-                                      <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                        Diagnóstico
-                                      </p>
-                                      <p className='text-sm mt-1'>
-                                        {caseItem.diagnostico}
-                                      </p>
-                                    </div>
-                                  )}
                                 </div>
                               ))}
                             </div>
@@ -1834,59 +1502,19 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             />
           )}
 
-          {/* Modal de Preview del PDF - Fuera del map para que sea único */}
-          <Dialog
-            open={previewingCaseId !== null}
-            onOpenChange={(open) => {
-              if (!open) setPreviewingCaseId(null);
+          {/* UnifiedCaseModal para ver detalles del caso */}
+          <UnifiedCaseModal
+            case_={selectedCaseForModal}
+            isOpen={selectedCaseForModal !== null}
+            onClose={() => setSelectedCaseForModal(null)}
+            onSave={() => {
+              refetch();
+              if (refetchDependentsCases) {
+                refetchDependentsCases();
+              }
             }}
-          >
-            <DialogContent className='max-w-5xl w-full h-[90vh] p-0'>
-              <DialogHeader className='p-4 border-b'>
-                <DialogTitle className='flex items-center gap-2'>
-                  <FileText className='w-5 h-5' />
-                  Vista previa del documento -{' '}
-                  {(() => {
-                    const case_ = filteredCases?.find((c) => c.id === previewingCaseId) ||
-                                  filteredDependentsCases?.find((c) => c.id === previewingCaseId);
-                    return case_?.code || 'Sin código';
-                  })()}
-                </DialogTitle>
-              </DialogHeader>
-              <div className='flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900'>
-                {previewPdfUrl ? (
-                  <iframe
-                    src={previewPdfUrl}
-                    className='w-full h-full border-0'
-                    title='Vista previa del PDF'
-                    style={{
-                      minHeight: 'calc(90vh - 80px)',
-                    }}
-                  />
-                ) : (
-                  <div className='flex items-center justify-center h-full'>
-                    <div className='text-center'>
-                      {previewingCaseId ? (
-                        <>
-                          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4'></div>
-                          <p className='text-gray-500 dark:text-gray-400'>
-                            Cargando PDF...
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
-                          <p className='text-gray-500 dark:text-gray-400'>
-                            No hay PDF disponible para previsualizar
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+            onCaseSelect={() => {}} // No necesario en este contexto
+          />
         </>
       )}
 

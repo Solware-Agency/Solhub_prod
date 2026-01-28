@@ -725,6 +725,21 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     handleInputChange(field, numericValue);
   };
 
+  // Permite decimales usando coma o punto (normaliza a punto)
+  const handleDecimalInput = (field: keyof TriajeFormData, value: string) => {
+    // Normalizar coma a punto para parseFloat / backend
+    let v = value.replace(/,/g, '.');
+    // Mantener solo dígitos y un separador decimal
+    v = v.replace(/[^0-9.]/g, '');
+    const firstDot = v.indexOf('.');
+    if (firstDot !== -1) {
+      v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '');
+    }
+    // Si inicia con ".", prefijar "0" para mejor UX/parseo
+    if (v.startsWith('.')) v = `0${v}`;
+    handleInputChange(field, v);
+  };
+
   // Función para validar rangos de signos vitales
   const validateVitalSignsRanges = (): { isValid: boolean; errorMessage: string } => {
     const errors: string[] = [];
@@ -1744,7 +1759,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     type='text'
                     placeholder='Cm'
                     value={formData.talla}
-                    onChange={(e) => handleNumericInput('talla', e.target.value)}
+                    inputMode='decimal'
+                    onChange={(e) => handleDecimalInput('talla', e.target.value)}
                     disabled={loading}
                     className={inputStyles}
                   />

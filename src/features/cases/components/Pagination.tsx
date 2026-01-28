@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@shared/lib/utils'
 
 interface PaginationProps {
 	currentPage: number
@@ -11,6 +12,8 @@ interface PaginationProps {
 	onNext: () => void
 	onPrev: () => void
 	totalItems?: number
+	variant?: 'default' | 'compact'
+	className?: string
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -19,6 +22,8 @@ const Pagination: React.FC<PaginationProps> = ({
 	onGoToPage,
 	onNext,
 	onPrev,
+	variant = 'default',
+	className,
 }) => {
 	const pageNumbers = useMemo(() => {
 		if (totalPages <= 1) return []
@@ -36,14 +41,24 @@ const Pagination: React.FC<PaginationProps> = ({
 	// if (totalPages <= 1) return null
 
 	return (
-		<div className="flex flex-col sm:flex-row items-center justify-center gap-4 p-4">
+		<div
+			className={cn(
+				variant === 'compact'
+					? 'flex items-center justify-center gap-2'
+					: 'flex flex-col sm:flex-row items-center justify-center gap-4 p-4',
+				className,
+			)}
+		>
 			{/* Controles de paginación */}
 			<div className="flex items-center gap-2">
 				<div className="flex items-center gap-1">
 					<button
 						onClick={onPrev}
 						disabled={currentPage === 1}
-						className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+						className={cn(
+							'p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-md hover:bg-gray-100 dark:hover:bg-gray-800',
+							variant === 'compact' && 'p-1.5',
+						)}
 						title="Página anterior"
 					>
 						<ChevronLeft className="w-4 h-4" />
@@ -52,11 +67,13 @@ const Pagination: React.FC<PaginationProps> = ({
 						<button
 							key={page}
 							onClick={() => onGoToPage(page)}
-							className={`px-3 py-2 text-sm rounded-md transition-none ${
+							className={cn(
+								variant === 'compact' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm',
+								'rounded-md transition-none',
 								page === currentPage
 									? 'border-2 border-primary text-primary bg-transparent font-medium'
 									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-							}`}
+							)}
 						>
 							{page}
 						</button>
@@ -64,7 +81,10 @@ const Pagination: React.FC<PaginationProps> = ({
 					<button
 						onClick={onNext}
 						disabled={currentPage === totalPages}
-						className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+						className={cn(
+							'p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-md hover:bg-gray-100 dark:hover:bg-gray-800',
+							variant === 'compact' && 'p-1.5',
+						)}
 						title="Página siguiente"
 					>
 						<ChevronRight className="w-4 h-4" />

@@ -1331,14 +1331,14 @@ const MainUsers: React.FC = () => {
 						</table>
 					</div>
 
-					{/* Estado vacó­o */}
+					{/* Estado vacío */}
 					{filteredUsers.length === 0 && (
 						<div className="text-center py-12">
 							<div className="text-gray-500 dark:text-gray-400">
 								<p className="text-lg font-medium">
 									{profile?.role === 'residente' ? 'No se encontraron médicos' : 'No se encontraron usuarios'}
 								</p>
-								<p className="text-sm">Intenta ajustar los filtros de bóºsqueda</p>
+								<p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
 							</div>
 						</div>
 					)}
