@@ -2166,6 +2166,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               pdfUrl={(currentCase as any).uploaded_pdf_url} 
                               size='sm'
                               variant='outline'
+                              isAttached={true}
                             />
                           ) : (
                             <span className='text-sm text-gray-500 dark:text-gray-400'>

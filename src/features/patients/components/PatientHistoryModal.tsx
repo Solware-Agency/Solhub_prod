@@ -49,6 +49,7 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal';
+import { PDFButton } from '@shared/components/ui/PDFButton';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -125,7 +126,14 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const [pendingEmailCases, setPendingEmailCases] = useState<MedicalCaseWithPatient[]>([]);
   const [activeTab, setActiveTab] = useState('cases');
-  const [searchTermRepresentados, setSearchTermRepresentados] = useState('');
+  const [selectedRepresentadoId, setSelectedRepresentadoId] = useState<string | null>(null);
+  
+  // Reset selected representado when tab changes or modal closes
+  useEffect(() => {
+    if (activeTab !== 'representados' || !isOpen) {
+      setSelectedRepresentadoId(null);
+    }
+  }, [activeTab, isOpen]);
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -190,6 +198,45 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     enabled: isOpen && !!patient?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Fetch lista de representados (dependientes)
+  const { data: representadosList, isLoading: isLoadingRepresentados } = useQuery({
+    queryKey: ['representados-list', patient?.id],
+    queryFn: async () => {
+      if (!patient?.id) return [];
+      
+      try {
+        // Obtener todos los dependientes del paciente responsable
+        const dependents = await getDependentsByResponsable(patient.id);
+        
+        if (!dependents || dependents.length === 0) {
+          return [];
+        }
+
+        // Retornar solo la lista de dependientes únicos
+        return dependents
+          .filter(dep => dep.dependiente?.id)
+          .map(dep => ({
+            id: dep.dependiente!.id,
+            nombre: dep.dependiente!.nombre || 'Desconocido',
+            cedula: dep.dependiente!.cedula || '',
+            tipo: dep.tipo,
+          }));
+      } catch (error) {
+        console.error('Error obteniendo lista de representados:', error);
+        return [];
+      }
+    },
+    enabled: isOpen && !!patient?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Auto-seleccionar el primer representado cuando se cargan los datos
+  useEffect(() => {
+    if (representadosList && representadosList.length > 0 && !selectedRepresentadoId) {
+      setSelectedRepresentadoId(representadosList[0].id);
+    }
+  }, [representadosList, selectedRepresentadoId]);
 
   // Fetch casos de representados (dependientes)
   const { data: dependentsCases, isLoading: isLoadingDependentsCases, refetch: refetchDependentsCases } = useQuery({
@@ -279,23 +326,18 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     );
   }, [data, searchTerm]);
 
-  // Filter casos de representados based on search term
+  // Filter casos de representados based on selected representado
   const filteredDependentsCases = React.useMemo(() => {
     if (!dependentsCases) return [];
 
-    if (!searchTermRepresentados) return dependentsCases;
+    if (!selectedRepresentadoId) return [];
 
-    const searchLower = searchTermRepresentados.toLowerCase();
+    // Filtrar casos del representado seleccionado
     return dependentsCases.filter(
-      (caseItem: MedicalCaseWithPatient & { dependienteNombre: string }) =>
-        (caseItem.code?.toLowerCase() || '').includes(searchLower) ||
-        (caseItem.exam_type?.toLowerCase() || '').includes(searchLower) ||
-        (caseItem.treating_doctor?.toLowerCase() || '').includes(searchLower) ||
-        (caseItem.branch?.toLowerCase() || '').includes(searchLower) ||
-        (caseItem.payment_status?.toLowerCase() || '').includes(searchLower) ||
-        (caseItem.dependienteNombre?.toLowerCase() || '').includes(searchLower),
+      (caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) =>
+        caseItem.dependienteId === selectedRepresentadoId,
     );
-  }, [dependentsCases, searchTermRepresentados]);
+  }, [dependentsCases, selectedRepresentadoId]);
 
   // Funciones para manejar selección de casos (después de filteredCases)
   const toggleCaseSelection = (caseId: string) => {
@@ -1016,8 +1058,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             className='flex items-center gap-2'
                           >
                             <Users className='h-4 w-4' />
-                            <span className='hidden md:inline'>Casos de Representados</span>
-                            <span className='md:hidden'>Representados</span>
+                            <span>Representados</span>
                           </TabsTrigger>
                           {laboratory?.features?.hasTriaje && (
                             <TabsTrigger
@@ -1315,20 +1356,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               </>
                                             )}
                                           </Button>
-                                          <Button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedCaseForModal(caseItem);
-                                            }}
-                                            disabled={
-                                              isSaving ||
-                                              !caseItem.informepdf_url ||
-                                              caseItem.doc_aprobado !==
-                                                'aprobado'
-                                            }
-                                          >
-                                            <Eye className='w-4 h-4' />
-                                          </Button>
+                                          <div onClick={(e) => e.stopPropagation()}>
+                                            <PDFButton
+                                              pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                              size='sm'
+                                              variant='default'
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1339,138 +1373,197 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         </div>
                       </TabsContent>
 
-                      {/* Tab: Casos de Representados */}
+                      {/* Tab: Representados */}
                       <TabsContent
                         value='representados'
                         className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
-                        {/* Search */}
-                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-                          <div className='relative flex-1'>
-                            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
-                            <Input
-                              type='text'
-                              placeholder='Buscar por código, tipo, médico, representado...'
-                              value={searchTermRepresentados}
-                              onChange={(e) => setSearchTermRepresentados(e.target.value)}
-                              className='pl-10'
-                            />
-                          </div>
-                        </div>
-
-                        {/* Cases List */}
-                        <div className='flex-1 overflow-y-auto p-4 min-h-0 h-full'>
-                          {isLoadingDependentsCases ? (
-                            <div className='flex items-center justify-center py-12'>
-                              <div className='flex items-center gap-3'>
-                                <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
-                                <span className='text-lg text-gray-700 dark:text-gray-300'>
-                                  Cargando casos de representados...
-                                </span>
-                              </div>
+                        {/* Two Panel Layout */}
+                        <div className='flex-1 flex overflow-hidden min-h-0'>
+                          {/* Left Panel: Lista de Representados */}
+                          <div className='w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden'>
+                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                              <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
+                                Representados
+                              </h3>
                             </div>
-                          ) : error ? (
-                            <div className='text-center py-12'>
-                              <p className='text-red-500 dark:text-red-400'>
-                                Error al cargar casos de representados
-                              </p>
-                            </div>
-                          ) : !filteredDependentsCases || filteredDependentsCases.length === 0 ? (
-                            <div className='text-center py-12'>
-                              <Users className='w-16 h-16 mx-auto text-gray-400 mb-4' />
-                              <p className='text-gray-500 dark:text-gray-400'>
-                                {dependentsCases && dependentsCases.length === 0
-                                  ? 'Este paciente no tiene representados o no hay casos registrados para sus representados.'
-                                  : 'No se encontraron casos que coincidan con la búsqueda.'}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className='space-y-4'>
-                              {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
-                                <div
-                                  key={caseItem.id}
-                                  onClick={(e) => {
-                                    // Prevenir que el click se propague a los botones internos
-                                    if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
-                                      return;
-                                    }
-                                    setSelectedCaseForModal(caseItem);
-                                  }}
-                                  className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer'
-                                >
-                                  <div className='space-y-3'>
-                                    {/* Código, Fecha y Sede en la misma línea */}
-                                    <div className='grid grid-cols-3 gap-4'>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Código
-                                        </p>
-                                        <p className='text-sm font-medium'>
-                                          {caseItem.code || 'Sin código'}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Fecha
-                                        </p>
-                                        <p className='text-sm font-medium'>
-                                          {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                                          Sede
-                                        </p>
-                                        <BranchBadge branch={caseItem.branch} className='text-xs' />
-                                      </div>
-                                    </div>
-
-                                    {/* Acciones */}
-                                    <div className='flex gap-2 items-center justify-start pt-2'>
-                                      <Button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCheckAndDownloadPDF(caseItem);
-                                        }}
-                                        disabled={
-                                          isGeneratingPDF ||
-                                          isSaving ||
-                                          caseItem.doc_aprobado !== 'aprobado' ||
-                                          selectedCases.size > 0 ||
-                                          isDownloadingMultiple
-                                        }
-                                      >
-                                        {isGeneratingPDF || isSaving ? (
-                                          <>
-                                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                            Generando...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Download className='h-4 w-4 mr-2' />
-                                            PDF
-                                          </>
-                                        )}
-                                      </Button>
-                                      <Button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedCaseForModal(caseItem);
-                                        }}
-                                        disabled={
-                                          isSaving ||
-                                          !caseItem.informepdf_url ||
-                                          caseItem.doc_aprobado !== 'aprobado'
-                                        }
-                                      >
-                                        <Eye className='w-4 h-4' />
-                                      </Button>
-                                    </div>
+                            <div className='flex-1 overflow-y-auto p-2'>
+                              {isLoadingRepresentados ? (
+                                <div className='flex items-center justify-center py-12'>
+                                  <div className='flex items-center gap-3'>
+                                    <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
+                                    <span className='text-sm text-gray-700 dark:text-gray-300'>
+                                      Cargando representados...
+                                    </span>
                                   </div>
                                 </div>
-                              ))}
+                              ) : !representadosList || representadosList.length === 0 ? (
+                                <div className='text-center py-12'>
+                                  <Users className='w-12 h-12 mx-auto text-gray-400 mb-4' />
+                                  <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                    Este paciente no tiene representados registrados.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className='space-y-2'>
+                                  {representadosList.map((representado) => (
+                                    <div
+                                      key={representado.id}
+                                      onClick={() => setSelectedRepresentadoId(representado.id)}
+                                      className={`p-3 rounded-lg cursor-pointer transition-all ${
+                                        selectedRepresentadoId === representado.id
+                                          ? 'bg-primary text-primary-foreground shadow-md'
+                                          : 'bg-white dark:bg-background border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                      }`}
+                                    >
+                                      <p className={`font-medium text-sm ${
+                                        selectedRepresentadoId === representado.id
+                                          ? 'text-primary-foreground'
+                                          : 'text-gray-900 dark:text-gray-100'
+                                      }`}>
+                                        {representado.nombre}
+                                      </p>
+                                      {representado.cedula && (
+                                        <p className={`text-xs mt-1 ${
+                                          selectedRepresentadoId === representado.id
+                                            ? 'text-primary-foreground/80'
+                                            : 'text-gray-500 dark:text-gray-400'
+                                        }`}>
+                                          {representado.cedula}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
+
+                          {/* Right Panel: Casos del Representado Seleccionado */}
+                          <div className='flex-1 flex flex-col overflow-hidden'>
+                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                              <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
+                                {selectedRepresentadoId && representadosList
+                                  ? `Casos de ${representadosList.find(r => r.id === selectedRepresentadoId)?.nombre || 'Representado'}`
+                                  : 'Selecciona un representado'}
+                              </h3>
+                            </div>
+                            <div className='flex-1 overflow-y-auto p-4'>
+                              {!selectedRepresentadoId ? (
+                                <div className='text-center py-12'>
+                                  <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                                  <p className='text-gray-500 dark:text-gray-400'>
+                                    Selecciona un representado para ver sus casos
+                                  </p>
+                                </div>
+                              ) : isLoadingDependentsCases ? (
+                                <div className='flex items-center justify-center py-12'>
+                                  <div className='flex items-center gap-3'>
+                                    <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
+                                    <span className='text-lg text-gray-700 dark:text-gray-300'>
+                                      Cargando casos...
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : error ? (
+                                <div className='text-center py-12'>
+                                  <p className='text-red-500 dark:text-red-400'>
+                                    Error al cargar casos
+                                  </p>
+                                </div>
+                              ) : !filteredDependentsCases || filteredDependentsCases.length === 0 ? (
+                                <div className='text-center py-12'>
+                                  <FileText className='w-16 h-16 mx-auto text-gray-400 mb-4' />
+                                  <p className='text-gray-500 dark:text-gray-400'>
+                                    No hay casos registrados para este representado.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className='space-y-4'>
+                                  {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
+                                    <div
+                                      key={caseItem.id}
+                                      onClick={(e) => {
+                                        // Prevenir que el click se propague a los botones internos
+                                        if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
+                                          return;
+                                        }
+                                        setSelectedCaseForModal(caseItem);
+                                      }}
+                                      className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer'
+                                    >
+                                      <div className='space-y-3'>
+                                        {/* Primera línea: Código y Fecha */}
+                                        <div className='grid grid-cols-2 gap-4'>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Código
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {caseItem.code || 'Sin código'}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Fecha
+                                            </p>
+                                            <p className='text-sm font-medium'>
+                                              {format(new Date(caseItem.date), 'dd/MM/yyyy', { locale: es })}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {/* Segunda línea: Sede y Botones */}
+                                        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-gray-200 dark:border-gray-700'>
+                                          <div className='flex-shrink-0'>
+                                            <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                                              Sede
+                                            </p>
+                                            <BranchBadge branch={caseItem.branch} className='text-xs' />
+                                          </div>
+                                          <div className='flex gap-2 items-center'>
+                                            <Button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleCheckAndDownloadPDF(caseItem);
+                                              }}
+                                              disabled={
+                                                isGeneratingPDF ||
+                                                isSaving ||
+                                                caseItem.doc_aprobado !== 'aprobado' ||
+                                                selectedCases.size > 0 ||
+                                                isDownloadingMultiple
+                                              }
+                                              size='sm'
+                                            >
+                                              {isGeneratingPDF || isSaving ? (
+                                                <>
+                                                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                                  Generando...
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Download className='h-4 w-4 mr-2' />
+                                                  PDF
+                                                </>
+                                              )}
+                                            </Button>
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                              <PDFButton
+                                                pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                                size='sm'
+                                                variant='default'
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </TabsContent>
 

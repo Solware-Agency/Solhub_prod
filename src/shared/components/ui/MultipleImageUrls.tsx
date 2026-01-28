@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { X, Plus, Image as ImageIcon, ExternalLink, Eye } from 'lucide-react';
+import { X, Plus, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
 
 interface MultipleImageUrlsProps {
@@ -74,13 +74,6 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
       {/* Lista de imágenes existentes */}
       {images.length > 0 && (
         <div className='space-y-2'>
-          <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
-            <ImageIcon className='w-4 h-4' />
-            <span className='font-medium'>
-              {images.length} {images.length === 1 ? 'imagen' : 'imágenes'}
-            </span>
-          </div>
-          
           {isEditing ? (
             // Modo edición: Lista con inputs
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
@@ -116,30 +109,18 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
               ))}
             </div>
           ) : (
-            // Modo lectura: Grid de miniaturas clickeables
-            <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
+            // Modo lectura: Grid de miniaturas clickeables (máximo 5 por línea)
+            <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 justify-items-start'>
               {images.map((imageUrl, index) => (
                 <div
                   key={index}
-                  className='group relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-all duration-200 cursor-pointer bg-gray-100 dark:bg-gray-800'
+                  className='group relative aspect-square w-16 sm:w-20 md:w-24 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-all duration-200 cursor-pointer bg-gray-100 dark:bg-gray-800'
                   onClick={() => openImageInNewTab(imageUrl)}
                   title={`Click para ver imagen ${index + 1}`}
                 >
                   {/* Número de imagen */}
                   <div className='absolute top-1 left-1 z-10 bg-black/60 text-white text-xs font-semibold px-1.5 py-0.5 rounded'>
                     #{index + 1}
-                  </div>
-                  
-                  {/* Botón de ver en overlay al hacer hover */}
-                  <div className='absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 z-10'>
-                    <div className='flex gap-2'>
-                      <div className='bg-white dark:bg-gray-800 rounded-full p-2'>
-                        <Eye className='w-4 h-4 text-gray-900 dark:text-white' />
-                      </div>
-                      <div className='bg-white dark:bg-gray-800 rounded-full p-2'>
-                        <ExternalLink className='w-4 h-4 text-gray-900 dark:text-white' />
-                      </div>
-                    </div>
                   </div>
 
                   {/* Imagen o fallback */}
@@ -154,9 +135,6 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
                   ) : (
                     <div className='w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 p-2'>
                       <ImageIcon className='w-8 h-8 mb-1' />
-                      <span className='text-xs text-center break-all line-clamp-3'>
-                        {imageUrl.substring(0, 30)}...
-                      </span>
                     </div>
                   )}
                 </div>

@@ -322,6 +322,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							size="sm"
 							variant="ghost"
 							className="h-6 px-2"
+							isAttached={true}
 						/>
 						<Button
 							variant="ghost"
