@@ -87,55 +87,53 @@ export async function validateLaboratoryCode(
 /**
  * Incrementa el contador de usos de un código
  */
-export async function incrementCodeUsage(codeId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
-  try {
-    console.log('📈 Incrementando uso del código:', codeId);
+export async function incrementCodeUsage(codeId: string): Promise<void> {
+  console.log('📈 Incrementando uso del código:', codeId);
 
-    // Obtener current_uses actual
-    const { data: currentData, error: fetchError } = await (supabase as any)
-      .from('laboratory_codes')
-      .select('current_uses')
-      .eq('id', codeId)
-      .single();
+  // ⚠️ IMPORTANTE:
+  // Durante el signup el usuario suele NO tener sesión válida (email confirmation),
+  // así que un UPDATE directo puede fallar por RLS.
+  // Por eso usamos un RPC SECURITY DEFINER en BD.
+  const { data, error } = await (supabase as any).rpc(
+    'increment_laboratory_code_usage',
+    { code_id: codeId },
+  );
 
-    if (fetchError || !currentData) {
-      return {
-        success: false,
-        error: 'No se pudo obtener información del código'
-      };
-    }
-
-    // Incrementar
-    const { error } = await (supabase as any)
-      .from('laboratory_codes')
-      .update({
-        current_uses: currentData.current_uses + 1
-      })
-      .eq('id', codeId);
-
-    if (error) {
-      console.error('❌ Error incrementando uso:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-
-    console.log('✅ Uso incrementado correctamente');
-
-    return {
-      success: true
-    };
-  } catch (error) {
-    console.error('❌ Error incrementando uso:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    };
+  if (!error) {
+    // data típicamente será [{ id, current_uses }]
+    console.log('✅ Uso incrementado correctamente (RPC)', data);
+    return;
   }
+
+  // Fallback defensivo: si el RPC aún no existe en el entorno, intentamos UPDATE directo.
+  // Esto puede seguir fallando por RLS, pero al menos deja un error claro en consola.
+  console.warn(
+    '⚠️ RPC increment_laboratory_code_usage falló; intentando fallback UPDATE directo.',
+    error,
+  );
+
+  const { data: currentData, error: fetchError } = await (supabase as any)
+    .from('laboratory_codes')
+    .select('current_uses')
+    .eq('id', codeId)
+    .single();
+
+  if (fetchError || !currentData) {
+    console.error('❌ Error obteniendo código para fallback:', fetchError);
+    throw new Error('No se pudo incrementar el uso del código');
+  }
+
+  const { error: updateError } = await (supabase as any)
+    .from('laboratory_codes')
+    .update({ current_uses: currentData.current_uses + 1 })
+    .eq('id', codeId);
+
+  if (updateError) {
+    console.error('❌ Error incrementando uso (fallback):', updateError);
+    throw new Error(updateError.message || 'No se pudo incrementar el uso del código');
+  }
+
+  console.log('✅ Uso incrementado correctamente (fallback)');
 }
 
 /**

@@ -730,33 +730,79 @@ const MainUsers: React.FC = () => {
 			return
 		}
 
+		const userIdToDelete = userToDelete.id
+		const userEmailToDelete = userToDelete.email
+		const userDisplayNameToDelete = userToDelete.display_name
+
 		try {
-			const { success, error } = await deleteUser(userToDelete.id)
+			const { success, error } = await deleteUser(userIdToDelete)
+
+			// Verificar si el usuario fue eliminado de profiles (aunque haya error en auth)
+			// Esto permite cerrar el modal incluso si hay un error parcial
+			const { data: profileCheck } = await supabase
+				.from('profiles')
+				.select('id')
+				.eq('id', userIdToDelete)
+				.single()
+
+			const profileWasDeleted = !profileCheck
 
 			if (error || !success) {
-				throw error || new Error('Error al eliminar usuario')
+				// Si el perfil fue eliminado pero hubo error en auth, mostrar mensaje específico
+				if (profileWasDeleted) {
+					toast({
+						title: '⚠️ Eliminación parcial',
+						description: `El usuario ${userDisplayNameToDelete || userEmailToDelete} fue eliminado de la base de datos, pero puede que aún exista en el sistema de autenticación. Verifica manualmente si es necesario.`,
+						variant: 'destructive',
+					})
+				} else {
+					throw error || new Error('Error al eliminar usuario')
+				}
+			} else {
+				toast({
+					title: '✅ Usuario eliminado',
+					description: `El usuario ${userDisplayNameToDelete || userEmailToDelete} ha sido eliminado exitosamente. Los casos y pacientes enlazados se mantienen intactos.`,
+					className: 'bg-green-100 border-green-400 text-green-800',
+				})
 			}
-
-			toast({
-				title: '✅ Usuario eliminado',
-				description: `El usuario ${userToDelete.display_name || userToDelete.email} ha sido eliminado exitosamente. Los casos y pacientes enlazados se mantienen intactos.`,
-				className: 'bg-green-100 border-green-400 text-green-800',
-			})
 
 			// Refrescar la lista de usuarios
 			refetch()
 
-			// Cerrar diálogo y limpiar estado
+			// Cerrar diálogo y limpiar estado (siempre, incluso si hubo error parcial)
 			setDeleteDialogOpen(false)
 			setUserToDelete(null)
 			setDeleteCooldown(0)
 		} catch (error) {
 			console.error('Error eliminando usuario:', error)
-			toast({
-				title: '❌ Error al eliminar',
-				description: error instanceof Error ? error.message : 'Hubo un problema al eliminar el usuario. Inténtalo de nuevo.',
-				variant: 'destructive',
-			})
+			
+			// Verificar si el perfil fue eliminado a pesar del error
+			const { data: profileCheck } = await supabase
+				.from('profiles')
+				.select('id')
+				.eq('id', userIdToDelete)
+				.single()
+
+			const profileWasDeleted = !profileCheck
+
+			if (profileWasDeleted) {
+				// Si el perfil fue eliminado, cerrar el modal y mostrar mensaje
+				toast({
+					title: '⚠️ Eliminación parcial',
+					description: `El usuario ${userDisplayNameToDelete || userEmailToDelete} fue eliminado de la base de datos, pero hubo un error al eliminarlo del sistema de autenticación. Verifica manualmente si es necesario.`,
+					variant: 'destructive',
+				})
+				setDeleteDialogOpen(false)
+				setUserToDelete(null)
+				setDeleteCooldown(0)
+				refetch()
+			} else {
+				toast({
+					title: '❌ Error al eliminar',
+					description: error instanceof Error ? error.message : 'Hubo un problema al eliminar el usuario. Inténtalo de nuevo.',
+					variant: 'destructive',
+				})
+			}
 		}
 	}
 

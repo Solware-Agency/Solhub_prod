@@ -577,32 +577,15 @@ export const deleteUser = async (
 			}
 		}
 
-		// Paso 1: Eliminar el perfil de la tabla profiles manualmente
-		// Esto NO eliminará los casos/pacientes porque no hay CASCADE en esas relaciones
-		const { error: deleteProfileError } = await supabase
-			.from('profiles')
-			.delete()
-			.eq('id', userId)
-			.eq('laboratory_id', currentProfile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
-
-		if (deleteProfileError) {
-			console.error('Error eliminando perfil:', deleteProfileError)
-			return {
-				success: false,
-				error: deleteProfileError,
-			}
-		}
-
-		// Paso 2: Eliminar el usuario de auth.users usando función RPC
+		// Paso 1: Eliminar el usuario de auth.users usando función RPC PRIMERO
 		// La función RPC tiene SECURITY DEFINER para acceder a auth.users
+		// IMPORTANTE: Debe ejecutarse ANTES de eliminar el perfil porque necesita validar el perfil
 		const { data: deleteResult, error: deleteAuthError } = await supabase.rpc('delete_user_from_auth', {
 			p_user_id: userId,
 		})
 
 		if (deleteAuthError) {
 			console.error('Error eliminando usuario de auth:', deleteAuthError)
-			// Si falla la eliminación de auth, el perfil ya fue eliminado
-			// Esto es un estado inconsistente, pero el usuario no podrá autenticarse
 			return {
 				success: false,
 				error: new Error(`Error al eliminar usuario de autenticación: ${deleteAuthError.message}`),
@@ -621,6 +604,23 @@ export const deleteUser = async (
 			}
 		}
 
+		// Paso 2: El perfil se eliminará automáticamente por ON DELETE CASCADE
+		// Pero verificamos que se haya eliminado correctamente
+		// Si por alguna razón el CASCADE no funcionó, eliminamos manualmente el perfil
+		const { error: deleteProfileError } = await supabase
+			.from('profiles')
+			.delete()
+			.eq('id', userId)
+			.eq('laboratory_id', currentProfile.laboratory_id) // 🔐 VALIDACIÓN MULTI-TENANT
+
+		// Si el perfil ya no existe (eliminado por CASCADE), no es un error
+		// Solo reportamos error si es un error real (no PGRST116 que significa "no encontrado")
+		if (deleteProfileError && deleteProfileError.code !== 'PGRST116') {
+			console.warn('Advertencia: El perfil no se eliminó automáticamente por CASCADE:', deleteProfileError)
+			// No retornamos error aquí porque el usuario ya fue eliminado de auth.users
+			// El perfil debería haberse eliminado automáticamente por CASCADE
+		}
+
 		console.log(`Usuario ${userId} eliminado exitosamente`)
 		return {
 			success: true,
@@ -628,6 +628,25 @@ export const deleteUser = async (
 		}
 	} catch (error) {
 		console.error('Error inesperado eliminando usuario:', error)
+		
+		// Verificar si el perfil fue eliminado a pesar del error
+		const { data: profileCheck } = await supabase
+			.from('profiles')
+			.select('id')
+			.eq('id', userId)
+			.single()
+
+		const profileWasDeleted = !profileCheck
+		
+		if (profileWasDeleted) {
+			console.warn('El perfil fue eliminado pero hubo un error:', error)
+			// Retornar éxito parcial para que el modal se cierre
+			return {
+				success: true,
+				error: error instanceof Error ? error : new Error('Usuario eliminado parcialmente. Verifica manualmente auth.users si es necesario.'),
+			}
+		}
+
 		return {
 			success: false,
 			error: error as Error,
