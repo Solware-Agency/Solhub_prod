@@ -38,6 +38,12 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		cases: '/imagenologia/cases',
 		patients: '/imagenologia/patients',
 	},
+	laboratorio: {
+		home: '/laboratorio/home',
+		cases: '/laboratorio/cases',
+		patients: '/laboratorio/patients',
+		settings: '/laboratorio/settings',
+	},
 	medico_tratante: {
 		home: '/medico-tratante/home',
 		cases: '/medico-tratante/cases',

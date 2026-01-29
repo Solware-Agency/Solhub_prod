@@ -16,7 +16,11 @@ import { validateFormPayments, calculatePaymentDetails } from '@features/form/li
 import { prepareDefaultValues, preparePaymentValues } from './registration-helpers'
 import type { ModuleConfig } from '@/shared/types/types'
 // Nuevo sistema: servicios de identificaciones (dual-write)
-import { createIdentification, parseCedula } from '@services/supabase/patients/identificaciones-service'
+import {
+	createIdentification,
+	parseCedula,
+	formatCedulaCanonical,
+} from '@services/supabase/patients/identificaciones-service'
 
 // Tipo de formulario (evita importación circular)
 export interface FormValues {
@@ -162,7 +166,7 @@ export const registerMedicalCase = async (
 				.select('slug')
 				.eq('id', profileWithLab.laboratory_id)
 				.single()
-			
+
 			laboratorySlug = (labData as { slug?: string } | null)?.slug || null
 		}
 
@@ -329,128 +333,106 @@ export const registerMedicalCase = async (
  * @param userAssignedBranch - Sede asignada al usuario (assigned_branch del perfil)
  */
 const prepareRegistrationData = (
-  formData: FormValues,
-  user: any,
-  exchangeRate?: number,
-  moduleConfig?: ModuleConfig | null,
-  userAssignedBranch?: string | null,
-  laboratorySlug?: string | null,
+	formData: FormValues,
+	user: any,
+	exchangeRate?: number,
+	moduleConfig?: ModuleConfig | null,
+	userAssignedBranch?: string | null,
+	laboratorySlug?: string | null,
 ) => {
-  // Datos del paciente (tabla patients)
-  const patientData: PatientInsert = {
-    cedula:
-      formData.idType === 'S/C'
-        ? null // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
-        : `${formData.idType}-${formData.idNumber}`,
-    nombre: formData.fullName,
-    edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
-    telefono: formData.phone,
-    email: formData.email || null,
-    gender: formData.gender || null, // Si está vacío, guardar como null
-  };
+	// Datos del paciente (tabla patients). Cédula SIEMPRE en formato canónico (TIPO-NUMERO).
+	const cedulaRaw = formData.idType === 'S/C' ? null : `${formData.idType}-${formData.idNumber}`
+	const patientData: PatientInsert = {
+		cedula:
+			cedulaRaw == null || cedulaRaw === ''
+				? null // NULL para dependientes (no viola constraint unique_cedula_per_laboratory)
+				: (formatCedulaCanonical(cedulaRaw) ?? cedulaRaw),
+		nombre: formData.fullName,
+		edad: formData.ageValue ? `${formData.ageValue} ${formData.ageUnit}` : null,
+		telefono: formData.phone,
+		email: formData.email || null,
+		gender: formData.gender || null, // Si está vacío, guardar como null
+	}
 
-  // Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
-  // const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
+	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
+	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
-  // Verificar si hay pagos
-  const hasPayments =
-    formData.payments?.some((payment) => (payment.amount || 0) > 0) || false;
-  const hasTotalAmount = formData.totalAmount > 0;
+	// Verificar si hay pagos
+	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
+	const hasTotalAmount = formData.totalAmount > 0
 
-  // Calcular remaining amount y estado de pago solo si hay pagos
-  let missingAmount = 0;
-  let isPaymentComplete = false;
-  let remaining = 0;
+	// Calcular remaining amount y estado de pago solo si hay pagos
+	let missingAmount = 0
+	let isPaymentComplete = false
+	let remaining = 0
 
-  if (hasPayments && hasTotalAmount) {
-    const paymentDetails = calculatePaymentDetails(
-      formData.payments || [],
-      formData.totalAmount,
-      exchangeRate,
-    );
-    missingAmount = paymentDetails.missingAmount || 0;
-    isPaymentComplete = paymentDetails.isPaymentComplete;
-    remaining = missingAmount;
-  }
+	if (hasPayments && hasTotalAmount) {
+		const paymentDetails = calculatePaymentDetails(formData.payments || [], formData.totalAmount, exchangeRate)
+		missingAmount = paymentDetails.missingAmount || 0
+		isPaymentComplete = paymentDetails.isPaymentComplete
+		remaining = missingAmount
+	}
 
-  // Obtener valores por defecto basados en configuración del módulo
-  // Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
-  // Pasar userAssignedBranch para que se use como fallback si no hay branch en el formulario
-  // Pasar laboratorySlug para validar que SPT siempre tenga sede
-  const defaultValues = prepareDefaultValues(
-    formData,
-    moduleConfig,
-    userAssignedBranch,
-    laboratorySlug,
-  );
+	// Obtener valores por defecto basados en configuración del módulo
+	// Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
+	// Pasar userAssignedBranch para que se use como fallback si no hay branch en el formulario
+	// Pasar laboratorySlug para validar que SPT siempre tenga sede
+	const defaultValues = prepareDefaultValues(formData, moduleConfig, userAssignedBranch, laboratorySlug)
 
-  // Preparar valores de pago (maneja labs sin módulo de pagos)
-  const paymentValues = preparePaymentValues(
-    formData,
-    hasPayments,
-    hasTotalAmount,
-    isPaymentComplete,
-    remaining,
-  );
+	// Preparar valores de pago (maneja labs sin módulo de pagos)
+	const paymentValues = preparePaymentValues(formData, hasPayments, hasTotalAmount, isPaymentComplete, remaining)
 
-  // Datos del caso médico (tabla medical_records_clean)
-  const caseData: MedicalCaseInsert = {
-    // Aplicar valores por defecto primero (para campos NOT NULL)
-    // Estos valores ya tienen en cuenta si el campo está habilitado o deshabilitado
-    // Asegurar que campos NOT NULL nunca sean null/undefined
-    origin: (defaultValues.origin || '') as string,
-    treating_doctor: (defaultValues.treating_doctor || '') as string,
-    sample_type: (defaultValues.sample_type || '') as string,
-    number_of_samples: defaultValues.number_of_samples || 1,
-    branch: defaultValues.branch ?? null, // Convertir undefined a null
-    date: defaultValues.date || new Date().toISOString(),
-    // payment_status se define en paymentValues, no duplicar aquí
+	// Datos del caso médico (tabla medical_records_clean)
+	const caseData: MedicalCaseInsert = {
+		// Aplicar valores por defecto primero (para campos NOT NULL)
+		// Estos valores ya tienen en cuenta si el campo está habilitado o deshabilitado
+		// Asegurar que campos NOT NULL nunca sean null/undefined
+		origin: (defaultValues.origin || '') as string,
+		treating_doctor: (defaultValues.treating_doctor || '') as string,
+		sample_type: (defaultValues.sample_type || '') as string,
+		number_of_samples: defaultValues.number_of_samples || 1,
+		branch: defaultValues.branch ?? null, // Convertir undefined a null
+		date: defaultValues.date || new Date().toISOString(),
+		// payment_status se define en paymentValues, no duplicar aquí
 
-    // Información del examen
-    // Si no hay exam_type pero sí consulta, usar consulta como exam_type
-    // Esto permite generar códigos para casos solo con consulta (ya mapeadas en codeMappings)
-    exam_type: formData.examType || (formData as any).consulta || null,
+		// Información del examen
+		// Si no hay exam_type pero sí consulta, usar consulta como exam_type
+		// Esto permite generar códigos para casos solo con consulta (ya mapeadas en codeMappings)
+		exam_type: formData.examType || (formData as any).consulta || null,
 
-    // Campos opcionales
-    relationship: formData.relationship || null,
-    consulta: (formData as any).consulta || null, // Especialidad médica (solo para lab SPT) - usar as any temporalmente
-    code: '', // Se generará automáticamente
+		// Campos opcionales
+		relationship: formData.relationship || null,
+		consulta: (formData as any).consulta || null, // Especialidad médica (solo para lab SPT) - usar as any temporalmente
+		code: '', // Se generará automáticamente
 
-    // Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
-    ...paymentValues,
-    exchange_rate: exchangeRate || null,
+		// Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
+		...paymentValues,
+		exchange_rate: exchangeRate || null,
 
-    // Información adicional
-    comments: formData.comments || null,
+		// Información adicional
+		comments: formData.comments || null,
 
-    // Metadatos
-    generated_by: user.id || null,
-    // Campos adicionales para tracking de creación
-    created_by: user.id || null,
-    created_by_display_name:
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email ||
-      null,
-  };
+		// Metadatos
+		generated_by: user.id || null,
+		// Campos adicionales para tracking de creación
+		created_by: user.id || null,
+		created_by_display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email || null,
+	}
 
-  // Debug: Verificar que treating_doctor nunca sea null/undefined
-  if (
-    caseData.treating_doctor === null ||
-    caseData.treating_doctor === undefined
-  ) {
-    console.error('❌ ERROR: treating_doctor es null/undefined!', {
-      defaultValue: defaultValues.treating_doctor,
-      formValue: formData.treatingDoctor,
-      doctorName: formData.doctorName,
-      moduleConfig: moduleConfig?.fields?.medicoTratante,
-    });
-    // Forzar string vacío si es null/undefined
-    caseData.treating_doctor = '';
-  }
+	// Debug: Verificar que treating_doctor nunca sea null/undefined
+	if (caseData.treating_doctor === null || caseData.treating_doctor === undefined) {
+		console.error('❌ ERROR: treating_doctor es null/undefined!', {
+			defaultValue: defaultValues.treating_doctor,
+			formValue: formData.treatingDoctor,
+			doctorName: formData.doctorName,
+			moduleConfig: moduleConfig?.fields?.medicoTratante,
+		})
+		// Forzar string vacío si es null/undefined
+		caseData.treating_doctor = ''
+	}
 
-  return { patientData, caseData };
-};
+	return { patientData, caseData }
+}
 
 /**
  * Detectar si hay cambios en los datos del paciente

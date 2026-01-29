@@ -27,13 +27,11 @@ import type {
   MedicalCaseWithPatient,
   MedicalCaseUpdate,
 } from '@/services/supabase/cases/medical-cases-service';
-import type { PatientUpdate } from '@/services/supabase/patients/patients-service';
 import {
   updateMedicalCase,
   deleteMedicalCase,
   findCaseByCode,
 } from '@/services/supabase/cases/medical-cases-service';
-import { updatePatient } from '@/services/supabase/patients/patients-service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -42,6 +40,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
+import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 import {
   createDropdownOptions,
   FormDropdown,
@@ -70,7 +69,7 @@ import { getCodeLegend } from '@/shared/utils/code-legend-utils';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import SendEmailModal from './SendEmailModal';
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service';
-import { ImageButton } from '@shared/components/ui/ImageButton';
+import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls';
 import { PDFButton } from '@shared/components/ui/PDFButton';
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
@@ -275,8 +274,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
     const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
-    // Image URL state for imagenologia role
-    const [imageUrl, setImageUrl] = useState('');
+    // Image URLs state for imagenologia role (hasta 10 imágenes)
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
 
     // Payment editing states
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -553,50 +552,55 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Initialize edited case when currentCase changes or when entering edit mode
     useEffect(() => {
-      if (currentCase && isEditing) {
-        // Initialize with current case data - separating patient and case data
-        setEditedCase({
-          // Patient data
-          nombre: currentCase.nombre,
-          cedula: currentCase.cedula,
-          telefono: currentCase.telefono,
-          patient_email: currentCase.patient_email,
-          edad: currentCase.edad,
-          // Case data
-          exam_type: currentCase.exam_type,
-          treating_doctor: currentCase.treating_doctor,
-          origin: currentCase.origin,
-          branch: currentCase.branch,
-          comments: currentCase.comments,
-          // Financial data
-          total_amount: currentCase.total_amount,
-          exchange_rate: currentCase.exchange_rate,
-        });
-        
-        // Initialize image URL for imagenologia role
-        setImageUrl((currentCase as any).image_url || '');
+      if (currentCase) {
+        // Initialize image URLs for imagenologia role (siempre, no solo en edición)
+        // Priorizar images_urls (nuevo), fallback a image_url (legacy)
+        const caseImages = (currentCase as any).images_urls || 
+                          ((currentCase as any).image_url ? [(currentCase as any).image_url] : []);
+        setImageUrls(caseImages);
 
-        // Initialize payment methods from current case
-        const methods: PaymentMethod[] = [];
-        for (let i = 1; i <= 4; i++) {
-          const method = currentCase[
-            `payment_method_${i}` as keyof MedicalCaseWithPatient
-          ] as string;
-          const amount = currentCase[
-            `payment_amount_${i}` as keyof MedicalCaseWithPatient
-          ] as number;
-          const reference = currentCase[
-            `payment_reference_${i}` as keyof MedicalCaseWithPatient
-          ] as string;
+        if (isEditing) {
+          // Initialize with current case data - separating patient and case data
+          setEditedCase({
+            // Patient data
+            nombre: currentCase.nombre,
+            cedula: currentCase.cedula,
+            telefono: currentCase.telefono,
+            patient_email: currentCase.patient_email,
+            edad: currentCase.edad,
+            // Case data
+            exam_type: currentCase.exam_type,
+            treating_doctor: currentCase.treating_doctor,
+            origin: currentCase.origin,
+            branch: currentCase.branch,
+            comments: currentCase.comments,
+            // Financial data
+            total_amount: currentCase.total_amount,
+            exchange_rate: currentCase.exchange_rate,
+          });
 
-          if (method && amount) {
-            methods.push({ method, amount, reference: reference || '' });
+          // Initialize payment methods from current case
+          const methods: PaymentMethod[] = [];
+          for (let i = 1; i <= 4; i++) {
+            const method = currentCase[
+              `payment_method_${i}` as keyof MedicalCaseWithPatient
+            ] as string;
+            const amount = currentCase[
+              `payment_amount_${i}` as keyof MedicalCaseWithPatient
+            ] as number;
+            const reference = currentCase[
+              `payment_reference_${i}` as keyof MedicalCaseWithPatient
+            ] as string;
+
+            if (method && amount) {
+              methods.push({ method, amount, reference: reference || '' });
+            }
           }
+          setPaymentMethods(methods);
+        } else {
+          setEditedCase({});
+          setPaymentMethods([]);
         }
-        setPaymentMethods(methods);
-      } else {
-        setEditedCase({});
-        setPaymentMethods([]);
       }
     }, [currentCase, isEditing]);
 
@@ -758,8 +762,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
       setIsSaving(true);
       try {
-        // Separar cambios en datos del paciente vs datos del caso
-        const patientFields = ['nombre', 'telefono', 'patient_email', 'edad'];
+        // Solo permitir editar campos del caso (Información Médica + Información Adicional)
         const caseFields = [
           'exam_type',
           'treating_doctor',
@@ -770,34 +773,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'image_url',
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
-
-        // Detectar cambios en datos del paciente
-        const patientChanges: Partial<PatientUpdate> = {};
-        const patientChangeLogs = [];
-
-        for (const field of patientFields) {
-          const newValue = editedCase[field as keyof MedicalCaseWithPatient];
-          const oldValue = currentCase[field as keyof MedicalCaseWithPatient];
-
-          if (newValue !== oldValue) {
-            // Map patient_email to email for the patient update
-            if (field === 'patient_email') {
-              patientChanges.email = newValue as string | null;
-            } else if (field === 'nombre') {
-              patientChanges.nombre = newValue as string;
-            } else if (field === 'telefono') {
-              patientChanges.telefono = newValue as string | null;
-            } else if (field === 'edad') {
-              patientChanges.edad = newValue as string | null;
-            }
-            patientChangeLogs.push({
-              field,
-              fieldLabel: getFieldLabel(field),
-              oldValue,
-              newValue,
-            });
-          }
-        }
 
         // Detectar cambios en datos del caso
         const caseChanges: Partial<MedicalCaseUpdate> = {};
@@ -957,10 +932,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
+        // Detectar cambios en URLs de imágenes (se guardan aparte en images_urls)
+        const currentImages: string[] =
+          (currentCase as any).images_urls ||
+          ((currentCase as any).image_url ? [(currentCase as any).image_url] : []);
+        const imagesChanged =
+          JSON.stringify(imageUrls) !== JSON.stringify(currentImages);
+
         if (
-          Object.keys(patientChanges).length === 0 &&
           Object.keys(caseChanges).length === 0 &&
-          Object.keys(financialChanges).length === 0
+          Object.keys(financialChanges).length === 0 &&
+          !imagesChanged
         ) {
           toast({
             title: 'Sin cambios',
@@ -970,25 +952,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           setIsEditing(false);
           setIsSaving(false);
           return;
-        }
-
-        // Actualizar datos del paciente si hay cambios
-        if (Object.keys(patientChanges).length > 0) {
-          if (!currentCase.patient_id) {
-            throw new Error(
-              'No se puede actualizar el paciente: patient_id no está disponible',
-            );
-          }
-          // updatePatient ya registra cambios automáticamente en change_logs
-          // (con agrupación por session_id y normalización)
-          await updatePatient(currentCase.patient_id, patientChanges, user.id);
-
-          toast({
-            title: '✅ Datos del paciente actualizados',
-            description:
-              'Los cambios del paciente se han guardado exitosamente.',
-            className: 'bg-green-100 border-green-400 text-green-800',
-          });
         }
 
         // Actualizar datos del caso si hay cambios
@@ -1020,24 +983,30 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           });
         }
 
-        // Save image URL for imagenologia/owner/prueba roles
-        if ((profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && imageUrl) {
-          const { error: imageUrlError } = await supabase
+        // Guardar URLs de imágenes (images_urls) - editable por roles específicos
+        if (
+          imagesChanged &&
+          (profile?.role === 'imagenologia' ||
+            profile?.role === 'owner' ||
+            profile?.role === 'prueba' ||
+            profile?.role === 'call_center')
+        ) {
+          const { error: imageUrlsError } = await supabase
             .from('medical_records_clean')
-            .update({ image_url: imageUrl })
+            .update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
             .eq('id', currentCase.id);
             
-          if (imageUrlError) {
-            console.error('Error saving image URL:', imageUrlError);
+          if (imageUrlsError) {
+            console.error('Error saving image URLs:', imageUrlsError);
             toast({
-              title: '❌ Error al guardar URL',
-              description: 'No se pudo guardar la URL de la imagen.',
+              title: '❌ Error al guardar URLs',
+              description: 'No se pudieron guardar las URLs de las imágenes.',
               variant: 'destructive',
             });
           } else {
             toast({
-              title: '✅ URL de imagen guardada',
-              description: 'La URL de la imagen se ha guardado correctamente.',
+              title: '✅ URLs de imágenes guardadas',
+              description: `Se ${imageUrls.length === 1 ? 'ha' : 'han'} guardado ${imageUrls.length} ${imageUrls.length === 1 ? 'imagen' : 'imágenes'} correctamente.`,
               className: 'bg-green-100 border-green-400 text-green-800',
             });
           }
@@ -1054,7 +1023,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         setPaymentMethods([]);
         setIsAddingNewPayment(false);
         setNewPaymentMethod({ method: '', amount: 0, reference: '' });
-        setImageUrl(''); // Clear image URL
+        setImageUrls([]); // Clear image URLs
 
         // Call onSave callback if provided
         if (onSave) {
@@ -1194,6 +1163,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             console.error('Error actualizando email_sent:', updateError);
             // No mostramos error al usuario ya que el email se envió exitosamente
           }
+
+          // Registrar el envío en email_send_logs
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'success',
+          });
         }
 
         const recipientCount = 1 + emails.cc.length + emails.bcc.length;
@@ -1212,6 +1191,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         }
       } catch (error) {
         console.error('Error enviando correo:', error);
+        
+        // Registrar el error en email_send_logs
+        if (case_?.id) {
+          await logEmailSend({
+            case_id: case_.id,
+            recipient_email: emails.to,
+            cc_emails: emails.cc,
+            bcc_emails: emails.bcc,
+            laboratory_id: case_.laboratory_id || laboratory?.id || '',
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Error desconocido',
+          });
+        }
+
         toast({
           title: '❌ Error',
           description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
@@ -1673,21 +1666,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           >
                             <Phone className='w-4 h-4' />
                           </button>
-                          {isEmployeeSpt && (
-                            <button
-                              onClick={handleDownloadCase}
-                              disabled={isSaving}
-                              title='Descargar el PDF del informe del caso'
-                              className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
-                              aria-label='Descargar caso'
-                            >
-                              {isSaving ? (
-                                <Loader2 className='w-4 h-4 animate-spin' />
-                              ) : (
-                                <Download className='w-4 h-4' />
-                              )}
-                            </button>
-                          )}
+                          <button
+                            onClick={handleDownloadCase}
+                            disabled={isSaving}
+                            title='Descargar el PDF del informe del caso'
+                            className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
+                            aria-label='Descargar caso'
+                          >
+                            {isSaving ? (
+                              <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                              <Download className='w-4 h-4' />
+                            )}
+                          </button>
                           <button
                             onClick={handleSendWhatsApp}
                             title='Enviar mensaje por WhatsApp al paciente'
@@ -1800,11 +1791,24 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         label='Nombre completo'
                         value={currentCase.nombre}
                         field='nombre'
-                        isEditing={isEditing}
+                        isEditing={false}
                         editedValue={editedCase.nombre ?? null}
                         onChange={handleInputChange}
                       />
                       
+                      {/* Representado por - Solo visible si es representado, siempre visible */}
+                      {responsableData?.responsable && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Representado por:
+                          </span>
+                          <div className='sm:w-1/2 sm:text-right'>
+                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                              {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Botón Ver más/Ver menos */}
                       <div className='flex justify-center pt-2'>
@@ -1832,118 +1836,47 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       {/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
                       {showFullPatientInfo && (
                         <>
-                          {/* Cédula - Mostrar información del responsable si es menor o animal */}
-                          <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                              {responsableData?.responsable ? 'Representado por:' : 'Cédula:'}
-                            </span>
-                            <div className='sm:w-1/2 sm:text-right'>
-                              {responsableData?.responsable ? (
-                                <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                                  {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
-                                </span>
-                              ) : (
+                          {/* Cédula - Solo mostrar si NO es representado */}
+                          {!responsableData?.responsable && (
+                            <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                              <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                                Cédula:
+                              </span>
+                              <div className='sm:w-1/2 sm:text-right'>
                                 <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
                                   {currentCase.cedula || 'Sin cédula'}
                                 </span>
-                              )}
+                              </div>
                             </div>
-                          </div>
+                          )}
                           {/* Edad: input numérico + dropdown (AÑOS/MESES) */}
                           <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                             <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                               Edad:
                             </span>
-                            {isEditing ? (
-                              <div className='sm:w-1/2 grid grid-cols-2 gap-2'>
-                                {(() => {
-                                  const parsed = parseEdad(
-                                    String(
-                                      editedCase.edad ?? currentCase.edad ?? '',
-                                    ),
-                                  );
-                                  const ageValue = parsed.value;
-                                  const ageUnit = parsed.unit;
-                                  return (
-                                    <>
-                                      <Input
-                                        id='edad-input'
-                                        name='edad'
-                                        type='number'
-                                        placeholder='0'
-                                        value={ageValue === '' ? '' : ageValue}
-                                        min={0}
-                                        max={150}
-                                        onChange={(e) => {
-                                          const newValue = e.target.value;
-                                          const numeric =
-                                            newValue === '' ? '' : Number(newValue);
-                                          const unitToUse = ageUnit || 'Años';
-                                          const newEdad =
-                                            newValue === ''
-                                              ? null
-                                              : `${numeric} ${unitToUse}`;
-                                          handleInputChange('edad', newEdad);
-                                        }}
-                                        className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
-                                      />
-                                      <CustomDropdown
-                                        id='edad-unit-dropdown'
-                                        options={createDropdownOptions([
-                                          'Meses',
-                                          'Años',
-                                        ])}
-                                        value={ageUnit || 'Años'}
-                                        onChange={(newUnit) => {
-                                          const parsedNow = parseEdad(
-                                            String(
-                                              editedCase.edad ??
-                                                currentCase.edad ??
-                                                '',
-                                            ),
-                                          );
-                                          const valueNow = parsedNow.value;
-                                          const valueToUse =
-                                            valueNow === '' ? '' : valueNow;
-                                          const newEdad =
-                                            valueToUse === ''
-                                              ? null
-                                              : `${valueToUse} ${newUnit}`;
-                                          handleInputChange('edad', newEdad);
-                                        }}
-                                        placeholder='Unidad'
-                                        className='text-sm'
-                                        direction='auto'
-                                      />
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            ) : (
-                              <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                                {(() => {
-                                  // Si hay edad, mostrarla
-                                  if (currentCase.edad) {
-                                    return currentCase.edad;
-                                  }
-                                  // Si no hay edad pero hay fecha_nacimiento, calcularla
-                                  const calculatedAge = calculateAgeFromFechaNacimiento(
-                                    (currentCase as any).fecha_nacimiento
-                                  );
-                                  if (calculatedAge) {
-                                    return calculatedAge;
-                                  }
-                                  // Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
-                                  return 'Sin edad';
-                                })()}
-                              </span>
-                            )}
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {(() => {
+                                // Si hay edad, mostrarla
+                                if (currentCase.edad) {
+                                  return currentCase.edad;
+                                }
+                                // Si no hay edad pero hay fecha_nacimiento, calcularla
+                                const calculatedAge = calculateAgeFromFechaNacimiento(
+                                  (currentCase as any).fecha_nacimiento
+                                );
+                                if (calculatedAge) {
+                                  return calculatedAge;
+                                }
+                                // Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
+                                return 'Sin edad';
+                              })()}
+                            </span>
                           </div>
                           <InfoRow
                             label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
                             value={currentCase.telefono || ''}
                             field='telefono'
-                            isEditing={isEditing}
+                            isEditing={false}
                             editedValue={editedCase.telefono ?? null}
                             onChange={handleInputChange}
                             disabled={!!responsableData}
@@ -1953,7 +1886,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             value={currentCase.patient_email || 'N/A'}
                             field='patient_email'
                             type='email'
-                            isEditing={isEditing}
+                            isEditing={false}
                             editedValue={editedCase.patient_email ?? null}
                             onChange={handleInputChange}
                           />
@@ -2207,14 +2140,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* PDF Subido - Solo para SPT, roles: laboratorio, owner, prueba (godmode) */}
+                      {/* PDF Subido - Solo para SPT, roles: laboratorio, employee, owner, prueba (godmode), call_center */}
                       {/* Visible en la sección de Información Médica */}
                       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                         <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                           PDF Adjunto:
                         </span>
                         <div className='sm:flex sm:justify-end sm:flex-1'>
-                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba') ? (
+                          {isSpt && (profile?.role === 'laboratorio' || profile?.role === 'employee' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'imagenologia' || profile?.role === 'call_center') ? (
                             <CasePDFUpload
                               caseId={currentCase.id}
                               currentPdfUrl={(currentCase as any).uploaded_pdf_url}
@@ -2233,6 +2166,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                               pdfUrl={(currentCase as any).uploaded_pdf_url} 
                               size='sm'
                               variant='outline'
+                              isAttached={true}
                             />
                           ) : (
                             <span className='text-sm text-gray-500 dark:text-gray-400'>
@@ -2242,33 +2176,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
-                      {/* Image URL field - Visible for all roles if image exists, editable only for imagenologia/owner/prueba */}
+                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
                       {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                          Imagen:
+                      <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                          Imágenes (Imagenología):
                         </span>
-                        <div className='sm:flex sm:justify-end sm:flex-1'>
-                          {(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba') && isEditing ? (
-                            <Input
-                              id='image-url-input'
-                              name='image_url'
-                              type='url'
-                              placeholder='https://ejemplo.com/imagen.jpg'
-                              value={imageUrl}
-                              onChange={(e) => {
-                                setImageUrl(e.target.value);
-                                setEditedCase({ ...editedCase, image_url: e.target.value });
-                              }}
-                              className='text-sm focus:border-primary focus:ring-primary bg-white dark:bg-gray-800 flex-1'
-                            />
-                          ) : (currentCase as any).image_url ? (
-                            <ImageButton imageUrl={(currentCase as any).image_url} />
-                          ) : (
-                            <span className='text-sm text-gray-500 dark:text-gray-400'>
-                              Sin imagen
-                            </span>
-                          )}
+                        <div className='w-full'>
+                          <MultipleImageUrls
+                            images={imageUrls}
+                            onChange={setImageUrls}
+                            maxImages={10}
+                            isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
+                          />
                         </div>
                       </div>
 
@@ -2411,7 +2331,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </span>
                           </div>
 
-                          {isEditing && (
+                            {isEditing && (
                             <div className='py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                               <div className='w-full space-y-2'>
                                 <label className='text-sm font-medium text-gray-600 dark:text-gray-400'>
@@ -2964,6 +2884,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             primaryEmail={case_.patient_email || ''}
             patientName={case_.nombre || ''}
             caseCode={case_.code || case_.id || ''}
+            caseId={case_.id}
             isSending={isSaving}
           />
         )}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
+import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
 import { createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@/services/supabase/config/config'
@@ -63,11 +64,14 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 		nombre: patient.nombre,
 		telefono: patient.telefono || '',
 		email: patient.email || '',
-		image_url: (patient as any).image_url || '',
 		edad: patient.edad || '',
 		cedulaType: initialCedula.type,
 		cedulaNumber: initialCedula.number,
 	})
+
+	// Separate state for images (backward compatible con image_url)
+	const initialImages = (patient as any).images_urls || ((patient as any).image_url ? [(patient as any).image_url] : [])
+	const [imageUrls, setImageUrls] = useState<string[]>(initialImages)
 
 	const [edadValue, setEdadValue] = useState(initialEdad.value)
 	const [edadUnit, setEdadUnit] = useState<'Años' | 'Meses'>(initialEdad.unit || 'Años')
@@ -165,13 +169,15 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				})
 			}
 
-			// Solo registrar cambio de image_url si el usuario es imagenologia
-			if (isImagenologia && formData.image_url !== (patient as any).image_url) {
+			// Solo registrar cambio de images_urls si el usuario es imagenologia
+			const oldImages = (patient as any).images_urls || ((patient as any).image_url ? [(patient as any).image_url] : [])
+			const hasImageChanges = JSON.stringify(oldImages) !== JSON.stringify(imageUrls)
+			if (isImagenologia && hasImageChanges) {
 				changes.push({
-					field: 'image_url',
-					fieldLabel: 'URL de Imagen',
-					oldValue: (patient as any).image_url || null,
-					newValue: formData.image_url || null,
+					field: 'images_urls',
+					fieldLabel: 'Imágenes',
+					oldValue: oldImages.length > 0 ? `${oldImages.length} imagen${oldImages.length !== 1 ? 'es' : ''}` : null,
+					newValue: imageUrls.length > 0 ? `${imageUrls.length} imagen${imageUrls.length !== 1 ? 'es' : ''}` : null,
 				})
 			}
 
@@ -184,7 +190,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 			}
 
 			// Actualizar el paciente usando el servicio (incluye dual-write automático)
-			// Construir payload de update; solo incluir image_url si imagenologia
+			// Construir payload de update; solo incluir images_urls si imagenologia
 			const updatePayload: any = {
 				cedula: formData.cedulaType === 'S/C' ? null : newCedula,
 				nombre: formData.nombre,
@@ -193,7 +199,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				edad: formData.edad,
 			}
 			if (isImagenologia) {
-				updatePayload.image_url = formData.image_url || null
+				updatePayload.images_urls = imageUrls.length > 0 ? imageUrls : null
 			}
 
 			// Usar updatePatient que incluye dual-write automático a identificaciones
@@ -273,9 +279,14 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 										<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-lg p-4 hover:shadow-md transition-shadow">
 											<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 													{isImagenologia && (
-														<div className="space-y-2">
-															<label className="text-sm text-gray-500 dark:text-gray-400">URL de Imagen</label>
-															<Input name="image_url" value={formData.image_url} onChange={(e) => setFormData(prev => ({...prev, image_url: e.target.value}))} placeholder="https://..." />
+														<div className="space-y-2 col-span-1 sm:col-span-2">
+															<label className="text-sm text-gray-500 dark:text-gray-400">Imágenes (hasta 10)</label>
+															<MultipleImageUrls
+																images={imageUrls}
+																onChange={setImageUrls}
+																maxImages={10}
+																isEditing={true}
+															/>
 														</div>
 													)}
 												<div className="space-y-2">

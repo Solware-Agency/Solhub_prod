@@ -561,7 +561,14 @@ export const getChangeLogsForRecord = async (medicalRecordId: string) => {
 };
 
 // Function to get all change logs with pagination
-export const getAllChangeLogs = async (limit = 50, offset = 0) => {
+export const getAllChangeLogs = async (
+  limit = 50,
+  offset = 0,
+  filters?: {
+    dateFrom?: string; // Formato YYYY-MM-DD
+    dateTo?: string; // Formato YYYY-MM-DD
+  },
+) => {
   try {
     // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
     const {
@@ -585,8 +592,13 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
       throw new Error('Usuario no tiene laboratorio asignado');
     }
 
-    // 🔐 MULTI-TENANT: Filtrar change logs por laboratory_id
-    const { data, error } = await supabase
+    // Construir query base para change_logs (para conteo y datos)
+    let changeLogsCountQuery = supabase
+      .from(CHANGE_LOG_TABLE)
+      .select('*', { count: 'exact', head: true })
+      .eq('laboratory_id', profile.laboratory_id); // 🔐 FILTRO MULTI-TENANT
+
+    let changeLogsQuery = supabase
       .from(CHANGE_LOG_TABLE)
       .select(
         `
@@ -603,17 +615,113 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
 				)
 			`,
       )
-      .eq('laboratory_id', profile.laboratory_id) // 🔐 FILTRO MULTI-TENANT
-      .order('changed_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq('laboratory_id', profile.laboratory_id); // 🔐 FILTRO MULTI-TENANT
 
-    if (error) {
-      console.error('Error fetching all change logs:', error);
-      return { data: null, error };
+    // Aplicar filtro de fecha ANTES de la paginación
+    // IMPORTANTE: Filtramos por cómo se mostrará la fecha en la zona horaria local del usuario
+    if (filters?.dateFrom) {
+      // Crear fecha en zona horaria local (inicio del día seleccionado)
+      // filters.dateFrom viene en formato YYYY-MM-DD
+      const [year, month, day] = filters.dateFrom.split('-').map(Number);
+      const fromDateLocal = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const fromDateUTC = fromDateLocal.toISOString();
+      console.log(`🔍 [getAllChangeLogs] Filtro dateFrom: ${filters.dateFrom} -> Local: ${fromDateLocal.toString()} -> UTC: ${fromDateUTC}`);
+      // Convertir a UTC: cuando se muestre en la UI, aparecerá como el día seleccionado
+      changeLogsQuery = changeLogsQuery.gte('changed_at', fromDateUTC);
+      changeLogsCountQuery = changeLogsCountQuery.gte('changed_at', fromDateUTC);
     }
 
-    // Transform the data to handle deleted records and return a strongly-typed array
-    const transformedData: ChangeLogJoined[] | undefined = data?.map(
+    if (filters?.dateTo) {
+      // Crear fecha en zona horaria local (inicio del día siguiente)
+      // Esto asegura que incluimos todo el día seleccionado cuando se muestre en la UI
+      const [year, month, day] = filters.dateTo.split('-').map(Number);
+      const nextDayLocal = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
+      const nextDayUTC = nextDayLocal.toISOString();
+      console.log(`🔍 [getAllChangeLogs] Filtro dateTo: ${filters.dateTo} -> Next day Local: ${nextDayLocal.toString()} -> UTC: ${nextDayUTC}`);
+      // Usar < (menor que) en lugar de <= para excluir el día siguiente
+      changeLogsQuery = changeLogsQuery.lt('changed_at', nextDayUTC);
+      changeLogsCountQuery = changeLogsCountQuery.lt('changed_at', nextDayUTC);
+    }
+
+    // Obtener conteo total de change_logs
+    const { count: changeLogsCount, error: changeLogsCountError } = await changeLogsCountQuery;
+    
+    if (changeLogsCountError) {
+      console.error('Error counting change logs:', changeLogsCountError);
+    }
+
+    // Si hay filtros de fecha, necesitamos obtener más datos para poder paginar correctamente
+    const fetchLimit = filters?.dateFrom || filters?.dateTo ? limit * 20 : limit * 2;
+
+    // 🔐 MULTI-TENANT: Filtrar change logs por laboratory_id
+    const { data: changeLogs, error: changeLogsError } = await changeLogsQuery
+      .order('changed_at', { ascending: false })
+      .limit(fetchLimit);
+
+    if (changeLogsError) {
+      console.error('Error fetching change logs:', changeLogsError);
+      return { data: null, error: changeLogsError };
+    }
+
+    // Construir query base para email_send_logs (para conteo y datos)
+    let emailLogsCountQuery = supabase
+      .from('email_send_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('laboratory_id', profile.laboratory_id);
+
+    let emailLogsQuery = supabase
+      .from('email_send_logs')
+      .select(
+        `
+				*,
+				medical_records_clean(
+					id,
+					code,
+					patient_id
+				),
+				sent_by_user:profiles!email_send_logs_sent_by_user_id_fkey(
+					id,
+					display_name,
+					email
+				)
+			`,
+      )
+      .eq('laboratory_id', profile.laboratory_id);
+
+    // Aplicar filtro de fecha también en email logs (misma lógica)
+    if (filters?.dateFrom) {
+      const [year, month, day] = filters.dateFrom.split('-').map(Number);
+      const fromDateLocal = new Date(year, month - 1, day, 0, 0, 0, 0);
+      emailLogsQuery = emailLogsQuery.gte('sent_at', fromDateLocal.toISOString());
+      emailLogsCountQuery = emailLogsCountQuery.gte('sent_at', fromDateLocal.toISOString());
+    }
+
+    if (filters?.dateTo) {
+      const [year, month, day] = filters.dateTo.split('-').map(Number);
+      const nextDayLocal = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
+      emailLogsQuery = emailLogsQuery.lt('sent_at', nextDayLocal.toISOString());
+      emailLogsCountQuery = emailLogsCountQuery.lt('sent_at', nextDayLocal.toISOString());
+    }
+
+    // Obtener conteo total de email_logs
+    const { count: emailLogsCount, error: emailLogsCountError } = await emailLogsCountQuery;
+    
+    if (emailLogsCountError) {
+      console.error('Error counting email logs:', emailLogsCountError);
+    }
+
+    // 📧 Obtener email_send_logs también
+    const { data: emailLogs, error: emailLogsError } = await emailLogsQuery
+      .order('sent_at', { ascending: false })
+      .limit(fetchLimit);
+
+    if (emailLogsError) {
+      console.error('Error fetching email logs:', emailLogsError);
+      // No retornamos error, simplemente continuamos sin email logs
+    }
+
+    // Transform change logs
+    const transformedChangeLogs: ChangeLogJoined[] = (changeLogs || []).map(
       (row: unknown) => {
         const log = row as Record<string, unknown>;
         const result: ChangeLogJoined = {
@@ -636,10 +744,6 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
             (log['deleted_record_info'] as string | null) ?? null,
           change_session_id:
             (log['change_session_id'] as string | null) ?? null,
-          // Debug: verificar que change_session_id se está recuperando
-          // ...(process.env.NODE_ENV === 'development' && {
-          //   _debug_change_session_id: log['change_session_id'],
-          // }),
           medical_records_clean:
             (log['medical_records_clean'] as
               | {
@@ -665,7 +769,6 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
           !result.patient_id &&
           result.deleted_record_info
         ) {
-          // Handle deleted records - try to determine if it was a patient or medical case
           if (result.entity_type === 'patient') {
             return {
               ...result,
@@ -690,7 +793,45 @@ export const getAllChangeLogs = async (limit = 50, offset = 0) => {
       },
     );
 
-    return { data: transformedData, error: null };
+    // 📧 Transform email logs to ChangeLogJoined format
+    const transformedEmailLogs: ChangeLogJoined[] = (emailLogs || []).map(
+      (emailLog: any) => ({
+        id: `email_${emailLog.id}`,
+        medical_record_id: emailLog.case_id,
+        patient_id: null,
+        entity_type: 'email_send',
+        user_id: emailLog.sent_by_user_id || 'system',
+        user_email: emailLog.sent_by_user?.email || 'sistema@solhub.com',
+        user_display_name: emailLog.sent_by_user?.display_name || 'Sistema',
+        field_name: 'email_sent',
+        field_label: emailLog.status === 'success' ? 'Envío de Email' : 'Envío de Email (Fallido)',
+        old_value: null,
+        new_value: emailLog.recipient_email,
+        changed_at: emailLog.sent_at,
+        created_at: emailLog.created_at,
+        deleted_record_info: emailLog.error_message,
+        change_session_id: null,
+        medical_records_clean: emailLog.medical_records_clean,
+        patients: undefined,
+      }),
+    );
+
+    // Combinar y ordenar todos los logs por fecha
+    const allLogs = [...transformedChangeLogs, ...transformedEmailLogs].sort(
+      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+    );
+
+    // Calcular el total real sumando los conteos de ambas tablas
+    const totalCount = (changeLogsCount || 0) + (emailLogsCount || 0);
+
+    // Aplicar paginación después de combinar
+    const paginatedData = allLogs.slice(offset, offset + limit);
+
+    return { 
+      data: paginatedData, 
+      totalCount,
+      error: null 
+    };
   } catch (error) {
     console.error('Error fetching all change logs:', error);
     return { data: null, error };

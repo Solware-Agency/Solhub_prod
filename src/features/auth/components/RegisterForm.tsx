@@ -1,5 +1,4 @@
 import {
-  UserRound,
   Eye,
   EyeOff,
   Clock,
@@ -23,6 +22,7 @@ import { createDropdownOptions } from '@shared/components/ui/form-dropdown';
 import Aurora from '@shared/components/ui/Aurora';
 import FadeContent from '@shared/components/ui/FadeContent';
 import type { User } from '@supabase/supabase-js';
+import SolHubIcon from '@shared/components/icons/SolHubIcon';
 
 function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -410,23 +410,21 @@ function RegisterForm() {
         speed={0.3}
       />
 
-      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center overflow-hidden'>
         <FadeContent
           blur={true}
           duration={1000}
           easing='ease-out'
           initialOpacity={0}
           delay={200}
-          className='w-full h-full flex items-center justify-center'
+          className='w-full h-full flex items-center justify-center overflow-hidden'
         >
-          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-xl bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
+          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none md:rounded-2xl p-6 md:p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20 overflow-hidden'>
             <div className='text-center mb-4 flex flex-col items-center justify-center'>
-              <UserRound className='text-white size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]' />
-              <div>
-                <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
-                  Bienvenido a SolHub
-                </h1>
-              </div>
+              <SolHubIcon
+                fill='#fff'
+                className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
+              />
               <p className='text-slate-300'>Crea una cuenta para continuar</p>
             </div>
 

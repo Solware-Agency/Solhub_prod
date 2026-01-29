@@ -1,11 +1,37 @@
 import { supabase } from '@/services/supabase/config/config'
 import type { UserProfile } from '@/services/supabase/auth/auth'
 
+/**
+ * Hace logout automático cuando el perfil no existe (usuario eliminado)
+ */
+const handleProfileNotFound = async () => {
+	console.warn('[⚠️] Perfil no encontrado - haciendo logout automático...')
+	try {
+		await supabase.auth.signOut()
+		// Redirigir a login después de un pequeño delay para asegurar que el logout se complete
+		setTimeout(() => {
+			window.location.href = '/'
+		}, 500)
+	} catch (logoutError) {
+		console.error('[❌] Error durante logout automático:', logoutError)
+		// Forzar redirección incluso si hay error
+		window.location.href = '/'
+	}
+}
+
 export const getAndSyncUserProfile = async (userId: string, userMeta: any): Promise<UserProfile | null> => {
 	const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
 	if (error || !profile) {
 		console.error('[❌] Error fetching profile:', error)
+		
+		// Si el error es PGRST116 (no rows returned), significa que el perfil fue eliminado
+		// Hacer logout automático
+		if (error?.code === 'PGRST116') {
+			console.warn('[⚠️] Perfil eliminado detectado (PGRST116) - haciendo logout automático')
+			await handleProfileNotFound()
+		}
+		
 		return null
 	}
 
@@ -53,11 +79,19 @@ export const getAndSyncUserProfile = async (userId: string, userMeta: any): Prom
 		console.log('[🔄] Display name synced')
 	}
 
-		return {
-			...profile,
-			role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia',
-			created_at: profile.created_at || new Date().toISOString(),
-			updated_at: profile.updated_at || new Date().toISOString(),
+	return {
+		id: profile.id,
+		email: profile.email,
+		role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio',
+		created_at: profile.created_at || new Date().toISOString(),
+		updated_at: profile.updated_at || new Date().toISOString(),
+		assigned_branch: profile.assigned_branch ?? null,
+		display_name: profile.display_name ?? null,
 		estado: (profile.estado as 'pendiente' | 'aprobado') || undefined,
-	}
+		phone: (profile as unknown as { phone: string | null }).phone ?? null,
+		laboratory_id: (profile as unknown as { laboratory_id: string | null }).laboratory_id ?? null,
+		signature_url: (profile as unknown as { signature_url: string | null }).signature_url ?? null,
+		signature_url_2: (profile as unknown as { signature_url_2: string | null }).signature_url_2 ?? null,
+		signature_url_3: (profile as unknown as { signature_url_3: string | null }).signature_url_3 ?? null,
+	} as UserProfile
 }

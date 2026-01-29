@@ -6,8 +6,11 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = {
-  // Allows to automatically instantiate createClient with right options
+export type Database = {  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: '12.2.3 (519615d)';
@@ -116,6 +119,64 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_send_logs: {
+        Row: {
+          case_id: string;
+          created_at: string | null;
+          error_message: string | null;
+          id: string;
+          laboratory_id: string;
+          recipient_email: string;
+          sent_at: string;
+          sent_by_user_id: string | null;
+          status: string;
+        };
+        Insert: {
+          case_id: string;
+          created_at?: string | null;
+          error_message?: string | null;
+          id?: string;
+          laboratory_id: string;
+          recipient_email: string;
+          sent_at?: string;
+          sent_by_user_id?: string | null;
+          status: string;
+        };
+        Update: {
+          case_id?: string;
+          created_at?: string | null;
+          error_message?: string | null;
+          id?: string;
+          laboratory_id?: string;
+          recipient_email?: string;
+          sent_at?: string;
+          sent_by_user_id?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'email_send_logs_case_id_fkey';
+            columns: ['case_id'];
+            isOneToOne: false;
+            referencedRelation: 'medical_records_clean';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'email_send_logs_laboratory_id_fkey';
+            columns: ['laboratory_id'];
+            isOneToOne: false;
+            referencedRelation: 'laboratories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'email_send_logs_sent_by_user_id_fkey';
+            columns: ['sent_by_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       immuno_requests: {
         Row: {
           case_id: string;
@@ -181,6 +242,7 @@ export type Database = {
           googledocs_url: string | null;
           id: string;
           image_url: string | null;
+          images_urls: string[] | null;
           ims: string | null;
           laboratory_id: string;
           informe_qr: string | null;
@@ -230,6 +292,7 @@ export type Database = {
           googledocs_url?: string | null;
           id?: string;
           image_url?: string | null;
+          images_urls?: string[] | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
@@ -279,6 +342,7 @@ export type Database = {
           googledocs_url?: string | null;
           id?: string;
           image_url?: string | null;
+          images_urls?: string[] | null;
           ims?: string | null;
           informe_qr?: string | null;
           informepdf_url?: string | null;
@@ -367,7 +431,7 @@ export type Database = {
           estado: string;
           id: string;
           phone: string | null;
-          role: string;
+          role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url: string | null;
           signature_url_2: string | null;
           signature_url_3: string | null;
@@ -382,7 +446,7 @@ export type Database = {
           estado?: string;
           id: string;
           phone?: string | null;
-          role?: string;
+          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -397,7 +461,7 @@ export type Database = {
           estado?: string;
           id?: string;
           phone?: string | null;
-          role?: string;
+          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -708,8 +772,9 @@ export interface MedicalRecord {
   ki67?: string | null;
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
-  image_url?: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
+  image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
+  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
 }
 
 // =====================================================================
@@ -901,6 +966,6 @@ export interface ProfileWithLaboratory {
   email_lower: string | null;
   estado: string;
   phone: string | null;
-  role: string;
+  role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
   updated_at: string | null;
 }

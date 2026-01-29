@@ -147,6 +147,9 @@ export const ServiceSection = memo(
 
     // Verificar si es el laboratorio Conspat para aplicar layout especial
     const isConspat = laboratory?.slug === 'conspat';
+    
+    // Verificar si es el laboratorio LM/Marihorgen para mostrar campos específicos
+    const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
 
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
@@ -176,7 +179,7 @@ export const ServiceSection = memo(
             )}
           />
           {/* Procedencia - CON AUTOCOMPLETADO */}
-          {procedenciaConfig?.enabled && (
+          {(procedenciaConfig?.enabled || isLM) && (
             <FormField
               control={control}
               name='origin'
@@ -236,15 +239,15 @@ export const ServiceSection = memo(
             )}
           />
 
-          {/* Médico Tratante - CON AUTOCOMPLETADO - Solo visible si está habilitado en la configuración */}
-          {medicoTratanteConfig?.enabled && (
+          {/* Médico Tratante - CON AUTOCOMPLETADO - Solo visible si está habilitado en la configuración o es LM/Marihorgen */}
+          {(medicoTratanteConfig?.enabled || isLM) && (
             <FormField
               control={control}
               name='treatingDoctor'
               render={({ field, fieldState }) => (
                 <FormItem className='min-w-[180px] flex-1'>
                   <FormLabel>
-                    Médico Tratante {medicoTratanteConfig.required && '*'}
+                    Médico Tratante {medicoTratanteConfig?.required && '*'}
                   </FormLabel>
                   <FormControl>
                     <AutocompleteInput
@@ -274,7 +277,7 @@ export const ServiceSection = memo(
           {isConspat ? (
             <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
               {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
-              {sampleTypeConfig?.enabled && (
+              {(sampleTypeConfig?.enabled || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -299,7 +302,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {numberOfSamplesConfig?.enabled && (
+              {(numberOfSamplesConfig?.enabled || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
@@ -349,7 +352,7 @@ export const ServiceSection = memo(
           ) : (
             <>
               {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
-              {sampleTypeConfig?.enabled && (
+              {(sampleTypeConfig?.enabled || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -374,7 +377,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {numberOfSamplesConfig?.enabled && (
+              {(numberOfSamplesConfig?.enabled || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'

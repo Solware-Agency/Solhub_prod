@@ -68,6 +68,19 @@ const getUserLaboratoryId = async (): Promise<string> => {
 }
 
 /**
+ * Formato canónico de cédula: siempre "TIPO-NUMERO" (ej: V-26396677).
+ * Homologa datos: si viene solo número (26396677) devuelve V-26396677.
+ * Usar al escribir en patients.cedula y al mostrar en UI para consistencia.
+ */
+export const formatCedulaCanonical = (cedula: string | null | undefined): string | null => {
+	if (cedula == null || cedula === '' || cedula === 'S/C') return null
+	const trimmed = cedula.trim()
+	if (!trimmed) return null
+	const { tipo, numero } = parseCedula(trimmed)
+	return `${tipo}-${numero}`
+}
+
+/**
  * Parsear cédula desde formato completo a tipo y número
  * Ejemplo: "V-12345678" -> { tipo: "V", numero: "12345678" }
  */

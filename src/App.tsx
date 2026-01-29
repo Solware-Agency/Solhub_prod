@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { Toaster } from '@shared/components/ui/toaster';
 import { DateRangeProvider } from '@app/providers/DateRangeContext';
+import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import {
   LoginPage,
   RegisterPage,
@@ -26,7 +27,7 @@ import {
   PrivateRoute,
   StandaloneChatPage,
 } from '@app/routes/lazy-routes';
-import { imagenologiaRoutes } from '@app/routes/route-config';
+import { imagenologiaRoutes, laboratorioRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
 import {
   dashboardRoutes,
@@ -93,19 +94,20 @@ function RecoveryGate() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        <div className='App'>
-          <DateRangeProvider>
-            <Toaster />
-            <Suspense fallback={<LoadingSpinner />}>
-              <RecoveryGate />
-              <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <div className='App'>
+            <DateRangeProvider>
+              <Toaster />
+              <Suspense fallback={<LoadingSpinner />}>
+                <RecoveryGate />
+                <Routes>
                 {/* Public routes */}
                 <Route path='/' element={<LoginPage />} />
                 <Route path='/register' element={<RegisterPage />} />
@@ -310,6 +312,36 @@ function App() {
                         }
                       />
                     );
+                  })}                </Route>
+
+                <Route
+                  path='/laboratorio'
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <PrivateRoute requiredRole='laboratorio'>
+                        <Layout />
+                      </PrivateRoute>
+                    </Suspense>
+                  }
+                >
+                  {/* Nested routes for laboratorio */}
+                  <Route index element={<ReceptionistHomePage />} />
+                  {laboratorioRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/laboratorio/cases'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
                   })}
                 </Route>
 
@@ -462,6 +494,7 @@ function App() {
         </div>
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

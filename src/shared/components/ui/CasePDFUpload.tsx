@@ -29,7 +29,7 @@ interface CasePDFUploadProps {
 
 /**
  * Componente para subir y eliminar PDFs de casos
- * Solo para roles: laboratorio, owner, prueba (godmode) en SPT
+ * Solo para roles: laboratorio, owner, prueba (godmode), call_center en SPT
  */
 export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
@@ -51,7 +51,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	const canUpload = isSpt && 
 		user && 
 		profile?.laboratory_id &&
-		(profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba')
+		(profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'imagenologia' || profile?.role === 'call_center')
 
 	if (!canUpload) {
 		return null
@@ -86,13 +86,17 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		setIsUploading(true)
 		setError(null)
 
+		let pdfUrl: string | null = null
+
 		try {
 			// Subir archivo a Supabase Storage
-			const { data: pdfUrl, error: uploadError } = await uploadCasePDF(
+			const { data, error: uploadError } = await uploadCasePDF(
 				caseId,
 				selectedFile,
 				profile.laboratory_id,
 			)
+
+			pdfUrl = data
 
 			if (uploadError || !pdfUrl) {
 				// Convertir error a Error si no lo es
@@ -139,7 +143,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 
 			console.log('Successfully updated medical_records_clean:', updateData)
 
-			// Notificar al componente padre para refrescar
+			// Notificar al componente padre para refreschar
 			await onPdfUpdated()
 
 			// Limpiar estado
@@ -318,6 +322,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							size="sm"
 							variant="ghost"
 							className="h-6 px-2"
+							isAttached={true}
 						/>
 						<Button
 							variant="ghost"

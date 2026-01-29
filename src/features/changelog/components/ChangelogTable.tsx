@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Edit } from 'lucide-react'
+import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Mail, MailX, Edit } from 'lucide-react'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -80,14 +80,14 @@ const ChangelogTable: React.FC = () => {
 					.from('profiles')
 					.select('laboratory_id')
 					.eq('id', user.id)
-					.single()
+				.single() as { data: { laboratory_id?: string } | null; error: any | null }
 
-				if (!profile?.laboratory_id) {
-					console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
-					return
-				}
+			if (!profile?.laboratory_id) {
+				console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
+				return
+			}
 
-				console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
+			console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
 
 				channel = supabase
 					.channel('realtime-changelog', {
@@ -101,7 +101,7 @@ const ChangelogTable: React.FC = () => {
 							event: '*', // INSERT | UPDATE | DELETE
 							schema: 'public',
 							table: 'change_logs',
-							filter: `laboratory_id=eq.${profile.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
+							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
 						},
 						(payload) => {
 							console.log('🔄 [ChangelogTable] Cambio detectado en change_logs:', {
@@ -118,6 +118,30 @@ const ChangelogTable: React.FC = () => {
 							})
 
 							console.log('✅ [ChangelogTable] Queries invalidadas, refetch automático')
+						},
+					)
+					.on(
+						'postgres_changes',
+						{
+							event: '*', // INSERT | UPDATE | DELETE
+							schema: 'public',
+							table: 'email_send_logs',
+							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
+						},
+						(payload) => {
+							console.log('📧 [ChangelogTable] Cambio detectado en email_send_logs:', {
+								event: payload.eventType,
+								table: payload.table,
+								new: payload.new,
+							})
+
+							// Invalidar queries para forzar refetch
+							queryClient.invalidateQueries({
+								queryKey: ['change-logs'],
+								exact: false,
+							})
+
+							console.log('✅ [ChangelogTable] Queries invalidadas (email logs), refetch automático')
 						},
 					)
 					.subscribe((status) => {
@@ -158,6 +182,11 @@ const ChangelogTable: React.FC = () => {
 	const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
+	// Resetear página cuando cambian los filtros de fecha
+	React.useEffect(() => {
+		setPage(0)
+	}, [dateRange])
+
 	// Check if user is owner (only owners can delete logs)
 
 	// Query to fetch change logs
@@ -167,12 +196,32 @@ const ChangelogTable: React.FC = () => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ['change-logs', page, rowsPerPage],
-		queryFn: () => getAllChangeLogs(rowsPerPage, page * rowsPerPage),
+		queryKey: ['change-logs', page, rowsPerPage, dateRange],
+		queryFn: () => {
+			const filters: { dateFrom?: string; dateTo?: string } = {};
+			
+			// Convertir dateRange a formato YYYY-MM-DD para el filtro del servidor
+			if (dateRange?.from) {
+				const year = dateRange.from.getFullYear();
+				const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
+				const day = String(dateRange.from.getDate()).padStart(2, '0');
+				filters.dateFrom = `${year}-${month}-${day}`;
+			}
+			
+			if (dateRange?.to) {
+				const year = dateRange.to.getFullYear();
+				const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
+				const day = String(dateRange.to.getDate()).padStart(2, '0');
+				filters.dateTo = `${year}-${month}-${day}`;
+			}
+			
+			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters);
+		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
 
-	// Filter logs based on search term, action type, entity type, and date
+	// Filter logs based on search term and action type
+	// NOTA: El filtro de fecha ahora se aplica en el servidor antes de la paginación
 	const filteredLogs = React.useMemo(() => {
 		if (!logsData?.data) return []
 
@@ -199,39 +248,10 @@ const ChangelogTable: React.FC = () => {
 				matchesAction = log.field_name !== 'created_record' && log.field_name !== 'deleted_record'
 			}
 
-			// Date range filter
-			let matchesDate = true
-			if (dateRange?.from || dateRange?.to) {
-				const logDate = new Date(log.changed_at)
-				let fromDate = dateRange.from ? new Date(dateRange.from) : null
-				let toDate = dateRange.to ? new Date(dateRange.to) : null
-
-				// Normalizar fechas: establecer fromDate al inicio del día (00:00:00)
-				if (fromDate) {
-					fromDate.setHours(0, 0, 0, 0)
-				}
-
-				// Normalizar fechas: establecer toDate al final del día (23:59:59.999)
-				// Esto asegura que se incluyan todos los registros del día seleccionado
-				if (toDate) {
-					toDate.setHours(23, 59, 59, 999)
-				}
-
-				if (fromDate && toDate) {
-					// Rango completo: desde inicio del día hasta final del día
-					matchesDate = logDate >= fromDate && logDate <= toDate
-				} else if (fromDate) {
-					// Solo fecha desde: incluir desde inicio del día
-					matchesDate = logDate >= fromDate
-				} else if (toDate) {
-					// Solo fecha hasta: incluir hasta final del día
-					matchesDate = logDate <= toDate
-				}
-			}
-
-			return matchesSearch && matchesAction && matchesDate
+			// El filtro de fecha ya se aplicó en el servidor, no es necesario filtrar aquí
+			return matchesSearch && matchesAction
 		})
-	}, [logsData?.data, searchTerm, actionFilter, dateRange])
+	}, [logsData?.data, searchTerm, actionFilter])
 
 	// Agrupar logs por change_session_id (fallback inteligente para data vieja)
 	const groupedLogs = React.useMemo(() => {
@@ -335,7 +355,7 @@ const ChangelogTable: React.FC = () => {
         .from('profiles')
         .select('laboratory_id')
         .eq('id', user.id)
-        .single();
+			.single() as { data: { laboratory_id?: string } | null; error: any | null };
 
       if (profileError || !userProfile?.laboratory_id) {
         throw new Error('Usuario no tiene laboratorio asignado');
@@ -346,7 +366,7 @@ const ChangelogTable: React.FC = () => {
         .from('change_logs')
         .delete()
         .eq('id', logToDelete)
-        .eq('laboratory_id', userProfile.laboratory_id); // 🔐 VALIDACIÓN MULTI-TENANT
+        .eq('laboratory_id', userProfile.laboratory_id!); // 🔐 VALIDACIÓN MULTI-TENANT
 
       if (error) {
         throw error;
@@ -399,6 +419,21 @@ const ChangelogTable: React.FC = () => {
 				icon: <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />,
 				bgColor: 'bg-red-100 dark:bg-red-900/30',
 				textColor: 'text-red-800 dark:text-red-300',
+			}
+		} else if (log.field_name === 'email_sent') {
+			// Verificar si es un error (deleted_record_info contiene el mensaje de error)
+			const isError = log.deleted_record_info && log.deleted_record_info.trim() !== ''
+			return {
+				text: isError ? 'Email (Error)' : 'Email Enviado',
+				icon: isError 
+					? <MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+					: <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
+				bgColor: isError 
+					? 'bg-orange-100 dark:bg-orange-900/30'
+					: 'bg-purple-100 dark:bg-purple-900/30',
+				textColor: isError
+					? 'text-orange-800 dark:text-orange-300'
+					: 'text-purple-800 dark:text-purple-300',
 			}
 		} else {
 			return {
@@ -575,7 +610,7 @@ const ChangelogTable: React.FC = () => {
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 												{groupedLogs.map((group: GroupedChangeLog) => {
 													const log = group.firstChange
-											const actionInfo = getActionTypeInfo(log)
+
 
 											return (
 												<tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">
@@ -863,8 +898,14 @@ const ChangelogTable: React.FC = () => {
 							<Button variant="outline" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
 								Anterior
 							</Button>
-							<span className="text-sm">Página {page + 1}</span>
-							<Button variant="outline" onClick={() => setPage(page + 1)} disabled={filteredLogs.length < rowsPerPage}>
+							<span className="text-sm">
+								Página {page + 1} de {logsData?.totalCount ? Math.ceil(logsData.totalCount / rowsPerPage) : 1}
+							</span>
+							<Button 
+								variant="outline" 
+								onClick={() => setPage(page + 1)} 
+								disabled={!logsData?.data || logsData.data.length < rowsPerPage || (logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)}
+							>
 								Siguiente
 							</Button>
 						</div>

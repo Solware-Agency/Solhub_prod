@@ -1452,6 +1452,27 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     <span className='hidden sm:inline'>Exportar</span>
                   </Button>
 
+                  {/* Paginación (arriba, junto a filtros y exportar) */}
+                  {totalPages > 1 && (
+                    <div className='w-full md:w-auto md:ml-auto'>
+                      <Pagination
+                        variant='compact'
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        itemsPerPage={itemsPerPage}
+                        pageSizeOptions={pageSizeOptions}
+                        onItemsPerPageChange={handleItemsPerPageChange}
+                        onGoToPage={goToPage}
+                        onNext={goToNextPage}
+                        onPrev={goToPreviousPage}
+                        totalItems={
+                          pagination?.totalItems ??
+                          filteredAndSortedCases.filtered.length
+                        }
+                      />
+                    </div>
+                  )}
+
                   {/* Close button - Hidden on mobile, visible on desktop */}
                   <Button
                     variant='outline'
@@ -1548,23 +1569,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   )}
                 </div>
 
-                {/* Paginación fullscreen - Siempre visible */}
-                <div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    itemsPerPage={itemsPerPage}
-                    pageSizeOptions={pageSizeOptions}
-                    onItemsPerPageChange={handleItemsPerPageChange}
-                    onGoToPage={goToPage}
-                    onNext={goToNextPage}
-                    onPrev={goToPreviousPage}
-                    totalItems={
-                      pagination?.totalItems ??
-                      filteredAndSortedCases.filtered.length
-                    }
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -1762,6 +1766,27 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   <span className='hidden sm:inline'>Exportar</span>
                 </Button>
 
+                {/* Paginación (arriba, junto a filtros y exportar) */}
+                {totalPages > 1 && (
+                  <div className='w-full md:w-auto md:ml-auto'>
+                    <Pagination
+                      variant='compact'
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      itemsPerPage={itemsPerPage}
+                      pageSizeOptions={pageSizeOptions}
+                      onItemsPerPageChange={handleItemsPerPageChange}
+                      onGoToPage={goToPage}
+                      onNext={goToNextPage}
+                      onPrev={goToPreviousPage}
+                      totalItems={
+                        pagination?.totalItems ??
+                        filteredAndSortedCases.filtered.length
+                      }
+                    />
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -1847,25 +1872,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               )}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className='flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700'>
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  itemsPerPage={itemsPerPage}
-                  pageSizeOptions={pageSizeOptions}
-                  onItemsPerPageChange={handleItemsPerPageChange}
-                  onGoToPage={goToPage}
-                  onNext={goToNextPage}
-                  onPrev={goToPreviousPage}
-                  totalItems={
-                    pagination?.totalItems ??
-                    filteredAndSortedCases.filtered.length
-                  }
-                />
-              </div>
-            )}
           </div>
         </div>
 

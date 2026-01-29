@@ -377,6 +377,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isCallCenter = profile?.role === 'call_center' as any;
   const isPrueba = profile?.role === 'prueba' as any;
   const isImagenologia = profile?.role === 'imagenologia';
+  const isLaboratorio = profile?.role === 'laboratorio';
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -756,6 +757,38 @@ const Sidebar: React.FC<SidebarProps> = ({
             </>
           )}
 
+          {isLaboratorio && (
+            <>
+              <div className='py-1'>
+                <NavItem
+                  to='/laboratorio/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <FeatureGuard feature='hasCases'>
+                <NavItem
+                  to='/laboratorio/cases'
+                  icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
+                  label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasPatients'>
+                <NavItem
+                  to='/laboratorio/patients'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+            </>
+          )}
+
           {isMedicoTratante && (
             <>
               <div className='py-1'>
@@ -855,26 +888,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           {isPrueba && (
             <>
               <FeatureGuard feature='hasStats'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/home'
-                    icon={<Home className='stroke-2 size-5 shrink-0' />}
-                    label='Inicio'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Inicio'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <FeatureGuard feature='hasForm'>
-                <div className='py-1'>
-                  <NavItem
-                    to='/prueba/medical-form'
-                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
-                    label='Formulario'
-                    showFullContent={showFullContent}
-                    onClick={onClose}
-                  />
-                </div>
+                <NavItem
+                  to='/prueba/medical-form'
+                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                  label='Formulario'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
               </FeatureGuard>
               <NavGroup
                 icon={

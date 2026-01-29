@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'imagenologia'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio'>
 }
 
 /**
@@ -13,7 +13,7 @@ interface PrivateRouteProps {
  * Only allows access to users with verified emails and appropriate roles
  */
 const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
-	const { user, loading: authLoading } = useAuth()
+	const { user, loading: authLoading, signOut } = useAuth()
 	const { profile, isLoading: profileLoading, error: profileError } = useUserProfile()
 
 	// Show loading spinner while checking authentication and profile
@@ -51,7 +51,29 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 	// Handle profile loading errors or missing profile
 	if (profileError || !profile) {
 		console.warn('Profile issue for user:', user.id, 'Error:', profileError)
-		// Instead of redirecting to login, show an error message or retry
+		
+		// Si el error es PGRST116 (no rows returned), significa que el perfil fue eliminado
+		// Hacer logout automático y redirigir
+		if (profileError?.code === 'PGRST116') {
+			console.warn('⚠️ Perfil eliminado detectado (PGRST116) - haciendo logout automático')
+			// Ejecutar logout en un efecto separado para evitar problemas con hooks
+			signOut().then(() => {
+				window.location.href = '/'
+			}).catch(() => {
+				// Forzar redirección incluso si hay error
+				window.location.href = '/'
+			})
+			return (
+				<div className="w-screen h-screen bg-dark flex items-center justify-center">
+					<div className="bg-white p-8 rounded-lg max-w-md text-center">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+						<p className="text-gray-600">Cerrando sesión...</p>
+					</div>
+				</div>
+			)
+		}
+		
+		// Para otros errores, mostrar mensaje de error con opción de reintentar
 		return (
 			<div className="w-screen h-screen bg-dark flex items-center justify-center">
 				<div className="bg-white p-8 rounded-lg max-w-md text-center">
@@ -90,13 +112,16 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 			console.debug('PrivateRoute debug - allowedRoles:', allowedRoles, 'profile.role:', profile.role)
 
 			// Redirect based on actual user role to their proper home
-			switch (profile.role) {
+			const userRole = profile.role as string
+			switch (userRole) {
 				case 'owner':
 					return <Navigate to="/dashboard/home" replace />
 				case 'prueba':
 					return <Navigate to="/prueba/home" replace />
 				case 'medicowner':
 					return <Navigate to="/dashboard/home" replace />
+				case 'laboratorio':
+					return <Navigate to="/laboratorio/home" replace />
 				// Cada rol va a su propia ruta de home (que renderiza el mismo componente)
 				case 'residente':
 					return <Navigate to="/medic/home" replace />

@@ -7,6 +7,7 @@ import { supabase } from '@services/supabase/config/config'
 import {
 	findPatientByIdentificationNumber,
 	parseCedula,
+	formatCedulaCanonical,
 	createIdentification,
 	updateIdentification,
 	getIdentificacionesByPatient,
@@ -84,6 +85,20 @@ export interface PatientUpdate {
 }
 
 // =====================================================================
+// HOMOLOGACIÓN DE CÉDULA (formato canónico TIPO-NUMERO)
+// =====================================================================
+// Garantiza que patients.cedula siempre se guarde y devuelva con prefijo (V-, E-, etc.)
+// para evitar inconsistencia entre registros con/sin prefijo (dual-write, datos legacy).
+
+/** Aplica formato canónico a la cédula de un paciente devuelto por la BD */
+const normalizePatientCedula = <T extends { cedula?: string | null }>(patient: T): T => {
+	if (!patient || patient.cedula == null || patient.cedula === '') return patient
+	const canonical = formatCedulaCanonical(patient.cedula)
+	if (canonical === patient.cedula) return patient
+	return { ...patient, cedula: canonical }
+}
+
+// =====================================================================
 // FUNCIONES DEL SERVICIO DE PACIENTES
 // =====================================================================
 
@@ -119,10 +134,7 @@ const getUserLaboratoryId = async (): Promise<string> => {
 			throw error
 		}
 		// Si es otro error, convertirlo
-		throw new PatientError(
-			error instanceof Error ? error.message : 'Error desconocido',
-			'UNKNOWN_ERROR',
-		)
+		throw new PatientError(error instanceof Error ? error.message : 'Error desconocido', 'UNKNOWN_ERROR')
 	}
 }
 
@@ -144,7 +156,7 @@ export const findPatientByCedula = async (cedula: string): Promise<Patient | nul
 			.single()
 
 		if (exactMatch && !exactError) {
-			return exactMatch as unknown as Patient
+			return normalizePatientCedula(exactMatch as unknown as Patient)
 		}
 
 		// Si no hay coincidencia exacta, buscar por número de cédula (sin prefijo)
@@ -163,7 +175,7 @@ export const findPatientByCedula = async (cedula: string): Promise<Patient | nul
 			console.log(
 				`⚠️ Encontrado paciente con mismo número pero diferente prefijo: ${patient.cedula} (buscando: ${cedula})`,
 			)
-			return patient
+			return normalizePatientCedula(patient)
 		}
 
 		// Si no encuentra nada, retornar null
@@ -221,7 +233,7 @@ export const findPatientUnified = async (cedula: string): Promise<Patient | null
 				const result = await findPatientByIdentificationNumber(numero, tipo)
 
 				if (result && result.paciente) {
-					// Convertir a formato Patient
+					// Convertir a formato Patient (cedula ya en formato canónico desde identificaciones)
 					const patient: Patient = {
 						id: result.paciente.id,
 						laboratory_id: result.paciente.laboratory_id,
@@ -238,7 +250,7 @@ export const findPatientUnified = async (cedula: string): Promise<Patient | null
 						updated_at: result.paciente.updated_at,
 						version: result.paciente.version,
 					}
-					return patient
+					return normalizePatientCedula(patient)
 				}
 			} catch (newSystemError) {
 				// FALLBACK: Si falla el nuevo sistema, usar el antiguo
@@ -281,7 +293,7 @@ export const findPatientById = async (id: string): Promise<Patient | null> => {
 			throw error
 		}
 
-		return data as unknown as Patient
+		return normalizePatientCedula(data as unknown as Patient)
 	} catch (error) {
 		console.error('Error buscando paciente por ID:', error)
 		throw error
@@ -291,19 +303,24 @@ export const findPatientById = async (id: string): Promise<Patient | null> => {
 /**
  * Crear nuevo paciente - MULTI-TENANT
  * Automáticamente asigna laboratory_id del usuario autenticado
+ * Homologación: cedula se guarda siempre en formato canónico (TIPO-NUMERO)
  */
 export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory_id'>): Promise<Patient> => {
 	try {
 		const laboratoryId = await getUserLaboratoryId()
 
+		// Homologar cédula: siempre guardar en formato canónico (V-12345678)
+		const payload = {
+			...patientData,
+			cedula: patientData.cedula ? (formatCedulaCanonical(patientData.cedula) ?? patientData.cedula) : null,
+			laboratory_id: laboratoryId,
+		}
+
 		// SIEMPRE incluir laboratory_id al insertar
 		// Usar 'as any' porque los tipos generados pueden no incluir laboratory_id
 		const { data, error } = await supabase
 			.from('patients')
-			.insert({
-				...patientData,
-				laboratory_id: laboratoryId, // CRÍTICO: Multi-tenant
-			} as any)
+			.insert(payload as any)
 			.select('id, laboratory_id, cedula, nombre, edad, telefono, email, gender, created_at, updated_at, version')
 			.single()
 
@@ -378,7 +395,7 @@ export const createPatient = async (patientData: Omit<PatientInsert, 'laboratory
 			console.log('ℹ️ Dual-write: Paciente sin cédula (S/C o null), omitiendo identificación')
 		}
 
-		return data as unknown as Patient
+		return normalizePatientCedula(data as unknown as Patient)
 	} catch (error) {
 		console.error('❌ Error creando paciente:', error)
 		// Si ya es un PatientError, re-lanzarlo
@@ -404,22 +421,27 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 			throw new Error('Paciente no encontrado')
 		}
 
+		// Homologar cédula al actualizar: siempre formato canónico (TIPO-NUMERO) cuando se envía
+		const normalizedCedula =
+			updates.cedula !== undefined ? (formatCedulaCanonical(updates.cedula) ?? updates.cedula) : undefined
+
 		// Si se está actualizando la cédula, verificar si ya existe otro paciente con esa cédula
-		if (updates.cedula && updates.cedula !== currentPatient.cedula) {
-			const existingPatient = await findPatientByCedula(updates.cedula)
+		if (normalizedCedula !== undefined && normalizedCedula !== currentPatient.cedula) {
+			const existingPatient = await findPatientByCedula(normalizedCedula)
 			if (existingPatient && existingPatient.id !== id) {
-				throw new Error(`Ya existe un paciente con la cédula ${updates.cedula}`)
+				throw new Error(`Ya existe un paciente con la cédula ${normalizedCedula}`)
 			}
 		}
 
 		// Preparar datos de actualización
 		const updateData: PatientUpdate = {
 			...updates,
+			...(normalizedCedula !== undefined && { cedula: normalizedCedula }),
 			updated_at: new Date().toISOString(),
 			version: (currentPatient.version || 1) + 1,
 		}
 
-		// Actualizar paciente
+		// Actualizar paciente (cedula ya normalizada en updateData)
 		// Usar 'as any' porque los tipos generados pueden no permitir null en cedula
 		const { data, error } = await supabase
 			.from('patients')
@@ -473,9 +495,7 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 						console.log('ℹ️ Dual-write: Identificación ya existe con estos datos, omitiendo actualización')
 					} else {
 						// Buscar si hay una identificación del mismo tipo (para actualizar)
-						const sameTypeIdentificacion = existingIdentificaciones.find(
-							(ident) => ident.tipo_documento === tipo,
-						)
+						const sameTypeIdentificacion = existingIdentificaciones.find((ident) => ident.tipo_documento === tipo)
 
 						if (sameTypeIdentificacion) {
 							// Actualizar la identificación existente del mismo tipo
@@ -522,7 +542,7 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 		}
 
 		console.log('✅ Paciente actualizado exitosamente:', data)
-		return data as unknown as Patient
+		return normalizePatientCedula(data as unknown as Patient)
 	} catch (error) {
 		console.error('❌ Error actualizando paciente:', error)
 		throw error
@@ -531,7 +551,7 @@ export const updatePatient = async (id: string, updates: PatientUpdate, userId?:
 
 /**
  * Registrar cambios de paciente en change_logs
- * 
+ *
  * IMPORTANTE: Esta función se ejecuta dentro de la misma promesa del update
  * para mitigar fallos parciales (si el update falla, el log no se registra)
  */
@@ -625,19 +645,17 @@ export const getPatients = async (
 				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 1000) // Límite alto para obtener todos los relevantes
 
 				if (optimizedResults && optimizedResults.length > 0) {
-					// Obtener IDs de pacientes encontrados
-					const patientIds = optimizedResults.map((p) => p.id)
+					// IDs en orden de relevancia (exactos, luego primer nombre = término, ts_rank, nombre)
+					let orderedIds = optimizedResults.map((p) => p.id)
 
-					// Construir query con los IDs encontrados
 					let query = supabase
 						.from('patients')
 						.select('*', { count: 'exact' })
 						.eq('laboratory_id', laboratoryId)
-						.in('id', patientIds)
+						.in('id', orderedIds)
 
 					// Aplicar filtro de branch si existe
 					if (branchFilter && branchFilter !== 'all') {
-						// Obtener patient_ids de medical_records_clean con esa branch
 						const { data: casesData, error: casesError } = await supabase
 							.from('medical_records_clean')
 							.select('patient_id')
@@ -650,12 +668,11 @@ export const getPatients = async (
 							const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
 
 							if (uniquePatientIds.length > 0) {
-								// Intersectar con los IDs de búsqueda optimizada
-								const filteredIds = patientIds.filter((id) => uniquePatientIds.includes(id))
+								const filteredIds = orderedIds.filter((id) => uniquePatientIds.includes(id))
 								if (filteredIds.length > 0) {
 									query = query.in('id', filteredIds)
+									orderedIds = filteredIds
 								} else {
-									// No hay pacientes que coincidan con ambos filtros
 									return {
 										data: [],
 										count: 0,
@@ -676,83 +693,26 @@ export const getPatients = async (
 						}
 					}
 
-					// Manejar ordenamiento especial para 'edad'
-					if (sortField === 'edad') {
-						const { data: allData, error, count } = await query
-
-						if (error) {
-							throw error
-						}
-
-						const extractAgeValue = (edad: string | null | undefined): number => {
-							if (!edad || edad.trim() === '') return -1
-
-							const edadStr = String(edad).trim().toUpperCase()
-							const match = edadStr.match(/(\d+)/)
-							if (!match) return -1
-
-							const number = parseInt(match[1], 10)
-							if (isNaN(number)) return -1
-
-							if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) {
-								return number * 365
-							} else if (edadStr.includes('MES') || edadStr.includes('MESES')) {
-								return number * 30
-							} else if (
-								edadStr.includes('DÍA') ||
-								edadStr.includes('DÍAS') ||
-								edadStr.includes('DIA') ||
-								edadStr.includes('DIAS')
-							) {
-								return number
-							}
-
-							return number * 365
-						}
-
-						const sortedData = (allData || []).sort((a: any, b: any) => {
-							const aValue = extractAgeValue(a.edad)
-							const bValue = extractAgeValue(b.edad)
-
-							if (aValue === -1 && bValue === -1) return 0
-							if (aValue === -1) return 1
-							if (bValue === -1) return -1
-
-							return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
-						})
-
-						const from = (page - 1) * limit
-						const to = from + limit
-						const paginatedData = sortedData.slice(from, to)
-
-						return {
-							data: paginatedData,
-							count: count || 0,
-							page,
-							limit,
-							totalPages: Math.ceil((count || 0) / limit),
-						}
-					}
-
-					// Para otros campos, ordenar en la base de datos
-					query = query.order(sortField, { ascending: sortDirection === 'asc' })
-
-					// Paginación
-					const from = (page - 1) * limit
-					const to = from + limit - 1
-
-					const { data, error, count } = await query.range(from, to)
+					// Con búsqueda: respetar orden por relevancia (no reordenar por sortField)
+					const { data: allData, error, count } = await query.range(0, orderedIds.length - 1)
 
 					if (error) {
 						throw error
 					}
 
+					const byRelevanceOrder = (allData || []).sort(
+						(a: any, b: any) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id),
+					)
+					const from = (page - 1) * limit
+					const to = from + limit
+					const paginatedData = byRelevanceOrder.slice(from, to)
+
 					return {
-						data: data || [],
-						count: count || 0,
+						data: paginatedData.map((p: any) => normalizePatientCedula(p)),
+						count: count ?? byRelevanceOrder.length,
 						page,
 						limit,
-						totalPages: Math.ceil((count || 0) / limit),
+						totalPages: Math.ceil((count ?? byRelevanceOrder.length) / limit),
 					}
 				}
 			} catch (optimizedError) {
@@ -783,7 +743,9 @@ export const getPatients = async (
 				console.error('Error obteniendo casos por branch:', casesError)
 			} else if (casesData) {
 				// Extraer IDs únicos de pacientes (filtrar nulls y convertir a string[])
-				const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter((id): id is string => id !== null))]
+				const uniquePatientIds = [
+					...new Set(casesData.map((c) => c.patient_id).filter((id): id is string => id !== null)),
+				]
 
 				if (uniquePatientIds.length > 0) {
 					query = query.in('id', uniquePatientIds)
@@ -856,7 +818,7 @@ export const getPatients = async (
 			// Aplicar paginación después del ordenamiento
 			const from = (page - 1) * limit
 			const to = from + limit
-			const paginatedData = sortedData.slice(from, to)
+			const paginatedData = sortedData.slice(from, to).map((p: any) => normalizePatientCedula(p))
 
 			return {
 				data: paginatedData,
@@ -881,7 +843,7 @@ export const getPatients = async (
 		}
 
 		return {
-			data: data || [],
+			data: (data || []).map((p: any) => normalizePatientCedula(p)),
 			count: count || 0,
 			page,
 			limit,
@@ -1009,7 +971,7 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 			throw error
 		}
 
-		return data || []
+		return (data || []).map((p: any) => normalizePatientCedula(p))
 	} catch (error) {
 		console.error('Error buscando pacientes:', error)
 		throw error
@@ -1078,24 +1040,26 @@ export const searchPatientsOptimized = async (searchTerm: string, limit = 10): P
 			})) as Patient[]
 		}
 
-		// Mapear resultados a formato Patient
+		// Mapear resultados a formato Patient y homologar cédula (formato canónico)
 		const results = (data as any) || []
-		return results.map((row: any) => ({
-			id: row.id,
-			nombre: row.nombre,
-			cedula: row.cedula || null,
-			telefono: row.telefono || null,
-			email: row.email || null,
-			gender: (row.gender as 'Masculino' | 'Femenino' | null) || null,
-			tipo_paciente: (row.tipo_paciente as 'adulto' | 'menor' | 'animal' | null) || null,
-			edad: row.edad || null,
-			fecha_nacimiento: row.fecha_nacimiento || null,
-			especie: row.especie || null,
-			laboratory_id: laboratoryId,
-			created_at: null,
-			updated_at: null,
-			version: null,
-		})) as Patient[]
+		return results.map((row: any) =>
+			normalizePatientCedula({
+				id: row.id,
+				nombre: row.nombre,
+				cedula: row.cedula || null,
+				telefono: row.telefono || null,
+				email: row.email || null,
+				gender: (row.gender as 'Masculino' | 'Femenino' | null) || null,
+				tipo_paciente: (row.tipo_paciente as 'adulto' | 'menor' | 'animal' | null) || null,
+				edad: row.edad || null,
+				fecha_nacimiento: row.fecha_nacimiento || null,
+				especie: row.especie || null,
+				laboratory_id: laboratoryId,
+				created_at: null,
+				updated_at: null,
+				version: null,
+			} as Patient),
+		)
 	} catch (error) {
 		console.error('Error en búsqueda optimizada:', error)
 		// Fallback a búsqueda tradicional
@@ -1144,13 +1108,15 @@ export const findDuplicatePatients = async () => {
 			Array<{ id: string; cedula: string; nombre: string; created_at: string | null }>
 		> = {}
 
-		allPatients?.forEach((patient) => {
-			const cedulaNumber = patient.cedula.replace(/^[VEJC]-/, '')
-			if (!groupedByNumber[cedulaNumber]) {
-				groupedByNumber[cedulaNumber] = []
-			}
-			groupedByNumber[cedulaNumber].push(patient)
-		})
+		;(allPatients || [])
+			.filter((p) => p.cedula != null && p.cedula !== '')
+			.forEach((patient) => {
+				const cedulaNumber = patient.cedula!.replace(/^[VEJC]-/, '')
+				if (!groupedByNumber[cedulaNumber]) {
+					groupedByNumber[cedulaNumber] = []
+				}
+				groupedByNumber[cedulaNumber].push(patient)
+			})
 
 		// Encontrar duplicados
 		const duplicates: Array<{

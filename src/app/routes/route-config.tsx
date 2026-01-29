@@ -14,6 +14,7 @@ import {
   ReceptionistHomePage,
   TriageAnalyticsPage,
   WaitingRoomPage,
+  ErrorBoundaryTest,
 } from './lazy-routes';
 
 export interface RouteConfig {
@@ -115,6 +116,10 @@ export const employeeRoutes: RouteConfig[] = [
     component: TriageAnalyticsPage,
   },
   {
+    path: 'error-test',
+    component: ErrorBoundaryTest,
+  },
+  {
     path: 'settings',
     component: SettingsPage,
   },
@@ -139,6 +144,28 @@ export const medicRoutes: RouteConfig[] = [
 
 // Configuración de rutas para imagenologia
 export const imagenologiaRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    component: ReceptionistHomePage,
+  },
+  {
+    path: 'cases',
+    feature: 'hasCases',
+    component: CasesPage,
+  },
+  {
+    path: 'patients',
+    feature: 'hasPatients',
+    component: PatientsPage,
+  },
+  {
+    path: 'settings',
+    component: SettingsPage,
+  },
+];
+
+// Configuración de rutas para laboratorio (ver pacientes, casos, enviar informes, adjuntar PDF)
+export const laboratorioRoutes: RouteConfig[] = [
   {
     path: 'home',
     component: ReceptionistHomePage,

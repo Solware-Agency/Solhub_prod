@@ -109,7 +109,7 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
 }
 
 export interface MedicalCaseInsert {
@@ -245,7 +245,7 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -298,7 +298,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba)
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;
@@ -1087,6 +1087,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   dateFrom?: string;
   dateTo?: string;
   examType?: string;
+  consulta?: string;
   paymentStatus?: 'Incompleto' | 'Pagado';
   userRole?:
     | 'owner'
@@ -1123,14 +1124,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
 
           if (!optimizedError && optimizedResults && optimizedResults.length > 0) {
-            // Obtener los IDs de los casos encontrados
-            const caseIds = optimizedResults.map((r: any) => r.id);
+						// IDs en orden de relevancia (exactos, luego primer nombre = término, score, código)
+						const caseIds = optimizedResults.map((r: any) => r.id)
 
-            // Obtener los casos completos con información del paciente
-            const { data: fullCases, error: fullCasesError } = await supabase
-              .from('medical_records_clean')
-              .select(
-                `
+						// Obtener los casos completos (sin order para respetar relevancia después)
+						const { data: fullCases, error: fullCasesError } = await supabase
+							.from('medical_records_clean')
+							.select(
+								`
                 *,
                 patients(
                   cedula,
@@ -1141,151 +1142,127 @@ export const getAllCasesWithPatientInfo = async (filters?: {
                   fecha_nacimiento
                 )
               `,
-              )
-              .in('id', caseIds)
-              .order('created_at', { ascending: false });
+							)
+							.in('id', caseIds)
 
-            if (!fullCasesError && fullCases) {
-              // Transformar los datos
-              const transformedData = fullCases.map((item: any) => ({
-                ...item,
-                cedula: item.patients?.cedula || '',
-                nombre: item.patients?.nombre || '',
-                edad: item.patients?.edad || null,
-                telefono: item.patients?.telefono || null,
-                patient_email: item.patients?.email || null,
-                fecha_nacimiento: item.patients?.fecha_nacimiento || null,
-                version: item.version || null,
-              })) as MedicalCaseWithPatient[];
+						if (!fullCasesError && fullCases) {
+							// Respetar orden por relevancia (no reordenar por created_at)
+							const byRelevanceOrder = [...fullCases].sort(
+								(a: any, b: any) => caseIds.indexOf(a.id) - caseIds.indexOf(b.id),
+							)
 
-              // Aplicar otros filtros si existen (misma lógica que el método tradicional)
-              let filteredData = transformedData;
+							// Transformar los datos
+							const transformedData = byRelevanceOrder.map((item: any) => ({
+								...item,
+								cedula: item.patients?.cedula || '',
+								nombre: item.patients?.nombre || '',
+								edad: item.patients?.edad || null,
+								telefono: item.patients?.telefono || null,
+								patient_email: item.patients?.email || null,
+								fecha_nacimiento: item.patients?.fecha_nacimiento || null,
+								version: item.version || null,
+							})) as MedicalCaseWithPatient[]
 
-              if (filters?.branch) {
-                filteredData = filteredData.filter(
-                  (item) => item.branch === filters.branch,
-                );
-              }
+							// Aplicar otros filtros si existen (misma lógica que el método tradicional)
+							let filteredData = transformedData
 
-              if (filters?.branchFilter && filters.branchFilter.length > 0) {
-                filteredData = filteredData.filter(
-                  (item) => item.branch && filters.branchFilter!.includes(item.branch),
-                );
-              }
+							if (filters?.branch) {
+								filteredData = filteredData.filter((item) => item.branch === filters.branch)
+							}
 
-              if (filters?.dateFrom) {
-                filteredData = filteredData.filter(
-                  (item) => item.date >= filters.dateFrom!,
-                );
-              }
+							if (filters?.branchFilter && filters.branchFilter.length > 0) {
+								filteredData = filteredData.filter((item) => item.branch && filters.branchFilter!.includes(item.branch))
+							}
 
-              if (filters?.dateTo) {
-                filteredData = filteredData.filter(
-                  (item) => item.date <= filters.dateTo!,
-                );
-              }
+							if (filters?.dateFrom) {
+								filteredData = filteredData.filter((item) => item.date >= filters.dateFrom!)
+							}
 
-              if (filters?.examType) {
-                let exactExamType = filters.examType;
-                if (filters.examType === 'inmunohistoquimica') {
-                  exactExamType = 'Inmunohistoquímica';
-                } else if (filters.examType === 'citologia') {
-                  exactExamType = 'Citología';
-                } else if (filters.examType === 'biopsia') {
-                  exactExamType = 'Biopsia';
-                }
-                filteredData = filteredData.filter(
-                  (item) => item.exam_type === exactExamType,
-                );
-              }
+							if (filters?.dateTo) {
+								filteredData = filteredData.filter((item) => item.date <= filters.dateTo!)
+							}
 
-              if (filters?.paymentStatus) {
-                filteredData = filteredData.filter(
-                  (item) => item.payment_status === filters.paymentStatus,
-                );
-              }
+							if (filters?.examType) {
+								let exactExamType = filters.examType
+								if (filters.examType === 'inmunohistoquimica') {
+									exactExamType = 'Inmunohistoquímica'
+								} else if (filters.examType === 'citologia') {
+									exactExamType = 'Citología'
+								} else if (filters.examType === 'biopsia') {
+									exactExamType = 'Biopsia'
+								}
+								filteredData = filteredData.filter((item) => item.exam_type === exactExamType)
+							}
 
-              if (filters?.documentStatus) {
-                filteredData = filteredData.filter(
-                  (item) => item.doc_aprobado === filters.documentStatus,
-                );
-              }
+							// Filtro por tipo de consulta (especialidad médica)
+							if (filters?.consulta) {
+								filteredData = filteredData.filter((item) => item.consulta === filters.consulta)
+							}
 
-              if (filters?.pdfStatus) {
-                if (filters.pdfStatus === 'pendientes') {
-                  filteredData = filteredData.filter(
-                    (item) => item.pdf_en_ready === false,
-                  );
-                } else if (filters.pdfStatus === 'faltantes') {
-                  filteredData = filteredData.filter(
-                    (item) => item.pdf_en_ready === true,
-                  );
-                }
-              }
+							if (filters?.paymentStatus) {
+								filteredData = filteredData.filter((item) => item.payment_status === filters.paymentStatus)
+							}
 
-              if (filters?.citoStatus) {
-                filteredData = filteredData.filter(
-                  (item) => item.cito_status === filters.citoStatus,
-                );
-              }
+							if (filters?.documentStatus) {
+								filteredData = filteredData.filter((item) => item.doc_aprobado === filters.documentStatus)
+							}
 
-              if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
-                filteredData = filteredData.filter(
-                  (item) =>
-                    item.treating_doctor &&
-                    filters.doctorFilter!.includes(item.treating_doctor),
-                );
-              }
+							if (filters?.pdfStatus) {
+								if (filters.pdfStatus === 'pendientes') {
+									filteredData = filteredData.filter((item) => item.pdf_en_ready === false)
+								} else if (filters.pdfStatus === 'faltantes') {
+									filteredData = filteredData.filter((item) => item.pdf_en_ready === true)
+								}
+							}
 
-              if (filters?.originFilter && filters.originFilter.length > 0) {
-                filteredData = filteredData.filter(
-                  (item) =>
-                    item.origin && filters.originFilter!.includes(item.origin),
-                );
-              }
+							if (filters?.citoStatus) {
+								filteredData = filteredData.filter((item) => item.cito_status === filters.citoStatus)
+							}
 
-              if (filters?.emailSentStatus !== undefined) {
-                filteredData = filteredData.filter(
-                  (item) => item.email_sent === filters.emailSentStatus,
-                );
-              }
+							if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+								filteredData = filteredData.filter(
+									(item) => item.treating_doctor && filters.doctorFilter!.includes(item.treating_doctor),
+								)
+							}
 
-              if (filters?.userRole === 'residente') {
-                filteredData = filteredData.filter(
-                  (item) => item.exam_type === 'Biopsia',
-                );
-              }
+							if (filters?.originFilter && filters.originFilter.length > 0) {
+								filteredData = filteredData.filter((item) => item.origin && filters.originFilter!.includes(item.origin))
+							}
 
-              if (filters?.userRole === 'citotecno') {
-                filteredData = filteredData.filter(
-                  (item) => item.exam_type === 'Citología',
-                );
-              }
+							if (filters?.emailSentStatus !== undefined) {
+								filteredData = filteredData.filter((item) => item.email_sent === filters.emailSentStatus)
+							}
 
-              if (filters?.userRole === 'patologo') {
-                filteredData = filteredData.filter(
-                  (item) =>
-                    item.exam_type === 'Biopsia' ||
-                    item.exam_type === 'Inmunohistoquímica',
-                );
-              }
+							if (filters?.userRole === 'residente') {
+								filteredData = filteredData.filter((item) => item.exam_type === 'Biopsia')
+							}
 
-              // Aplicar ordenamiento si existe
-              if (filters?.sortField && filters?.sortDirection) {
-                filteredData.sort((a, b) => {
-                  const aValue = (a as any)[filters.sortField!];
-                  const bValue = (b as any)[filters.sortField!];
-                  if (filters.sortDirection === 'asc') {
-                    return aValue > bValue ? 1 : -1;
-                  } else {
-                    return aValue < bValue ? 1 : -1;
-                  }
-                });
-              }
+							if (filters?.userRole === 'citotecno') {
+								filteredData = filteredData.filter((item) => item.exam_type === 'Citología')
+							}
 
-              return filteredData;
-            }
-          }
+							if (filters?.userRole === 'patologo') {
+								filteredData = filteredData.filter(
+									(item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
+								)
+							}
+
+							// Aplicar ordenamiento si existe
+							if (filters?.sortField && filters?.sortDirection) {
+								filteredData.sort((a, b) => {
+									const aValue = (a as any)[filters.sortField!]
+									const bValue = (b as any)[filters.sortField!]
+									if (filters.sortDirection === 'asc') {
+										return aValue > bValue ? 1 : -1
+									} else {
+										return aValue < bValue ? 1 : -1
+									}
+								})
+							}
+
+							return filteredData
+						}
+					}
         } catch (optimizedError) {
           console.warn(
             '⚠️ Búsqueda optimizada falló, usando método tradicional:',
@@ -1632,6 +1609,11 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           exactExamType = 'Biopsia';
         }
         query = query.eq('exam_type', exactExamType);
+      }
+
+      // Filtro por tipo de consulta (especialidad médica)
+      if (filters?.consulta) {
+        query = query.eq('consulta', filters.consulta);
       }
 
       if (filters?.paymentStatus) {

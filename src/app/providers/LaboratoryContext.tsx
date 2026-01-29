@@ -43,6 +43,22 @@ export function LaboratoryProvider({
 
       if (profileError || !laboratoryId) {
         console.error('Error loading user profile:', profileError);
+        
+        // Si el error es PGRST116 (no rows returned), significa que el perfil fue eliminado
+        // Hacer logout automático
+        if (profileError?.code === 'PGRST116') {
+          console.warn('⚠️ Perfil eliminado detectado en LaboratoryContext (PGRST116) - haciendo logout automático');
+          try {
+            await supabase.auth.signOut();
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 500);
+          } catch (logoutError) {
+            console.error('Error durante logout automático:', logoutError);
+            window.location.href = '/';
+          }
+        }
+        
         setLaboratory(null);
         setIsLoading(false);
         return;

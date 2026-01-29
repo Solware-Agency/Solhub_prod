@@ -67,7 +67,7 @@ export const useUserProfile = () => {
 	return {
 		profile: query.data,
 		isLoading: authLoading || query.isLoading,
-		error: query.error?.message || null,
+		error: query.error as { code?: string; message?: string } | null,
 		refetch: query.refetch,
 	}
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,10 @@ import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
-import { Mail, X, Plus } from 'lucide-react';
+import { Mail, X, Plus, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { getEmailSendHistory, type EmailSendLog } from '@/services/supabase/email-logs/email-logs-service';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface SendEmailModalProps {
   isOpen: boolean;
@@ -19,6 +22,7 @@ interface SendEmailModalProps {
   primaryEmail: string;
   patientName: string;
   caseCode: string;
+  caseId?: string;
   isSending: boolean;
 }
 
@@ -29,10 +33,27 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
   primaryEmail,
   patientName,
   caseCode,
+  caseId,
   isSending,
 }) => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
+  const [newBccEmail, setNewBccEmail] = useState('');
+  const [emailHistory, setEmailHistory] = useState<EmailSendLog[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Cargar historial de envíos cuando se abre el modal
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (isOpen && caseId) {
+        setIsLoadingHistory(true);
+        const { data } = await getEmailSendHistory(caseId);
+        setEmailHistory(data || []);
+        setIsLoadingHistory(false);
+      }
+    };
+    loadHistory();
+  }, [isOpen, caseId]);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -83,6 +104,46 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
         </DialogHeader>
 
         <div className='space-y-4 py-4'>
+          {/* Historial de envíos anteriores */}
+          {caseId && emailHistory.length > 0 && (
+            <div className='bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+              <div className='flex items-center gap-2 mb-2'>
+                <Clock className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+                <h4 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
+                  Envíos anteriores ({emailHistory.length})
+                </h4>
+              </div>
+              <div className='space-y-2 max-h-32 overflow-y-auto'>
+                {emailHistory.slice(0, 3).map((log) => (
+                  <div
+                    key={log.id}
+                    className='flex items-start justify-between text-xs bg-white dark:bg-gray-800/50 p-2 rounded border border-gray-200 dark:border-gray-700'
+                  >
+                    <div className='flex items-start gap-2 flex-1'>
+                      {log.status === 'success' ? (
+                        <CheckCircle2 className='w-3 h-3 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0' />
+                      ) : (
+                        <XCircle className='w-3 h-3 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0' />
+                      )}
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-gray-700 dark:text-gray-300 truncate'>
+                          {log.recipient_email}
+                        </p>
+                        <p className='text-gray-500 dark:text-gray-400'>
+                          {format(new Date(log.sent_at), "d 'de' MMM, HH:mm", { locale: es })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {emailHistory.length > 3 && (
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
+                  +{emailHistory.length - 3} envío(s) más
+                </p>
+              )}
+            </div>
+          )}
           {/* Destinatario principal */}
           <div className='space-y-2'>
             <Label htmlFor='primary-email'>Destinatario principal</Label>
