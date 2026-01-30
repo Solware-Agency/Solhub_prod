@@ -72,6 +72,7 @@ import { getResponsableByDependiente } from '@services/supabase/patients/respons
 import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls';
 import { PDFButton } from '@shared/components/ui/PDFButton';
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
+import PatientHistoryModal from '@features/patients/components/PatientHistoryModal';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -272,6 +273,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
     const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
+    const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false);
     const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
     // Image URLs state for imagenologia role (hasta 10 imágenes)
@@ -1803,9 +1805,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             Representado por:
                           </span>
                           <div className='sm:w-1/2 sm:text-right'>
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                            <button
+                              type='button'
+                              onClick={() => setShowResponsableHistoryModal(true)}
+                              className='text-sm text-primary dark:text-primary font-medium hover:underline cursor-pointer text-right'
+                            >
                               {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
-                            </span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -2888,6 +2894,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             isSending={isSaving}
           />
         )}
+
+        {/* Historial médico del representante (al hacer clic en "Representado por") - por delante del modal de caso */}
+        <PatientHistoryModal
+          isOpen={showResponsableHistoryModal}
+          onClose={() => setShowResponsableHistoryModal(false)}
+          patient={responsableData?.responsable ?? null}
+          elevatedZIndex
+        />
       </>
     );
 

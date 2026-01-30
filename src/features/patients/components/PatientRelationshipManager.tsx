@@ -589,7 +589,7 @@ export const PatientRelationshipManager = ({
 								id="email"
 								type="email"
 								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								onChange={(e) => setEmail(e.target.value.replace(/[^a-zA-Z0-9@._+-]/g, ''))}
 								placeholder="Email (opcional)"
 							/>
 						</div>

@@ -798,8 +798,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       if (!isNaN(sistolica) && (sistolica < 50 || sistolica > 250)) {
         errors.push('La presión sistólica debe estar entre 50 y 250 mmHg.');
       }
-      if (!isNaN(diastolica) && (diastolica < 30 || diastolica > 150)) {
-        errors.push('La presión diastólica debe estar entre 30 y 150 mmHg.');
+      if (!isNaN(diastolica) && (diastolica < 20 || diastolica > 150)) {
+        errors.push('La presión diastólica debe estar entre 20 y 150 mmHg.');
       }
     }
     
@@ -823,18 +823,15 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     };
     
     // Verificar cada signo vital obligatorio
-    if (!hasValue(formData.frecuenciaCardiaca)) {
-      missingFields.push('Frecuencia Cardíaca');
-    }
-    
+    // FC (Frecuencia Cardíaca) - No es obligatorio
     // FR (Frecuencia Respiratoria) - No es obligatorio
-    
+    // Temperatura - No es obligatorio
+    // Glicemia - No es obligatorio
+
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('Saturación de Oxígeno');
     }
-    
-    // Temperatura - No es obligatorio
-    
+
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('Presión Arterial');
     }

@@ -289,7 +289,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					</div>
 				</div>
 
-				{/* Email - CON AUTOCOMPLETADO */}
+				{/* Email - CON AUTOCOMPLETADO (solo caracteres válidos en correo) */}
 				<FormField
 					control={control}
 					name="email"
@@ -302,7 +302,13 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 									type="email"
 									iconRight={<Mail className="h-4 w-4 text-muted-foreground" />}
 									placeholder="Solwy@gmail.com"
-									{...field}
+									value={field.value ?? ''}
+									onChange={(e) => {
+										const sanitized = e.target.value.replace(/[^a-zA-Z0-9@._+-]/g, '')
+										field.onChange(sanitized)
+									}}
+									onBlur={field.onBlur}
+									ref={field.ref}
 									className={inputStyles + ' transition-none'}
 								/>
 							</FormControl>

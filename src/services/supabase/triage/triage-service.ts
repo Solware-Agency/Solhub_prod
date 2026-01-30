@@ -422,10 +422,10 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
   }
   
   // Validar signos vitales obligatorios
-  if (!data.heart_rate || data.heart_rate <= 0) {
-    missingFields.push('FC (Frecuencia Cardíaca)');
-  }
+  // FC (Frecuencia Cardíaca) - No es obligatorio
   // FR (Frecuencia Respiratoria) - No es obligatorio
+  // Temperatura - No es obligatorio
+  // Glicemia - No es obligatorio
   if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0 || data.oxygen_saturation > 100) {
     missingFields.push('SpO₂ (Saturación de Oxígeno)');
   }

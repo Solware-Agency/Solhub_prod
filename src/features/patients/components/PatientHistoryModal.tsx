@@ -55,6 +55,8 @@ interface PatientHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   patient: Patient | null;
+  /** Cuando true, el modal usa z-index mayor que Detalles del caso (p. ej. abierto desde página de casos) */
+  elevatedZIndex?: boolean;
 }
 
 // Helper to calculate age from fecha_nacimiento
@@ -109,6 +111,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   isOpen,
   onClose,
   patient,
+  elevatedZIndex = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -782,13 +785,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
-              className='fixed inset-0 bg-black/50 z-[99999998]'
+              className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-[100000000000000000]' : 'z-[99999998]'}`}
             />
           )}
 
           {/* Modal */}
           {!isEditing && (
-            <div className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'>
+            <div className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-[100000000000000001]' : 'z-[99999999]'}`}>
               {/* Overlay de fondo con opacidad desde el inicio */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -992,7 +995,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                 const phoneNumber =
                                   patient.telefono?.replace(/\D/g, '') || '';
                                 const message = encodeURIComponent(
-                                  'Hola, me comunico desde el sistema médico. ¿Cómo está usted?',
+                                  `Hola, me comunico desde ${laboratory?.name ?? 'el laboratorio'}.`,
                                 );
                                 const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${message}&type=phone_number&app_absent=0`;
                                 window.open(whatsappUrl, '_blank');
