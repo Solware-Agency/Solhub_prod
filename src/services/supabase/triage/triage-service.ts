@@ -35,6 +35,12 @@ type ExtendedDatabase = Database & {
           tabaco: number | null;
           cafe: number | null;
           comment: string | null;
+          enfermedad_actual: string | null;
+          antecedentes_quirurgicos: string | null;
+          diagnostico: string | null;
+          plan_de_accion: string | null;
+          lugar_de_nacimiento: string | null;
+          telefono_emergencia: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -62,6 +68,12 @@ type ExtendedDatabase = Database & {
           tabaco?: number | null;
           cafe?: number | null;
           comment?: string | null;
+          enfermedad_actual?: string | null;
+          antecedentes_quirurgicos?: string | null;
+          diagnostico?: string | null;
+          plan_de_accion?: string | null;
+          lugar_de_nacimiento?: string | null;
+          telefono_emergencia?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -89,6 +101,12 @@ type ExtendedDatabase = Database & {
           tabaco?: number | null;
           cafe?: number | null;
           comment?: string | null;
+          enfermedad_actual?: string | null;
+          antecedentes_quirurgicos?: string | null;
+          diagnostico?: string | null;
+          plan_de_accion?: string | null;
+          lugar_de_nacimiento?: string | null;
+          telefono_emergencia?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -127,6 +145,12 @@ export interface TriageRecord {
   bmi: number | null;
   examen_fisico: string | null;
   comment: string | null;
+  enfermedad_actual: string | null;
+  antecedentes_quirurgicos: string | null;
+  diagnostico: string | null;
+  plan_de_accion: string | null;
+  lugar_de_nacimiento: string | null;
+  telefono_emergencia: string | null;
   created_by: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -155,6 +179,12 @@ export interface TriageRecordInsert {
   bmi?: number | null; // Se calcula automáticamente si hay altura y peso
   examen_fisico?: string | null;
   comment?: string | null;
+  enfermedad_actual?: string | null;
+  antecedentes_quirurgicos?: string | null;
+  diagnostico?: string | null;
+  plan_de_accion?: string | null;
+  lugar_de_nacimiento?: string | null;
+  telefono_emergencia?: string | null;
   created_by?: string | null;
 }
 
