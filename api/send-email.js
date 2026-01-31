@@ -262,7 +262,7 @@ export default async function handler(req, res) {
               <div style="text-align: center;">
                 <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none;">
                   <img src="${url}" alt="Imagen ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e0e0e0;" />
-                  <p style="color: #667eea; font-size: 11px; margin: 6px 0 0 0; font-weight: bold;">📷 Ver #${index + 1}</p>
+                  <p style="color: #667eea; font-size: 11px; margin: 6px 0 0 0; font-weight: bold;">Ver #${index + 1}</p>
                 </a>
               </div>
             `).join('')}
