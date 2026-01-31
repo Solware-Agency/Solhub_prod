@@ -28,15 +28,28 @@ export default async function handler(req, res) {
     });
 
     // Validar datos requeridos
-    if (!patientEmail || !patientName || !pdfUrl) {
+    if (!patientEmail || !patientName) {
       console.log("❌ Datos faltantes:", {
         patientEmail: !!patientEmail,
-        patientName: !!patientName,
-        pdfUrl: !!pdfUrl
+        patientName: !!patientName
       });
       return res.status(400).json({
         success: false,
-        error: "Faltan datos requeridos: patientEmail, patientName, pdfUrl"
+        error: "Faltan datos requeridos: patientEmail, patientName"
+      });
+    }
+
+    // Validar que haya al menos uno de: pdfUrl, uploadedPdfUrl o imageUrls
+    const hasContent = pdfUrl || uploadedPdfUrl || (imageUrls && imageUrls.length > 0);
+    if (!hasContent) {
+      console.log("❌ Sin contenido para enviar:", {
+        pdfUrl: !!pdfUrl,
+        uploadedPdfUrl: !!uploadedPdfUrl,
+        imageUrls: imageUrls ? imageUrls.length : 0
+      });
+      return res.status(400).json({
+        success: false,
+        error: "Debe proporcionar al menos un PDF (caso o adjunto) o imágenes para enviar"
       });
     }
 
@@ -214,10 +227,11 @@ export default async function handler(req, res) {
       </p>
 
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
-        Le informamos que su informe médico del <strong>Caso ${caseCode || 'N/A'}</strong> está listo para descarga.
+        Le informamos que ${pdfUrl ? 'su informe médico del' : 'la información del'} <strong>Caso ${caseCode || 'N/A'}</strong> está ${pdfUrl ? 'lista para descarga' : 'disponible'}.
       </p>
 
       <div style="text-align: center; margin: 40px 0;">
+        ${pdfUrl ? `
         <a href="${pdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
               color: white; 
               padding: 15px 30px; 
@@ -229,6 +243,7 @@ export default async function handler(req, res) {
               box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
           📄 Descargar Informe
         </a>
+        ` : ''}
         
         ${uploadedPdfUrl ? `
           <br><br>
