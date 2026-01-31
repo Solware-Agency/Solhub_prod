@@ -1189,10 +1189,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       return;
     }
 
-    if (!case_?.informe_qr) {
+    // Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
+    const pdfUrl = case_?.informe_qr;
+    const uploadedPdf = (case_ as any)?.uploaded_pdf_url;
+    const images = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) 
+      ? (case_ as any).images_urls 
+      : (case_ as any)?.image_url ? [(case_ as any).image_url] : [];
+
+    if (!pdfUrl && !uploadedPdf && images.length === 0) {
       toast({
         title: '❌ Error',
-        description: 'El PDF del caso aún no está disponible.',
+        description: 'El caso debe tener al menos un PDF generado, PDF adjunto o imágenes para enviar por correo.',
         variant: 'destructive',
       });
       return;

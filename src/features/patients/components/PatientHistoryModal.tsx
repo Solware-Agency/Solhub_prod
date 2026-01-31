@@ -558,19 +558,25 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       return;
     }
 
-    // Filtrar solo casos aprobados y que están en la selección
+    // Filtrar solo casos aprobados que estén en la selección y tengan al menos PDF, PDF adjunto o imágenes
     const casesToEmail =
-      filteredCases?.filter(
-        (caseItem) =>
-          selectedCases.has(caseItem.id) &&
-          caseItem.doc_aprobado === 'aprobado',
-      ) || [];
+      filteredCases?.filter((caseItem) => {
+        if (!selectedCases.has(caseItem.id) || caseItem.doc_aprobado !== 'aprobado') {
+          return false;
+        }
+        
+        const hasPdf = !!caseItem.informepdf_url;
+        const hasUploadedPdf = !!(caseItem as any)?.uploaded_pdf_url;
+        const hasImages = ((caseItem as any)?.images_urls && Array.isArray((caseItem as any).images_urls) && (caseItem as any).images_urls.length > 0) || !!(caseItem as any)?.image_url;
+        
+        return hasPdf || hasUploadedPdf || hasImages;
+      }) || [];
 
     if (casesToEmail.length === 0) {
       toast({
         title: '⚠️ No hay casos válidos',
         description:
-          'Los casos seleccionados deben estar aprobados para poder enviar sus PDFs por email.',
+          'Los casos seleccionados deben estar aprobados y tener al menos PDF, PDF adjunto o imágenes para enviar por email.',
         variant: 'destructive',
       });
       return;
@@ -730,15 +736,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   };
 
   const handleSendAllEmails = () => {
-    // Obtener casos aprobados del paciente
-    const approvedCases = filteredCases?.filter(
-      (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
-    ) || [];
+    // Obtener casos aprobados del paciente que tengan al menos PDF, PDF adjunto o imágenes
+    const approvedCases = filteredCases?.filter((c) => {
+      if (c.doc_aprobado !== 'aprobado') return false;
+      
+      const hasPdf = !!c.informepdf_url;
+      const hasUploadedPdf = !!(c as any)?.uploaded_pdf_url;
+      const hasImages = ((c as any)?.images_urls && Array.isArray((c as any).images_urls) && (c as any).images_urls.length > 0) || !!(c as any)?.image_url;
+      
+      return hasPdf || hasUploadedPdf || hasImages;
+    }) || [];
 
     if (approvedCases.length === 0) {
       toast({
         title: '⚠️ Sin casos disponibles',
-        description: 'No hay casos aprobados con PDF disponible para enviar.',
+        description: 'No hay casos aprobados con PDF, PDF adjunto o imágenes disponibles para enviar.',
         variant: 'destructive',
       });
       return;

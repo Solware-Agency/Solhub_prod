@@ -1082,12 +1082,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
-      // Verificar que exista el PDF (informe_qr es el campo actual, attachment_url es legacy)
+      // Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
       const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
-      if (!pdfUrl) {
+      const uploadedPdf = (case_ as any)?.uploaded_pdf_url;
+      const images = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) 
+        ? (case_ as any).images_urls 
+        : (case_ as any)?.image_url ? [(case_ as any).image_url] : [];
+
+      if (!pdfUrl && !uploadedPdf && images.length === 0) {
         toast({
           title: '❌ Error',
-          description: 'El PDF del caso aún no está disponible.',
+          description: 'El caso debe tener al menos un PDF generado, PDF adjunto o imágenes para enviar por correo.',
           variant: 'destructive',
         });
         return;
