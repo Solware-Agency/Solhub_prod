@@ -1937,7 +1937,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
                       {/* Estudio - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.examType?.enabled && (
+                      {(moduleConfig?.fields?.examType?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Estudio:
@@ -1968,7 +1968,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                      {(moduleConfig?.fields?.medicoTratante?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Médico tratante:
@@ -2003,7 +2003,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Tipo de Consulta - Solo para SPT */}
-                      {moduleConfig?.fields?.consulta?.enabled && (
+                      {(moduleConfig?.fields?.consulta?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Tipo de consulta:
@@ -2053,7 +2053,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Procedencia - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.procedencia?.enabled && (
+                      {(moduleConfig?.fields?.procedencia?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Procedencia:
@@ -2088,7 +2088,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Sede - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.branch?.enabled && (
+                      {(moduleConfig?.fields?.branch?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Sede:
@@ -2150,7 +2150,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
-                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                      {(moduleConfig?.fields?.numberOfSamples?.enabled ?? true) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Cantidad de muestras:
