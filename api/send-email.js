@@ -249,13 +249,13 @@ export default async function handler(req, res) {
           <br><br>
           <a href="${uploadedPdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 color: white; 
-                padding: 10px 20px; 
+                padding: 15px 30px; 
                 text-decoration: none; 
-                border-radius: 20px; 
+                border-radius: 25px; 
                 display: inline-block;
                 font-weight: bold;
-                font-size: 14px;
-                box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);">
+                font-size: 16px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
             📎 Adjunto
           </a>
         ` : ''}
