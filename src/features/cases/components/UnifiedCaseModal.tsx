@@ -1113,6 +1113,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.nombre}`;
         const emailBody = `Hola ${case_?.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
         
+        // Obtener imágenes del caso (priorizar images_urls array)
+        const caseImages = (currentCase as any)?.images_urls && Array.isArray((currentCase as any).images_urls) && (currentCase as any).images_urls.length > 0
+          ? (currentCase as any).images_urls
+          : ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : []);
+
         // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
         const isDevelopment = import.meta.env.DEV;
         const apiUrl = isDevelopment
@@ -1129,6 +1134,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             patientName: case_?.nombre,
             caseCode: case_?.code || case_?.id,
             pdfUrl: pdfUrl,
+            uploadedPdfUrl: (currentCase as any)?.uploaded_pdf_url || null,
+            imageUrls: caseImages,
             laboratory_id: case_?.laboratory_id || laboratory?.id,
             subject: emailSubject,
             message: emailBody,

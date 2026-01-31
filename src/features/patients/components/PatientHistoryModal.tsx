@@ -618,6 +618,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             throw new Error('PDF no disponible');
           }
 
+          // Obtener imágenes del caso (priorizar images_urls array)
+          const caseImages = (caseItem as any).images_urls && Array.isArray((caseItem as any).images_urls) && (caseItem as any).images_urls.length > 0
+            ? (caseItem as any).images_urls
+            : ((caseItem as any).image_url ? [(caseItem as any).image_url] : []);
+
           // Enviar email usando send-email.js
           const response = await fetch('/api/send-email', {
             method: 'POST',
@@ -629,6 +634,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               patientName: patient?.nombre,
               caseCode: caseItem.code || 'N/A',
               pdfUrl: caseItem.informepdf_url,
+              uploadedPdfUrl: (caseItem as any).uploaded_pdf_url || null,
+              imageUrls: caseImages,
               laboratory_id: caseItem.laboratory_id || laboratory?.id,
               cc: emails.cc,
               bcc: emails.bcc,
