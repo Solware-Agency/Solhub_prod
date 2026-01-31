@@ -24,6 +24,7 @@ interface CasePDFUploadProps {
 	caseId: string
 	currentPdfUrl: string | null | undefined
 	onPdfUpdated: () => void | Promise<void>
+	onUploadingChange?: (isUploading: boolean) => void
 	className?: string
 }
 
@@ -35,6 +36,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
 	currentPdfUrl,
 	onPdfUpdated,
+	onUploadingChange,
 	className = '',
 }) => {
 	const { toast } = useToast()
@@ -84,6 +86,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		}
 
 		setIsUploading(true)
+		onUploadingChange?.(true)
 		setError(null)
 
 		let pdfUrl: string | null = null
@@ -208,6 +211,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			})
 		} finally {
 			setIsUploading(false)
+			onUploadingChange?.(false)
 		}
 	}
 

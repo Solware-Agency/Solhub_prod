@@ -276,6 +276,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false);
     const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
     
+    // Estados para rastrear subida de archivos
+    const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    const [isUploadingImages, setIsUploadingImages] = useState(false);
+    
     // Image URLs state for imagenologia role (hasta 10 imágenes)
     const [imageUrls, setImageUrls] = useState<string[]>([]);
 
@@ -1073,6 +1077,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     };
 
     const handleSendEmail = async () => {
+      // Verificar si se están subiendo archivos
+      if (isUploadingPdf || isUploadingImages) {
+        toast({
+          title: '⏳ Subiendo archivos...',
+          description: 'Por favor espera a que terminen de subirse los archivos antes de enviar el correo.',
+          variant: 'default',
+        });
+        return;
+      }
+
       if (!case_?.patient_email) {
         toast({
           title: '❌ Error',
@@ -1661,12 +1675,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleSendEmail}
-                            disabled={isSaving}
-                            title='Enviar informe por correo electrónico'
+                            disabled={isSaving || isUploadingPdf || isUploadingImages}
+                            title={
+                              isUploadingPdf || isUploadingImages
+                                ? 'Espera a que terminen de subirse los archivos...'
+                                : 'Enviar informe por correo electrónico'
+                            }
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
                             aria-label='Enviar correo'
                           >
-                            {isSaving ? (
+                            {isSaving || isUploadingPdf || isUploadingImages ? (
                               <Loader2 className='w-4 h-4 animate-spin' />
                             ) : (
                               <Send className='w-4 h-4' />
@@ -2169,6 +2187,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             <CasePDFUpload
                               caseId={currentCase.id}
                               currentPdfUrl={(currentCase as any).uploaded_pdf_url}
+                              onUploadingChange={setIsUploadingPdf}
                               onPdfUpdated={async () => {
                                 // Refrescar el caso después de subir/eliminar PDF
                                 if (refetchCaseData) {
