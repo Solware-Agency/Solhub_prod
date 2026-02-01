@@ -69,6 +69,7 @@ export const PaymentSection = memo(({
 		name: 'totalAmount',
 	})
 	const sampleType = useWatch({ control, name: 'sampleType', defaultValue: '' })
+	const numberOfSamples = useWatch({ control, name: 'numberOfSamples', defaultValue: 1 })
 	const priceType = useWatch({ control, name: 'priceType', defaultValue: '' })
 
 	const selectedCost = useMemo(() => {
@@ -81,6 +82,13 @@ export const PaymentSection = memo(({
 		[selectedCost]
 	)
 
+	const round2 = useCallback((value: number) => Number(value.toFixed(2)), [])
+
+	const getMultiplier = useCallback(() => {
+		const qty = typeof numberOfSamples === 'number' ? numberOfSamples : Number(numberOfSamples)
+		return Math.max(1, isNaN(qty) ? 1 : qty)
+	}, [numberOfSamples])
+
 	const applyPriceOption = useCallback(
 		(option: PriceTypeOption) => {
 			if (!selectedCost) return
@@ -91,12 +99,13 @@ export const PaymentSection = memo(({
 						? selectedCost.price_convenios
 						: selectedCost.price_descuento
 			if (amount != null) {
-				setValue('totalAmount', amount, { shouldValidate: true })
+				const total = round2(amount * getMultiplier())
+				setValue('totalAmount', total, { shouldValidate: true })
 				setValue('priceType', option, { shouldValidate: false })
-				setUsdValue(String(amount))
+				setUsdValue(String(total))
 			}
 		},
-		[selectedCost, setValue, setUsdValue]
+		[selectedCost, setValue, setUsdValue, getMultiplier, round2]
 	)
 
 	// When sample type changes in Marihorgen, clear price selection so user picks again
@@ -106,6 +115,21 @@ export const PaymentSection = memo(({
 		setValue('totalAmount', 0, { shouldValidate: true })
 		setUsdValue('')
 	}, [sampleType, isMarihorgen, setValue, setUsdValue])
+
+	useEffect(() => {
+		if (!isMarihorgen) return
+		if (!selectedCost || !priceType) return
+		const base =
+			priceType === 'taquilla'
+				? selectedCost.price_taquilla
+				: priceType === 'convenios'
+					? selectedCost.price_convenios
+					: selectedCost.price_descuento
+		if (base == null) return
+		const total = round2(base * getMultiplier())
+		setValue('totalAmount', total, { shouldValidate: true })
+		setUsdValue(String(total))
+	}, [numberOfSamples, priceType, selectedCost, isMarihorgen, getMultiplier, round2, setValue, setUsdValue])
 
 	// Use useMemo to prevent recalculation on every render
 	const { paymentStatus, isPaymentComplete, missingAmount } = useMemo(() => {

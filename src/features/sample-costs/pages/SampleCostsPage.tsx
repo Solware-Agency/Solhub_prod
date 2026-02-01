@@ -23,7 +23,7 @@ const SampleCostsPage: React.FC = () => {
 
 	const [costs, setCosts] = useState<SampleTypeCost[]>([])
 	const [loading, setLoading] = useState(true)
-	const [editing, setEditing] = useState<Record<string, { taquilla: string; convenios: string; descuento: string }>>({})
+	const [editing, setEditing] = useState<Record<string, { taquilla: string }>>({})
 	const [savingCode, setSavingCode] = useState<string | null>(null)
 
 	const loadCosts = useCallback(() => {
@@ -40,51 +40,46 @@ const SampleCostsPage: React.FC = () => {
 		loadCosts()
 	}, [loadCosts])
 
-	const setEdit = (code: string, field: 'taquilla' | 'convenios' | 'descuento', value: string) => {
+	const round2 = (value: number) => Number(value.toFixed(2))
+
+	const setEdit = (code: string, value: string) => {
 		setEditing((prev) => {
-			const row = costs.find((c) => c.code === code)
-			const base = row
-				? {
-						taquilla: row.price_taquilla != null ? String(row.price_taquilla) : '',
-						convenios: row.price_convenios != null ? String(row.price_convenios) : '',
-						descuento: row.price_descuento != null ? String(row.price_descuento) : '',
-					}
-				: { taquilla: '', convenios: '', descuento: '' }
 			return {
 				...prev,
-				[code]: { ...base, ...prev[code], [field]: value },
+				[code]: { ...prev[code], taquilla: value },
 			}
 		})
 	}
 
 	const getDisplayValue = (row: SampleTypeCost, field: 'taquilla' | 'convenios' | 'descuento') => {
 		const ed = editing[row.code]
-		if (ed && ed[field] !== undefined && ed[field] !== '') return ed[field]
-		const v = field === 'taquilla' ? row.price_taquilla : field === 'convenios' ? row.price_convenios : row.price_descuento
-		return v != null ? String(v) : ''
+		const onlyTaquilla = row.price_convenios == null && row.price_descuento == null
+		if (field === 'taquilla') {
+			if (ed && ed.taquilla !== undefined && ed.taquilla !== '') return ed.taquilla
+			return row.price_taquilla != null ? String(row.price_taquilla) : ''
+		}
+		if (onlyTaquilla) return ''
+		const base = ed?.taquilla !== undefined && ed.taquilla !== '' ? parseFloat(ed.taquilla) : row.price_taquilla
+		if (base == null || isNaN(base)) return ''
+		const calc = field === 'convenios' ? round2(base * 0.95) : round2(base * 0.9)
+		return String(calc)
 	}
 
 	const handleSaveRow = async (row: SampleTypeCost) => {
 		if (!laboratory?.id) return
 		const ed = editing[row.code]
 		const taquilla = ed?.taquilla !== undefined && ed.taquilla !== '' ? parseFloat(ed.taquilla) : undefined
-		const convenios =
-			ed?.convenios !== undefined && ed.convenios !== ''
-				? (parseFloat(ed.convenios) as number | null)
-				: undefined
-		const descuento =
-			ed?.descuento !== undefined && ed.descuento !== ''
-				? (parseFloat(ed.descuento) as number | null)
-				: undefined
-		if (taquilla === undefined && convenios === undefined && descuento === undefined) {
+		const onlyTaquilla = row.price_convenios == null && row.price_descuento == null
+		if (taquilla === undefined || isNaN(taquilla)) {
 			toast({ title: 'Sin cambios', description: 'Edite al menos un monto para guardar.', variant: 'default' })
 			return
 		}
+		const convenios = onlyTaquilla ? null : round2(taquilla * 0.95)
+		const descuento = onlyTaquilla ? null : round2(taquilla * 0.9)
 		setSavingCode(row.code)
 		const res = await updateSampleTypeCost(laboratory.id, row.code, {
-			...(taquilla !== undefined && { price_taquilla: taquilla }),
-			...(convenios !== undefined && { price_convenios: convenios }),
-			...(descuento !== undefined && { price_descuento: descuento }),
+			price_taquilla: taquilla,
+			...(onlyTaquilla ? {} : { price_convenios: convenios, price_descuento: descuento }),
 		})
 		setSavingCode(null)
 		if (res.success) {
@@ -128,13 +123,12 @@ const SampleCostsPage: React.FC = () => {
 	return (
 		<div className="p-4 sm:p-6 space-y-4">
 			<Card>
-				<CardHeader className="flex flex-row items-center gap-2">
-					<DollarSign className="h-5 w-5" />
-					<CardTitle>Estructura de costos (Marihorgen)</CardTitle>
+				<CardHeader>
+					<CardTitle>Estructura de costos</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<p className="text-sm text-muted-foreground mb-4">
-						Edite los montos por tipo de muestra. Taquilla = Costo 1, Convenios = Costo 2, Descuento = Costo 3 (10%).
+						Edite el monto de Taquilla; los demás se calculan automáticamente.
 					</p>
 					<div className="overflow-x-auto">
 						<table className="w-full border-collapse text-sm">
@@ -159,7 +153,7 @@ const SampleCostsPage: React.FC = () => {
 												step="0.01"
 												min="0"
 												value={getDisplayValue(row, 'taquilla')}
-												onChange={(e) => setEdit(row.code, 'taquilla', e.target.value)}
+												onChange={(e) => setEdit(row.code, e.target.value)}
 												disabled={!canEdit}
 												className="w-24 h-8 text-right font-mono"
 											/>
@@ -171,9 +165,9 @@ const SampleCostsPage: React.FC = () => {
 												min="0"
 												placeholder="N/A"
 												value={getDisplayValue(row, 'convenios')}
-												onChange={(e) => setEdit(row.code, 'convenios', e.target.value)}
-												disabled={!canEdit}
-												className="w-24 h-8 text-right font-mono"
+												readOnly
+												disabled
+												className="w-24 h-8 text-right font-mono opacity-70"
 											/>
 										</td>
 										<td className="p-2">
@@ -183,9 +177,9 @@ const SampleCostsPage: React.FC = () => {
 												min="0"
 												placeholder="N/A"
 												value={getDisplayValue(row, 'descuento')}
-												onChange={(e) => setEdit(row.code, 'descuento', e.target.value)}
-												disabled={!canEdit}
-												className="w-24 h-8 text-right font-mono"
+												readOnly
+												disabled
+												className="w-24 h-8 text-right font-mono opacity-70"
 											/>
 										</td>
 										{canEdit && (
