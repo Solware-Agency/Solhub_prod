@@ -714,9 +714,14 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           title: '✅ Documento completado y aprobado',
           description: 'Ya puedes generar el PDF.',
         });
-        // Avanzar automáticamente al siguiente paso
+        // Avanzar automáticamente al paso de PDF (último paso)
         setTimeout(() => {
-          handleNext();
+          const pdfStepIndex = computedSteps.findIndex((step) => step.id === 'pdf');
+          if (pdfStepIndex !== -1) {
+            setActiveStep(pdfStepIndex);
+          } else {
+            handleNext();
+          }
         }, 500);
       } else {
         // Flujo normal: marcar como pendiente para revisión
