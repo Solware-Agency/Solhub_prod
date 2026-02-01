@@ -1867,6 +1867,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           caseCode={case_.code || case_.id || 'N/A'}
           caseId={case_.id}
           isSending={isSending}
+          pdfUrl={case_.informe_qr}
+          uploadedPdfUrl={(case_ as any)?.uploaded_pdf_url}
+          imageUrls={(case_ as any)?.images_urls || ((case_ as any)?.image_url ? [(case_ as any).image_url] : [])}
+          laboratoryName={laboratory?.name}
+          laboratoryLogo={laboratory?.branding?.logo}
         />
       )}
 

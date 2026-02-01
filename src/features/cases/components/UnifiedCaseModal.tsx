@@ -1937,7 +1937,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
                       {/* Estudio - Dropdown - Solo si está habilitado */}
-                      {(moduleConfig?.fields?.examType?.enabled ?? true) && (
+                      {moduleConfig?.fields?.examType?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Estudio:
@@ -1968,7 +1968,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
-                      {(moduleConfig?.fields?.medicoTratante?.enabled ?? true) && (
+                      {moduleConfig?.fields?.medicoTratante?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Médico tratante:
@@ -2003,7 +2003,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Tipo de Consulta - Solo para SPT */}
-                      {(moduleConfig?.fields?.consulta?.enabled ?? true) && (
+                      {moduleConfig?.fields?.consulta?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Tipo de consulta:
@@ -2053,7 +2053,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Procedencia - Autocompletado - Solo si está habilitado */}
-                      {(moduleConfig?.fields?.procedencia?.enabled ?? true) && (
+                      {moduleConfig?.fields?.procedencia?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Procedencia:
@@ -2088,7 +2088,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Sede - Dropdown - Solo si está habilitado */}
-                      {(moduleConfig?.fields?.branch?.enabled ?? true) && (
+                      {moduleConfig?.fields?.branch?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Sede:
@@ -2150,7 +2150,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
-                      {(moduleConfig?.fields?.numberOfSamples?.enabled ?? true) && (
+                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Cantidad de muestras:
@@ -2923,6 +2923,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             caseCode={case_.code || case_.id || ''}
             caseId={case_.id}
             isSending={isSaving}
+            pdfUrl={(case_ as any)?.informe_qr || case_?.attachment_url}
+            uploadedPdfUrl={(currentCase as any)?.uploaded_pdf_url}
+            imageUrls={(currentCase as any)?.images_urls || ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : [])}
+            laboratoryName={laboratory?.name}
+            laboratoryLogo={laboratory?.branding?.logo}
           />
         )}
 
