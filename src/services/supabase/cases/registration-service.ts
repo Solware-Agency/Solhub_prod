@@ -98,6 +98,7 @@ export interface MedicalCaseInsert {
 	payment_reference_4?: string | null
 	exchange_rate?: number | null
 	comments?: string | null
+	price_type?: string | null // taquilla | convenios | descuento (Marihorgen)
 	generated_by?: string | null
 	created_at?: string | null
 	updated_at?: string | null
@@ -411,6 +412,7 @@ const prepareRegistrationData = (
 
 		// Información adicional
 		comments: formData.comments || null,
+		price_type: (formData as any).priceType && String((formData as any).priceType).trim() ? (formData as any).priceType : null,
 
 		// Metadatos
 		generated_by: user.id || null,

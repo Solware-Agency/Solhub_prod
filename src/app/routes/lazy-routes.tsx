@@ -177,6 +177,12 @@ export const WaitingRoomPage = lazy(() =>
     'WaitingRoomPage'
   )
 )
+export const SampleCostsPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/sample-costs/pages/SampleCostsPage').then((module) => ({ default: module.default })),
+    'SampleCostsPage'
+  )
+)
 
 // Form pages - lazy loaded
 export const DoctorsSection = lazy(() =>
