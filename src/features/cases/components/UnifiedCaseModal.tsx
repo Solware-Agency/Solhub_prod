@@ -125,6 +125,7 @@ interface CaseDetailPanelProps {
 }
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function parseEdad(edad: string | null | undefined): {
   value: number | '';
   unit: 'Años' | 'Meses' | '';
@@ -278,6 +279,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     
     // Estados para rastrear subida de archivos
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [isUploadingImages, setIsUploadingImages] = useState(false);
     
     // Image URLs state for imagenologia role (hasta 10 imágenes)
@@ -1537,6 +1539,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const isEmployee = profile?.role === 'employee';
     // const isOwner = profile?.role === 'owner'
     // const isCitotecno = profile?.role === 'citotecno'
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isEmployeeSpt = isEmployee && isSpt;
 
     // Render modal content
@@ -2927,7 +2930,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             uploadedPdfUrl={(currentCase as any)?.uploaded_pdf_url}
             imageUrls={(currentCase as any)?.images_urls || ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : [])}
             laboratoryName={laboratory?.name}
-            laboratoryLogo={laboratory?.branding?.logo}
+            laboratoryLogo={laboratory?.branding?.logo || undefined}
           />
         )}
 
