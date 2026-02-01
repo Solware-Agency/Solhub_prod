@@ -37,7 +37,7 @@ interface PaymentSectionProps {
 	usdFromVes: string
 	exchangeRate: number | undefined
 	isLoadingRate: boolean
-	isMarihorgen?: boolean
+	isSampleTypeCostsEnabled?: boolean
 	sampleTypeCosts?: SampleTypeCost[] | null
 }
 
@@ -55,7 +55,7 @@ export const PaymentSection = memo(({
 	usdFromVes,
 	exchangeRate,
 	isLoadingRate,
-	isMarihorgen = false,
+	isSampleTypeCostsEnabled = false,
 	sampleTypeCosts = null,
 }: PaymentSectionProps) => {
 	const { setValue } = useFormContext<FormValues>()
@@ -110,14 +110,14 @@ export const PaymentSection = memo(({
 
 	// When sample type changes in Marihorgen, clear price selection so user picks again
 	useEffect(() => {
-		if (!isMarihorgen) return
+		if (!isSampleTypeCostsEnabled) return
 		setValue('priceType', '', { shouldValidate: false })
 		setValue('totalAmount', 0, { shouldValidate: true })
 		setUsdValue('')
-	}, [sampleType, isMarihorgen, setValue, setUsdValue])
+	}, [sampleType, isSampleTypeCostsEnabled, setValue, setUsdValue])
 
 	useEffect(() => {
-		if (!isMarihorgen) return
+		if (!isSampleTypeCostsEnabled) return
 		if (!selectedCost || !priceType) return
 		const base =
 			priceType === 'taquilla'
@@ -129,7 +129,7 @@ export const PaymentSection = memo(({
 		const total = round2(base * getMultiplier())
 		setValue('totalAmount', total, { shouldValidate: true })
 		setUsdValue(String(total))
-	}, [numberOfSamples, priceType, selectedCost, isMarihorgen, getMultiplier, round2, setValue, setUsdValue])
+	}, [numberOfSamples, priceType, selectedCost, isSampleTypeCostsEnabled, getMultiplier, round2, setValue, setUsdValue])
 
 	// Use useMemo to prevent recalculation on every render
 	const { paymentStatus, isPaymentComplete, missingAmount } = useMemo(() => {
@@ -159,12 +159,12 @@ export const PaymentSection = memo(({
 				<div
 					className={cn(
 						'grid grid-cols-1 gap-3 sm:gap-4 items-start',
-						isMarihorgen && sampleTypeCosts && sampleTypeCosts.length > 0
+						isSampleTypeCostsEnabled && sampleTypeCosts && sampleTypeCosts.length > 0
 							? 'md:grid-cols-[1fr_1fr_1fr_1fr]'
 							: 'md:grid-cols-[1fr_1fr_1fr]'
 					)}
 				>
-					{isMarihorgen && sampleTypeCosts && sampleTypeCosts.length > 0 && (
+					{isSampleTypeCostsEnabled && sampleTypeCosts && sampleTypeCosts.length > 0 && (
 						<div className="w-full">
 							<FormItem className="w-full">
 								<FormLabel className="text-sm sm:text-base">Tipo de precio</FormLabel>
@@ -197,7 +197,7 @@ export const PaymentSection = memo(({
 							inputStyles={inputStyles}
 							exchangeRate={exchangeRate}
 							isLoadingRate={isLoadingRate}
-							totalAmountReadOnly={isMarihorgen && !!sampleType && !!priceType}
+							totalAmountReadOnly={isSampleTypeCostsEnabled && !!sampleType && !!priceType}
 						/>
 					</div>
 					<div className="w-full">

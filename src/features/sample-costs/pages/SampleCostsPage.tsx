@@ -16,10 +16,9 @@ const SampleCostsPage: React.FC = () => {
 	const { laboratory } = useLaboratory()
 	const { profile } = useUserProfile()
 	const { toast } = useToast()
-	const isMarihorgen =
-		laboratory?.slug?.toLowerCase() === 'marihorgen' || laboratory?.slug?.toLowerCase() === 'lm'
+	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
 	const canEdit =
-		(profile?.role === 'owner' || profile?.role === 'prueba') && isMarihorgen && !!laboratory?.id
+		(profile?.role === 'owner' || profile?.role === 'prueba') && hasSampleTypeCosts && !!laboratory?.id
 
 	const [costs, setCosts] = useState<SampleTypeCost[]>([])
 	const [loading, setLoading] = useState(true)
@@ -95,7 +94,7 @@ const SampleCostsPage: React.FC = () => {
 		}
 	}
 
-	if (!isMarihorgen || !(profile?.role === 'owner' || profile?.role === 'prueba')) {
+	if (!hasSampleTypeCosts || !(profile?.role === 'owner' || profile?.role === 'prueba')) {
 		return (
 			<div className="p-4 sm:p-6">
 				<Card>
@@ -104,7 +103,7 @@ const SampleCostsPage: React.FC = () => {
 					</CardHeader>
 					<CardContent>
 						<p className="text-muted-foreground">
-							Esta página solo está disponible para el laboratorio Marihorgen (roles Owner o Prueba).
+							Esta página solo está disponible para laboratorios con la feature habilitada (roles Owner o Prueba).
 						</p>
 					</CardContent>
 				</Card>

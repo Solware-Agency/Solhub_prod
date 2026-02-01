@@ -344,10 +344,10 @@ export function MedicalFormContainer() {
 	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
 	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
-	const isMarihorgen = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
+	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
 
 	useEffect(() => {
-		if (!isMarihorgen || !laboratory?.id) {
+		if (!hasSampleTypeCosts || !laboratory?.id) {
 			setSampleTypeCosts(null);
 			return;
 		}
@@ -355,7 +355,7 @@ export function MedicalFormContainer() {
 			if (res.success && res.data) setSampleTypeCosts(res.data);
 			else setSampleTypeCosts(null);
 		});
-	}, [isMarihorgen, laboratory?.id]);
+	}, [hasSampleTypeCosts, laboratory?.id]);
 
 	return (
 		<>
@@ -408,7 +408,7 @@ export function MedicalFormContainer() {
 								usdFromVes={usdFromVes}
 								exchangeRate={exchangeRate}
 								isLoadingRate={isLoadingRate}
-								isMarihorgen={isMarihorgen}
+								isSampleTypeCostsEnabled={hasSampleTypeCosts}
 								sampleTypeCosts={sampleTypeCosts}
 							/>
 						</FeatureGuard>

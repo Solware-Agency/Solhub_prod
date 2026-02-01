@@ -155,6 +155,7 @@ export const ServiceSection = memo(
     
     // Verificar si es el laboratorio LM/Marihorgen para mostrar campos específicos
     const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
+    const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
 
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
@@ -282,7 +283,7 @@ export const ServiceSection = memo(
           {isConspat ? (
             <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
               {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || isLM) && (
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -290,7 +291,7 @@ export const ServiceSection = memo(
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Tipo de Muestra *</FormLabel>
                       <FormControl>
-                        {isLM && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
+                        {hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
                           <FormDropdown
                             options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
                             value={field.value}
@@ -318,7 +319,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || isLM) && (
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
@@ -368,7 +369,7 @@ export const ServiceSection = memo(
           ) : (
             <>
               {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || isLM) && (
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -376,7 +377,7 @@ export const ServiceSection = memo(
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Tipo de Muestra *</FormLabel>
                       <FormControl>
-                        {isLM && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
+                        {hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
                           <FormDropdown
                             options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
                             value={field.value}
@@ -404,7 +405,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || isLM) && (
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
