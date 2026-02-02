@@ -287,15 +287,19 @@ export const getUserSessionTimeout = async (userId: string): Promise<number> => 
 			.maybeSingle()
 
 		if (error) {
-			// If no settings found, create with default timeout
+			// If no settings found, create with default timeout (multi-tenant: requiere laboratory_id)
 			if (error.code === 'PGRST116') {
 				const defaultTimeout = 15 // 15 minutes default
-				const { error: insertError } = await supabase
-					.from('user_settings')
-					.insert({ id: userId, session_timeout: defaultTimeout })
+				const { data: profile } = await supabase.from('profiles').select('laboratory_id').eq('id', userId).maybeSingle()
+				const labId = profile?.laboratory_id
+				if (labId) {
+					const { error: insertError } = await supabase
+						.from('user_settings')
+						.insert({ id: userId, laboratory_id: labId, session_timeout: defaultTimeout })
 
-				if (insertError) {
-					console.error('Error creating user settings:', insertError)
+					if (insertError) {
+						console.error('Error creating user settings:', insertError)
+					}
 				}
 				return defaultTimeout
 			}
@@ -315,7 +319,7 @@ export const getUserSessionTimeout = async (userId: string): Promise<number> => 
 	}
 }
 
-// Update user session timeout setting
+// Update user session timeout setting (multi-tenant: requiere laboratory_id)
 export const updateUserSessionTimeout = async (userId: string, minutes: number): Promise<{ error: unknown | null }> => {
 	try {
 		// Validate the timeout value
@@ -323,8 +327,15 @@ export const updateUserSessionTimeout = async (userId: string, minutes: number):
 			return { error: new Error('Invalid session timeout value') }
 		}
 
+		const { data: profile } = await supabase.from('profiles').select('laboratory_id').eq('id', userId).maybeSingle()
+		const labId = profile?.laboratory_id
+		if (!labId) {
+			return { error: new Error('No laboratory_id in profile') }
+		}
+
 		const { error } = await supabase.from('user_settings').upsert({
 			id: userId,
+			laboratory_id: labId,
 			session_timeout: minutes,
 			updated_at: new Date().toISOString(),
 		})

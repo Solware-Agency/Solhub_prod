@@ -11,6 +11,26 @@ interface UseSessionTimeoutSettingsOptions {
 export function useSessionTimeoutSettings({ user }: UseSessionTimeoutSettingsOptions) {
 	const [sessionTimeout, setSessionTimeout] = useState<number>(30) // minutes
 	const [isLoading, setIsLoading] = useState(true)
+	const [laboratoryId, setLaboratoryId] = useState<string | null>(null)
+
+	// Obtener laboratory_id del perfil (multi-tenant)
+	useEffect(() => {
+		if (!user) {
+			setLaboratoryId(null)
+			return
+		}
+		let isMounted = true
+		const loadLaboratoryId = async () => {
+			const { data, error } = await supabase.from('profiles').select('laboratory_id').eq('id', user.id).maybeSingle()
+			if (!error && data?.laboratory_id && isMounted) {
+				setLaboratoryId(data.laboratory_id)
+			}
+		}
+		loadLaboratoryId()
+		return () => {
+			isMounted = false
+		}
+	}, [user])
 
 	// Load user timeout from database
 	useEffect(() => {
@@ -76,15 +96,26 @@ export function useSessionTimeoutSettings({ user }: UseSessionTimeoutSettingsOpt
 		}
 	}, [user])
 
-	// Update user timeout in database
+	// Update user timeout in database (incluye laboratory_id por multi-tenant)
 	const updateUserTimeout = useCallback(
 		async (minutes: number): Promise<boolean | undefined> => {
 			if (!user) return
 
 			try {
+				let labId = laboratoryId
+				if (!labId) {
+					const { data } = await supabase.from('profiles').select('laboratory_id').eq('id', user.id).maybeSingle()
+					labId = data?.laboratory_id ?? null
+				}
+				if (!labId) {
+					console.error('Error updating user timeout: no laboratory_id in profile')
+					return false
+				}
+
 				const { error } = await supabase.from('user_settings').upsert(
 					{
 						id: user.id,
+						laboratory_id: labId,
 						session_timeout: minutes,
 					},
 					{ onConflict: 'id' },
@@ -103,7 +134,7 @@ export function useSessionTimeoutSettings({ user }: UseSessionTimeoutSettingsOpt
 				return false
 			}
 		},
-		[user],
+		[user, laboratoryId],
 	)
 
 	return {

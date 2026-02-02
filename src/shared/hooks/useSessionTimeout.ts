@@ -88,15 +88,27 @@ export function useSessionTimeout({ user, onTimeout, onWarning, warningThreshold
 		loadUserTimeout()
 	}, [user])
 
-	// Update user timeout in database
+	// Update user timeout in database (incluye laboratory_id por multi-tenant)
 	const updateUserTimeout = useCallback(
 		async (minutes: number): Promise<boolean | undefined> => {
 			if (!user) return
 
 			try {
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('laboratory_id')
+					.eq('id', user.id)
+					.maybeSingle()
+				const labId = profile?.laboratory_id
+				if (!labId) {
+					console.error('Error updating user timeout: no laboratory_id in profile')
+					return false
+				}
+
 				const { error } = await supabase.from('user_settings').upsert(
 					{
 						id: user.id,
+						laboratory_id: labId,
 						session_timeout: minutes,
 					},
 					{ onConflict: 'id' },
