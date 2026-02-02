@@ -155,6 +155,7 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
 		totalAmount: totalAmountSchema,
 		payments: z.array(paymentSchema).optional().default([]),
 		comments: z.string().optional(),
+		priceType: z.enum(['taquilla', 'convenios', 'descuento']).optional().or(z.literal('')),
 		// Campos adicionales para compatibilidad con registration-service
 		doctorName: z.string().default(''),
 		patientType: z.string().default(''),

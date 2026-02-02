@@ -19,6 +19,7 @@ import {
   Brain,
   FolderSearch,
   Activity,
+  DollarSign,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -272,6 +273,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
   const isSpt = laboratory?.slug === 'spt';
+  const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
 
   // Definir las rutas de cada grupo
   const clinicalPaths = [
@@ -529,6 +531,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {hasSampleTypeCosts && (
+                <NavItem
+                  to='/dashboard/sample-costs'
+                  icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Estructura de costos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              )}
             </>
           )}
 
@@ -994,6 +1005,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {hasSampleTypeCosts && (
+                <NavItem
+                  to='/prueba/sample-costs'
+                  icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Estructura de costos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              )}
               {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
               {isSpt && (
                 <NavItem

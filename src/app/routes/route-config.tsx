@@ -14,6 +14,7 @@ import {
   ReceptionistHomePage,
   TriageAnalyticsPage,
   WaitingRoomPage,
+  SampleCostsPage,
   ErrorBoundaryTest,
 } from './lazy-routes';
 
@@ -81,6 +82,10 @@ export const dashboardRoutes: RouteConfig[] = [
   {
     path: 'waiting-room',
     component: WaitingRoomPage,
+  },
+  {
+    path: 'sample-costs',
+    component: SampleCostsPage,
   },
 ];
 
@@ -343,5 +348,9 @@ export const pruebaRoutes: RouteConfig[] = [
   {
     path: 'waiting-room',
     component: WaitingRoomPage,
+  },
+  {
+    path: 'sample-costs',
+    component: SampleCostsPage,
   },
 ];

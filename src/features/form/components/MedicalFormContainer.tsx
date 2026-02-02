@@ -20,6 +20,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
+import { getSampleTypeCostsByLaboratory, type SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -46,6 +47,7 @@ const getInitialFormValues = (): FormValues => ({
   totalAmount: 0, // Puede ser 0 si el módulo de pagos está deshabilitado
   payments: [{ method: '', amount: 0, reference: '' }],
   comments: '',
+  priceType: '',
 });
 
 export function MedicalFormContainer() {
@@ -57,7 +59,8 @@ export function MedicalFormContainer() {
   const [usdFromVes, setUsdFromVes] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [patientSectionResetKey, setPatientSectionResetKey] = useState(0)
+	const [patientSectionResetKey, setPatientSectionResetKey] = useState(0);
+	const [sampleTypeCosts, setSampleTypeCosts] = useState<SampleTypeCost[] | null>(null);
 
 	// Obtener configuración completa del módulo para pasar a registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
@@ -341,6 +344,18 @@ export function MedicalFormContainer() {
 	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
 	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
+	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
+
+	useEffect(() => {
+		if (!hasSampleTypeCosts || !laboratory?.id) {
+			setSampleTypeCosts(null);
+			return;
+		}
+		getSampleTypeCostsByLaboratory(laboratory.id).then((res) => {
+			if (res.success && res.data) setSampleTypeCosts(res.data);
+			else setSampleTypeCosts(null);
+		});
+	}, [hasSampleTypeCosts, laboratory?.id]);
 
 	return (
 		<>
@@ -377,7 +392,7 @@ export function MedicalFormContainer() {
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-3 sm:space-y-4 md:space-y-6">
 						<PatientDataSection key={patientSectionResetKey} control={formControl} inputStyles={inputStyles} />
-						<ServiceSection control={formControl} inputStyles={inputStyles} />
+						<ServiceSection control={formControl} inputStyles={inputStyles} sampleTypeCosts={sampleTypeCosts} />
 						<FeatureGuard feature="hasPayment">
 							<PaymentSection
 								control={formControl}
@@ -393,6 +408,8 @@ export function MedicalFormContainer() {
 								usdFromVes={usdFromVes}
 								exchangeRate={exchangeRate}
 								isLoadingRate={isLoadingRate}
+								isSampleTypeCostsEnabled={hasSampleTypeCosts}
+								sampleTypeCosts={sampleTypeCosts}
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />

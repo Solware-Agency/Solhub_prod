@@ -714,9 +714,14 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           title: '✅ Documento completado y aprobado',
           description: 'Ya puedes generar el PDF.',
         });
-        // Avanzar automáticamente al siguiente paso
+        // Avanzar automáticamente al paso de PDF (último paso)
         setTimeout(() => {
-          handleNext();
+          const pdfStepIndex = computedSteps.findIndex((step) => step.id === 'pdf');
+          if (pdfStepIndex !== -1) {
+            setActiveStep(pdfStepIndex);
+          } else {
+            handleNext();
+          }
         }, 500);
       } else {
         // Flujo normal: marcar como pendiente para revisión
@@ -1189,10 +1194,17 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       return;
     }
 
-    if (!case_?.informe_qr) {
+    // Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
+    const pdfUrl = case_?.informe_qr;
+    const uploadedPdf = (case_ as any)?.uploaded_pdf_url;
+    const images = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) 
+      ? (case_ as any).images_urls 
+      : (case_ as any)?.image_url ? [(case_ as any).image_url] : [];
+
+    if (!pdfUrl && !uploadedPdf && images.length === 0) {
       toast({
         title: '❌ Error',
-        description: 'El PDF del caso aún no está disponible.',
+        description: 'El caso debe tener al menos un PDF generado, PDF adjunto o imágenes para enviar por correo.',
         variant: 'destructive',
       });
       return;
@@ -1216,6 +1228,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.full_name}`;
       const emailBody = `Hola ${case_?.full_name},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
 
+      // Obtener imágenes del caso (priorizar images_urls array)
+      const caseImages = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) && (case_ as any).images_urls.length > 0
+        ? (case_ as any).images_urls
+        : ((case_ as any)?.image_url ? [(case_ as any).image_url] : []);
+
       // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
       const isDevelopment = import.meta.env.DEV;
       const apiUrl = isDevelopment
@@ -1231,6 +1248,8 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           patientName: case_.full_name,
           caseCode: case_.code || case_.id,
           pdfUrl: case_.informe_qr,
+          uploadedPdfUrl: (case_ as any)?.uploaded_pdf_url || null,
+          imageUrls: caseImages,
           laboratory_id: case_.laboratory_id || laboratory?.id,
           subject: emailSubject,
           message: emailBody,
@@ -1853,6 +1872,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           caseCode={case_.code || case_.id || 'N/A'}
           caseId={case_.id}
           isSending={isSending}
+          pdfUrl={case_.informe_qr}
+          uploadedPdfUrl={(case_ as any)?.uploaded_pdf_url}
+          imageUrls={(case_ as any)?.images_urls || ((case_ as any)?.image_url ? [(case_ as any).image_url] : [])}
+          laboratoryName={laboratory?.name}
+          laboratoryLogo={laboratory?.branding?.logo}
         />
       )}
 

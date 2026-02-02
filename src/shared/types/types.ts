@@ -797,6 +797,7 @@ export interface LaboratoryFeatures {
   hasEvaluateCitology: boolean
   hasReports: boolean
   hasNewPatientSystem: boolean
+  hasSampleTypeCosts: boolean
 }
 
 export interface LaboratoryBranding {

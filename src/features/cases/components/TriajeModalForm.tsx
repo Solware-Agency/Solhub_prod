@@ -74,6 +74,12 @@ interface TriajeFormData {
   motivoConsulta: string;
   examenFisico: string;
   comentario: string;
+  enfermedadActual: string;
+  antecedentesQuirurgicos: string;
+  diagnostico: string;
+  planDeAccion: string;
+  lugarNacimiento: string;
+  telefonoEmergencia: string;
 }
 
 interface TriajeModalFormProps {
@@ -284,8 +290,8 @@ const TriageInfoDisplay: React.FC<{
         </CardContent>
       </Card>
 
-      {/* Motivo de consulta */}
-      {record.reason && (
+      {/* Motivo de consulta y Enfermedad actual - misma línea */}
+      {(record.reason || record.enfermedad_actual) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-green-700 dark:text-green-300'>
@@ -293,8 +299,23 @@ const TriageInfoDisplay: React.FC<{
               Motivo de consulta
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
-            <p className='text-sm'>{record.reason}</p>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            {record.reason && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Motivo de consulta
+                </p>
+                <p className='text-sm'>{record.reason}</p>
+              </div>
+            )}
+            {record.enfermedad_actual && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Enfermedad actual
+                </p>
+                <p className='text-sm'>{record.enfermedad_actual}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -370,7 +391,9 @@ const TriageInfoDisplay: React.FC<{
       )}
 
       {/* Antecedentes */}
-      {(record.personal_background || record.family_history) && (
+      {(record.personal_background ||
+        record.family_history ||
+        record.antecedentes_quirurgicos) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
@@ -378,7 +401,7 @@ const TriageInfoDisplay: React.FC<{
               Antecedentes
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
             {record.personal_background && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
@@ -395,12 +418,23 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{record.family_history}</p>
               </div>
             )}
+            {record.antecedentes_quirurgicos && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Antecedentes quirúrgicos
+                </p>
+                <p className='text-sm'>{record.antecedentes_quirurgicos}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Examen físico y comentarios */}
-      {(record.examen_fisico || record.comment) && (
+      {/* Examen físico, Diagnóstico, Plan de acción y comentarios */}
+      {(record.examen_fisico ||
+        record.comment ||
+        record.diagnostico ||
+        record.plan_de_accion) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
@@ -408,7 +442,7 @@ const TriageInfoDisplay: React.FC<{
               Examen Físico y Observaciones
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
             {record.examen_fisico && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1'>
@@ -424,6 +458,52 @@ const TriageInfoDisplay: React.FC<{
                   Comentarios
                 </p>
                 <p className='text-sm'>{record.comment}</p>
+              </div>
+            )}
+            {record.diagnostico && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Diagnóstico
+                </p>
+                <p className='text-sm'>{record.diagnostico}</p>
+              </div>
+            )}
+            {record.plan_de_accion && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Plan de acción
+                </p>
+                <p className='text-sm'>{record.plan_de_accion}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Datos adicionales - al final */}
+      {(record.lugar_de_nacimiento || record.telefono_emergencia) && (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
+              <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
+              Datos adicionales
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            {record.lugar_de_nacimiento && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Lugar de nacimiento
+                </p>
+                <p className='text-sm'>{record.lugar_de_nacimiento}</p>
+              </div>
+            )}
+            {record.telefono_emergencia && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Número de teléfono de emergencia
+                </p>
+                <p className='text-sm'>{record.telefono_emergencia}</p>
               </div>
             )}
           </CardContent>
@@ -466,6 +546,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     motivoConsulta: '',
     examenFisico: '',
     comentario: '',
+    enfermedadActual: '',
+    antecedentesQuirurgicos: '',
+    diagnostico: '',
+    planDeAccion: '',
+    lugarNacimiento: '',
+    telefonoEmergencia: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -576,66 +662,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     }
   }, [formData.cigarrillosPorDia, formData.anosFumando]);
 
-  // Cargar datos existentes cuando se entra en modo edición
-  useEffect(() => {
-    if (existingTriage && isEditing) {
-      // Si existe triaje y estamos en modo edición, cargar los datos
-      if (isEnfermero) {
-        // Enfermero: solo cargar signos vitales
-        setFormData((prev) => ({
-          ...prev,
-          frecuenciaCardiaca: existingTriage.heart_rate?.toString() || '',
-          frecuenciaRespiratoria:
-            existingTriage.respiratory_rate?.toString() || '',
-          saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
-          temperatura: existingTriage.temperature_celsius?.toString() || '',
-          presionArterial: existingTriage.blood_pressure?.toString() || '',
-          glicemia: existingTriage.blood_glucose?.toString() || '',
-          talla: existingTriage.height_cm?.toString() || '',
-          peso: existingTriage.weight_kg?.toString() || '',
-          imc: existingTriage.bmi?.toString() || '',
-        }));
-      } else if (isMedico) {
-        // Médico: cargar todos los datos
-        setFormData((prev) => ({
-          ...prev,
-          frecuenciaCardiaca: existingTriage.heart_rate?.toString() || '',
-          frecuenciaRespiratoria:
-            existingTriage.respiratory_rate?.toString() || '',
-          saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
-          temperatura: existingTriage.temperature_celsius?.toString() || '',
-          presionArterial: existingTriage.blood_pressure?.toString() || '',
-          glicemia: existingTriage.blood_glucose?.toString() || '',
-          talla: existingTriage.height_cm?.toString() || '',
-          peso: existingTriage.weight_kg?.toString() || '',
-          imc: existingTriage.bmi?.toString() || '',
-          motivoConsulta: existingTriage.reason || '',
-          antecedentesPersonales: existingTriage.personal_background || '',
-          antecedentesFamiliares: existingTriage.family_history || '',
-          habitosPsicobiologicos: existingTriage.psychobiological_habits || '',
-          examenFisico: existingTriage.examen_fisico || '',
-          comentario: existingTriage.comment || '',
-          cafe: existingTriage.cafe?.toString() || '',
-          alcohol: existingTriage.alcohol || '',
-          ...(existingTriage.tabaco !== null &&
-          existingTriage.tabaco !== undefined
-            ? {
-                tabaco: existingTriage.tabaco > 0 ? 'Si' : 'No',
-                indiceTabaquico:
-                  existingTriage.tabaco > 0
-                    ? `Índice: ${
-                        existingTriage.tabaco
-                      } paq/año (${getSmokingRiskCategory(
-                        existingTriage.tabaco,
-                      )})`
-                    : '',
-              }
-            : {}),
-        }));
-      }
-    }
-  }, [existingTriage, isEditing, isMedico, isEnfermero]);
-
   // Función para determinar si la historia clínica está completa
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) return false;
@@ -700,6 +726,83 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
   // Si el triaje está completo y no estamos editando, mostrar vista
   const triageComplete = isTriageComplete(existingTriage ?? null);
+
+  // Cargar datos existentes cuando hay historia clínica y se muestra el formulario
+  // (modo edición, forzado a editar, o historia incompleta que muestra formulario en lugar de vista)
+  useEffect(() => {
+    const shouldPopulate =
+      existingTriage &&
+      (isEditing ||
+        forceEditMode ||
+        !triageComplete);
+    if (shouldPopulate) {
+      if (isEnfermero) {
+        setFormData((prev) => ({
+          ...prev,
+          frecuenciaCardiaca: existingTriage.heart_rate?.toString() || '',
+          frecuenciaRespiratoria:
+            existingTriage.respiratory_rate?.toString() || '',
+          saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
+          temperatura: existingTriage.temperature_celsius?.toString() || '',
+          presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
+          talla: existingTriage.height_cm?.toString() || '',
+          peso: existingTriage.weight_kg?.toString() || '',
+          imc: existingTriage.bmi?.toString() || '',
+        }));
+      } else {
+        // Médico o cualquier otro rol con permiso: cargar todos los datos
+        setFormData((prev) => ({
+          ...prev,
+          frecuenciaCardiaca: existingTriage.heart_rate?.toString() || '',
+          frecuenciaRespiratoria:
+            existingTriage.respiratory_rate?.toString() || '',
+          saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
+          temperatura: existingTriage.temperature_celsius?.toString() || '',
+          presionArterial: existingTriage.blood_pressure?.toString() || '',
+          glicemia: existingTriage.blood_glucose?.toString() || '',
+          talla: existingTriage.height_cm?.toString() || '',
+          peso: existingTriage.weight_kg?.toString() || '',
+          imc: existingTriage.bmi?.toString() || '',
+          motivoConsulta: existingTriage.reason || '',
+          antecedentesPersonales: existingTriage.personal_background || '',
+          antecedentesFamiliares: existingTriage.family_history || '',
+          habitosPsicobiologicos: existingTriage.psychobiological_habits || '',
+          examenFisico: existingTriage.examen_fisico || '',
+          comentario: existingTriage.comment || '',
+          enfermedadActual: existingTriage.enfermedad_actual || '',
+          antecedentesQuirurgicos: existingTriage.antecedentes_quirurgicos || '',
+          diagnostico: existingTriage.diagnostico || '',
+          planDeAccion: existingTriage.plan_de_accion || '',
+          lugarNacimiento: existingTriage.lugar_de_nacimiento || '',
+          telefonoEmergencia: existingTriage.telefono_emergencia || '',
+          cafe: existingTriage.cafe?.toString() || '',
+          alcohol: existingTriage.alcohol || '',
+          ...(existingTriage.tabaco !== null &&
+          existingTriage.tabaco !== undefined
+            ? {
+                tabaco: existingTriage.tabaco > 0 ? 'Si' : 'No',
+                indiceTabaquico:
+                  existingTriage.tabaco > 0
+                    ? `Índice: ${
+                        existingTriage.tabaco
+                      } paq/año (${getSmokingRiskCategory(
+                        existingTriage.tabaco,
+                      )})`
+                    : '',
+              }
+            : {}),
+        }));
+      }
+    }
+  }, [
+    existingTriage,
+    isEditing,
+    forceEditMode,
+    triageComplete,
+    isMedico,
+    isEnfermero,
+  ]);
 
   // Si forceEditMode está activo, forzar el modo de edición
   useEffect(() => {
@@ -798,8 +901,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       if (!isNaN(sistolica) && (sistolica < 50 || sistolica > 250)) {
         errors.push('La presión sistólica debe estar entre 50 y 250 mmHg.');
       }
-      if (!isNaN(diastolica) && (diastolica < 30 || diastolica > 150)) {
-        errors.push('La presión diastólica debe estar entre 30 y 150 mmHg.');
+      if (!isNaN(diastolica) && (diastolica < 20 || diastolica > 150)) {
+        errors.push('La presión diastólica debe estar entre 20 y 150 mmHg.');
       }
     }
     
@@ -823,18 +926,15 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     };
     
     // Verificar cada signo vital obligatorio
-    if (!hasValue(formData.frecuenciaCardiaca)) {
-      missingFields.push('Frecuencia Cardíaca');
-    }
-    
+    // FC (Frecuencia Cardíaca) - No es obligatorio
     // FR (Frecuencia Respiratoria) - No es obligatorio
-    
+    // Temperatura - No es obligatorio
+    // Glicemia - No es obligatorio
+
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('Saturación de Oxígeno');
     }
-    
-    // Temperatura - No es obligatorio
-    
+
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('Presión Arterial');
     }
@@ -1113,6 +1213,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           alcohol: formData.alcohol || null,
           examen_fisico: formData.examenFisico || null,
           comment: formData.comentario || null,
+          enfermedad_actual: formData.enfermedadActual || null,
+          antecedentes_quirurgicos: formData.antecedentesQuirurgicos || null,
+          diagnostico: formData.diagnostico || null,
+          plan_de_accion: formData.planDeAccion || null,
+          lugar_de_nacimiento: formData.lugarNacimiento || null,
+          telefono_emergencia: formData.telefonoEmergencia || null,
           ...vitalSignsData,
         };
 
@@ -1305,17 +1411,37 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Motivo de consulta
                   </CardTitle>
                 </CardHeader>
-                <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
-                  <Textarea
-                    placeholder='Ingrese el motivo de consulta...'
-                    value={formData.motivoConsulta}
-                    onChange={(e) =>
-                      handleInputChange('motivoConsulta', e.target.value)
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
+                <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Motivo de consulta
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese el motivo de consulta...'
+                      value={formData.motivoConsulta}
+                      onChange={(e) =>
+                        handleInputChange('motivoConsulta', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Enfermedad actual
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese la enfermedad actual...'
+                      value={formData.enfermedadActual}
+                      onChange={(e) =>
+                        handleInputChange('enfermedadActual', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1534,7 +1660,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   Antecedentes
                 </CardTitle>
               </CardHeader>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3'>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3'>
                 <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                   <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
@@ -1584,6 +1710,25 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     onChange={(e) =>
                       handleInputChange(
                         'habitosPsicobiologicos',
+                        e.target.value,
+                      )
+                    }
+                    disabled={loading}
+                    rows={4}
+                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Antecedentes quirúrgicos
+                  </label>
+                  <Textarea
+                    placeholder='Ingrese los antecedentes quirúrgicos...'
+                    value={formData.antecedentesQuirurgicos}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'antecedentesQuirurgicos',
                         e.target.value,
                       )
                     }
@@ -1809,7 +1954,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             </CardContent>
           </Card>
 
-          {/* Sección: Examen Físico y Observaciones */}
+          {/* Sección: Examen Físico, Diagnóstico, Plan de acción y Observaciones */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
               <CardHeader className='p-4 sm:p-6'>
@@ -1818,7 +1963,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   Examen Físico y Observaciones
                 </CardTitle>
               </CardHeader>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3'>
                 <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                   <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Stethoscope className='h-4 w-4 text-gray-600 dark:text-gray-400' />
@@ -1849,6 +1994,82 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     disabled={loading}
                     rows={4}
                     className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Diagnóstico
+                  </label>
+                  <Textarea
+                    placeholder='Ingrese el diagnóstico...'
+                    value={formData.diagnostico}
+                    onChange={(e) =>
+                      handleInputChange('diagnostico', e.target.value)
+                    }
+                    disabled={loading}
+                    rows={4}
+                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Plan de acción
+                  </label>
+                  <Textarea
+                    placeholder='Ingrese el plan de acción...'
+                    value={formData.planDeAccion}
+                    onChange={(e) =>
+                      handleInputChange('planDeAccion', e.target.value)
+                    }
+                    disabled={loading}
+                    rows={4}
+                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sección: Datos adicionales - al final */}
+          {!showOnlyVitalSigns && (
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
+                  <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
+                  Datos adicionales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Lugar de nacimiento
+                  </label>
+                  <Input
+                    placeholder='Caracas, Venezuela'
+                    value={formData.lugarNacimiento}
+                    onChange={(e) =>
+                      handleInputChange('lugarNacimiento', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Número de teléfono de emergencia
+                  </label>
+                  <Input
+                    placeholder="0412-1234567"
+                    value={formData.telefonoEmergencia}
+                    onChange={(e) =>
+                      handleInputChange('telefonoEmergencia', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
                   />
                 </div>
               </CardContent>

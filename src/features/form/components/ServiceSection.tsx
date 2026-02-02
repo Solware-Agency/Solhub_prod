@@ -25,14 +25,19 @@ import { useModuleField } from '@shared/hooks/useModuleField';
 import { useEffect, memo, useMemo } from 'react';
 import { Stethoscope, MapPin, Microscope } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
+import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service';
 
 interface ServiceSectionProps {
   control: Control<FormValues>;
   inputStyles: string;
+  sampleTypeCosts?: SampleTypeCost[] | null;
 }
 
+const sampleTypeOptionsFromCosts = (costs: SampleTypeCost[]) =>
+  costs.map((c) => ({ value: c.name, label: c.name }));
+
 export const ServiceSection = memo(
-  ({ control, inputStyles }: ServiceSectionProps) => {
+  ({ control, inputStyles, sampleTypeCosts }: ServiceSectionProps) => {
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
     const branch = useWatch({ control, name: 'branch' });
@@ -150,6 +155,7 @@ export const ServiceSection = memo(
     
     // Verificar si es el laboratorio LM/Marihorgen para mostrar campos específicos
     const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
+    const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
 
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
@@ -276,8 +282,8 @@ export const ServiceSection = memo(
           {/* Para otros laboratorios: Tipo de Muestra y Cantidad de Muestras van antes de Relación */}
           {isConspat ? (
             <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
-              {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
-              {(sampleTypeConfig?.enabled || isLM) && (
+              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -285,15 +291,26 @@ export const ServiceSection = memo(
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Tipo de Muestra *</FormLabel>
                       <FormControl>
-                        <AutocompleteInput
-                          fieldName='sampleType'
-                          placeholder='Ej: Biopsia de Piel'
-                          iconRight={
-                            <Microscope className='h-4 w-4 text-muted-foreground' />
-                          }
-                          {...field}
-                          className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-                        />
+                        {hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
+                          <FormDropdown
+                            options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder='Seleccione tipo de muestra'
+                            className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+                            id='service-sample-type'
+                          />
+                        ) : (
+                          <AutocompleteInput
+                            fieldName='sampleType'
+                            placeholder='Ej: Biopsia de Piel'
+                            iconRight={
+                              <Microscope className='h-4 w-4 text-muted-foreground' />
+                            }
+                            {...field}
+                            className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+                          />
+                        )}
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -302,7 +319,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || isLM) && (
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
@@ -351,8 +368,8 @@ export const ServiceSection = memo(
             </div>
           ) : (
             <>
-              {/* Tipo de Muestra - CON AUTOCOMPLETADO */}
-              {(sampleTypeConfig?.enabled || isLM) && (
+              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -360,15 +377,26 @@ export const ServiceSection = memo(
                     <FormItem className='min-w-[180px] flex-1'>
                       <FormLabel>Tipo de Muestra *</FormLabel>
                       <FormControl>
-                        <AutocompleteInput
-                          fieldName='sampleType'
-                          placeholder='Ej: Biopsia de Piel'
-                          iconRight={
-                            <Microscope className='h-4 w-4 text-muted-foreground' />
-                          }
-                          {...field}
-                          className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-                        />
+                        {hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
+                          <FormDropdown
+                            options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder='Seleccione tipo de muestra'
+                            className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+                            id='service-sample-type'
+                          />
+                        ) : (
+                          <AutocompleteInput
+                            fieldName='sampleType'
+                            placeholder='Ej: Biopsia de Piel'
+                            iconRight={
+                              <Microscope className='h-4 w-4 text-muted-foreground' />
+                            }
+                            {...field}
+                            className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+                          />
+                        )}
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -377,7 +405,7 @@ export const ServiceSection = memo(
               )}
 
               {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || isLM) && (
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'

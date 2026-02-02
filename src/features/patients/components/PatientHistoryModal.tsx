@@ -55,6 +55,8 @@ interface PatientHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   patient: Patient | null;
+  /** Cuando true, el modal usa z-index mayor que Detalles del caso (p. ej. abierto desde página de casos) */
+  elevatedZIndex?: boolean;
 }
 
 // Helper to calculate age from fecha_nacimiento
@@ -109,6 +111,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   isOpen,
   onClose,
   patient,
+  elevatedZIndex = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -555,19 +558,25 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       return;
     }
 
-    // Filtrar solo casos aprobados y que están en la selección
+    // Filtrar solo casos aprobados que estén en la selección y tengan al menos PDF, PDF adjunto o imágenes
     const casesToEmail =
-      filteredCases?.filter(
-        (caseItem) =>
-          selectedCases.has(caseItem.id) &&
-          caseItem.doc_aprobado === 'aprobado',
-      ) || [];
+      filteredCases?.filter((caseItem) => {
+        if (!selectedCases.has(caseItem.id) || caseItem.doc_aprobado !== 'aprobado') {
+          return false;
+        }
+        
+        const hasPdf = !!caseItem.informepdf_url;
+        const hasUploadedPdf = !!(caseItem as any)?.uploaded_pdf_url;
+        const hasImages = ((caseItem as any)?.images_urls && Array.isArray((caseItem as any).images_urls) && (caseItem as any).images_urls.length > 0) || !!(caseItem as any)?.image_url;
+        
+        return hasPdf || hasUploadedPdf || hasImages;
+      }) || [];
 
     if (casesToEmail.length === 0) {
       toast({
         title: '⚠️ No hay casos válidos',
         description:
-          'Los casos seleccionados deben estar aprobados para poder enviar sus PDFs por email.',
+          'Los casos seleccionados deben estar aprobados y tener al menos PDF, PDF adjunto o imágenes para enviar por email.',
         variant: 'destructive',
       });
       return;
@@ -615,6 +624,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             throw new Error('PDF no disponible');
           }
 
+          // Obtener imágenes del caso (priorizar images_urls array)
+          const caseImages = (caseItem as any).images_urls && Array.isArray((caseItem as any).images_urls) && (caseItem as any).images_urls.length > 0
+            ? (caseItem as any).images_urls
+            : ((caseItem as any).image_url ? [(caseItem as any).image_url] : []);
+
           // Enviar email usando send-email.js
           const response = await fetch('/api/send-email', {
             method: 'POST',
@@ -626,6 +640,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               patientName: patient?.nombre,
               caseCode: caseItem.code || 'N/A',
               pdfUrl: caseItem.informepdf_url,
+              uploadedPdfUrl: (caseItem as any).uploaded_pdf_url || null,
+              imageUrls: caseImages,
               laboratory_id: caseItem.laboratory_id || laboratory?.id,
               cc: emails.cc,
               bcc: emails.bcc,
@@ -720,15 +736,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   };
 
   const handleSendAllEmails = () => {
-    // Obtener casos aprobados del paciente
-    const approvedCases = filteredCases?.filter(
-      (c) => c.doc_aprobado === 'aprobado' && c.informepdf_url
-    ) || [];
+    // Obtener casos aprobados del paciente que tengan al menos PDF, PDF adjunto o imágenes
+    const approvedCases = filteredCases?.filter((c) => {
+      if (c.doc_aprobado !== 'aprobado') return false;
+      
+      const hasPdf = !!c.informepdf_url;
+      const hasUploadedPdf = !!(c as any)?.uploaded_pdf_url;
+      const hasImages = ((c as any)?.images_urls && Array.isArray((c as any).images_urls) && (c as any).images_urls.length > 0) || !!(c as any)?.image_url;
+      
+      return hasPdf || hasUploadedPdf || hasImages;
+    }) || [];
 
     if (approvedCases.length === 0) {
       toast({
         title: '⚠️ Sin casos disponibles',
-        description: 'No hay casos aprobados con PDF disponible para enviar.',
+        description: 'No hay casos aprobados con PDF, PDF adjunto o imágenes disponibles para enviar.',
         variant: 'destructive',
       });
       return;
@@ -782,13 +804,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
-              className='fixed inset-0 bg-black/50 z-[99999998]'
+              className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-[100000000000000000]' : 'z-[99999998]'}`}
             />
           )}
 
           {/* Modal */}
           {!isEditing && (
-            <div className='fixed inset-0 z-[99999999] flex items-center justify-center p-4'>
+            <div className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-[100000000000000001]' : 'z-[99999999]'}`}>
               {/* Overlay de fondo con opacidad desde el inicio */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -992,7 +1014,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                 const phoneNumber =
                                   patient.telefono?.replace(/\D/g, '') || '';
                                 const message = encodeURIComponent(
-                                  'Hola, me comunico desde el sistema médico. ¿Cómo está usted?',
+                                  `Hola, me comunico desde ${laboratory?.name ?? 'el laboratorio'}.`,
                                 );
                                 const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${message}&type=phone_number&app_absent=0`;
                                 window.open(whatsappUrl, '_blank');

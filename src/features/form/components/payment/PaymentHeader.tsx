@@ -10,9 +10,10 @@ interface PaymentHeaderProps {
 	inputStyles: string
 	exchangeRate?: number
 	isLoadingRate?: boolean
+	totalAmountReadOnly?: boolean
 }
 
-export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadingRate }: PaymentHeaderProps) => {
+export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadingRate, totalAmountReadOnly = false }: PaymentHeaderProps) => {
 	const totalAmount = useWatch({
 		control,
 		name: 'totalAmount',
@@ -27,38 +28,46 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 		return null
 	}, [totalAmount, exchangeRate])
 
-	// Monto Total siempre es en dólares ($)
 	const currencyLabel = '$'
-
-	// Memoize the amount change handler to prevent re-renders
 
 	return (
 		<React.Fragment>
 			<FormField
 				control={control}
 				name="totalAmount"
-				render={({ field }) => (
+				render={({ field }) => {
+					const readOnlyValue =
+						field.value != null && field.value !== '' ? String(Number(field.value).toFixed(2)) : '0,00'
+					return (
 					<FormItem className="w-full">
 						<FormLabel className="text-sm sm:text-base">Monto Total {currencyLabel}</FormLabel>
 						<FormControl>
-							{(() => {
-								const calculatorHandler = createCalculatorInputHandler(field.value || 0, field.onChange)
-
-								return (
-									<Input
-										type="text"
-										inputMode="decimal"
-										placeholder="0,00"
-										value={calculatorHandler.displayValue}
-										onKeyDown={calculatorHandler.handleKeyDown}
-										onPaste={calculatorHandler.handlePaste}
-										onFocus={calculatorHandler.handleFocus}
-										onChange={calculatorHandler.handleChange}
-										className={`${inputStyles} text-right font-mono`}
-										autoComplete="off"
-									/>
-								)
-							})()}
+							{totalAmountReadOnly ? (
+								<Input
+									type="text"
+									value={readOnlyValue}
+									readOnly
+									className={`${inputStyles} text-right font-mono bg-muted`}
+								/>
+							) : (
+								(() => {
+									const calculatorHandler = createCalculatorInputHandler(field.value || 0, field.onChange)
+									return (
+										<Input
+											type="text"
+											inputMode="decimal"
+											placeholder="0,00"
+											value={calculatorHandler.displayValue}
+											onKeyDown={calculatorHandler.handleKeyDown}
+											onPaste={calculatorHandler.handlePaste}
+											onFocus={calculatorHandler.handleFocus}
+											onChange={calculatorHandler.handleChange}
+											className={`${inputStyles} text-right font-mono`}
+											autoComplete="off"
+										/>
+									)
+								})()
+							)}
 						</FormControl>
 						<div className="flex gap-2 items-center flex-nowrap">
 							{totalInVes && <p className="text-xs sm:text-sm font-bold text-green-600 whitespace-nowrap">{totalInVes} VES</p>}
@@ -67,7 +76,8 @@ export const PaymentHeader = memo(({ control, inputStyles, exchangeRate, isLoadi
 							</p>
 						</div>
 					</FormItem>
-				)}
+					)
+				}}
 			/>
 		</React.Fragment>
 	)

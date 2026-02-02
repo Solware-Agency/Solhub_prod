@@ -72,6 +72,7 @@ import { getResponsableByDependiente } from '@services/supabase/patients/respons
 import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls';
 import { PDFButton } from '@shared/components/ui/PDFButton';
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload';
+import PatientHistoryModal from '@features/patients/components/PatientHistoryModal';
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
 interface ChangeLogEntry {
@@ -124,6 +125,7 @@ interface CaseDetailPanelProps {
 }
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function parseEdad(edad: string | null | undefined): {
   value: number | '';
   unit: 'Años' | 'Meses' | '';
@@ -272,7 +274,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
     const [showFullPatientInfo, setShowFullPatientInfo] = useState(false);
+    const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false);
     const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
+    
+    // Estados para rastrear subida de archivos
+    const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [isUploadingImages, setIsUploadingImages] = useState(false);
     
     // Image URLs state for imagenologia role (hasta 10 imágenes)
     const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -1071,6 +1079,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     };
 
     const handleSendEmail = async () => {
+      // Verificar si se están subiendo archivos
+      if (isUploadingPdf || isUploadingImages) {
+        toast({
+          title: '⏳ Subiendo archivos...',
+          description: 'Por favor espera a que terminen de subirse los archivos antes de enviar el correo.',
+          variant: 'default',
+        });
+        return;
+      }
+
       if (!case_?.patient_email) {
         toast({
           title: '❌ Error',
@@ -1080,12 +1098,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         return;
       }
 
-      // Verificar que exista el PDF (informe_qr es el campo actual, attachment_url es legacy)
+      // Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
       const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
-      if (!pdfUrl) {
+      const uploadedPdf = (case_ as any)?.uploaded_pdf_url;
+      const images = (case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls) 
+        ? (case_ as any).images_urls 
+        : (case_ as any)?.image_url ? [(case_ as any).image_url] : [];
+
+      if (!pdfUrl && !uploadedPdf && images.length === 0) {
         toast({
           title: '❌ Error',
-          description: 'El PDF del caso aún no está disponible.',
+          description: 'El caso debe tener al menos un PDF generado, PDF adjunto o imágenes para enviar por correo.',
           variant: 'destructive',
         });
         return;
@@ -1111,6 +1134,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.nombre}`;
         const emailBody = `Hola ${case_?.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`;
         
+        // Obtener imágenes del caso (priorizar images_urls array)
+        const caseImages = (currentCase as any)?.images_urls && Array.isArray((currentCase as any).images_urls) && (currentCase as any).images_urls.length > 0
+          ? (currentCase as any).images_urls
+          : ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : []);
+
         // Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
         const isDevelopment = import.meta.env.DEV;
         const apiUrl = isDevelopment
@@ -1127,6 +1155,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             patientName: case_?.nombre,
             caseCode: case_?.code || case_?.id,
             pdfUrl: pdfUrl,
+            uploadedPdfUrl: (currentCase as any)?.uploaded_pdf_url || null,
+            imageUrls: caseImages,
             laboratory_id: case_?.laboratory_id || laboratory?.id,
             subject: emailSubject,
             message: emailBody,
@@ -1509,6 +1539,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const isEmployee = profile?.role === 'employee';
     // const isOwner = profile?.role === 'owner'
     // const isCitotecno = profile?.role === 'citotecno'
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isEmployeeSpt = isEmployee && isSpt;
 
     // Render modal content
@@ -1647,12 +1678,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={handleSendEmail}
-                            disabled={isSaving}
-                            title='Enviar informe por correo electrónico'
+                            disabled={isSaving || isUploadingPdf || isUploadingImages}
+                            title={
+                              isUploadingPdf || isUploadingImages
+                                ? 'Espera a que terminen de subirse los archivos...'
+                                : 'Enviar informe por correo electrónico'
+                            }
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
                             aria-label='Enviar correo'
                           >
-                            {isSaving ? (
+                            {isSaving || isUploadingPdf || isUploadingImages ? (
                               <Loader2 className='w-4 h-4 animate-spin' />
                             ) : (
                               <Send className='w-4 h-4' />
@@ -1803,9 +1838,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             Representado por:
                           </span>
                           <div className='sm:w-1/2 sm:text-right'>
-                            <span className='text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                            <button
+                              type='button'
+                              onClick={() => setShowResponsableHistoryModal(true)}
+                              className='text-sm text-primary dark:text-primary font-medium hover:underline cursor-pointer text-right'
+                            >
                               {responsableData.responsable.nombre} • {responsableData.responsable.cedula}
-                            </span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -2151,6 +2190,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             <CasePDFUpload
                               caseId={currentCase.id}
                               currentPdfUrl={(currentCase as any).uploaded_pdf_url}
+                              onUploadingChange={setIsUploadingPdf}
                               onPdfUpdated={async () => {
                                 // Refrescar el caso después de subir/eliminar PDF
                                 if (refetchCaseData) {
@@ -2886,8 +2926,21 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             caseCode={case_.code || case_.id || ''}
             caseId={case_.id}
             isSending={isSaving}
+            pdfUrl={(case_ as any)?.informe_qr || case_?.attachment_url}
+            uploadedPdfUrl={(currentCase as any)?.uploaded_pdf_url}
+            imageUrls={(currentCase as any)?.images_urls || ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : [])}
+            laboratoryName={laboratory?.name}
+            laboratoryLogo={laboratory?.branding?.logo || undefined}
           />
         )}
+
+        {/* Historial médico del representante (al hacer clic en "Representado por") - por delante del modal de caso */}
+        <PatientHistoryModal
+          isOpen={showResponsableHistoryModal}
+          onClose={() => setShowResponsableHistoryModal(false)}
+          patient={responsableData?.responsable ?? null}
+          elevatedZIndex
+        />
       </>
     );
 

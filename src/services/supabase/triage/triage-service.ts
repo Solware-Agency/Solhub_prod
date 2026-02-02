@@ -35,6 +35,12 @@ type ExtendedDatabase = Database & {
           tabaco: number | null;
           cafe: number | null;
           comment: string | null;
+          enfermedad_actual: string | null;
+          antecedentes_quirurgicos: string | null;
+          diagnostico: string | null;
+          plan_de_accion: string | null;
+          lugar_de_nacimiento: string | null;
+          telefono_emergencia: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -62,6 +68,12 @@ type ExtendedDatabase = Database & {
           tabaco?: number | null;
           cafe?: number | null;
           comment?: string | null;
+          enfermedad_actual?: string | null;
+          antecedentes_quirurgicos?: string | null;
+          diagnostico?: string | null;
+          plan_de_accion?: string | null;
+          lugar_de_nacimiento?: string | null;
+          telefono_emergencia?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -89,6 +101,12 @@ type ExtendedDatabase = Database & {
           tabaco?: number | null;
           cafe?: number | null;
           comment?: string | null;
+          enfermedad_actual?: string | null;
+          antecedentes_quirurgicos?: string | null;
+          diagnostico?: string | null;
+          plan_de_accion?: string | null;
+          lugar_de_nacimiento?: string | null;
+          telefono_emergencia?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -127,6 +145,12 @@ export interface TriageRecord {
   bmi: number | null;
   examen_fisico: string | null;
   comment: string | null;
+  enfermedad_actual: string | null;
+  antecedentes_quirurgicos: string | null;
+  diagnostico: string | null;
+  plan_de_accion: string | null;
+  lugar_de_nacimiento: string | null;
+  telefono_emergencia: string | null;
   created_by: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -155,6 +179,12 @@ export interface TriageRecordInsert {
   bmi?: number | null; // Se calcula automáticamente si hay altura y peso
   examen_fisico?: string | null;
   comment?: string | null;
+  enfermedad_actual?: string | null;
+  antecedentes_quirurgicos?: string | null;
+  diagnostico?: string | null;
+  plan_de_accion?: string | null;
+  lugar_de_nacimiento?: string | null;
+  telefono_emergencia?: string | null;
   created_by?: string | null;
 }
 
@@ -422,10 +452,10 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
   }
   
   // Validar signos vitales obligatorios
-  if (!data.heart_rate || data.heart_rate <= 0) {
-    missingFields.push('FC (Frecuencia Cardíaca)');
-  }
+  // FC (Frecuencia Cardíaca) - No es obligatorio
   // FR (Frecuencia Respiratoria) - No es obligatorio
+  // Temperatura - No es obligatorio
+  // Glicemia - No es obligatorio
   if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0 || data.oxygen_saturation > 100) {
     missingFields.push('SpO₂ (Saturación de Oxígeno)');
   }

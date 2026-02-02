@@ -113,7 +113,16 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 		if (!nombre.trim()) {
 			toast({
 				title: 'Error',
-				description: 'El nombre es obligatorio',
+				description: 'El nombre completo es obligatorio',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (!telefono.trim()) {
+			toast({
+				title: 'Error',
+				description: 'El teléfono es obligatorio',
 				variant: 'destructive',
 			})
 			return
@@ -133,6 +142,33 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			toast({
 				title: 'Error',
 				description: 'El número de cédula debe contener solo números',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (!gender) {
+			toast({
+				title: 'Error',
+				description: 'El género es obligatorio',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (!fechaNacimiento && !edad.trim()) {
+			toast({
+				title: 'Error',
+				description: 'Debe indicar fecha de nacimiento o edad',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (!fechaNacimiento && edad.trim() && !/^\d+$/.test(edad.trim())) {
+			toast({
+				title: 'Error',
+				description: 'La edad debe ser un número válido',
 				variant: 'destructive',
 			})
 			return
@@ -209,7 +245,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 						errorMessage = 'Ya existe un paciente con esta cédula.'
 						break
 					case 'PATIENT_REQUIRED_FIELD':
-						errorMessage = 'Por favor, completa todos los campos obligatorios.'
+						errorMessage = 'Faltan campos obligatorios: nombre, cédula, teléfono, género y fecha de nacimiento o edad.'
 						break
 					case 'DATABASE_ERROR':
 						errorMessage = 'Error al guardar en la base de datos. Por favor, intenta de nuevo.'
@@ -348,7 +384,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 						</div>
 
 						<div className="space-y-2">
-							<Label>Género</Label>
+							<Label>Género *</Label>
 							<FormDropdown
 								options={createDropdownOptions(['Masculino', 'Femenino'])}
 								value={gender}
@@ -450,7 +486,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 							id="email"
 							type="email"
 							value={email}
-							onChange={(e) => setEmail(e.target.value)}
+							onChange={(e) => setEmail(e.target.value.replace(/[^a-zA-Z0-9@._+-]/g, ''))}
 							placeholder="Solwy@gmail.com"
 						/>
 					</div>

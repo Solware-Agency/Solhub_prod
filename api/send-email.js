@@ -13,28 +13,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { patientEmail, patientName, caseCode, pdfUrl, laboratory_id, subject, message, cc, bcc } = req.body;
+    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
     console.log("📧 Datos recibidos:", {
       patientEmail,
       patientName,
       caseCode,
       pdfUrl: pdfUrl ? "URL presente" : "URL faltante",
+      uploadedPdfUrl: uploadedPdfUrl ? "PDF adjunto presente" : "Sin PDF adjunto",
+      imageUrls: imageUrls && imageUrls.length > 0 ? `${imageUrls.length} imágenes` : "Sin imágenes",
       laboratory_id: laboratory_id || null,
       cc: cc || [],
       bcc: bcc || [],
     });
 
     // Validar datos requeridos
-    if (!patientEmail || !patientName || !pdfUrl) {
+    if (!patientEmail || !patientName) {
       console.log("❌ Datos faltantes:", {
         patientEmail: !!patientEmail,
-        patientName: !!patientName,
-        pdfUrl: !!pdfUrl
+        patientName: !!patientName
       });
       return res.status(400).json({
         success: false,
-        error: "Faltan datos requeridos: patientEmail, patientName, pdfUrl"
+        error: "Faltan datos requeridos: patientEmail, patientName"
+      });
+    }
+
+    // Validar que haya al menos uno de: pdfUrl, uploadedPdfUrl o imageUrls
+    const hasContent = pdfUrl || uploadedPdfUrl || (imageUrls && imageUrls.length > 0);
+    if (!hasContent) {
+      console.log("❌ Sin contenido para enviar:", {
+        pdfUrl: !!pdfUrl,
+        uploadedPdfUrl: !!uploadedPdfUrl,
+        imageUrls: imageUrls ? imageUrls.length : 0
+      });
+      return res.status(400).json({
+        success: false,
+        error: "Debe proporcionar al menos un PDF (caso o adjunto) o imágenes para enviar"
       });
     }
 
@@ -212,10 +227,11 @@ export default async function handler(req, res) {
       </p>
 
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
-        Le informamos que su informe médico del <strong>Caso ${caseCode || 'N/A'}</strong> está listo para descarga.
+        Le informamos que ${pdfUrl ? 'su informe médico del' : 'la información del'} <strong>Caso ${caseCode || 'N/A'}</strong> está ${pdfUrl ? 'lista para descarga' : 'disponible'}.
       </p>
 
       <div style="text-align: center; margin: 40px 0;">
+        ${pdfUrl ? `
         <a href="${pdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
               color: white; 
               padding: 15px 30px; 
@@ -227,6 +243,22 @@ export default async function handler(req, res) {
               box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
           📄 Descargar Informe
         </a>
+        ` : ''}
+        
+        ${uploadedPdfUrl ? `
+          <br><br>
+          <a href="${uploadedPdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 15px 30px; 
+                text-decoration: none; 
+                border-radius: 25px; 
+                display: inline-block;
+                font-weight: bold;
+                font-size: 16px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+            📎 Adjunto
+          </a>
+        ` : ''}
       </div>
 
       <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -235,7 +267,23 @@ export default async function handler(req, res) {
         </p>
       </div>
 
-
+      ${imageUrls && imageUrls.length > 0 ? `
+        <div style="margin: 30px 0;">
+          <h3 style="color: #667eea; font-size: 18px; margin-bottom: 15px; text-align: center;">
+            📸 Imágenes del Caso (${imageUrls.length})
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            ${imageUrls.map((url, index) => `
+              <div style="text-align: center;">
+                <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none;">
+                  <img src="${url}" alt="Imagen ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e0e0e0;" />
+                  <p style="color: #667eea; font-size: 11px; margin: 6px 0 0 0; font-weight: bold;">Ver #${index + 1}</p>
+                </a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
 
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
         Si tiene alguna pregunta, no dude en contactarnos al
