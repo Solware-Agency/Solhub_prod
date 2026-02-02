@@ -151,7 +151,7 @@ export default async function handler(req, res) {
             }
             // Logo para Marihorgen/LM
             if (slug && (String(slug).toLowerCase() === 'marihorgen' || String(slug).toLowerCase() === 'lm')) {
-              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/logo_marihorgen.svg';
+              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/logo_marihorgen.png';
             }
           } catch (e) {
             // no bloquear
