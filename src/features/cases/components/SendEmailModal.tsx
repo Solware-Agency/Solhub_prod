@@ -170,11 +170,13 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
             </div>
           ` : ''}
 
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="color: #666; font-size: 14px; margin: 0;">
-              Si tiene alguna consulta, no dude en contactarnos.
-            </p>
-          </div>
+          ${laboratorySlug !== 'marihorgen' && laboratorySlug !== 'lm' ? `
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="color: #666; font-size: 14px; margin: 0;">
+                Si tiene alguna consulta, no dude en contactarnos.
+              </p>
+            </div>
+          ` : ''}
 
           ${laboratorySlug === 'marihorgen' || laboratorySlug === 'lm' ? `
             <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">

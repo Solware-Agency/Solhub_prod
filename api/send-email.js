@@ -149,6 +149,10 @@ export default async function handler(req, res) {
             if (slug && String(slug).toLowerCase().includes('spt')) {
               labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
             }
+            // Logo para Marihorgen/LM
+            if (slug && (String(slug).toLowerCase() === 'marihorgen' || String(slug).toLowerCase() === 'lm')) {
+              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/logo_marihorgen.svg';
+            }
           } catch (e) {
             // no bloquear
           }
@@ -287,10 +291,12 @@ export default async function handler(req, res) {
         </div>
       ` : ''}
 
-      <p style="color: #666; font-size: 16px; line-height: 1.6;">
-        Si tiene alguna pregunta, no dude en contactarnos al
-        ${contactAnchorHtml}
-      </p>
+      ${labSlug !== 'marihorgen' && labSlug !== 'lm' ? `
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          Si tiene alguna pregunta, no dude en contactarnos al
+          ${contactAnchorHtml}
+        </p>
+      ` : ''}
 
       <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
