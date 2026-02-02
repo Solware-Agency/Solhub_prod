@@ -155,7 +155,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     // Para SPT: también disponible para medico_tratante (flujo completo)
     // NO disponible para: employee, medicowner (ellos generan docs directamente)
     const shouldSkipDataStep = isSpt 
-      ? (isEmployee || isMedicowner)
+      ? (isEmployee || isMedicowner || isOwner)
       : (isEmployee || isMedicowner || isMedicoTratante);
     
     if (!shouldSkipDataStep) {
