@@ -899,61 +899,69 @@ const MainUsers: React.FC = () => {
 			<div className="mb-4 sm:mb-6">
 				<div>
 					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-						{profile?.role === 'residente' ? 'Gestión de Médicos' : 'Gestión de Usuarios'}
+						{canManage
+							? profile?.role === 'residente'
+								? 'Gestión de Médicos'
+								: 'Gestión de Usuarios'
+							: 'Usuarios'}
 					</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 				</div>
-				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-					{profile?.role === 'residente'
-						? 'Administra los médicos del sistema y sus permisos'
-						: 'Administra los usuarios del sistema y sus permisos'}
-				</p>
+				{canManage && (
+					<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+						{profile?.role === 'residente'
+							? 'Administra los médicos del sistema y sus permisos'
+							: 'Administra los usuarios del sistema y sus permisos'}
+					</p>
+				)}
 			</div>
 
-			{/* Instrucciones */}
-			<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 mb-3 sm:mb-5">
-				<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
-					{profile?.role === 'residente' ? 'Información de Médicos' : 'Instrucciones de Uso'}
-				</h3>
-				<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-					{profile?.role === 'residente' ? (
-						<>
-							<li>
-								<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
-							</li>
-							<li>
-								<strong>Asignación de Sede:</strong> Los médicos con una sede asignada solo podrán ver los casos médicos
-								de esa sede.
-							</li>
-							<li>
-								<strong>Generación de Casos:</strong> Los médicos pueden generar diagnósticos para casos de biopsia.
-							</li>
-						</>
-					) : (
-						<>
-							<li>
-								<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
-								aprobados por un propietario antes de poder acceder al sistema.
-							</li>
-							{availableRoles.length > 0 && (
-								<>
-									{availableRoles.map((role) => {
-										const roleValue = role.value as UserRole
-										const instruction = ROLE_INSTRUCTIONS[roleValue]
-										if (!instruction) return null
+			{/* Instrucciones: solo para owner y prueba (canManage) */}
+			{canManage && (
+				<div className="mt-4 sm:mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 mb-3 sm:mb-5">
+					<h3 className="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-300 mb-1 sm:mb-2">
+						{profile?.role === 'residente' ? 'Información de Médicos' : 'Instrucciones de Uso'}
+					</h3>
+					<ul className="list-disc list-inside space-y-1 sm:space-y-2 text-xs sm:text-sm text-blue-700 dark:text-blue-400">
+						{profile?.role === 'residente' ? (
+							<>
+								<li>
+									<strong>Médicos:</strong> En esta sección puedes ver y gestionar los usuarios con rol de médico.
+								</li>
+								<li>
+									<strong>Asignación de Sede:</strong> Los médicos con una sede asignada solo podrán ver los casos médicos
+									de esa sede.
+								</li>
+								<li>
+									<strong>Generación de Casos:</strong> Los médicos pueden generar diagnósticos para casos de biopsia.
+								</li>
+							</>
+						) : (
+							<>
+								<li>
+									<strong>Aprobación de Usuarios:</strong> Los nuevos usuarios se crean con estado "Pendiente" y deben ser
+									aprobados por un propietario antes de poder acceder al sistema.
+								</li>
+								{availableRoles.length > 0 && (
+									<>
+										{availableRoles.map((role) => {
+											const roleValue = role.value as UserRole
+											const instruction = ROLE_INSTRUCTIONS[roleValue]
+											if (!instruction) return null
 
-										return (
-											<li key={roleValue}>
-												<strong>{role.label}{roleValue !== 'call_center' ? 's' : ''}:</strong> {instruction}
-											</li>
-										)
-									})}
-								</>
-							)}
-						</>
-					)}
-				</ul>
-			</div>
+											return (
+												<li key={roleValue}>
+													<strong>{role.label}{roleValue !== 'call_center' ? 's' : ''}:</strong> {instruction}
+												</li>
+											)
+										})}
+									</>
+								)}
+							</>
+						)}
+					</ul>
+				</div>
+			)}
 
 			{/* Filtros, bóºsqueda y estadó­sticas */}
 			<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg mb-3 sm:mb-5">
@@ -1111,11 +1119,13 @@ const MainUsers: React.FC = () => {
 												</p>
 											</div>
 										</div>
-										<div>
-											<Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-500" onClick={() => handleDeleteClick(user)}>
-												<Trash2 className="w-3 h-3" />
-											</Button>
-										</div>
+										{canManage && (
+											<div>
+												<Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-500" onClick={() => handleDeleteClick(user)}>
+													<Trash2 className="w-3 h-3" />
+												</Button>
+											</div>
+										)}
 									</div>
 
 									{/* Selector de aprobación */}
@@ -1235,14 +1245,6 @@ const MainUsers: React.FC = () => {
 													</TooltipTrigger>
 													<TooltipContent className="p-3 max-w-lg w-auto">
 														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
-															{user.display_name && (
-																<div
-																	className="font-semibold text-sm mb-1 whitespace-nowrap"
-																	style={{ color: laboratory?.branding?.primaryColor || undefined }}
-																>
-																	{user.display_name}
-																</div>
-															)}
 															<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
 																<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
 																<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{user.email}</span>

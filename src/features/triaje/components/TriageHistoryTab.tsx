@@ -110,7 +110,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           {record.case_code && (
             <>
               <span className='text-xs text-gray-400 dark:text-gray-500 mx-1'>•</span>
-              <span className='text-xs font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary border border-primary/20 dark:border-primary/30'>
+              <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
                 {record.case_code}
               </span>
             </>

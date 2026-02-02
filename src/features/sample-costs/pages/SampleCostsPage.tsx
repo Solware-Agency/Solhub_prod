@@ -4,26 +4,57 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import {
 	getSampleTypeCostsByLaboratory,
 	updateSampleTypeCost,
+	createSampleTypeCost,
+	deleteSampleTypeCost,
 	type SampleTypeCost,
 } from '@services/supabase/laboratories/sample-type-costs-service'
+import { updateLaboratoryConfig } from '@services/supabase/laboratories/laboratories-service'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
+} from '@shared/components/ui/dialog'
+import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
-import { Loader2, Save, DollarSign } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Pencil } from 'lucide-react'
+
+const DEFAULT_CONVENIO_PCT = 5
+const DEFAULT_DESCUENTO_PCT = 10
 
 const SampleCostsPage: React.FC = () => {
-	const { laboratory } = useLaboratory()
+	const { laboratory, refreshLaboratory } = useLaboratory()
 	const { profile } = useUserProfile()
 	const { toast } = useToast()
 	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
 	const canEdit =
 		(profile?.role === 'owner' || profile?.role === 'prueba') && hasSampleTypeCosts && !!laboratory?.id
+	const isOwner = profile?.role === 'owner'
+
+	const convenioDiscountPercent = laboratory?.config?.convenioDiscountPercent ?? DEFAULT_CONVENIO_PCT
+	const descuentoDiscountPercent = laboratory?.config?.descuentoDiscountPercent ?? DEFAULT_DESCUENTO_PCT
+	const factorConvenios = (100 - convenioDiscountPercent) / 100
+	const factorDescuento = (100 - descuentoDiscountPercent) / 100
 
 	const [costs, setCosts] = useState<SampleTypeCost[]>([])
 	const [loading, setLoading] = useState(true)
 	const [editing, setEditing] = useState<Record<string, { taquilla: string }>>({})
 	const [savingCode, setSavingCode] = useState<string | null>(null)
+	const [deletingCode, setDeletingCode] = useState<string | null>(null)
+	const [openAddModal, setOpenAddModal] = useState(false)
+	const [addCode, setAddCode] = useState('')
+	const [addName, setAddName] = useState('')
+	const [addTaquilla, setAddTaquilla] = useState('')
+	const [addOnlyTaquilla, setAddOnlyTaquilla] = useState(false)
+	const [savingNew, setSavingNew] = useState(false)
+	const [openPercentModal, setOpenPercentModal] = useState(false)
+	const [editConvenioPct, setEditConvenioPct] = useState(String(convenioDiscountPercent))
+	const [editDescuentoPct, setEditDescuentoPct] = useState(String(descuentoDiscountPercent))
+	const [savingPercent, setSavingPercent] = useState(false)
 
 	const loadCosts = useCallback(() => {
 		if (!laboratory?.id) return
@@ -50,6 +81,16 @@ const SampleCostsPage: React.FC = () => {
 		})
 	}
 
+	const hasRowPriceChanged = (row: SampleTypeCost): boolean => {
+		const ed = editing[row.code]
+		if (!ed || ed.taquilla === undefined || ed.taquilla === '') return false
+		const newVal = parseFloat(ed.taquilla)
+		if (isNaN(newVal)) return false
+		const original = row.price_taquilla
+		if (original == null) return true
+		return round2(newVal) !== round2(original)
+	}
+
 	const getDisplayValue = (row: SampleTypeCost, field: 'taquilla' | 'convenios' | 'descuento') => {
 		const ed = editing[row.code]
 		const onlyTaquilla = row.price_convenios == null && row.price_descuento == null
@@ -60,7 +101,7 @@ const SampleCostsPage: React.FC = () => {
 		if (onlyTaquilla) return ''
 		const base = ed?.taquilla !== undefined && ed.taquilla !== '' ? parseFloat(ed.taquilla) : row.price_taquilla
 		if (base == null || isNaN(base)) return ''
-		const calc = field === 'convenios' ? round2(base * 0.95) : round2(base * 0.9)
+		const calc = field === 'convenios' ? round2(base * factorConvenios) : round2(base * factorDescuento)
 		return String(calc)
 	}
 
@@ -94,6 +135,25 @@ const SampleCostsPage: React.FC = () => {
 		}
 	}
 
+	const handleDeleteRow = async (row: SampleTypeCost) => {
+		if (!laboratory?.id) return
+		if (!window.confirm(`¿Eliminar el tipo de muestra "${row.name}" (${row.code})? Esta acción no se puede deshacer.`)) return
+		setDeletingCode(row.code)
+		const res = await deleteSampleTypeCost(laboratory.id, row.code)
+		setDeletingCode(null)
+		if (res.success) {
+			toast({ title: 'Eliminado', description: `${row.name} ha sido eliminado.` })
+			setEditing((prev) => {
+				const next = { ...prev }
+				delete next[row.code]
+				return next
+			})
+			loadCosts()
+		} else {
+			toast({ title: 'Error', description: res.error ?? 'No se pudo eliminar.', variant: 'destructive' })
+		}
+	}
+
 	if (!hasSampleTypeCosts || !(profile?.role === 'owner' || profile?.role === 'prueba')) {
 		return (
 			<div className="p-4 sm:p-6">
@@ -119,11 +179,94 @@ const SampleCostsPage: React.FC = () => {
 		)
 	}
 
+	const resetAddModal = () => {
+		setAddCode('')
+		setAddName('')
+		setAddTaquilla('')
+		setAddOnlyTaquilla(false)
+		setOpenAddModal(false)
+	}
+
+	const handleAddSubmit = async () => {
+		if (!laboratory?.id) return
+		const code = addCode.trim()
+		const name = addName.trim()
+		const taquilla = parseFloat(addTaquilla)
+		if (!code || !name || isNaN(taquilla) || taquilla < 0) {
+			toast({ title: 'Datos incompletos', description: 'Complete código, nombre y precio taquilla.', variant: 'destructive' })
+			return
+		}
+		setSavingNew(true)
+		const res = await createSampleTypeCost(laboratory.id, {
+			code,
+			name,
+			price_taquilla: taquilla,
+			only_taquilla: addOnlyTaquilla,
+			convenioDiscountPercent,
+			descuentoDiscountPercent,
+		})
+		setSavingNew(false)
+		if (res.success) {
+			toast({ title: 'Agregado', description: `${res.data?.name} creado.` })
+			resetAddModal()
+			loadCosts()
+		} else {
+			toast({ title: 'Error', description: res.error ?? 'No se pudo crear.', variant: 'destructive' })
+		}
+	}
+
+	const handleSavePercent = async () => {
+		if (!laboratory?.id) return
+		const convenio = parseFloat(editConvenioPct)
+		const descuento = parseFloat(editDescuentoPct)
+		if (isNaN(convenio) || convenio < 0 || convenio > 100 || isNaN(descuento) || descuento < 0 || descuento > 100) {
+			toast({ title: 'Datos inválidos', description: 'Los porcentajes deben ser números entre 0 y 100.', variant: 'destructive' })
+			return
+		}
+		setSavingPercent(true)
+		const res = await updateLaboratoryConfig(laboratory.id, {
+			convenioDiscountPercent: convenio,
+			descuentoDiscountPercent: descuento,
+		})
+		setSavingPercent(false)
+		if (res.success) {
+			toast({ title: 'Guardado', description: 'Porcentajes de descuento actualizados.' })
+			setOpenPercentModal(false)
+			await refreshLaboratory()
+		} else {
+			toast({ title: 'Error', description: res.error ?? 'No se pudo guardar.', variant: 'destructive' })
+		}
+	}
+
 	return (
 		<div className="p-4 sm:p-6 space-y-4">
 			<Card>
-				<CardHeader>
+				<CardHeader className="flex flex-row items-center justify-between gap-2">
 					<CardTitle>Estructura de costos</CardTitle>
+					<div className="flex items-center gap-2">
+						{isOwner && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									setEditConvenioPct(String(convenioDiscountPercent))
+									setEditDescuentoPct(String(descuentoDiscountPercent))
+									setOpenPercentModal(true)
+								}}
+								aria-label="Editar porcentajes de descuento"
+							>
+								<Pencil className="h-4 w-4 sm:mr-1" />
+								<span className="hidden sm:inline">Editar %</span>
+							</Button>
+						)}
+						{canEdit && (
+							<Button type="button" variant="outline" size="sm" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
+								<Plus className="h-4 w-4 sm:mr-1" />
+								<span className="hidden sm:inline">Agregar</span>
+							</Button>
+						)}
+					</div>
 				</CardHeader>
 				<CardContent>
 					<p className="text-sm text-muted-foreground mb-4">
@@ -138,7 +281,7 @@ const SampleCostsPage: React.FC = () => {
 									<th className="text-left p-2 font-medium">Taquilla ($)</th>
 									<th className="text-left p-2 font-medium">Convenios ($)</th>
 									<th className="text-left p-2 font-medium">Descuento ($)</th>
-									{canEdit && <th className="p-2 w-24">Acción</th>}
+									{canEdit && <th className="p-2 w-32">Acción</th>}
 								</tr>
 							</thead>
 							<tbody>
@@ -183,21 +326,36 @@ const SampleCostsPage: React.FC = () => {
 										</td>
 										{canEdit && (
 											<td className="p-2">
-												<Button
-													size="sm"
-													variant="outline"
-													onClick={() => handleSaveRow(row)}
-													disabled={savingCode === row.code}
-												>
-													{savingCode === row.code ? (
-														<Loader2 className="h-4 w-4 animate-spin" />
-													) : (
-														<>
-															<Save className="h-4 w-4 mr-1" />
-															Guardar
-														</>
-													)}
-												</Button>
+												<div className="flex items-center gap-1 flex-nowrap">
+													<Button
+														size="icon"
+														variant="outline"
+														onClick={() => handleSaveRow(row)}
+														disabled={savingCode === row.code || !hasRowPriceChanged(row)}
+														className="h-8 w-8 flex-shrink-0"
+														aria-label="Guardar"
+													>
+														{savingCode === row.code ? (
+															<Loader2 className="h-4 w-4 animate-spin" />
+														) : (
+															<Save className="h-4 w-4" />
+														)}
+													</Button>
+													<Button
+														size="icon"
+														variant="outline"
+														onClick={() => handleDeleteRow(row)}
+														disabled={deletingCode === row.code}
+														className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+														aria-label="Eliminar"
+													>
+														{deletingCode === row.code ? (
+															<Loader2 className="h-4 w-4 animate-spin" />
+														) : (
+															<Trash2 className="h-4 w-4" />
+														)}
+													</Button>
+												</div>
 											</td>
 										)}
 									</tr>
@@ -210,6 +368,147 @@ const SampleCostsPage: React.FC = () => {
 					)}
 				</CardContent>
 			</Card>
+
+			<Dialog open={openAddModal} onOpenChange={(open) => !open && resetAddModal()}>
+				<DialogContent className="sm:max-w-md bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+					<DialogHeader>
+						<DialogTitle>Agregar tipo de muestra</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4 py-2">
+						<div className="space-y-2">
+							<Label htmlFor="add-code">Código</Label>
+							<Input
+								id="add-code"
+								value={addCode}
+								onChange={(e) => setAddCode(e.target.value)}
+								placeholder="ej. A04"
+								className="font-mono"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="add-name">Tipo de muestra</Label>
+							<Input
+								id="add-name"
+								value={addName}
+								onChange={(e) => setAddName(e.target.value)}
+								placeholder="Nombre del tipo"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="add-taquilla">Precio taquilla ($)</Label>
+							<Input
+								id="add-taquilla"
+								type="number"
+								step="0.01"
+								min="0"
+								value={addTaquilla}
+								onChange={(e) => setAddTaquilla(e.target.value)}
+								placeholder="0,00"
+								className="font-mono"
+							/>
+						</div>
+						<div className="flex flex-row items-center gap-2">
+							<input
+								type="checkbox"
+								id="add-only-taquilla"
+								checked={addOnlyTaquilla}
+								onChange={(e) => setAddOnlyTaquilla(e.target.checked)}
+								className="rounded border-input"
+							/>
+							<Label htmlFor="add-only-taquilla" className="cursor-pointer font-normal">
+								Solo taquilla (sin convenios/descuento)
+							</Label>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={resetAddModal} disabled={savingNew}>
+							Cancelar
+						</Button>
+						<Button
+							type="button"
+							disabled={
+								savingNew ||
+								!addCode.trim() ||
+								!addName.trim() ||
+								!addTaquilla ||
+								isNaN(parseFloat(addTaquilla)) ||
+								parseFloat(addTaquilla) < 0
+							}
+							onClick={handleAddSubmit}
+						>
+							{savingNew ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<>
+									<Save className="h-4 w-4 mr-1" />
+									Guardar
+								</>
+							)}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={openPercentModal} onOpenChange={setOpenPercentModal}>
+				<DialogContent className="sm:max-w-md bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+					<DialogHeader>
+						<DialogTitle>Editar porcentajes de descuento</DialogTitle>
+					</DialogHeader>
+					<p className="text-sm text-muted-foreground">
+						Porcentaje aplicado sobre Taquilla para calcular Convenios (2º precio) y Descuento (3º precio).
+					</p>
+					<div className="grid gap-4 py-2">
+						<div className="space-y-2">
+							<Label htmlFor="edit-convenio-pct">Convenios (% descuento)</Label>
+							<Input
+								id="edit-convenio-pct"
+								type="number"
+								min="0"
+								max="100"
+								step="0.5"
+								value={editConvenioPct}
+								onChange={(e) => setEditConvenioPct(e.target.value)}
+								placeholder="5"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="edit-descuento-pct">Descuento (% descuento)</Label>
+							<Input
+								id="edit-descuento-pct"
+								type="number"
+								min="0"
+								max="100"
+								step="0.5"
+								value={editDescuentoPct}
+								onChange={(e) => setEditDescuentoPct(e.target.value)}
+								placeholder="10"
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={() => setOpenPercentModal(false)} disabled={savingPercent}>
+							Cancelar
+						</Button>
+						<Button
+							type="button"
+							disabled={
+								savingPercent ||
+								editConvenioPct === '' ||
+								editDescuentoPct === '' ||
+								isNaN(parseFloat(editConvenioPct)) ||
+								isNaN(parseFloat(editDescuentoPct)) ||
+								parseFloat(editConvenioPct) < 0 ||
+								parseFloat(editConvenioPct) > 100 ||
+								parseFloat(editDescuentoPct) < 0 ||
+								parseFloat(editDescuentoPct) > 100
+							}
+							onClick={handleSavePercent}
+						>
+							{savingPercent ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-1" /> Guardar</>}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	)
 }

@@ -57,6 +57,8 @@ export function MedicalFormContainer() {
   const [vesValue, setVesValue] = useState('');
   const [vesInputValue, setVesInputValue] = useState('');
   const [usdFromVes, setUsdFromVes] = useState('');
+  const [converterUsdValue, setConverterUsdValue] = useState('');
+  const [converterVesValue, setConverterVesValue] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 	const [patientSectionResetKey, setPatientSectionResetKey] = useState(0);
@@ -127,6 +129,20 @@ export function MedicalFormContainer() {
 			setUsdFromVes('')
 		}
 	}, [vesInputValue, exchangeRate])
+
+	// Convertidor USD a VES: valor independiente del monto total (solo lo que el usuario escribe)
+	useEffect(() => {
+		if (exchangeRate && converterUsdValue) {
+			const usd = parseFloat(converterUsdValue)
+			if (!isNaN(usd)) {
+				setConverterVesValue((usd * exchangeRate).toFixed(2))
+			} else {
+				setConverterVesValue('')
+			}
+		} else {
+			setConverterVesValue('')
+		}
+	}, [converterUsdValue, exchangeRate])
 
 	useResetForm(form, getInitialFormValues, setUsdValue, setIsSubmitted, toast)
 
@@ -243,6 +259,8 @@ export function MedicalFormContainer() {
 				setVesValue('')
 				setVesInputValue('')
 				setUsdFromVes('')
+				setConverterUsdValue('')
+				setConverterVesValue('')
 
 				// Reset form to initial values
 				form.reset(getInitialFormValues())
@@ -319,6 +337,8 @@ export function MedicalFormContainer() {
 		setVesValue('')
 		setVesInputValue('')
 		setUsdFromVes('')
+		setConverterUsdValue('')
+		setConverterVesValue('')
 		setIsSubmitted(false)
 		// Incrementar resetKey para resetear el estado interno de NewPatientDataSection
 		setPatientSectionResetKey((prev) => prev + 1)
@@ -406,10 +426,15 @@ export function MedicalFormContainer() {
 								vesInputValue={vesInputValue}
 								setVesInputValue={setVesInputValue}
 								usdFromVes={usdFromVes}
+								converterUsdValue={converterUsdValue}
+								setConverterUsdValue={setConverterUsdValue}
+								converterVesValue={converterVesValue}
 								exchangeRate={exchangeRate}
 								isLoadingRate={isLoadingRate}
 								isSampleTypeCostsEnabled={hasSampleTypeCosts}
 								sampleTypeCosts={sampleTypeCosts}
+								convenioDiscountPercent={laboratory?.config?.convenioDiscountPercent ?? 5}
+								descuentoDiscountPercent={laboratory?.config?.descuentoDiscountPercent ?? 10}
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />

@@ -7,23 +7,20 @@ import { Button } from '@shared/components/ui/button'
 import { Copy } from 'lucide-react'
 
 interface CurrencyConverterProps {
-	usdValue: string
-	setUsdValue: (value: string) => void
-	vesValue: string
-	vesInputValue: string
-	setVesInputValue: (value: string) => void
-	usdFromVes: string
+	converterUsdValue: string
+	setConverterUsdValue: (value: string) => void
+	converterVesValue: string
 	exchangeRate: number | undefined
 	isLoadingRate: boolean
 	inputStyles: string
 }
 
-export const ConverterUSDtoVES = memo(({ usdValue, setUsdValue, vesValue, inputStyles }: CurrencyConverterProps) => {
+export const ConverterUSDtoVES = memo(({ converterUsdValue, setConverterUsdValue, converterVesValue, inputStyles }: CurrencyConverterProps) => {
 	const { toast } = useToast()
 
-	// Calculator handlers for both inputs
-	const usdCalculatorHandler = createCalculatorInputHandler(parseFloat(usdValue) || 0, (value: number) =>
-		setUsdValue(value.toString()),
+	// Calculator handlers: valor independiente del monto total del formulario
+	const usdCalculatorHandler = createCalculatorInputHandler(parseFloat(converterUsdValue) || 0, (value: number) =>
+		setConverterUsdValue(value.toString()),
 	)
 
 	const handleCopyToClipboard = async (value: string) => {
@@ -58,9 +55,9 @@ export const ConverterUSDtoVES = memo(({ usdValue, setUsdValue, vesValue, inputS
 				className={`${inputStyles} text-right font-mono`}
 				autoComplete="off"
 			/>
-			{vesValue && (
+			{converterVesValue && (
 				<div className="flex items-center gap-2">
-					<p className="text-xs sm:text-sm font-bold text-green-600">{vesValue} VES</p>
+					<p className="text-xs sm:text-sm font-bold text-green-600">{converterVesValue} VES</p>
 					<Button
 						variant="ghost"
 						size="icon"
@@ -68,7 +65,7 @@ export const ConverterUSDtoVES = memo(({ usdValue, setUsdValue, vesValue, inputS
 						className="h-6 w-6 flex-shrink-0"
 						onClick={(e) => {
 							e.stopPropagation()
-							handleCopyToClipboard(vesValue)
+							handleCopyToClipboard(converterVesValue)
 						}}
 						aria-label="Copiar VES"
 					>

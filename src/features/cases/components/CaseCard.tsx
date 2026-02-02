@@ -23,6 +23,13 @@ interface CaseCardProps {
 const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest, userRole }) => {
 	const { laboratory } = useLaboratory()
 	const isSpt = laboratory?.slug === 'spt'
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
+	// Marihorgen + Inmunohistoquímica: mostrar código de exhibición (puede estar vacío); si no, código interno
+	const displayCode =
+		isMarihorgen && case_.exam_type === 'Inmunohistoquímica'
+			? (case_.owner_display_code ?? '')
+			: (case_.code ?? '')
+	const showCodeBadge = isMarihorgen && case_.exam_type === 'Inmunohistoquímica' ? true : !!case_.code
 
 	// Obtener tipo de paciente para mostrar badge si es menor o animal
 	const { data: patientType } = useQuery({
@@ -88,9 +95,9 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 					</span>
 				)}
 				<div className="flex items-center">
-					{case_.code && (
+					{showCodeBadge && (
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-							{case_.code}
+							{displayCode || '—'}
 						</span>
 					)}
 				</div>

@@ -33,7 +33,6 @@ function RegisterForm() {
   const [laboratoryCode, setLaboratoryCode] = useState(''); // ← NUEVO: Código de laboratorio
   const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -588,7 +587,7 @@ function RegisterForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading || rateLimitError}
-                    className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200'
+                    className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200 pr-10'
                     autoComplete='new-password'
                   />
                   <button
@@ -596,6 +595,7 @@ function RegisterForm() {
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={loading || rateLimitError}
                     className='absolute inset-y-0 right-0 pr-3 flex items-center text-slate-300 hover:text-white disabled:opacity-50 transition-none'
+                    aria-label={showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
                   >
                     {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                   </button>
@@ -606,28 +606,16 @@ function RegisterForm() {
                 </p>
                 <div className='relative'>
                   <input
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showPassword ? 'text' : 'password'}
                     name='confirmPassword'
                     placeholder='••••••••••••••'
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading || rateLimitError}
-                    className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200'
+                    className='w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#3d84f5] focus:border-transparent transition-all duration-200 pr-10'
                     autoComplete='new-password'
                   />
-                  <button
-                    type='button'
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={loading || rateLimitError}
-                    className='absolute inset-y-0 right-0 pr-3 flex items-center text-slate-300 hover:text-white disabled:opacity-50 transition-none'
-                  >
-                    {showConfirmPassword ? (
-                      <Eye size={20} />
-                    ) : (
-                      <EyeOff size={20} />
-                    )}
-                  </button>
                 </div>
               </div>
 

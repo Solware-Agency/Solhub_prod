@@ -315,7 +315,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			)}
 
 			{currentPdfUrl && !selectedFile && (
-				<div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+				<div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
 					<FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
 					<span className="text-sm text-green-800 dark:text-green-200 flex-1">
 						PDF subido
@@ -347,7 +347,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			)}
 
 			{selectedFile && (
-				<div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+				<div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
 					<FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 					<span className="text-sm text-blue-800 dark:text-blue-200 flex-1 truncate">
 						{selectedFile.name}

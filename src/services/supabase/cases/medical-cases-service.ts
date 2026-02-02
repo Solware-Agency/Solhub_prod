@@ -110,6 +110,7 @@ export interface MedicalCase {
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
   uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
 }
 
 export interface MedicalCaseInsert {
@@ -246,6 +247,7 @@ export interface MedicalCaseUpdate {
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
   uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
 }
 
 // Tipo para casos médicos con información del paciente (usando JOIN directo)
@@ -299,6 +301,7 @@ export interface MedicalCaseWithPatient {
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
   uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   // Campos de patients
   informepdf_url: string | null;
   cedula: string;

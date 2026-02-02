@@ -845,6 +845,9 @@ export interface LaboratoryConfig {
   codeMappings?: {           // Mapeo de exámenes a códigos (ej: {"Citología": "CI", "Mamografía": "MA"})
     [examType: string]: string
   }
+  // Porcentajes de descuento para estructura de costos (Convenios = 2º precio, Descuento = 3º precio)
+  convenioDiscountPercent?: number   // Ej: 5 = 5% de descuento (precio convenio = taquilla * 0.95)
+  descuentoDiscountPercent?: number  // Ej: 10 = 10% de descuento (precio descuento = taquilla * 0.9)
 }
 
 export interface Laboratory {

@@ -260,6 +260,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
     const { user } = useAuth();
     const { laboratory } = useLaboratory();
     const isSpt = laboratory?.slug === 'spt';
+    const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
+    const isOwner = profile?.role === 'owner';
     const moduleConfig = useModuleConfig('registrationForm');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -582,6 +584,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             origin: currentCase.origin,
             branch: currentCase.branch,
             comments: currentCase.comments,
+            owner_display_code: (currentCase as any).owner_display_code ?? '',
             // Financial data
             total_amount: currentCase.total_amount,
             exchange_rate: currentCase.exchange_rate,
@@ -779,6 +782,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'comments',
           'consulta',
           'image_url',
+          ...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner ? ['owner_display_code' as const] : []),
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -790,7 +794,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           const newValue = editedCase[field as keyof MedicalCaseWithPatient];
           const oldValue = currentCase[field as keyof MedicalCaseWithPatient];
 
-          if (newValue !== oldValue) {
+          const hasChange = field === 'owner_display_code'
+            ? (() => {
+                const oldNorm = String((currentCase as any).owner_display_code ?? '').replace(/\D/g, '').slice(0, 5);
+                const newNorm = String(editedCase.owner_display_code ?? '').replace(/\D/g, '').slice(0, 5);
+                return oldNorm !== newNorm;
+              })()
+            : newValue !== oldValue;
+
+          if (hasChange) {
             if (field === 'exam_type') {
               caseChanges.exam_type = newValue as string;
             } else if (field === 'treating_doctor') {
@@ -806,6 +818,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               caseChanges.consulta = newValue as string | null;
             } else if (field === 'image_url') {
               caseChanges.image_url = newValue as string | null;
+            } else if (field === 'owner_display_code') {
+              const raw = newValue as string | null | undefined;
+              const trimmed = typeof raw === 'string' ? raw.trim().replace(/\D/g, '').slice(0, 5) : '';
+              caseChanges.owner_display_code = trimmed === '' ? null : trimmed;
             }
             caseChangeLogs.push({
               field,
@@ -1380,6 +1396,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         status: 'Estado',
         comments: 'Comentarios',
         consulta: 'Tipo de Consulta',
+        owner_display_code: 'Código (visible)',
         // Legacy fields (for backward compatibility)
         full_name: 'Nombre Completo',
         id_number: 'Cédula',
@@ -1600,7 +1617,26 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     </div>
                   </div>
                   <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden'>
-                    {currentCase.code && (
+                    {isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' ? (
+                      isEditing && isOwner ? (
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="Código"
+                          value={String(editedCase.owner_display_code ?? (currentCase as any).owner_display_code ?? '').slice(0, 5)}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, '').slice(0, 5);
+                            handleInputChange('owner_display_code', v);
+                          }}
+                          className='inline-flex h-7 w-20 px-1.5 sm:px-2 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700 flex-shrink-0'
+                        />
+                      ) : (
+                        <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-[2rem] text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 flex-shrink-0'>
+                          {(currentCase as any).owner_display_code ?? ''}
+                        </span>
+                      )
+                    ) : currentCase.code ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help flex-shrink-0'>
@@ -1613,7 +1649,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           {getCodeLegend(currentCase.code, laboratory)}
                         </TooltipContent>
                       </Tooltip>
-                    )}
+                    ) : null}
                     {!notShow && !isSpt && (
                       <span
                         className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(

@@ -1036,6 +1036,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               searchLower,
             ) ||
             (case_.code?.toLowerCase() || '').includes(searchLower) ||
+            (case_.owner_display_code?.toLowerCase() || '').includes(searchLower) ||
             (case_.branch?.toLowerCase() || '').includes(searchLower) ||
             (case_.exam_type?.toLowerCase() || '').includes(searchLower);
         }
