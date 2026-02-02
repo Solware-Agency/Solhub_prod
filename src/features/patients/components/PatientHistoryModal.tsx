@@ -51,6 +51,7 @@ import SendEmailModal from '@features/cases/components/SendEmailModal';
 import { getDependentsByResponsable, getResponsableByDependiente, deleteResponsibility } from '@/services/supabase/patients/responsabilidades-service';
 import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal';
 import { PDFButton } from '@shared/components/ui/PDFButton';
+import { getDownloadUrl } from '@/services/utils/download-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -170,6 +171,33 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
       : (caseItem.code ?? '');
   const showCodeBadge = (caseItem: MedicalCaseWithPatient) =>
     isMarihorgen && caseItem.exam_type === 'Inmunohistoquímica' ? true : !!caseItem.code;
+  /** URL del PDF generado para previsualizar: inline cuando sea posible */
+  const getGeneratedPdfPreviewUrl = (caseItem: MedicalCaseWithPatient) => {
+    const c = caseItem as MedicalCaseWithPatient & {
+      token?: string | null;
+      informepdf_url?: string | null;
+      informe_qr?: string | null;
+    };
+    if (c.token) {
+      return `/api/download-pdf?caseId=${c.id}&token=${c.token}&preview=true`;
+    }
+    if (c.informe_qr) {
+      if (c.informe_qr.includes('/api/download-pdf')) {
+        return `${c.informe_qr}${c.informe_qr.includes('?') ? '&' : '?'}preview=true`;
+      }
+      return c.informe_qr;
+    }
+    if (c.informepdf_url) {
+      // Google Drive: convertir URL de descarga a vista previa
+      const driveMatch = c.informepdf_url.match(/drive\.google\.com\/uc\?id=([^&]+)/i);
+      if (driveMatch?.[1]) {
+        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      }
+      const url = getDownloadUrl(c.id, c.token ?? null, c.informepdf_url);
+      return url || c.informepdf_url;
+    }
+    return null;
+  };
 
   const editPatient = () => {
     setIsEditing(true);
@@ -1130,7 +1158,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
                               <Input
                                 type='text'
-                                placeholder='Buscar por código, tipo, médico...'
+                                placeholder='Buscar por código, tipo, médico'
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className='pl-10'
@@ -1403,7 +1431,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                           </Button>
                                           <div onClick={(e) => e.stopPropagation()}>
                                             <PDFButton
-                                              pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                              pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                               size='sm'
                                               variant='default'
                                             />
@@ -1618,7 +1646,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             </Button>
                                             <div onClick={(e) => e.stopPropagation()}>
                                               <PDFButton
-                                                pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                                pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                                 size='sm'
                                                 variant='default'
                                               />
