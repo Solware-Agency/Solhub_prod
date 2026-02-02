@@ -2967,6 +2967,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             imageUrls={(currentCase as any)?.images_urls || ((currentCase as any)?.image_url ? [(currentCase as any).image_url] : [])}
             laboratoryName={laboratory?.name}
             laboratoryLogo={laboratory?.branding?.logo || undefined}
+            laboratorySlug={laboratory?.slug}
           />
         )}
 

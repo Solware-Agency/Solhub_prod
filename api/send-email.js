@@ -69,6 +69,7 @@ export default async function handler(req, res) {
     let labLogo = defaultLogoUrl;
     let labPhone = '+58 414-2691682';
     let labName = process.env.RESEND_FROM_NAME || 'Solware Agency';
+    let labSlug = null;
 
     if (laboratory_id && process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
       try {
@@ -82,6 +83,7 @@ export default async function handler(req, res) {
 
       if (!labError && lab) {
         labName = lab.name || labName;
+        labSlug = lab.slug || null;
         const branding = lab.branding || {};
         const config = lab.config || {};
 
@@ -146,6 +148,10 @@ export default async function handler(req, res) {
             const slug = lab.slug || lab.name || '';
             if (slug && String(slug).toLowerCase().includes('spt')) {
               labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
+            }
+            // Logo para Marihorgen/LM
+            if (slug && (String(slug).toLowerCase() === 'marihorgen' || String(slug).toLowerCase() === 'lm')) {
+              labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/logo_marihorgen.png';
             }
           } catch (e) {
             // no bloquear
@@ -285,12 +291,37 @@ export default async function handler(req, res) {
         </div>
       ` : ''}
 
-      <p style="color: #666; font-size: 16px; line-height: 1.6;">
-        Si tiene alguna pregunta, no dude en contactarnos al
-        ${contactAnchorHtml}
-      </p>
+      ${labSlug !== 'marihorgen' && labSlug !== 'lm' ? `
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          Si tiene alguna pregunta, no dude en contactarnos al
+          ${contactAnchorHtml}
+        </p>
+      ` : ''}
 
       <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+      ${labSlug === 'marihorgen' || labSlug === 'lm' ? `
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p style="color: #856404; font-size: 13px; line-height: 1.8; margin: 0; font-weight: bold;">
+            ESTE INFORME HA SIDO ENVIADO DE FORMA ELECTRÓNICA A SOLICITUD DEL PACIENTE Y SU MÉDICO TRATANTE. LA VERACIDAD DE SU CONTENIDO REPOSA EN EL MATERIAL DE ARCHIVO DEL LABORATORIO (LÁMINAS HISTOLÓGICAS Y/O BLOQUES DE INCLUSIÓN EN PARAFINA); SI DESEA COMPROBAR LA VERACIDAD DEL CONTENIDO PUEDE COMUNICARSE CON EL MÉDICO ANATOMOPATÓLOGO FIRMANTE, A TRAVÉS DE LOS NÚMEROS TELEFÓNICOS Y/O DEL CORREO ELECTRÓNICO, QUIEN CONSERVA EN ARCHIVO LA MUESTRA REMITIDA PARA PROCESAMIENTO Y ESTUDIO HISTOLÓGICO.
+          </p>
+          <p style="color: #856404; font-size: 12px; line-height: 1.6; margin: 10px 0 0 0; font-style: italic;">
+            *(El tiempo máximo de archivo del material procesado es de cinco (05) años. Pasado ese tiempo se procede a descartar la muestra archivada en láminas y bloques de inclusión en parafina.)
+          </p>
+          <p style="color: #856404; font-size: 13px; line-height: 1.8; margin: 15px 0 0 0; font-weight: bold;">
+            SI USTED HA RECIBIDO UN INFORME SIN EL FORMATO LEGAL DEL LABORATORIO (QUE INCLUYE MARCA DE AGUA, LOGO, REGISTRO DE INFORMACIÓN FISCAL, DIRECCIÓN FISCAL, CORREO ELECTRÓNICO, TELÉFONOS Y FIRMA DIGITAL), DENUNCIE AL EMISOR POR PLAGIO Y NO SEA UNA VICTIMA DE TERCEROS QUE PUDIERAN COMPROMETER SU SALUD O LA DE SU FAMILIAR.
+          </p>
+          <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0c36d;">
+            <p style="color: #856404; font-size: 14px; margin: 0; font-weight: bold;">
+              Dra. Marihorgen Pérez<br>
+              <span style="font-weight: normal;">Médico Anatomopatólogo</span>
+            </p>
+            <p style="color: #856404; font-size: 13px; margin: 8px 0 0 0;">
+              0412-9637455 • 0424-1222491 • 0414-2331990 • 0212-4179598
+            </p>
+          </div>
+        </div>
+      ` : ''}
 
       <p style="color: #999; font-size: 14px; text-align: center; margin: 0;">
         Saludos cordiales,<br>
