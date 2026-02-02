@@ -30,6 +30,7 @@ interface SendEmailModalProps {
   imageUrls?: string[];
   laboratoryName?: string;
   laboratoryLogo?: string;
+  laboratorySlug?: string;
 }
 
 const SendEmailModal: React.FC<SendEmailModalProps> = ({
@@ -46,6 +47,7 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
   imageUrls = [],
   laboratoryName = 'SolHub',
   laboratoryLogo,
+  laboratorySlug,
 }) => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
@@ -173,6 +175,29 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
               Si tiene alguna consulta, no dude en contactarnos.
             </p>
           </div>
+
+          ${laboratorySlug === 'marihorgen' || laboratorySlug === 'lm' ? `
+            <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+              <p style="color: #856404; font-size: 13px; line-height: 1.8; margin: 0; font-weight: bold;">
+                ESTE INFORME HA SIDO ENVIADO DE FORMA ELECTRÓNICA A SOLICITUD DEL PACIENTE Y SU MÉDICO TRATANTE. LA VERACIDAD DE SU CONTENIDO REPOSA EN EL MATERIAL DE ARCHIVO DEL LABORATORIO (LÁMINAS HISTOLÓGICAS Y/O BLOQUES DE INCLUSIÓN EN PARAFINA); SI DESEA COMPROBAR LA VERACIDAD DEL CONTENIDO PUEDE COMUNICARSE CON EL MÉDICO ANATOMOPATÓLOGO FIRMANTE, A TRAVÉS DE LOS NÚMEROS TELEFÓNICOS Y/O DEL CORREO ELECTRÓNICO, QUIEN CONSERVA EN ARCHIVO LA MUESTRA REMITIDA PARA PROCESAMIENTO Y ESTUDIO HISTOLÓGICO.
+              </p>
+              <p style="color: #856404; font-size: 12px; line-height: 1.6; margin: 10px 0 0 0; font-style: italic;">
+                *(El tiempo máximo de archivo del material procesado es de cinco (05) años. Pasado ese tiempo se procede a descartar la muestra archivada en láminas y bloques de inclusión en parafina.)
+              </p>
+              <p style="color: #856404; font-size: 13px; line-height: 1.8; margin: 15px 0 0 0; font-weight: bold;">
+                SI USTED HA RECIBIDO UN INFORME SIN EL FORMATO LEGAL DEL LABORATORIO (QUE INCLUYE MARCA DE AGUA, LOGO, REGISTRO DE INFORMACIÓN FISCAL, DIRECCIÓN FISCAL, CORREO ELECTRÓNICO, TELÉFONOS Y FIRMA DIGITAL), DENUNCIE AL EMISOR POR PLAGIO Y NO SEA UNA VICTIMA DE TERCEROS QUE PUDIERAN COMPROMETER SU SALUD O LA DE SU FAMILIAR.
+              </p>
+              <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0c36d;">
+                <p style="color: #856404; font-size: 14px; margin: 0; font-weight: bold;">
+                  Dra. Marihorgen Pérez<br>
+                  <span style="font-weight: normal;">Médico Anatomopatólogo</span>
+                </p>
+                <p style="color: #856404; font-size: 13px; margin: 8px 0 0 0;">
+                  0412-9637455 • 0424-1222491 • 0414-2331990 • 0212-4179598
+                </p>
+              </div>
+            </div>
+          ` : ''}
 
           <div style="text-align: center; padding: 20px; border-top: 1px solid #e5e7eb;">
             <p style="color: #999; font-size: 12px; margin: 0;">
