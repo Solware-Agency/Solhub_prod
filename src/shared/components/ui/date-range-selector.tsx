@@ -24,6 +24,16 @@ interface DateRangeSelectorProps {
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, className }) => {
 	const [isDayOpen, setIsDayOpen] = useState(false)
 	const [isRangeOpen, setIsRangeOpen] = useState(false)
+	
+	// Estados internos independientes para cada modo
+	const [selectedDay, setSelectedDay] = useState<Date>(startOfDay(new Date()))
+	const [selectedRange, setSelectedRange] = useState<{ from: Date; to: Date }>({
+		from: startOfMonth(new Date()),
+		to: endOfMonth(new Date()),
+	})
+	
+	// Estado temporal para el rango mientras se está seleccionando
+	const [tempRange, setTempRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined)
 
 	const handleModeChange = (mode: DateRangeMode) => {
 		const now = new Date()
@@ -40,24 +50,14 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 				end = endOfMonth(now)
 				break
 			case 'day':
-				// Mantener el día actual si ya es day, sino usar hoy
-				if (value.mode === 'day') {
-					start = value.start
-					end = value.end
-				} else {
-					start = startOfDay(now)
-					end = endOfDay(now)
-				}
+				// Usar el día guardado independientemente
+				start = startOfDay(selectedDay)
+				end = endOfDay(selectedDay)
 				break
 			case 'range':
-				// Mantener el rango actual si ya es range, sino usar el mes actual
-				if (value.mode === 'range') {
-					start = value.start
-					end = value.end
-				} else {
-					start = startOfMonth(now)
-					end = endOfMonth(now)
-				}
+				// Usar el rango guardado independientemente
+				start = selectedRange.from
+				end = selectedRange.to
 				break
 		}
 
@@ -69,19 +69,42 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 	}
 
 	const handleCustomDateChange = (range: { from?: Date; to?: Date } | undefined) => {
+		// Actualizar el rango temporal mientras se selecciona
+		setTempRange(range)
+		
+		// Solo guardar y aplicar cuando se hayan seleccionado ambas fechas
 		if (range?.from && range?.to) {
+			const newRange = {
+				from: startOfDay(range.from),
+				to: endOfDay(range.to),
+			}
+			// Guardar el rango seleccionado
+			setSelectedRange(newRange)
 			onChange({
-				start: startOfDay(range.from),
-				end: endOfDay(range.to),
+				start: newRange.from,
+				end: newRange.to,
 				mode: 'range',
 			})
+			setIsRangeOpen(false)
+			setTempRange(undefined)
+		}
+	}
+	
+	// Resetear el rango temporal cuando se abre el popover
+	const handleRangePopoverChange = (open: boolean) => {
+		setIsRangeOpen(open)
+		if (open) {
+			setTempRange(undefined)
 		}
 	}
 
 	const handleSingleDayChange = (date: Date | undefined) => {
 		if (date) {
+			const newDay = startOfDay(date)
+			// Guardar el día seleccionado
+			setSelectedDay(newDay)
 			onChange({
-				start: startOfDay(date),
+				start: newDay,
 				end: endOfDay(date),
 				mode: 'day',
 			})
@@ -158,8 +181,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 						<CalendarComponent
 							initialFocus
 							mode="single"
-							defaultMonth={value.start}
-							selected={value.start}
+							defaultMonth={selectedDay}
+							selected={selectedDay}
 							onSelect={handleSingleDayChange}
 							disabled={{ after: new Date() }}
 							toDate={new Date()}
@@ -170,7 +193,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 				</Popover>
 
 				{/* Popover para rango de fechas */}
-				<Popover open={isRangeOpen} onOpenChange={setIsRangeOpen}>
+				<Popover open={isRangeOpen} onOpenChange={handleRangePopoverChange}>
 					<PopoverTrigger asChild>
 						<Button variant="ghost" size="sm" className={cn(getModeButtonClass('range'), 'flex items-center gap-2')}>
 							<Calendar className="h-4 w-4" />
@@ -182,11 +205,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 						<CalendarComponent
 							initialFocus
 							mode="range"
-							defaultMonth={value.start}
-							selected={{
-								from: value.start,
-								to: value.end,
-							}}
+							defaultMonth={selectedRange.from}
+							selected={tempRange}
 							onSelect={handleCustomDateChange}
 							numberOfMonths={1}
 							disabled={{ after: new Date() }}
