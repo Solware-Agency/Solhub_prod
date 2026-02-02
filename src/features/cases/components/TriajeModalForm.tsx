@@ -1417,7 +1417,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       Motivo de consulta
                     </label>
                     <Textarea
-                      placeholder='Ingrese el motivo de consulta...'
+                      placeholder='Ingrese el motivo de consulta'
                       value={formData.motivoConsulta}
                       onChange={(e) =>
                         handleInputChange('motivoConsulta', e.target.value)
@@ -1432,7 +1432,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       Enfermedad actual
                     </label>
                     <Textarea
-                      placeholder='Ingrese la enfermedad actual...'
+                      placeholder='Ingrese la enfermedad actual'
                       value={formData.enfermedadActual}
                       onChange={(e) =>
                         handleInputChange('enfermedadActual', e.target.value)
@@ -1667,7 +1667,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Antecedentes personales
                   </label>
                   <Textarea
-                    placeholder='Ingrese los antecedentes personales...'
+                    placeholder='Ingrese los antecedentes personales'
                     value={formData.antecedentesPersonales}
                     onChange={(e) =>
                       handleInputChange(
@@ -1686,7 +1686,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Antecedentes familiares
                   </label>
                   <Textarea
-                    placeholder='Ingrese los antecedentes familiares...'
+                    placeholder='Ingrese los antecedentes familiares'
                     value={formData.antecedentesFamiliares}
                     onChange={(e) =>
                       handleInputChange(
@@ -1705,7 +1705,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Hábitos psicobiológicos
                   </label>
                   <Textarea
-                    placeholder='Ingrese los hábitos psicobiológicos...'
+                    placeholder='Ingrese los hábitos psicobiológicos'
                     value={formData.habitosPsicobiologicos}
                     onChange={(e) =>
                       handleInputChange(
@@ -1724,7 +1724,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Antecedentes quirúrgicos
                   </label>
                   <Textarea
-                    placeholder='Ingrese los antecedentes quirúrgicos...'
+                    placeholder='Ingrese los antecedentes quirúrgicos'
                     value={formData.antecedentesQuirurgicos}
                     onChange={(e) =>
                       handleInputChange(
@@ -1970,7 +1970,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Examen físico
                   </label>
                   <Textarea
-                    placeholder='Ingrese el examen físico...'
+                    placeholder='Ingrese el examen físico'
                     value={formData.examenFisico}
                     onChange={(e) =>
                       handleInputChange('examenFisico', e.target.value)
@@ -1986,7 +1986,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Observaciones
                   </label>
                   <Textarea
-                    placeholder='Ingrese observaciones adicionales...'
+                    placeholder='Ingrese observaciones adicionales'
                     value={formData.comentario}
                     onChange={(e) =>
                       handleInputChange('comentario', e.target.value)
@@ -2002,7 +2002,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Diagnóstico
                   </label>
                   <Textarea
-                    placeholder='Ingrese el diagnóstico...'
+                    placeholder='Ingrese el diagnóstico'
                     value={formData.diagnostico}
                     onChange={(e) =>
                       handleInputChange('diagnostico', e.target.value)
@@ -2018,7 +2018,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     Plan de acción
                   </label>
                   <Textarea
-                    placeholder='Ingrese el plan de acción...'
+                    placeholder='Ingrese el plan de acción'
                     value={formData.planDeAccion}
                     onChange={(e) =>
                       handleInputChange('planDeAccion', e.target.value)

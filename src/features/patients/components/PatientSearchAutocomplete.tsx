@@ -55,7 +55,7 @@ interface PatientSearchAutocompleteProps {
 export const PatientSearchAutocomplete = ({
 	onSelect,
 	onSelectResponsable,
-	placeholder = 'Buscar por cédula, nombre o teléfono...',
+	placeholder = 'Buscar por cédula, nombre o teléfono',
 	className,
 	minSearchLength = 2,
 	disabled = false,
