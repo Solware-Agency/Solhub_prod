@@ -437,7 +437,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 						<PatientSearchAutocomplete
 							onSelectResponsable={handleSelectResponsable}
 							onSelect={handleSelectProfile}
-							placeholder="Buscar por cédula, nombre o teléfono del paciente..."
+							placeholder="Buscar por cédula, nombre o teléfono del paciente"
 							className="w-full"
 						/>
 						<NewResponsableForm

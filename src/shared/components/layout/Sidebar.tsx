@@ -523,9 +523,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <FeatureGuard feature='hasUsers'>
                 <NavItem
                   to='/dashboard/users'
-                  icon={
-                    <Users className='stroke-2 size-4 sm:size-5 shrink-0' />
-                  }
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
                   label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
@@ -594,6 +592,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/dashboard/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -643,6 +650,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/employee/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -669,6 +685,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/medic/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/medic/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -710,6 +735,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/cito/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -729,6 +763,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/patolo/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/patolo/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -765,6 +808,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/imagenologia/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -793,6 +845,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/laboratorio/patients'
                   icon={<Users className='stroke-2 size-5 shrink-0' />}
                   label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/laboratorio/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -829,6 +890,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/medico-tratante/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -861,6 +931,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/enfermero/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -889,6 +968,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/call-center/patients'
                   icon={<Users className='stroke-2 size-5 shrink-0' />}
                   label='Pacientes'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasUsers'>
+                <NavItem
+                  to='/call-center/users'
+                  icon={<Users className='stroke-2 size-4 sm:size-5 shrink-0' />}
+                  label='Usuarios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

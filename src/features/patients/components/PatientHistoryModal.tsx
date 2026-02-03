@@ -14,6 +14,7 @@ import {
   Eye,
   Activity,
   Users,
+  Trash2,
 } from 'lucide-react';
 import {
   Tabs,
@@ -24,7 +25,7 @@ import {
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase/config/config';
 import { getCasesByPatientIdWithInfo } from '@/services/supabase/cases/medical-cases-service';
 import { BranchBadge } from '@shared/components/ui/branch-badge';
@@ -47,9 +48,20 @@ import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
-import { getDependentsByResponsable, getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
+import { getDependentsByResponsable, getResponsableByDependiente, deleteResponsibility } from '@/services/supabase/patients/responsabilidades-service';
 import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal';
 import { PDFButton } from '@shared/components/ui/PDFButton';
+import { getDownloadUrl } from '@/services/utils/download-utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@shared/components/ui/alert-dialog';
 
 interface PatientHistoryModalProps {
   isOpen: boolean;
@@ -130,7 +142,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const [pendingEmailCases, setPendingEmailCases] = useState<MedicalCaseWithPatient[]>([]);
   const [activeTab, setActiveTab] = useState('cases');
   const [selectedRepresentadoId, setSelectedRepresentadoId] = useState<string | null>(null);
-  
+  const [representadoToDelete, setRepresentadoToDelete] = useState<{ responsabilidadId: string; nombre: string; dependienteId: string } | null>(null);
+  const [isDeletingRepresentado, setIsDeletingRepresentado] = useState(false);
+
+  const queryClient = useQueryClient();
+
   // Reset selected representado when tab changes or modal closes
   useEffect(() => {
     if (activeTab !== 'representados' || !isOpen) {
@@ -148,6 +164,40 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const { laboratory } = useLaboratory();
   const isImagenologia = profile?.role === 'imagenologia';
   const isSpt = laboratory?.slug === 'spt';
+  const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
+  const getDisplayCode = (caseItem: MedicalCaseWithPatient) =>
+    isMarihorgen && caseItem.exam_type === 'Inmunohistoquímica'
+      ? (caseItem.owner_display_code ?? '')
+      : (caseItem.code ?? '');
+  const showCodeBadge = (caseItem: MedicalCaseWithPatient) =>
+    isMarihorgen && caseItem.exam_type === 'Inmunohistoquímica' ? true : !!caseItem.code;
+  /** URL del PDF generado para previsualizar: inline cuando sea posible */
+  const getGeneratedPdfPreviewUrl = (caseItem: MedicalCaseWithPatient) => {
+    const c = caseItem as MedicalCaseWithPatient & {
+      token?: string | null;
+      informepdf_url?: string | null;
+      informe_qr?: string | null;
+    };
+    if (c.token) {
+      return `/api/download-pdf?caseId=${c.id}&token=${c.token}&preview=true`;
+    }
+    if (c.informe_qr) {
+      if (c.informe_qr.includes('/api/download-pdf')) {
+        return `${c.informe_qr}${c.informe_qr.includes('?') ? '&' : '?'}preview=true`;
+      }
+      return c.informe_qr;
+    }
+    if (c.informepdf_url) {
+      // Google Drive: convertir URL de descarga a vista previa
+      const driveMatch = c.informepdf_url.match(/drive\.google\.com\/uc\?id=([^&]+)/i);
+      if (driveMatch?.[1]) {
+        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      }
+      const url = getDownloadUrl(c.id, c.token ?? null, c.informepdf_url);
+      return url || c.informepdf_url;
+    }
+    return null;
+  };
 
   const editPatient = () => {
     setIsEditing(true);
@@ -216,11 +266,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
           return [];
         }
 
-        // Retornar solo la lista de dependientes únicos
+        // Retornar solo la lista de dependientes únicos (incluir responsabilidadId para eliminar)
         return dependents
           .filter(dep => dep.dependiente?.id)
           .map(dep => ({
             id: dep.dependiente!.id,
+            responsabilidadId: dep.id,
             nombre: dep.dependiente!.nombre || 'Desconocido',
             cedula: dep.dependiente!.cedula || '',
             tipo: dep.tipo,
@@ -1107,7 +1158,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
                               <Input
                                 type='text'
-                                placeholder='Buscar por código, tipo, médico...'
+                                placeholder='Buscar por código, tipo, médico'
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className='pl-10'
@@ -1269,9 +1320,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           ) : (
                             <div className='space-y-4'>
                               {filteredCases.map(
-                                (caseItem: MedicalCaseWithPatient) => (
+                                (caseItem: MedicalCaseWithPatient, index: number) => (
                                   <div
-                                    key={caseItem.id}
+                                    key={caseItem.id || caseItem.code || `case-${index}`}
                                     onClick={(e) => {
                                       // Prevenir que el click se propague a los botones internos
                                       if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
@@ -1313,9 +1364,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                               Código
                                             </p>
-                                            {caseItem.code ? (
+                                            {showCodeBadge(caseItem) ? (
                                               <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
-                                                {caseItem.code}
+                                                {getDisplayCode(caseItem) || '—'}
                                               </span>
                                             ) : (
                                               <p className='text-sm font-medium text-gray-400'>
@@ -1366,21 +1417,26 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               isDownloadingMultiple
                                             }
                                           >
-                                            {isGeneratingPDF || isSaving ? (
-                                              <>
-                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                                Generando...
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                PDF
-                                              </>
-                                            )}
+                                          {isGeneratingPDF ? (
+                                            <>
+                                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                              Generando...
+                                            </>
+                                          ) : isSaving ? (
+                                            <>
+                                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                              Descargando...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Download className='h-4 w-4 mr-2' />
+                                              PDF
+                                            </>
+                                          )}
                                           </Button>
                                           <div onClick={(e) => e.stopPropagation()}>
                                             <PDFButton
-                                              pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                              pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                               size='sm'
                                               variant='default'
                                             />
@@ -1432,28 +1488,51 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     <div
                                       key={representado.id}
                                       onClick={() => setSelectedRepresentadoId(representado.id)}
-                                      className={`p-3 rounded-lg cursor-pointer transition-all ${
+                                      className={`p-3 rounded-lg cursor-pointer transition-all flex items-center justify-between gap-2 ${
                                         selectedRepresentadoId === representado.id
                                           ? 'bg-primary text-primary-foreground shadow-md'
                                           : 'bg-white dark:bg-background border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                                       }`}
                                     >
-                                      <p className={`font-medium text-sm ${
-                                        selectedRepresentadoId === representado.id
-                                          ? 'text-primary-foreground'
-                                          : 'text-gray-900 dark:text-gray-100'
-                                      }`}>
-                                        {representado.nombre}
-                                      </p>
-                                      {representado.cedula && (
-                                        <p className={`text-xs mt-1 ${
+                                      <div className='min-w-0 flex-1'>
+                                        <p className={`font-medium text-sm ${
                                           selectedRepresentadoId === representado.id
-                                            ? 'text-primary-foreground/80'
-                                            : 'text-gray-500 dark:text-gray-400'
+                                            ? 'text-primary-foreground'
+                                            : 'text-gray-900 dark:text-gray-100'
                                         }`}>
-                                          {representado.cedula}
+                                          {representado.nombre}
                                         </p>
-                                      )}
+                                        {representado.cedula && (
+                                          <p className={`text-xs mt-1 ${
+                                            selectedRepresentadoId === representado.id
+                                              ? 'text-primary-foreground/80'
+                                              : 'text-gray-500 dark:text-gray-400'
+                                          }`}>
+                                            {representado.cedula}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <Button
+                                        type='button'
+                                        size='icon'
+                                        variant='ghost'
+                                        className={`shrink-0 h-8 w-8 ${
+                                          selectedRepresentadoId === representado.id
+                                            ? 'text-primary-foreground hover:bg-primary-foreground/20'
+                                            : 'text-gray-500 hover:text-destructive hover:bg-destructive/10'
+                                        }`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setRepresentadoToDelete({
+                                            responsabilidadId: representado.responsabilidadId,
+                                            nombre: representado.nombre,
+                                            dependienteId: representado.id,
+                                          });
+                                        }}
+                                        aria-label={`Eliminar ${representado.nombre}`}
+                                      >
+                                        <Trash2 className='w-4 h-4' />
+                                      </Button>
                                     </div>
                                   ))}
                                 </div>
@@ -1461,15 +1540,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             </div>
                           </div>
 
-                          {/* Right Panel: Casos del Representado Seleccionado */}
+                          {/* Right Panel: Casos del Representado Seleccionado (sin título) */}
                           <div className='flex-1 flex flex-col overflow-hidden'>
-                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-                              <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
-                                {selectedRepresentadoId && representadosList
-                                  ? `Casos de ${representadosList.find(r => r.id === selectedRepresentadoId)?.nombre || 'Representado'}`
-                                  : 'Selecciona un representado'}
-                              </h3>
-                            </div>
+                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0' />
                             <div className='flex-1 overflow-y-auto p-4'>
                               {!selectedRepresentadoId ? (
                                 <div className='text-center py-12'>
@@ -1502,9 +1575,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                 </div>
                               ) : (
                                 <div className='space-y-4'>
-                                  {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
+                                  {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }, index: number) => (
                                     <div
-                                      key={caseItem.id}
+                                      key={caseItem.id || caseItem.code || `case-dep-${index}`}
                                       onClick={(e) => {
                                         // Prevenir que el click se propague a los botones internos
                                         if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
@@ -1521,9 +1594,15 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                               Código
                                             </p>
-                                            <p className='text-sm font-medium'>
-                                              {caseItem.code || 'Sin código'}
-                                            </p>
+                                            {showCodeBadge(caseItem) ? (
+                                              <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                                                {getDisplayCode(caseItem) || '—'}
+                                              </span>
+                                            ) : (
+                                              <p className='text-sm font-medium text-gray-400'>
+                                                Sin código
+                                              </p>
+                                            )}
                                           </div>
                                           <div>
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
@@ -1572,7 +1651,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                             </Button>
                                             <div onClick={(e) => e.stopPropagation()}>
                                               <PDFButton
-                                                pdfUrl={(caseItem as any).informepdf_url || (caseItem as any).informe_qr || null}
+                                                pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                                 size='sm'
                                                 variant='default'
                                               />
@@ -1650,6 +1729,55 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
           isSending={isSendingEmails}
         />
       )}
+
+      {/* Diálogo confirmar eliminar representado */}
+      <AlertDialog open={!!representadoToDelete} onOpenChange={(open) => !open && setRepresentadoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar representado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se dejará de mostrar a <strong>{representadoToDelete?.nombre}</strong> como representado de este paciente.
+              Los casos del representado no se eliminan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingRepresentado}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!representadoToDelete) return;
+                setIsDeletingRepresentado(true);
+                try {
+                  await deleteResponsibility(representadoToDelete.responsabilidadId);
+                  if (selectedRepresentadoId === representadoToDelete.dependienteId) {
+                    const remaining = representadosList?.filter((r) => r.id !== representadoToDelete.dependienteId) ?? [];
+                    setSelectedRepresentadoId(remaining[0]?.id ?? null);
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['representados-list', patient?.id] });
+                  queryClient.invalidateQueries({ queryKey: ['dependents-cases', patient?.id] });
+                  toast({
+                    title: 'Representado eliminado',
+                    description: `${representadoToDelete.nombre} ya no aparece como representado.`,
+                  });
+                  setRepresentadoToDelete(null);
+                } catch (err) {
+                  console.error('Error eliminando representado:', err);
+                  toast({
+                    title: 'Error',
+                    description: 'No se pudo eliminar el representado. Inténtalo de nuevo.',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setIsDeletingRepresentado(false);
+                }
+              }}
+              disabled={isDeletingRepresentado}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              {isDeletingRepresentado ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AnimatePresence>
   );
 };

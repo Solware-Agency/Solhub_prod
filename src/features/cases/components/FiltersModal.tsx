@@ -177,6 +177,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
       { value: 'Medicina General', label: 'Medicina General' },
       { value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
       { value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+      { value: 'Reumatología', label: 'Reumatología' },
       { value: 'Fisioterapia', label: 'Fisioterapia' },
       { value: 'Psiquiatría', label: 'Psiquiatría' },
       { value: 'Optometría', label: 'Optometría' },

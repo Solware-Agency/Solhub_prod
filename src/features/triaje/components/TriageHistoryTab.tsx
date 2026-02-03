@@ -110,7 +110,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           {record.case_code && (
             <>
               <span className='text-xs text-gray-400 dark:text-gray-500 mx-1'>•</span>
-              <span className='text-xs font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary border border-primary/20 dark:border-primary/30'>
+              <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
                 {record.case_code}
               </span>
             </>
@@ -221,13 +221,28 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
       </div>
 
       {/* Información clínica (si existe) */}
-      {(record.reason || record.personal_background || record.family_history || record.psychobiological_habits || record.tabaco !== null || record.cafe !== null || record.alcohol) && (
+      {(record.reason ||
+        record.enfermedad_actual ||
+        record.personal_background ||
+        record.family_history ||
+        record.antecedentes_quirurgicos ||
+        record.antecedentes_sexuales ||
+        record.psychobiological_habits ||
+        record.tabaco !== null ||
+        record.cafe !== null ||
+        record.alcohol) && (
         <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'>
           <div className='grid grid-cols-2 gap-4 mb-4'>
             {record.reason && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Motivo de consulta</p>
                 <p className='text-sm'>{record.reason}</p>
+              </div>
+            )}
+            {record.enfermedad_actual && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Enfermedad actual</p>
+                <p className='text-sm'>{record.enfermedad_actual}</p>
               </div>
             )}
             {record.personal_background && (
@@ -240,6 +255,18 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes familiares</p>
                 <p className='text-sm'>{record.family_history}</p>
+              </div>
+            )}
+            {record.antecedentes_quirurgicos && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes quirúrgicos</p>
+                <p className='text-sm'>{record.antecedentes_quirurgicos}</p>
+              </div>
+            )}
+            {record.antecedentes_sexuales && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Antecedentes sexuales</p>
+                <p className='text-sm'>{record.antecedentes_sexuales}</p>
               </div>
             )}
             {record.psychobiological_habits && (
@@ -280,8 +307,8 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         </div>
       )}
 
-      {/* Examen físico y comentarios */}
-      {(record.examen_fisico || record.comment) && (
+      {/* Examen físico, observaciones, diagnóstico y plan de acción */}
+      {(record.examen_fisico || record.comment || record.diagnostico || record.plan_de_accion) && (
         <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2 grid grid-cols-2 gap-4'>
           {record.examen_fisico && (
             <div>
@@ -294,8 +321,20 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           )}
           {record.comment && (
             <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Comentarios</p>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Observaciones</p>
               <p className='text-sm'>{record.comment}</p>
+            </div>
+          )}
+          {record.diagnostico && (
+            <div>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Diagnóstico</p>
+              <p className='text-sm'>{record.diagnostico}</p>
+            </div>
+          )}
+          {record.plan_de_accion && (
+            <div>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Plan de acción</p>
+              <p className='text-sm'>{record.plan_de_accion}</p>
             </div>
           )}
         </div>

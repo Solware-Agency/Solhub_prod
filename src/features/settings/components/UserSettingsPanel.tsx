@@ -61,13 +61,24 @@ const UserSettingsPanel: React.FC = () => {
 
 		if (!user) return
 
+		const trimmedName = displayName?.trim() ?? ''
+		if (!trimmedName) {
+			setProfileError('El nombre para mostrar es obligatorio.')
+			toast({
+				title: 'Nombre requerido',
+				description: 'Debes escribir un nombre para poder guardar el perfil.',
+				variant: 'destructive',
+			})
+			return
+		}
+
 		setIsUpdatingProfile(true)
 
 		try {
 			// Update profile in Supabase - this will trigger the synchronization
 			const normalizedPhone = phone.replace(/\D/g, '')
 			const { error } = await updateUserProfile(user.id, {
-				display_name: displayName,
+				display_name: trimmedName,
 				phone: normalizedPhone,
 			})
 
@@ -235,7 +246,11 @@ const UserSettingsPanel: React.FC = () => {
 								</div>
 							)}
 
-							<Button type="submit" className="w-full bg-primary hover:bg-primary/80" disabled={isUpdatingProfile}>
+							<Button
+								type="submit"
+								className="w-full bg-primary hover:bg-primary/80"
+								disabled={isUpdatingProfile || !(displayName?.trim() ?? '')}
+							>
 								{isUpdatingProfile ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />

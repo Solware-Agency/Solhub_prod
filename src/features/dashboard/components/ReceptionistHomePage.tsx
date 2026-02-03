@@ -5,11 +5,11 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useAuth } from '@app/providers/AuthContext'
 import EyeTrackingComponent from './RobotTraking'
-import { FileText, Users, History, Settings, LogOut, FolderInput } from 'lucide-react'
+import { FileText, Users, History, Settings, LogOut, FolderInput, UserCircle } from 'lucide-react'
 import type { UserRole } from '@services/supabase/laboratories/laboratory-roles-service'
 
 // Mapeo de rutas por rol
-const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?: string; form?: string; changelog?: string; home?: string }> = {
+const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?: string; form?: string; changelog?: string; home?: string; users?: string }> = {
 	employee: {
 		home: '/employee/home',
 		cases: '/employee/records',
@@ -17,50 +17,59 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		settings: '/employee/settings',
 		form: '/employee/form',
 		changelog: '/employee/changelog',
+		users: '/employee/users',
 	},
 	residente: {
 		home: '/medic/home',
 		cases: '/medic/cases',
 		settings: '/medic/settings',
+		users: '/medic/users',
 	},
 	citotecno: {
 		home: '/cito/home',
 		cases: '/cito/cases',
 		settings: '/cito/settings',
+		users: '/cito/users',
 	},
 	patologo: {
 		home: '/patolo/home',
 		cases: '/patolo/cases',
 		settings: '/patolo/settings',
+		users: '/patolo/users',
 	},
 	imagenologia: {
 		home: '/imagenologia/home',
 		cases: '/imagenologia/cases',
 		patients: '/imagenologia/patients',
+		users: '/imagenologia/users',
 	},
 	laboratorio: {
 		home: '/laboratorio/home',
 		cases: '/laboratorio/cases',
 		patients: '/laboratorio/patients',
 		settings: '/laboratorio/settings',
+		users: '/laboratorio/users',
 	},
 	medico_tratante: {
 		home: '/medico-tratante/home',
 		cases: '/medico-tratante/cases',
 		patients: '/medico-tratante/patients',
 		settings: '/medico-tratante/settings',
+		users: '/medico-tratante/users',
 	},
 	enfermero: {
 		home: '/enfermero/home',
 		cases: '/enfermero/cases',
 		patients: '/enfermero/patients',
 		settings: '/enfermero/settings',
+		users: '/enfermero/users',
 	},
 	call_center: {
 		home: '/call-center/home',
 		cases: '/call-center/cases',
 		patients: '/call-center/patients',
 		settings: '/call-center/settings',
+		users: '/call-center/users',
 	},
 }
 
@@ -114,6 +123,16 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 			icon: History,
 			path: routes.changelog,
 			description: 'Ver historial de cambios',
+		})
+	}
+
+	// Usuarios (directorio): todos los roles que tienen la ruta (cuando el lab tiene hasUsers)
+	if (routes.users) {
+		buttons.push({
+			title: 'Usuarios',
+			icon: UserCircle,
+			path: routes.users,
+			description: 'Ver directorio de usuarios',
 		})
 	}
 

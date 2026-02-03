@@ -173,6 +173,7 @@ const ChangelogTable: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+	const [tempRange, setTempRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
 	const [rowsPerPage, setRowsPerPage] = useState(20)
@@ -510,7 +511,12 @@ const ChangelogTable: React.FC = () => {
 
 					{/* Date Range Filter */}
 					<div className="flex items-center gap-2">
-						<Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+						<Popover open={isDatePickerOpen} onOpenChange={(open) => {
+					setIsDatePickerOpen(open)
+					if (open) {
+						setTempRange(undefined)
+					}
+				}}>
 							<PopoverTrigger asChild>
 								<Button variant="outline" className="flex items-center gap-2">
 									<Calendar className="w-4 h-4 text-gray-400" />
@@ -526,11 +532,13 @@ const ChangelogTable: React.FC = () => {
 							<PopoverContent className="w-auto p-0">
 								<CalendarComponent
 									mode="range"
-									selected={dateRange}
-									onSelect={(range) => {
+								selected={tempRange}
+								onSelect={(range) => {
+									setTempRange(range)
+									if (range?.from && range?.to) {
 										setDateRange(range)
-										if (range?.from && range?.to) {
-											setIsDatePickerOpen(false)
+										setIsDatePickerOpen(false)
+										setTempRange(undefined)
 										}
 									}}
 									initialFocus

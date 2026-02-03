@@ -116,6 +116,11 @@ export const employeeRoutes: RouteConfig[] = [
     component: ChangelogPage,
   },
   {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
+  },
+  {
     path: 'triage-analytics',
     feature: 'hasTriaje',
     component: TriageAnalyticsPage,
@@ -142,6 +147,11 @@ export const medicRoutes: RouteConfig[] = [
     component: CasesPage,
   },
   {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
+  },
+  {
     path: 'settings',
     component: SettingsPage,
   },
@@ -162,6 +172,11 @@ export const imagenologiaRoutes: RouteConfig[] = [
     path: 'patients',
     feature: 'hasPatients',
     component: PatientsPage,
+  },
+  {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
   },
   {
     path: 'settings',
@@ -203,6 +218,11 @@ export const citotecnoRoutes: RouteConfig[] = [
     component: CasesPage,
   },
   {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
+  },
+  {
     path: 'settings',
     component: SettingsPage,
   },
@@ -240,6 +260,11 @@ export const medicoTratanteRoutes: RouteConfig[] = [
     path: 'patients',
     feature: 'hasPatients',
     component: PatientsPage,
+  },
+  {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
   },
   {
     path: 'settings',
@@ -284,6 +309,11 @@ export const callCenterRoutes: RouteConfig[] = [
     path: 'patients',
     feature: 'hasPatients',
     component: PatientsPage,
+  },
+  {
+    path: 'users',
+    feature: 'hasUsers',
+    component: UsersPage,
   },
   {
     path: 'settings',

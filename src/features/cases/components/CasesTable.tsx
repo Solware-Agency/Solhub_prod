@@ -18,6 +18,7 @@ import { useAuth } from '@app/providers/AuthContext';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useExportToExcel } from '@shared/hooks/useExportToExcel';
 import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal';
+import { ExportColumnsModal } from '@shared/components/ui/ExportColumnsModal';
 import RequestCaseModal from './RequestCaseModal';
 import UnifiedCaseModal from './UnifiedCaseModal';
 import HorizontalLinearStepper from './StepsCaseModal';
@@ -157,6 +158,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       pendingExport,
       handleConfirmExport,
       handleCancelExport,
+      isColumnsModalOpen,
+      setIsColumnsModalOpen,
+      selectedColumnKeys,
+      exportColumnOptions,
+      handleApplyColumnSelection,
     } = useExportToExcel();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -1036,6 +1042,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               searchLower,
             ) ||
             (case_.code?.toLowerCase() || '').includes(searchLower) ||
+            (case_.owner_display_code?.toLowerCase() || '').includes(searchLower) ||
             (case_.branch?.toLowerCase() || '').includes(searchLower) ||
             (case_.exam_type?.toLowerCase() || '').includes(searchLower);
         }
@@ -1657,6 +1664,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             onConfirm={handleConfirmExport}
             onCancel={handleCancelExport}
             casesCount={pendingExport?.estimatedCount || 0}
+            onPersonalize={() => setIsColumnsModalOpen(true)}
+            selectedColumnCount={
+              selectedColumnKeys === null ? undefined : selectedColumnKeys.length
+            }
+          />
+          <ExportColumnsModal
+            open={isColumnsModalOpen}
+            onOpenChange={setIsColumnsModalOpen}
+            columnOptions={exportColumnOptions}
+            selectedKeys={selectedColumnKeys}
+            onApply={handleApplyColumnSelection}
           />
         </>
       );
@@ -1960,6 +1978,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           onConfirm={handleConfirmExport}
           onCancel={handleCancelExport}
           casesCount={pendingExport?.estimatedCount || 0}
+          onPersonalize={() => setIsColumnsModalOpen(true)}
+          selectedColumnCount={
+            selectedColumnKeys === null ? undefined : selectedColumnKeys.length
+          }
+        />
+        <ExportColumnsModal
+          open={isColumnsModalOpen}
+          onOpenChange={setIsColumnsModalOpen}
+          columnOptions={exportColumnOptions}
+          selectedKeys={selectedColumnKeys}
+          onApply={handleApplyColumnSelection}
         />
       </>
     );

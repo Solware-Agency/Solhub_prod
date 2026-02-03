@@ -35,10 +35,17 @@ interface PaymentSectionProps {
 	vesInputValue: string
 	setVesInputValue: (value: string) => void
 	usdFromVes: string
+	converterUsdValue: string
+	setConverterUsdValue: (value: string) => void
+	converterVesValue: string
 	exchangeRate: number | undefined
 	isLoadingRate: boolean
 	isSampleTypeCostsEnabled?: boolean
 	sampleTypeCosts?: SampleTypeCost[] | null
+	/** Porcentaje de descuento para precio convenios (ej. 5). Usado para calcular precio desde taquilla. */
+	convenioDiscountPercent?: number
+	/** Porcentaje de descuento para precio descuento (ej. 10). Usado para calcular precio desde taquilla. */
+	descuentoDiscountPercent?: number
 }
 
 export const PaymentSection = memo(({
@@ -53,12 +60,19 @@ export const PaymentSection = memo(({
 	vesInputValue,
 	setVesInputValue,
 	usdFromVes,
+	converterUsdValue,
+	setConverterUsdValue,
+	converterVesValue,
 	exchangeRate,
 	isLoadingRate,
 	isSampleTypeCostsEnabled = false,
 	sampleTypeCosts = null,
+	convenioDiscountPercent = 5,
+	descuentoDiscountPercent = 10,
 }: PaymentSectionProps) => {
 	const { setValue } = useFormContext<FormValues>()
+	const factorConvenios = (100 - convenioDiscountPercent) / 100
+	const factorDescuento = (100 - descuentoDiscountPercent) / 100
 	const watchedPayments = useWatch({
 		control,
 		name: 'payments',
@@ -92,12 +106,13 @@ export const PaymentSection = memo(({
 	const applyPriceOption = useCallback(
 		(option: PriceTypeOption) => {
 			if (!selectedCost) return
+			const taquilla = selectedCost.price_taquilla
 			const amount =
 				option === 'taquilla'
-					? selectedCost.price_taquilla
+					? taquilla
 					: option === 'convenios'
-						? selectedCost.price_convenios
-						: selectedCost.price_descuento
+						? taquilla != null ? round2(taquilla * factorConvenios) : null
+						: taquilla != null ? round2(taquilla * factorDescuento) : null
 			if (amount != null) {
 				const total = round2(amount * getMultiplier())
 				setValue('totalAmount', total, { shouldValidate: true })
@@ -105,7 +120,7 @@ export const PaymentSection = memo(({
 				setUsdValue(String(total))
 			}
 		},
-		[selectedCost, setValue, setUsdValue, getMultiplier, round2]
+		[selectedCost, setValue, setUsdValue, getMultiplier, round2, factorConvenios, factorDescuento]
 	)
 
 	// When sample type changes in Marihorgen, clear price selection so user picks again
@@ -119,17 +134,18 @@ export const PaymentSection = memo(({
 	useEffect(() => {
 		if (!isSampleTypeCostsEnabled) return
 		if (!selectedCost || !priceType) return
+		const taquilla = selectedCost.price_taquilla
 		const base =
 			priceType === 'taquilla'
-				? selectedCost.price_taquilla
+				? taquilla
 				: priceType === 'convenios'
-					? selectedCost.price_convenios
-					: selectedCost.price_descuento
+					? taquilla != null ? round2(taquilla * factorConvenios) : null
+					: taquilla != null ? round2(taquilla * factorDescuento) : null
 		if (base == null) return
 		const total = round2(base * getMultiplier())
 		setValue('totalAmount', total, { shouldValidate: true })
 		setUsdValue(String(total))
-	}, [numberOfSamples, priceType, selectedCost, isSampleTypeCostsEnabled, getMultiplier, round2, setValue, setUsdValue])
+	}, [numberOfSamples, priceType, selectedCost, isSampleTypeCostsEnabled, getMultiplier, round2, setValue, setUsdValue, factorConvenios, factorDescuento])
 
 	// Use useMemo to prevent recalculation on every render
 	const { paymentStatus, isPaymentComplete, missingAmount } = useMemo(() => {
@@ -202,12 +218,9 @@ export const PaymentSection = memo(({
 					</div>
 					<div className="w-full">
 						<ConverterUSDtoVES
-							usdValue={usdValue}
-							setUsdValue={setUsdValue}
-							vesValue={vesValue}
-							vesInputValue={vesInputValue}
-							setVesInputValue={setVesInputValue}
-							usdFromVes={usdFromVes}
+							converterUsdValue={converterUsdValue}
+							setConverterUsdValue={setConverterUsdValue}
+							converterVesValue={converterVesValue}
 							exchangeRate={exchangeRate}
 							isLoadingRate={isLoadingRate}
 							inputStyles={inputStyles}

@@ -35,6 +35,101 @@ export interface UpdateSampleTypeCostResult {
 	error?: string
 }
 
+export interface CreateSampleTypeCostParams {
+	code: string
+	name: string
+	price_taquilla: number
+	/** Si true, price_convenios y price_descuento quedan null (solo taquilla). */
+	only_taquilla?: boolean
+	/** Porcentaje de descuento para precio convenios (ej. 5 = 5%). Por defecto 5. */
+	convenioDiscountPercent?: number
+	/** Porcentaje de descuento para precio descuento (ej. 10 = 10%). Por defecto 10. */
+	descuentoDiscountPercent?: number
+}
+
+export interface CreateSampleTypeCostResult {
+	success: boolean
+	data?: SampleTypeCost
+	error?: string
+}
+
+export interface DeleteSampleTypeCostResult {
+	success: boolean
+	error?: string
+}
+
+/**
+ * Elimina un tipo de muestra del laboratorio.
+ */
+export async function deleteSampleTypeCost(
+	laboratoryId: string,
+	code: string
+): Promise<DeleteSampleTypeCostResult> {
+	try {
+		const { error } = await supabase
+			.from('sample_type_costs')
+			.delete()
+			.eq('laboratory_id', laboratoryId)
+			.eq('code', code)
+
+		if (error) {
+			console.error('Error deleting sample type cost:', error)
+			return { success: false, error: error.message }
+		}
+
+		return { success: true }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Error desconocido'
+		console.error('deleteSampleTypeCost:', message)
+		return { success: false, error: message }
+	}
+}
+
+/**
+ * Crea un nuevo tipo de muestra con sus costos para el laboratorio.
+ */
+export async function createSampleTypeCost(
+	laboratoryId: string,
+	params: CreateSampleTypeCostParams
+): Promise<CreateSampleTypeCostResult> {
+	try {
+		const convenioPct = params.convenioDiscountPercent ?? 5
+		const descuentoPct = params.descuentoDiscountPercent ?? 10
+		const factorConvenios = (100 - convenioPct) / 100
+		const factorDescuento = (100 - descuentoPct) / 100
+		const priceConvenios = params.only_taquilla
+			? null
+			: Number((params.price_taquilla * factorConvenios).toFixed(2))
+		const priceDescuento = params.only_taquilla
+			? null
+			: Number((params.price_taquilla * factorDescuento).toFixed(2))
+
+		const { data, error } = await supabase
+			.from('sample_type_costs')
+			.insert({
+				laboratory_id: laboratoryId,
+				code: params.code.trim(),
+				name: params.name.trim(),
+				price_taquilla: params.price_taquilla,
+				price_convenios: priceConvenios,
+				price_descuento: priceDescuento,
+			})
+			.select()
+			.single()
+
+		if (error) {
+			console.error('Error creating sample type cost:', error)
+			return { success: false, error: error.message }
+		}
+
+		return { success: true, data: data as SampleTypeCost }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Error desconocido'
+		console.error('createSampleTypeCost:', message)
+		return { success: false, error: message }
+	}
+}
+
 /**
  * Obtiene la lista de costos por tipo de muestra para un laboratorio (ordenada por código).
  */

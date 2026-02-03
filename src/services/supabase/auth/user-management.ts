@@ -361,7 +361,7 @@ export const canManageUsers = async (
       console.error('Error checking user permissions:', error);
       return false;
     }
-    return data.role === 'owner';
+    return data.role === 'owner' || data.role === 'prueba';
   } catch (error) {
     console.error('Unexpected error checking user permissions:', error);
     return false;

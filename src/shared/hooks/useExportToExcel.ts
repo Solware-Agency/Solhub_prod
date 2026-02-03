@@ -4,6 +4,7 @@ import { useToast } from './use-toast'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { getAllCasesWithPatientInfo } from '@/services/supabase/cases/medical-cases-service'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+import { EXPORT_COLUMN_OPTIONS, EXPORT_COLUMN_KEYS } from '@shared/constants/exportColumns'
 
 type UnifiedMedicalRecord = MedicalCaseWithPatient
 
@@ -62,6 +63,8 @@ interface ServerFilters {
 export const useExportToExcel = () => {
 	const { toast } = useToast()
 	const [isModalOpen, setIsModalOpen] = useState(false)
+	const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false)
+	const [selectedColumnKeys, setSelectedColumnKeys] = useState<string[] | null>(null)
 	const [pendingExport, setPendingExport] = useState<{
 		serverFilters: ServerFilters
 		estimatedCount: number
@@ -92,7 +95,7 @@ export const useExportToExcel = () => {
 	)
 
 	const generateExcel = useCallback(
-		async (serverFilters: ServerFilters) => {
+		async (serverFilters: ServerFilters, selectedKeys: string[] | null) => {
 			try {
 				// Mostrar mensaje de carga
 				toast({
@@ -100,12 +103,12 @@ export const useExportToExcel = () => {
 					description: 'Por favor espera mientras obtenemos todos los casos filtrados.',
 				})
 
-			// Obtener TODOS los casos filtrados del servidor
-			const response = await getAllCasesWithPatientInfo(serverFilters)
-			// La función puede retornar un array directamente o un objeto con propiedad data
-			const cases = Array.isArray(response) ? response : response.data
+				// Obtener TODOS los casos filtrados del servidor
+				const response = await getAllCasesWithPatientInfo(serverFilters)
+				// La función puede retornar un array directamente o un objeto con propiedad data
+				const cases = Array.isArray(response) ? response : response.data
 
-			// Validar que cases sea un array válido
+				// Validar que cases sea un array válido
 				if (!cases || !Array.isArray(cases) || cases.length === 0) {
 					toast({
 						title: '❌ Sin datos para exportar',
@@ -114,8 +117,11 @@ export const useExportToExcel = () => {
 					})
 					return
 				}
+
+				const keysToExport = selectedKeys && selectedKeys.length > 0 ? selectedKeys : EXPORT_COLUMN_KEYS
+
 				// Preparar los datos para Excel
-				const excelData = cases.map((case_) => {
+				const fullRows = cases.map((case_) => {
 					const { paymentStatus, missingAmount } = calculateCasePaymentStatus(case_)
 					const ageDisplay = case_.edad || ''
 
@@ -123,9 +129,9 @@ export const useExportToExcel = () => {
 					const exchangeRate = case_.exchange_rate || 0
 					const totalInBs = exchangeRate > 0 ? (case_.total_amount || 0) * exchangeRate : 0
 
-					return {
+					const row: Record<string, string | number> = {
 						Código: case_.code || '',
-						'Registro': case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
+						Registro: case_.created_at ? new Date(case_.created_at).toLocaleDateString('es-ES') : 'N/A',
 						'Nombre del Paciente': case_.nombre || '',
 						Cédula: case_.cedula || '',
 						Email: case_.patient_email || '',
@@ -153,43 +159,19 @@ export const useExportToExcel = () => {
 						'PDF Listo': case_.pdf_en_ready ? 'Sí' : 'No',
 						'Estatus Citología': case_.cito_status || '',
 					}
+					return Object.fromEntries(Object.entries(row).filter(([k]) => keysToExport.includes(k))) as Record<
+						string,
+						string | number
+					>
 				})
 
 				// Crear el workbook
 				const wb = XLSX.utils.book_new()
-				const ws = XLSX.utils.json_to_sheet(excelData)
+				const ws = XLSX.utils.json_to_sheet(fullRows)
 
-				// Ajustar el ancho de las columnas
-				const colWidths = [
-					{ wch: 15 }, // Código
-					{ wch: 18 }, // Registro
-					{ wch: 25 }, // Nombre del Paciente
-					{ wch: 15 }, // Cédula
-					{ wch: 25 }, // Email
-					{ wch: 8 }, // Edad
-					{ wch: 10 }, // Sede
-					{ wch: 20 }, // Tipo de Estudio
-					{ wch: 25 }, // Médico Tratante
-					{ wch: 18 }, // Tasa de Cambio (Bs)
-					{ wch: 18 }, // Monto Total (USD)
-					{ wch: 18 }, // Monto Total (Bs)
-					{ wch: 15 }, // Estado de Pago
-					{ wch: 15 }, // Monto Faltante
-					{ wch: 20 }, // Método de Pago 1
-					{ wch: 15 }, // Monto Pago 1
-					{ wch: 25 }, // Referencia Pago 1
-					{ wch: 20 }, // Método de Pago 2
-					{ wch: 15 }, // Monto Pago 2
-					{ wch: 25 }, // Referencia Pago 2
-					{ wch: 20 }, // Método de Pago 3
-					{ wch: 15 }, // Monto Pago 3
-					{ wch: 25 }, // Referencia Pago 3
-					{ wch: 20 }, // Método de Pago 4
-					{ wch: 15 }, // Monto Pago 4
-					{ wch: 25 }, // Referencia Pago 4
-					{ wch: 12 }, // PDF Listo
-					{ wch: 15 }, // Estatus Citología
-				]
+				// Ancho de columnas según catálogo (mismo orden que keysToExport)
+				const keyToWidth = Object.fromEntries(EXPORT_COLUMN_OPTIONS.map((c) => [c.key, c.defaultWidth]))
+				const colWidths = keysToExport.map((k) => ({ wch: keyToWidth[k] ?? 15 }))
 				ws['!cols'] = colWidths
 
 				// Agregar la hoja al workbook
@@ -248,15 +230,26 @@ export const useExportToExcel = () => {
 	const handleConfirmExport = useCallback(async () => {
 		if (pendingExport) {
 			pendingExport.onConfirm()
-			await generateExcel(pendingExport.serverFilters)
+			await generateExcel(pendingExport.serverFilters, selectedColumnKeys)
 			setPendingExport(null)
 			setIsModalOpen(false)
 		}
-	}, [pendingExport, generateExcel])
+	}, [pendingExport, generateExcel, selectedColumnKeys])
 
 	const handleCancelExport = useCallback(() => {
 		setPendingExport(null)
 	}, [])
+
+	const handleApplyColumnSelection = useCallback((keys: string[]) => {
+		setSelectedColumnKeys(keys.length === EXPORT_COLUMN_KEYS.length ? null : keys)
+		setIsColumnsModalOpen(false)
+	}, [])
+
+	const exportColumnOptions = EXPORT_COLUMN_OPTIONS.map((c) => ({
+		key: c.key,
+		label: c.label,
+		group: c.group,
+	}))
 
 	return {
 		exportToExcel,
@@ -265,5 +258,10 @@ export const useExportToExcel = () => {
 		pendingExport,
 		handleConfirmExport,
 		handleCancelExport,
+		isColumnsModalOpen,
+		setIsColumnsModalOpen,
+		selectedColumnKeys,
+		exportColumnOptions,
+		handleApplyColumnSelection,
 	}
 }
