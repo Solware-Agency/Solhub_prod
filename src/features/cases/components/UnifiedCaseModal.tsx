@@ -1261,7 +1261,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     };
 
-    const handleSendWhatsApp = () => {
+    const handleSendWhatsApp = async () => {
       if (!case_?.telefono) {
         toast({
           title: '❌ Error',
@@ -1272,9 +1272,78 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
 
       // Create WhatsApp message with case information
-      // Para SPT, usar formato específico: "le escribimos desde Salud para todos"
+      // Para SPT, usar formato específico y adjuntar enlaces por orden si existen
+      const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
+      const uploadedPdfUrl = (currentCase as any)?.uploaded_pdf_url || null;
+      const caseImages =
+        (currentCase as any)?.images_urls &&
+        Array.isArray((currentCase as any).images_urls) &&
+        (currentCase as any).images_urls.length > 0
+          ? (currentCase as any).images_urls
+          : (currentCase as any)?.image_url
+            ? [(currentCase as any).image_url]
+            : [];
+
+      const SIGNED_URL_TTL_SECONDS = 60 * 30;
+      const createSignedUrlIfSupabase = async (url: string | null): Promise<string | null> => {
+        if (!url) return null;
+        try {
+          const parsedUrl = new URL(url);
+          const match = parsedUrl.pathname.match(
+            /\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/,
+          );
+
+          if (!match) {
+            return url;
+          }
+
+          const bucket = match[1];
+          const filePath = decodeURIComponent(match[2]);
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+
+          if (error || !data?.signedUrl) {
+            console.warn('No se pudo generar URL firmada, usando URL original:', error);
+            return url;
+          }
+
+          return data.signedUrl;
+        } catch (error) {
+          console.warn('Error al generar URL firmada, usando URL original:', error);
+          return url;
+        }
+      };
+
+      const [signedPdfUrl, signedUploadedPdfUrl, signedImageUrls] = isSpt
+        ? await Promise.all([
+            createSignedUrlIfSupabase(pdfUrl),
+            createSignedUrlIfSupabase(uploadedPdfUrl),
+            Promise.all(caseImages.map((url: string) => createSignedUrlIfSupabase(url))),
+          ])
+        : [pdfUrl, uploadedPdfUrl, caseImages];
+
+      const safeImageUrls = (signedImageUrls || []).filter(Boolean) as string[];
+
+      const sptMessageLines = [
+        `Hola ${case_.nombre}, te escribimos desde Salud Para Todos.`,
+      ];
+
+      if (signedPdfUrl) {
+        sptMessageLines.push('', 'Reporte (PDF):', signedPdfUrl);
+      }
+
+      if (signedUploadedPdfUrl) {
+        sptMessageLines.push('', 'PDF adjunto:', signedUploadedPdfUrl);
+      }
+
+      if (safeImageUrls.length > 0) {
+        sptMessageLines.push('', 'Imágenes:', ...safeImageUrls.map((url: string) => `- ${url}`));
+      }
+
+      // Para SPT, no incluir código de caso
       const message = isSpt
-        ? `Hola ${case_.nombre}, le escribimos desde Salud para todos por su caso ${case_.code || 'N/A'}.`
+        ? sptMessageLines.join('\n')
         : `Hola ${case_.nombre}, le escribimos desde el laboratorio ${laboratory?.name || 'nuestro laboratorio'} por su caso ${case_.code || 'N/A'}.`;
 
       // Format phone number (remove spaces, dashes, etc.)
