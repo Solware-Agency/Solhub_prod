@@ -1320,9 +1320,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           ) : (
                             <div className='space-y-4'>
                               {filteredCases.map(
-                                (caseItem: MedicalCaseWithPatient) => (
+                                (caseItem: MedicalCaseWithPatient, index: number) => (
                                   <div
-                                    key={caseItem.id}
+                                    key={caseItem.id || caseItem.code || `case-${index}`}
                                     onClick={(e) => {
                                       // Prevenir que el click se propague a los botones internos
                                       if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
@@ -1417,17 +1417,22 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               isDownloadingMultiple
                                             }
                                           >
-                                            {isGeneratingPDF || isSaving ? (
-                                              <>
-                                                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                                                Generando...
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Download className='h-4 w-4 mr-2' />
-                                                PDF
-                                              </>
-                                            )}
+                                          {isGeneratingPDF ? (
+                                            <>
+                                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                              Generando...
+                                            </>
+                                          ) : isSaving ? (
+                                            <>
+                                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                              Descargando...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Download className='h-4 w-4 mr-2' />
+                                              PDF
+                                            </>
+                                          )}
                                           </Button>
                                           <div onClick={(e) => e.stopPropagation()}>
                                             <PDFButton
@@ -1570,9 +1575,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                 </div>
                               ) : (
                                 <div className='space-y-4'>
-                                  {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }) => (
+                                  {filteredDependentsCases.map((caseItem: MedicalCaseWithPatient & { dependienteNombre: string; dependienteId: string }, index: number) => (
                                     <div
-                                      key={caseItem.id}
+                                      key={caseItem.id || caseItem.code || `case-dep-${index}`}
                                       onClick={(e) => {
                                         // Prevenir que el click se propague a los botones internos
                                         if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {

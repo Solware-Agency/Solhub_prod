@@ -2074,6 +2074,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                                   { value: 'Psicología', label: 'Psicología' },
                                   { value: 'Psiquiatría', label: 'Psiquiatría' },
                                   { value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+                                  { value: 'Reumatología', label: 'Reumatología' },
                                   { value: 'Traumatología', label: 'Traumatología' },
                                   { value: 'Urología', label: 'Urología' },
                                 ].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })))}

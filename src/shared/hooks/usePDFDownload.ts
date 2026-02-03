@@ -52,6 +52,70 @@ export function usePDFDownload(options?: {
     laboratory?.config?.webhooks?.generatePdf ||
     import.meta.env.VITE_GENERATE_PDF_WEBHOOK;
 
+  const downloadPdfFromUrl = async (
+    pdfUrl: string,
+    caseData: MedicalCaseWithPatient | MedicalRecord,
+  ) => {
+    try {
+      if (pdfUrl.includes('drive.google.com')) {
+        window.open(pdfUrl, '_blank');
+
+        if (options?.onDownloadSuccess) {
+          setTimeout(() => {
+            options.onDownloadSuccess?.();
+          }, 1000);
+        }
+
+        return true;
+      }
+
+      const response = await fetch(pdfUrl);
+      if (!response.ok) {
+        throw new Error(`Error al descargar: ${response.status}`);
+      }
+
+      const sanitizedName =
+        caseData.nombre ||
+        'Paciente'
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9\s]/g, '')
+          .replace(/\s+/g, '_')
+          .trim();
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${caseData.code || caseData.id}-${sanitizedName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: '✅ PDF descargado',
+        description: 'El documento se ha descargado correctamente.',
+      });
+
+      if (options?.onDownloadSuccess) {
+        setTimeout(() => {
+          options.onDownloadSuccess?.();
+        }, 1500);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error al abrir el PDF:', err);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo acceder al PDF. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const handleResetPDFFields = async (
     caseData: MedicalCaseWithPatient | MedicalRecord,
   ) => {
@@ -218,51 +282,7 @@ export function usePDFDownload(options?: {
         return;
       }
 
-      try {
-        // Descargar el archivo usando el endpoint de descarga
-        const response = await fetch(pdfUrl);
-        if (!response.ok) {
-          throw new Error(`Error al descargar: ${response.status}`);
-        }
-
-        const sanitizedName =
-          caseData.nombre ||
-          'Paciente'
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9\s]/g, '')
-            .replace(/\s+/g, '_')
-            .trim();
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${caseData.code || caseData.id}-${sanitizedName}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url); // Limpiar memoria
-
-        toast({
-          title: '✅ PDF descargado',
-          description: 'El documento se ha descargado correctamente.',
-        });
-
-        // Ejecutar callback si está definido
-        if (options?.onDownloadSuccess) {
-          setTimeout(() => {
-            options.onDownloadSuccess?.();
-          }, 1500);
-        }
-      } catch (err) {
-        console.error('Error al abrir el PDF:', err);
-        toast({
-          title: '❌ Error',
-          description: 'No se pudo acceder al PDF. Intenta nuevamente.',
-          variant: 'destructive',
-        });
-      }
+      await downloadPdfFromUrl(pdfUrl, caseData);
     } catch (error) {
       console.error('Error en handleResetPDFFields:', error);
 
@@ -317,7 +337,6 @@ export function usePDFDownload(options?: {
 
     try {
       setIsSaving(true);
-      setIsGeneratingPDF(true);
 
       // Verificar si ya existe tanto informepdf_url como informe_qr
       console.log(
@@ -340,14 +359,25 @@ export function usePDFDownload(options?: {
         return;
       }
 
-      if (initialData?.informepdf_url && initialData?.informe_qr) {
+      if (initialData?.informepdf_url) {
+        const pdfUrl =
+          getDownloadUrl(
+            caseData.id,
+            initialData.token || null,
+            initialData.informepdf_url || null,
+          ) || initialData.informepdf_url;
+
+        await downloadPdfFromUrl(pdfUrl, caseData);
+        return;
+      }
+
+      if (initialData?.informe_qr) {
         console.log(
-          '[1] PDF y QR ya existen, redirigiendo a informe_qr:',
+          '[1] PDF ya existe, redirigiendo a informe_qr:',
           initialData.informe_qr,
         );
         window.open(initialData.informe_qr, '_blank');
 
-        // Ejecutar callback si está definido
         if (options?.onDownloadSuccess) {
           setTimeout(() => {
             options.onDownloadSuccess?.();
@@ -362,6 +392,7 @@ export function usePDFDownload(options?: {
       );
 
       // Llamar a la función que genera el PDF
+      setIsGeneratingPDF(true);
       await handleResetPDFFields(caseData);
     } catch (error) {
       console.error('Error en handleCheckAndDownloadPDF:', error);

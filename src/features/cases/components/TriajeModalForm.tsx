@@ -76,6 +76,7 @@ interface TriajeFormData {
   comentario: string;
   enfermedadActual: string;
   antecedentesQuirurgicos: string;
+  antecedentesSexuales: string;
   diagnostico: string;
   planDeAccion: string;
   lugarNacimiento: string;
@@ -393,7 +394,8 @@ const TriageInfoDisplay: React.FC<{
       {/* Antecedentes */}
       {(record.personal_background ||
         record.family_history ||
-        record.antecedentes_quirurgicos) && (
+        record.antecedentes_quirurgicos ||
+        (record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
@@ -424,6 +426,14 @@ const TriageInfoDisplay: React.FC<{
                   Antecedentes quirúrgicos
                 </p>
                 <p className='text-sm'>{record.antecedentes_quirurgicos}</p>
+              </div>
+            )}
+            {(record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Antecedentes sexuales
+                </p>
+                <p className='text-sm'>{(record as { antecedentes_sexuales: string }).antecedentes_sexuales}</p>
               </div>
             )}
           </CardContent>
@@ -548,6 +558,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     comentario: '',
     enfermedadActual: '',
     antecedentesQuirurgicos: '',
+    antecedentesSexuales: '',
     diagnostico: '',
     planDeAccion: '',
     lugarNacimiento: '',
@@ -772,6 +783,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           comentario: existingTriage.comment || '',
           enfermedadActual: existingTriage.enfermedad_actual || '',
           antecedentesQuirurgicos: existingTriage.antecedentes_quirurgicos || '',
+          antecedentesSexuales: (existingTriage as { antecedentes_sexuales?: string | null }).antecedentes_sexuales || '',
           diagnostico: existingTriage.diagnostico || '',
           planDeAccion: existingTriage.plan_de_accion || '',
           lugarNacimiento: existingTriage.lugar_de_nacimiento || '',
@@ -1002,6 +1014,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasValue(formData.motivoConsulta) ||
         hasValue(formData.antecedentesPersonales) ||
         hasValue(formData.antecedentesFamiliares) ||
+        hasValue(formData.antecedentesSexuales) ||
         hasValue(formData.habitosPsicobiologicos) ||
         hasValue(formData.examenFisico) ||
         hasValue(formData.tabaco) ||
@@ -1118,6 +1131,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasRealValue(formData.motivoConsulta) ||
         hasRealValue(formData.antecedentesPersonales) ||
         hasRealValue(formData.antecedentesFamiliares) ||
+        hasRealValue(formData.antecedentesSexuales) ||
         hasRealValue(formData.habitosPsicobiologicos) ||
         hasRealValue(formData.examenFisico) ||
         hasRealValue(formData.tabaco) ||
@@ -1215,6 +1229,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           comment: formData.comentario || null,
           enfermedad_actual: formData.enfermedadActual || null,
           antecedentes_quirurgicos: formData.antecedentesQuirurgicos || null,
+          antecedentes_sexuales: formData.antecedentesSexuales || null,
           diagnostico: formData.diagnostico || null,
           plan_de_accion: formData.planDeAccion || null,
           lugar_de_nacimiento: formData.lugarNacimiento || null,
@@ -1275,6 +1290,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             habitosPsicobiologicos: updatedTriage.psychobiological_habits || '',
             examenFisico: updatedTriage.examen_fisico || '',
             comentario: updatedTriage.comment || '',
+            enfermedadActual: updatedTriage.enfermedad_actual || '',
+            antecedentesQuirurgicos: updatedTriage.antecedentes_quirurgicos || '',
+            antecedentesSexuales: (updatedTriage as { antecedentes_sexuales?: string | null }).antecedentes_sexuales || '',
+            diagnostico: updatedTriage.diagnostico || '',
+            planDeAccion: updatedTriage.plan_de_accion || '',
+            lugarNacimiento: updatedTriage.lugar_de_nacimiento || '',
+            telefonoEmergencia: updatedTriage.telefono_emergencia || '',
             cafe: updatedTriage.cafe?.toString() || '',
             alcohol: updatedTriage.alcohol || '',
             ...(updatedTriage.tabaco !== null &&
@@ -1319,6 +1341,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             motivoConsulta: '',
             examenFisico: '',
             comentario: '',
+            enfermedadActual: '',
+            antecedentesQuirurgicos: '',
+            antecedentesSexuales: '',
+            diagnostico: '',
+            planDeAccion: '',
+            lugarNacimiento: '',
+            telefonoEmergencia: '',
           });
           setMessage('');
           if (onSave) {
@@ -1400,20 +1429,20 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     <TooltipProvider delayDuration={0}>
       <div className='p-4 sm:p-6'>
         <form onSubmit={handleSubmit} className='space-y-3 sm:space-y-4'>
-          {/* Sección: Motivo de Consulta y Hábitos en la misma fila */}
+          {/* Sección 1: Examen Físico y Observaciones (6 campos en 2 filas de 3) */}
           {!showOnlyVitalSigns && (
-            <div className='grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-3 sm:gap-4'>
-              {/* Motivo de consulta - Izquierda */}
-              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'>
-                <CardHeader className='p-4 sm:p-6'>
-                  <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-green-700 dark:text-green-300'>
-                    <MessageSquare className='h-5 w-5 text-green-600 dark:text-green-400' />
-                    Motivo de consulta
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
+                  <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
+                  Examen Físico y Observaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <MessageSquare className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
                       Motivo de consulta
                     </label>
                     <Textarea
@@ -1442,18 +1471,200 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <Stethoscope className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
+                      Examen físico
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese el examen físico'
+                      value={formData.examenFisico}
+                      onChange={(e) =>
+                        handleInputChange('examenFisico', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
+                      Observaciones
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese observaciones adicionales'
+                      value={formData.comentario}
+                      onChange={(e) =>
+                        handleInputChange('comentario', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
+                      Diagnóstico
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese el diagnóstico'
+                      value={formData.diagnostico}
+                      onChange={(e) =>
+                        handleInputChange('diagnostico', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
+                      Plan de acción
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese el plan de acción'
+                      value={formData.planDeAccion}
+                      onChange={(e) =>
+                        handleInputChange('planDeAccion', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Hábitos - Derecha */}
-              <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
-                <CardHeader className='p-4 sm:p-6'>
-                  <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
-                    <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
-                    Hábitos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+          {/* Sección: Antecedentes (filas 3 + 2) */}
+          {!showOnlyVitalSigns && (
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
+                  <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+                  Antecedentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
+                {/* Fila 1: 3 antecedentes */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Antecedentes personales
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese los antecedentes personales'
+                      value={formData.antecedentesPersonales}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'antecedentesPersonales',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <Users className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Antecedentes familiares
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese los antecedentes familiares'
+                      value={formData.antecedentesFamiliares}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'antecedentesFamiliares',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <Brain className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Hábitos psicobiológicos
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese los hábitos psicobiológicos'
+                      value={formData.habitosPsicobiologicos}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'habitosPsicobiologicos',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                </div>
+                {/* Fila 2: 2 antecedentes */}
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Antecedentes quirúrgicos
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese los antecedentes quirúrgicos'
+                      value={formData.antecedentesQuirurgicos}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'antecedentesQuirurgicos',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Antecedentes sexuales
+                    </label>
+                    <Textarea
+                      placeholder='Ingrese los antecedentes sexuales'
+                      value={formData.antecedentesSexuales}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'antecedentesSexuales',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sección: Hábitos (min-height para evitar salto al mostrar Índice tabáquico) */}
+          {!showOnlyVitalSigns && (
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
+                  <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
+                  Hábitos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className={`p-3 sm:p-4 pt-0 sm:pt-0 ${formData.tabaco === 'Si' ? 'min-h-[240px]' : ''}`}>
                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                       <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -1648,97 +1859,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   )}
                 </CardContent>
               </Card>
-            </div>
-          )}
-
-          {/* Sección: Antecedentes - Ocupa todo el ancho */}
-          {!showOnlyVitalSigns && (
-            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
-                  <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
-                  Antecedentes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3'>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Antecedentes personales
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese los antecedentes personales'
-                    value={formData.antecedentesPersonales}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'antecedentesPersonales',
-                        e.target.value,
-                      )
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <Users className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Antecedentes familiares
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese los antecedentes familiares'
-                    value={formData.antecedentesFamiliares}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'antecedentesFamiliares',
-                        e.target.value,
-                      )
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <Brain className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Hábitos psicobiológicos
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese los hábitos psicobiológicos'
-                    value={formData.habitosPsicobiologicos}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'habitosPsicobiologicos',
-                        e.target.value,
-                      )
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Antecedentes quirúrgicos
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese los antecedentes quirúrgicos'
-                    value={formData.antecedentesQuirurgicos}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'antecedentesQuirurgicos',
-                        e.target.value,
-                      )
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-              </CardContent>
-            </Card>
           )}
 
           {/* Sección: Signos Vitales */}
@@ -1953,84 +2073,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               </div>
             </CardContent>
           </Card>
-
-          {/* Sección: Examen Físico, Diagnóstico, Plan de acción y Observaciones */}
-          {!showOnlyVitalSigns && (
-            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
-                  <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
-                  Examen Físico y Observaciones
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3'>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <Stethoscope className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Examen físico
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese el examen físico'
-                    value={formData.examenFisico}
-                    onChange={(e) =>
-                      handleInputChange('examenFisico', e.target.value)
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Observaciones
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese observaciones adicionales'
-                    value={formData.comentario}
-                    onChange={(e) =>
-                      handleInputChange('comentario', e.target.value)
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Diagnóstico
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese el diagnóstico'
-                    value={formData.diagnostico}
-                    onChange={(e) =>
-                      handleInputChange('diagnostico', e.target.value)
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                    <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                    Plan de acción
-                  </label>
-                  <Textarea
-                    placeholder='Ingrese el plan de acción'
-                    value={formData.planDeAccion}
-                    onChange={(e) =>
-                      handleInputChange('planDeAccion', e.target.value)
-                    }
-                    disabled={loading}
-                    rows={4}
-                    className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Sección: Datos adicionales - al final */}
           {!showOnlyVitalSigns && (

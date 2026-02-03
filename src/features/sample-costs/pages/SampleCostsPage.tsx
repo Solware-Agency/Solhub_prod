@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import {
@@ -21,7 +21,7 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
-import { Loader2, Save, Plus, Trash2, Pencil } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Percent, Search } from 'lucide-react'
 
 const DEFAULT_CONVENIO_PCT = 5
 const DEFAULT_DESCUENTO_PCT = 10
@@ -43,7 +43,7 @@ const SampleCostsPage: React.FC = () => {
 	const [costs, setCosts] = useState<SampleTypeCost[]>([])
 	const [loading, setLoading] = useState(true)
 	const [editing, setEditing] = useState<Record<string, { taquilla: string }>>({})
-	const [savingCode, setSavingCode] = useState<string | null>(null)
+	const [savingAll, setSavingAll] = useState(false)
 	const [deletingCode, setDeletingCode] = useState<string | null>(null)
 	const [openAddModal, setOpenAddModal] = useState(false)
 	const [addCode, setAddCode] = useState('')
@@ -55,6 +55,16 @@ const SampleCostsPage: React.FC = () => {
 	const [editConvenioPct, setEditConvenioPct] = useState(String(convenioDiscountPercent))
 	const [editDescuentoPct, setEditDescuentoPct] = useState(String(descuentoDiscountPercent))
 	const [savingPercent, setSavingPercent] = useState(false)
+	const [searchTerm, setSearchTerm] = useState('')
+
+	const filteredCosts = useMemo(() => {
+		if (!searchTerm.trim()) return costs
+		const q = searchTerm.trim().toLowerCase()
+		return costs.filter(
+			(row) =>
+				(row.code?.toLowerCase() ?? '').includes(q) || (row.name?.toLowerCase() ?? '').includes(q),
+		)
+	}, [costs, searchTerm])
 
 	const loadCosts = useCallback(() => {
 		if (!laboratory?.id) return
@@ -105,33 +115,44 @@ const SampleCostsPage: React.FC = () => {
 		return String(calc)
 	}
 
-	const handleSaveRow = async (row: SampleTypeCost) => {
-		if (!laboratory?.id) return
-		const ed = editing[row.code]
-		const taquilla = ed?.taquilla !== undefined && ed.taquilla !== '' ? parseFloat(ed.taquilla) : undefined
-		const onlyTaquilla = row.price_convenios == null && row.price_descuento == null
-		if (taquilla === undefined || isNaN(taquilla)) {
-			toast({ title: 'Sin cambios', description: 'Edite al menos un monto para guardar.', variant: 'default' })
-			return
-		}
-		const convenios = onlyTaquilla ? null : round2(taquilla * 0.95)
-		const descuento = onlyTaquilla ? null : round2(taquilla * 0.9)
-		setSavingCode(row.code)
-		const res = await updateSampleTypeCost(laboratory.id, row.code, {
-			price_taquilla: taquilla,
-			...(onlyTaquilla ? {} : { price_convenios: convenios, price_descuento: descuento }),
-		})
-		setSavingCode(null)
-		if (res.success) {
-			toast({ title: 'Guardado', description: `Costos de ${row.name} actualizados.` })
-			setEditing((prev) => {
-				const next = { ...prev }
-				delete next[row.code]
-				return next
+	const rowsWithChanges = costs.filter((row) => hasRowPriceChanged(row))
+	const hasAnyChanges = rowsWithChanges.length > 0
+
+	const handleSaveAll = async () => {
+		if (!laboratory?.id || !hasAnyChanges) return
+		setSavingAll(true)
+		let ok = 0
+		let err = false
+		for (const row of rowsWithChanges) {
+			const ed = editing[row.code]
+			const taquilla = ed?.taquilla !== undefined && ed.taquilla !== '' ? parseFloat(ed.taquilla) : undefined
+			const onlyTaquilla = row.price_convenios == null && row.price_descuento == null
+			if (taquilla === undefined || isNaN(taquilla)) continue
+			const convenios = onlyTaquilla ? null : round2(taquilla * factorConvenios)
+			const descuento = onlyTaquilla ? null : round2(taquilla * factorDescuento)
+			const res = await updateSampleTypeCost(laboratory.id, row.code, {
+				price_taquilla: taquilla,
+				...(onlyTaquilla ? {} : { price_convenios: convenios, price_descuento: descuento }),
 			})
+			if (res.success) {
+				ok++
+				setEditing((prev) => {
+					const next = { ...prev }
+					delete next[row.code]
+					return next
+				})
+			} else {
+				err = true
+				toast({ title: 'Error', description: res.error ?? `No se pudo guardar ${row.name}.`, variant: 'destructive' })
+			}
+		}
+		setSavingAll(false)
+		if (ok > 0) {
+			toast({ title: 'Guardado', description: ok === 1 ? 'Costos actualizados.' : `${ok} tipos de muestra actualizados.` })
 			loadCosts()
-		} else {
-			toast({ title: 'Error', description: res.error ?? 'No se pudo guardar.', variant: 'destructive' })
+		}
+		if (!err && ok === 0 && hasAnyChanges) {
+			toast({ title: 'Sin cambios', description: 'Edite al menos un monto para guardar.', variant: 'default' })
 		}
 	}
 
@@ -244,11 +265,23 @@ const SampleCostsPage: React.FC = () => {
 				<CardHeader className="flex flex-row items-center justify-between gap-2">
 					<CardTitle>Estructura de costos</CardTitle>
 					<div className="flex items-center gap-2">
+						{canEdit && (
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								onClick={handleSaveAll}
+								disabled={!hasAnyChanges || savingAll}
+								aria-label="Guardar cambios"
+							>
+								{savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+							</Button>
+						)}
 						{isOwner && (
 							<Button
 								type="button"
 								variant="outline"
-								size="sm"
+								size="icon"
 								onClick={() => {
 									setEditConvenioPct(String(convenioDiscountPercent))
 									setEditDescuentoPct(String(descuentoDiscountPercent))
@@ -256,22 +289,31 @@ const SampleCostsPage: React.FC = () => {
 								}}
 								aria-label="Editar porcentajes de descuento"
 							>
-								<Pencil className="h-4 w-4 sm:mr-1" />
-								<span className="hidden sm:inline">Editar %</span>
+								<Percent className="h-4 w-4" />
 							</Button>
 						)}
 						{canEdit && (
-							<Button type="button" variant="outline" size="sm" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
-								<Plus className="h-4 w-4 sm:mr-1" />
-								<span className="hidden sm:inline">Agregar</span>
+							<Button type="button" variant="outline" size="icon" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
+								<Plus className="h-4 w-4" />
 							</Button>
 						)}
 					</div>
 				</CardHeader>
 				<CardContent>
-					<p className="text-sm text-muted-foreground mb-4">
+					<p className="text-sm text-muted-foreground mb-4 hidden sm:block">
 						Edite el monto de Taquilla; los demás se calculan automáticamente.
 					</p>
+					<div className="relative mb-4 max-w-sm">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+						<Input
+							type="search"
+							placeholder="Buscar por código o tipo de muestra..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+							className="pl-9"
+							aria-label="Buscar en estructura de costos"
+						/>
+					</div>
 					<div className="overflow-x-auto">
 						<table className="w-full border-collapse text-sm">
 							<thead>
@@ -281,11 +323,11 @@ const SampleCostsPage: React.FC = () => {
 									<th className="text-left p-2 font-medium">Taquilla ($)</th>
 									<th className="text-left p-2 font-medium">Convenios ($)</th>
 									<th className="text-left p-2 font-medium">Descuento ($)</th>
-									{canEdit && <th className="p-2 w-32">Acción</th>}
+									{canEdit && <th className="p-2 w-20">Acción</th>}
 								</tr>
 							</thead>
 							<tbody>
-								{costs.map((row) => (
+								{filteredCosts.map((row) => (
 									<tr key={row.id} className="border-b hover:bg-muted/30">
 										<td className="p-2 font-mono">{row.code}</td>
 										<td className="p-2">{row.name}</td>
@@ -326,36 +368,20 @@ const SampleCostsPage: React.FC = () => {
 										</td>
 										{canEdit && (
 											<td className="p-2">
-												<div className="flex items-center gap-1 flex-nowrap">
-													<Button
-														size="icon"
-														variant="outline"
-														onClick={() => handleSaveRow(row)}
-														disabled={savingCode === row.code || !hasRowPriceChanged(row)}
-														className="h-8 w-8 flex-shrink-0"
-														aria-label="Guardar"
-													>
-														{savingCode === row.code ? (
-															<Loader2 className="h-4 w-4 animate-spin" />
-														) : (
-															<Save className="h-4 w-4" />
-														)}
-													</Button>
-													<Button
-														size="icon"
-														variant="outline"
-														onClick={() => handleDeleteRow(row)}
-														disabled={deletingCode === row.code}
-														className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-														aria-label="Eliminar"
-													>
-														{deletingCode === row.code ? (
-															<Loader2 className="h-4 w-4 animate-spin" />
-														) : (
-															<Trash2 className="h-4 w-4" />
-														)}
-													</Button>
-												</div>
+												<Button
+													size="icon"
+													variant="outline"
+													onClick={() => handleDeleteRow(row)}
+													disabled={deletingCode === row.code}
+													className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+													aria-label="Eliminar"
+												>
+													{deletingCode === row.code ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Trash2 className="h-4 w-4" />
+													)}
+												</Button>
 											</td>
 										)}
 									</tr>
@@ -365,6 +391,9 @@ const SampleCostsPage: React.FC = () => {
 					</div>
 					{costs.length === 0 && (
 						<p className="text-muted-foreground text-sm mt-4">No hay datos de costos para este laboratorio.</p>
+					)}
+					{costs.length > 0 && filteredCosts.length === 0 && (
+						<p className="text-muted-foreground text-sm mt-4">No hay resultados para &quot;{searchTerm}&quot;.</p>
 					)}
 				</CardContent>
 			</Card>

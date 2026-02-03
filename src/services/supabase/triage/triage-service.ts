@@ -37,6 +37,7 @@ type ExtendedDatabase = Database & {
           comment: string | null;
           enfermedad_actual: string | null;
           antecedentes_quirurgicos: string | null;
+          antecedentes_sexuales: string | null;
           diagnostico: string | null;
           plan_de_accion: string | null;
           lugar_de_nacimiento: string | null;
@@ -70,6 +71,7 @@ type ExtendedDatabase = Database & {
           comment?: string | null;
           enfermedad_actual?: string | null;
           antecedentes_quirurgicos?: string | null;
+          antecedentes_sexuales?: string | null;
           diagnostico?: string | null;
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
@@ -103,6 +105,7 @@ type ExtendedDatabase = Database & {
           comment?: string | null;
           enfermedad_actual?: string | null;
           antecedentes_quirurgicos?: string | null;
+          antecedentes_sexuales?: string | null;
           diagnostico?: string | null;
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
@@ -147,6 +150,7 @@ export interface TriageRecord {
   comment: string | null;
   enfermedad_actual: string | null;
   antecedentes_quirurgicos: string | null;
+  antecedentes_sexuales: string | null;
   diagnostico: string | null;
   plan_de_accion: string | null;
   lugar_de_nacimiento: string | null;
@@ -181,6 +185,7 @@ export interface TriageRecordInsert {
   comment?: string | null;
   enfermedad_actual?: string | null;
   antecedentes_quirurgicos?: string | null;
+  antecedentes_sexuales?: string | null;
   diagnostico?: string | null;
   plan_de_accion?: string | null;
   lugar_de_nacimiento?: string | null;
