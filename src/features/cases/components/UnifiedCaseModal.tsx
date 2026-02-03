@@ -1250,30 +1250,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       } catch (error) {
         console.error('Error enviando correo:', error);
         
-        // Extraer mensaje detallado del error
+        // Extraer mensaje detallado del error - versión mejorada
         let errorMessage = 'No se pudo enviar el correo. Inténtalo de nuevo.';
-        let debugInfo = '';
         
         if (error instanceof Error) {
-          try {
-            // Si el error tiene respuesta JSON, extraerla
-            const errorText = error.message;
-            if (errorText.includes('{')) {
-              const jsonStart = errorText.indexOf('{');
-              const jsonStr = errorText.substring(jsonStart);
-              const errorData = JSON.parse(jsonStr);
-              
-              if (errorData.debug && Array.isArray(errorData.debug)) {
-                debugInfo = errorData.debug.join(' → ');
-                errorMessage = `${errorData.error || 'Error'}: ${debugInfo}`;
-              } else if (errorData.error) {
-                errorMessage = errorData.error;
-              }
-            }
-          } catch (parseError) {
-            // Si no es JSON, usar el mensaje original
-            errorMessage = error.message;
-          }
+          errorMessage = error.message;
+          console.log('Error message completo:', errorMessage);
         }
         
         // Registrar el error en email_send_logs
@@ -1291,7 +1273,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         toast({
           title: '❌ Error',
-          description: errorMessage,
+          description: error instanceof Error ? error.message : 'No se pudo enviar el correo. Inténtalo de nuevo.',
           variant: 'destructive',
         });
       } finally {
