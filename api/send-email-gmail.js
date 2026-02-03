@@ -2,8 +2,11 @@
 // API específica para enviar emails usando Gmail API (SPT)
 
 export default async function handler(req, res) {
+  console.log("📧 Gmail API handler iniciado");
+  
   // Solo permitir POST
   if (req.method !== 'POST') {
+    console.log("❌ Método no permitido:", req.method);
     return res.status(405).json({
       success: false,
       error: 'Method not allowed'
@@ -11,8 +14,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Importación dinámica de Google APIs
+    console.log("🔧 Iniciando configuración Gmail API...");
+    
+    // Importaciones dinámicas
     const { google } = await import('googleapis');
+    console.log("✅ Google APIs importado correctamente");
     
     const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
@@ -57,17 +63,22 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log("✅ Variables de Gmail presentes");
+
     // Configurar OAuth2
+    console.log("🔑 Configurando OAuth2...");
     const oauth2Client = new google.auth.OAuth2(
       process.env.GMAIL_CLIENT_ID,
       process.env.GMAIL_CLIENT_SECRET,
       'http://localhost:3000/oauth2callback' // No se usa en producción
     );
 
+    console.log("🔄 Configurando refresh token...");
     oauth2Client.setCredentials({
       refresh_token: process.env.GMAIL_REFRESH_TOKEN,
     });
 
+    console.log("📬 Inicializando Gmail client...");
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
     // Obtener información del laboratorio (reutilizar lógica existente)
@@ -274,6 +285,9 @@ ${emailHtml}`;
 
     // Enviar el email
     console.log("📤 Enviando email con Gmail API...");
+    console.log("📧 Destinatarios:", { toEmails, ccEmails, bccEmails });
+    console.log("📋 Subject:", resolvedSubject);
+    
     const result = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
@@ -291,12 +305,16 @@ ${emailHtml}`;
     });
 
   } catch (error) {
-    console.error("❌ Error enviando email con Gmail API:", error);
+    console.error("❌ Error completo en Gmail API:", error);
+    console.error("❌ Error message:", error.message);
+    console.error("❌ Error stack:", error.stack);
+    
     res.status(500).json({
       success: false,
       error: "Error al enviar el email",
       details: error.message,
-      provider: "Gmail API"
+      provider: "Gmail API",
+      errorType: error.constructor.name
     });
   }
 }
