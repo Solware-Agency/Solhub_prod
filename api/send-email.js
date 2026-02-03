@@ -1,9 +1,6 @@
 // api/send-email.js
 
 export default async function handler(req, res) {
-  // Importación dinámica dentro de la función
-  const { Resend } = await import("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
   // Solo permitir POST
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -13,7 +10,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
+    const { laboratory_id } = req.body;
+
+    // Verificar si es SPT para usar Gmail API
+    if (laboratory_id && process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+        const { data: lab, error: labError } = await sb
+          .from('laboratories')
+          .select('slug')
+          .eq('id', laboratory_id)
+          .single();
+
+        // Si es SPT, usar Gmail API
+        if (!labError && lab && lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
+          console.log("🔄 Redirigiendo a Gmail API para SPT...");
+          const gmailHandler = await import('./send-email-gmail.js');
+          return gmailHandler.default(req, res);
+        }
+      } catch (e) {
+        console.warn('Error verificando laboratorio:', e.message);
+      }
+    }
+
+    // RESTO DEL CÓDIGO ORIGINAL DE RESEND...
+    
+    // Importación dinámica dentro de la función
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, subject, message, cc, bcc } = req.body;
 
     console.log("📧 Datos recibidos:", {
       patientEmail,
