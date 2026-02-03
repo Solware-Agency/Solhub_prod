@@ -23,6 +23,8 @@ export default async function handler(req, res) {
           .eq('id', laboratory_id)
           .single();
 
+        console.log("🔍 Debug laboratorio:", { laboratory_id, lab, labError });
+
         // Si es SPT, usar Gmail API
         if (!labError && lab && lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
           console.log("🔄 Redirigiendo a Gmail API para SPT...");
