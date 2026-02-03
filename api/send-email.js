@@ -26,8 +26,18 @@ export default async function handler(req, res) {
         // Si es SPT, usar Gmail API
         if (!labError && lab && lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
           console.log("🔄 Redirigiendo a Gmail API para SPT...");
-          const gmailHandler = await import('./send-email-gmail.js');
-          return gmailHandler.default(req, res);
+          
+          // Llamar función de Gmail directamente
+          const response = await fetch(`${req.headers.origin || 'https://dev.app.solhub.agency'}/api/send-email-gmail`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(req.body)
+          });
+          
+          const result = await response.json();
+          return res.status(response.status).json(result);
         }
       } catch (e) {
         console.warn('Error verificando laboratorio:', e.message);
