@@ -68,11 +68,20 @@ export default async function handler(req, res) {
 
     // Configurar OAuth2
     debugMessages.push("🔑 Configurando OAuth2...");
+    
+    // Determinar la URL de callback correcta según el entorno
+    const isDevelopment = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
+    const redirectUri = isDevelopment 
+      ? 'https://dev.app.solhub.agency/oauth2callback'
+      : 'https://app.solhub.agency/oauth2callback';
+    
     const oauth2Client = new google.auth.OAuth2(
       process.env.GMAIL_CLIENT_ID,
       process.env.GMAIL_CLIENT_SECRET,
-      'http://localhost:3000/oauth2callback'
+      redirectUri
     );
+    
+    debugMessages.push(`🔗 OAuth URI: ${redirectUri}`);
 
     debugMessages.push("🔄 Configurando refresh token...");
     oauth2Client.setCredentials({
