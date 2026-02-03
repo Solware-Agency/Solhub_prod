@@ -29,17 +29,14 @@ export default async function handler(req, res) {
         if (!labError && lab && lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
           console.log("🔄 Redirigiendo a Gmail API para SPT...");
           
-          // Llamar función de Gmail directamente
-          const response = await fetch(`${req.headers.origin || 'https://dev.app.solhub.agency'}/api/send-email-gmail`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(req.body)
-          });
-          
-          const result = await response.json();
-          return res.status(response.status).json(result);
+          // Import dinámico del handler de Gmail
+          try {
+            const gmailModule = await import('./send-email-gmail.js');
+            return await gmailModule.default(req, res);
+          } catch (importError) {
+            console.error("❌ Error importando Gmail handler:", importError);
+            // Fallback a Resend si falla el import
+          }
         }
       } catch (e) {
         console.warn('Error verificando laboratorio:', e.message);
