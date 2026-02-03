@@ -2,23 +2,24 @@
 // API específica para enviar emails usando Gmail API (SPT)
 
 export default async function handler(req, res) {
-  console.log("📧 Gmail API handler iniciado");
+  const debugMessages = [];
+  debugMessages.push("📧 Gmail API handler iniciado");
   
   // Solo permitir POST
   if (req.method !== 'POST') {
-    console.log("❌ Método no permitido:", req.method);
     return res.status(405).json({
       success: false,
-      error: 'Method not allowed'
+      error: 'Method not allowed',
+      debug: [...debugMessages, `❌ Método no permitido: ${req.method}`]
     });
   }
 
   try {
-    console.log("🔧 Iniciando configuración Gmail API...");
+    debugMessages.push("🔧 Iniciando configuración Gmail API...");
     
     // Importaciones dinámicas
     const { google } = await import('googleapis');
-    console.log("✅ Google APIs importado correctamente");
+    debugMessages.push("✅ Google APIs importado correctamente");
     
     const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
@@ -56,29 +57,29 @@ export default async function handler(req, res) {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
-      console.log("❌ Variables de entorno faltantes:", missingVars);
       return res.status(500).json({
         success: false,
-        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`
+        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`,
+        debug: [...debugMessages, `❌ Variables faltantes: ${missingVars.join(', ')}`]
       });
     }
 
-    console.log("✅ Variables de Gmail presentes");
+    debugMessages.push("✅ Variables de Gmail presentes");
 
     // Configurar OAuth2
-    console.log("🔑 Configurando OAuth2...");
+    debugMessages.push("🔑 Configurando OAuth2...");
     const oauth2Client = new google.auth.OAuth2(
       process.env.GMAIL_CLIENT_ID,
       process.env.GMAIL_CLIENT_SECRET,
-      'http://localhost:3000/oauth2callback' // No se usa en producción
+      'http://localhost:3000/oauth2callback'
     );
 
-    console.log("🔄 Configurando refresh token...");
+    debugMessages.push("🔄 Configurando refresh token...");
     oauth2Client.setCredentials({
       refresh_token: process.env.GMAIL_REFRESH_TOKEN,
     });
 
-    console.log("📬 Inicializando Gmail client...");
+    debugMessages.push("📬 Inicializando Gmail client...");
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
     // Obtener información del laboratorio (reutilizar lógica existente)
@@ -284,9 +285,9 @@ ${emailHtml}`;
       .replace(/=+$/, '');
 
     // Enviar el email
-    console.log("📤 Enviando email con Gmail API...");
-    console.log("📧 Destinatarios:", { toEmails, ccEmails, bccEmails });
-    console.log("📋 Subject:", resolvedSubject);
+    debugMessages.push("📤 Preparando envío con Gmail API...");
+    debugMessages.push(`📧 Destinatarios: TO=${toEmails.length}, CC=${ccEmails.length}, BCC=${bccEmails.length}`);
+    debugMessages.push(`📋 Subject: ${resolvedSubject}`);
     
     const result = await gmail.users.messages.send({
       userId: 'me',
@@ -295,26 +296,28 @@ ${emailHtml}`;
       },
     });
 
-    console.log("✅ Email enviado exitosamente con Gmail API:", result.data.id);
+    debugMessages.push(`✅ Email enviado exitosamente: ${result.data.id}`);
 
     res.status(200).json({
       success: true,
       message: "Email enviado exitosamente",
       messageId: result.data.id,
-      provider: "Gmail API"
+      provider: "Gmail API",
+      debug: debugMessages
     });
 
   } catch (error) {
-    console.error("❌ Error completo en Gmail API:", error);
-    console.error("❌ Error message:", error.message);
-    console.error("❌ Error stack:", error.stack);
+    debugMessages.push(`❌ Error: ${error.message}`);
+    debugMessages.push(`❌ Tipo: ${error.constructor.name}`);
     
     res.status(500).json({
       success: false,
       error: "Error al enviar el email",
       details: error.message,
       provider: "Gmail API",
-      errorType: error.constructor.name
+      errorType: error.constructor.name,
+      debug: debugMessages,
+      fullError: error.toString()
     });
   }
 }
