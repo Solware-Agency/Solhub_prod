@@ -1327,7 +1327,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
 
       toast({
         title: '❌ Error',
-        description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+        description: error instanceof Error ? error.message : 'No se pudo enviar el correo. Inténtalo de nuevo.',
         variant: 'destructive',
       });
     } finally {

@@ -1193,9 +1193,21 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         if (!response.ok) {
           console.error('Error del servidor:', result);
-          throw new Error(
-            result.error || result.details || 'Error al enviar el email',
-          );
+          
+          // Crear mensaje de error detallado
+          let errorMessage = result.error || result.details || 'Error al enviar el email';
+          
+          // Agregar información de debug si está disponible
+          if (result.debug && Array.isArray(result.debug)) {
+            const debugSteps = result.debug.join(' → ');
+            errorMessage = `${errorMessage}\n\nPasos: ${debugSteps}`;
+            
+            if (result.fullError) {
+              errorMessage += `\n\nDetalle técnico: ${result.fullError}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         // Actualizar el campo email_sent en la base de datos
@@ -1238,6 +1250,32 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       } catch (error) {
         console.error('Error enviando correo:', error);
         
+        // Extraer mensaje detallado del error
+        let errorMessage = 'No se pudo enviar el correo. Inténtalo de nuevo.';
+        let debugInfo = '';
+        
+        if (error instanceof Error) {
+          try {
+            // Si el error tiene respuesta JSON, extraerla
+            const errorText = error.message;
+            if (errorText.includes('{')) {
+              const jsonStart = errorText.indexOf('{');
+              const jsonStr = errorText.substring(jsonStart);
+              const errorData = JSON.parse(jsonStr);
+              
+              if (errorData.debug && Array.isArray(errorData.debug)) {
+                debugInfo = errorData.debug.join(' → ');
+                errorMessage = `${errorData.error || 'Error'}: ${debugInfo}`;
+              } else if (errorData.error) {
+                errorMessage = errorData.error;
+              }
+            }
+          } catch (parseError) {
+            // Si no es JSON, usar el mensaje original
+            errorMessage = error.message;
+          }
+        }
+        
         // Registrar el error en email_send_logs
         if (case_?.id) {
           await logEmailSend({
@@ -1253,7 +1291,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         toast({
           title: '❌ Error',
-          description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
