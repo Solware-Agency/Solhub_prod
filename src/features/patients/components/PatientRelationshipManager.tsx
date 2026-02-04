@@ -25,6 +25,8 @@ import { format } from 'date-fns'
 import { createResponsibility } from '@services/supabase/patients/responsabilidades-service'
 import { createPatient, updatePatient, findPatientById } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
+import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
+import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import type { PatientProfile } from './PatientSearchAutocomplete'
 
 // =====================================================================
@@ -63,6 +65,8 @@ export const PatientRelationshipManager = ({
 	const [gender, setGender] = useState<'Masculino' | 'Femenino' | ''>('')
 
 	const { toast } = useToast()
+	useBodyScrollLock(isOpen)
+	useGlobalOverlayOpen(isOpen)
 
 	// =====================================================================
 	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
