@@ -584,6 +584,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             origin: currentCase.origin,
             branch: currentCase.branch,
             comments: currentCase.comments,
+            consulta: (currentCase as MedicalCaseWithPatient).consulta ?? '',
+            image_url: (currentCase as any).image_url ?? null,
             owner_display_code: (currentCase as any).owner_display_code ?? '',
             // Financial data
             total_amount: currentCase.total_amount,

@@ -1835,27 +1835,29 @@ const logMedicalCaseChanges = async (
 
     // Detectar cambios con normalización (evita falsos positivos)
     for (const [field, newValue] of Object.entries(newData)) {
-      if (field === 'updated_at' || field === 'version') continue;
+			if (field === 'updated_at' || field === 'version') continue
+			// No registrar campos con undefined: se interpretan como "no enviados / no modificados"
+			if (newValue === undefined) continue
 
-      const oldValue = oldData[field as keyof MedicalCase];
+			const oldValue = oldData[field as keyof MedicalCase]
 
-      // Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
-      if (hasRealChange(oldValue, newValue)) {
-        changes.push({
-          medical_record_id: caseId,
-          entity_type: 'medical_case',
-          field_name: field,
-          field_label: fieldLabels[field] || field,
-          old_value: formatValueForLog(oldValue),
-          new_value: formatValueForLog(newValue),
-          user_id: userId,
-          user_email: userEmail,
-          user_display_name: userDisplayName,
-          change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
-          changed_at: changedAt, // Mismo timestamp para todos
-        });
-      }
-    }
+			// Usar hasRealChange para evitar registrar cambios falsos (null → null, '' → '', etc)
+			if (hasRealChange(oldValue, newValue)) {
+				changes.push({
+					medical_record_id: caseId,
+					entity_type: 'medical_case',
+					field_name: field,
+					field_label: fieldLabels[field] || field,
+					old_value: formatValueForLog(oldValue),
+					new_value: formatValueForLog(newValue),
+					user_id: userId,
+					user_email: userEmail,
+					user_display_name: userDisplayName,
+					change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
+					changed_at: changedAt, // Mismo timestamp para todos
+				})
+			}
+		}
 
     // Insertar cambios si hay alguno
     if (changes.length > 0) {
