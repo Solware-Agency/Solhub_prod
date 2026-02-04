@@ -2,37 +2,31 @@
 // API específica para enviar emails usando Gmail API (SPT)
 
 export default async function handler(req, res) {
-  const debugMessages = [];
-  debugMessages.push("📧 Gmail API handler iniciado");
-  
   // Solo permitir POST
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
-      error: 'Method not allowed',
-      debug: [...debugMessages, `❌ Método no permitido: ${req.method}`]
+      error: 'Method not allowed'
     });
   }
 
   try {
-    debugMessages.push("🔧 Iniciando configuración Gmail API...");
+    console.log("🚀 [Gmail API] Handler iniciado");
     
     // Importaciones dinámicas
     const { google } = await import('googleapis');
-    debugMessages.push("✅ Google APIs importado correctamente");
+    console.log("✅ [Gmail API] googleapis importado");
     
     const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
-    console.log("📧 Gmail API - Datos recibidos:", {
-      patientEmail,
-      patientName,
-      caseCode,
-      pdfUrl: pdfUrl ? "URL presente" : "URL faltante",
-      uploadedPdfUrl: uploadedPdfUrl ? "PDF adjunto presente" : "Sin PDF adjunto",
-      imageUrls: imageUrls && imageUrls.length > 0 ? `${imageUrls.length} imágenes` : "Sin imágenes",
-      laboratory_id: laboratory_id || null,
-      cc: cc || [],
-      bcc: bcc || [],
+    console.log("📦 [Gmail API] Datos recibidos:", {
+      patientEmail: patientEmail || "FALTA",
+      patientName: patientName || "FALTA",
+      caseCode: caseCode || "N/A",
+      pdfUrl: pdfUrl ? "✅ Presente" : "❌ Faltante",
+      uploadedPdfUrl: uploadedPdfUrl ? "✅ Presente" : "❌ Faltante",
+      imageUrls: imageUrls?.length || 0,
+      laboratory_id: laboratory_id || "N/A"
     });
 
     // Validar datos requeridos
@@ -45,6 +39,7 @@ export default async function handler(req, res) {
 
     // Validar que haya contenido para enviar
     const hasContent = pdfUrl || uploadedPdfUrl || (imageUrls && imageUrls.length > 0);
+    
     if (!hasContent) {
       return res.status(400).json({
         success: false,
@@ -52,71 +47,53 @@ export default async function handler(req, res) {
       });
     }
 
-    // Verificar variables de entorno de Gmail CON DEBUG DETALLADO
-    debugMessages.push("🔍 Verificando variables de Gmail...");
-    
-    const envDebug = {
-      GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID ? `OK (${process.env.GMAIL_CLIENT_ID.substring(0, 30)}...)` : '❌ FALTA',
-      GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET ? `OK (${process.env.GMAIL_CLIENT_SECRET.substring(0, 15)}...)` : '❌ FALTA',
-      GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ? `OK (${process.env.GMAIL_REFRESH_TOKEN.substring(0, 30)}...)` : '❌ FALTA',
-      GMAIL_USER_EMAIL: process.env.GMAIL_USER_EMAIL ? `OK (${process.env.GMAIL_USER_EMAIL})` : '❌ FALTA'
-    };
-    
-    debugMessages.push(`📋 Estado variables: ${JSON.stringify(envDebug)}`);
+    // Verificar variables de entorno de Gmail
+    console.log("🔍 [Gmail API] Verificando variables de entorno...");
+    console.log("Variables presentes:", {
+      GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID ? `✅ ${process.env.GMAIL_CLIENT_ID.substring(0, 20)}...` : "❌ FALTA",
+      GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET ? `✅ ${process.env.GMAIL_CLIENT_SECRET.substring(0, 10)}...` : "❌ FALTA",
+      GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ? `✅ ${process.env.GMAIL_REFRESH_TOKEN.substring(0, 15)}...` : "❌ FALTA",
+      GMAIL_USER_EMAIL: process.env.GMAIL_USER_EMAIL || "❌ FALTA"
+    });
     
     const requiredEnvVars = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN', 'GMAIL_USER_EMAIL'];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
-    if (missingVars.length > 0) {
-      return res.status(500).json({
-        success: false,
-        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`,
-        debug: [...debugMessages, `❌ Variables faltantes: ${missingVars.join(', ')}`, `Estado completo: ${JSON.stringify(envDebug)}`],
-        envDebug
-      });
-    }
-
-    debugMessages.push("✅ Todas las variables de Gmail presentes");
-
-    // Configurar OAuth2
-    debugMessages.push("🔑 Configurando OAuth2...");
-    
-    // Determinar la URL de callback correcta según el entorno
+    if (ole.log("🔑 [Gmail API] Configurando OAuth2...");
     const isDevelopment = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
     const redirectUri = isDevelopment 
       ? 'https://dev.app.solhub.agency/oauth2callback'
       : 'https://app.solhub.agency/oauth2callback';
+    
+    console.log(`🌐 [Gmail API] Entorno: ${isDevelopment ? 'DESARROLLO' : 'PRODUCCIÓN'}`);
+    console.log(`🔗 [Gmail API] Redirect URI: ${redirectUri}`);
     
     const oauth2Client = new google.auth.OAuth2(
       process.env.GMAIL_CLIENT_ID,
       process.env.GMAIL_CLIENT_SECRET,
       redirectUri
     );
+    console.log("✅ [Gmail API] OAuth2Client creado");
     
-    debugMessages.push(`🔗 OAuth URI: ${redirectUri}`);
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+    });
+    console.log("✅ [Gmail API] Credenciales configuradas");
 
-    debugMessages.push("🔄 Configurando refresh token...");
-    try {
-      oauth2Client.setCredentials({
-        refresh_token: process.env.GMAIL_REFRESH_TOKEN,
-      });
-      debugMessages.push("✅ Refresh token configurado");
-    } catch (credError) {
-      debugMessages.push(`❌ Error configurando credentials: ${credError.message}`);
-      throw new Error(`OAuth credentials error: ${credError.message}`);
-    }
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    console.log("✅ [Gmail API] Gmail client inicializado"
+      process.env.GMAIL_CLIENT_SECRET,
+      redirectUri
+    );
+    
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+    });
 
-    debugMessages.push("📬 Inicializando Gmail client...");
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // Obtener información del laboratorio (reutilizar lógica existente)
-    let labName = 'SPT - Salud para Todos';
-    let labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
-    let labPhone = '+58 212-4179598';
-    let labSlug = 'spt';
-
-    if (laboratory_id && process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
-      try {
+    // Obtener información del laboratorio
+    let labNole.log("🏥 [Gmail API] Obteniendo datos del laboratorio...");
         const { createClient } = await import('@supabase/supabase-js');
         const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
         const { data: lab, error: labError } = await sb
@@ -128,8 +105,17 @@ export default async function handler(req, res) {
         if (!labError && lab) {
           labName = lab.name || labName;
           labSlug = lab.slug || labSlug;
-          const branding = lab.branding || {};
+          console.log(`✅ [Gmail API] Laboratorio: ${labName} (${labSlug})`);
           
+          // Logo específico para SPT
+          if (lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
+            labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
+          }
+        } else {
+          console.warn("⚠️ [Gmail API] Error obteniendo laboratorio:", labError);
+        }
+      } catch (e) {
+        console.warn('⚠️ [Gmail API] 
           // Logo específico para SPT
           if (lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
             labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
@@ -291,17 +277,8 @@ export default async function handler(req, res) {
       `From: ${labName} <${process.env.GMAIL_USER_EMAIL}>`,
       `To: ${toEmails.join(', ')}`
     ];
-
-    if (ccEmails.length > 0) parts.push(`Cc: ${ccEmails.join(', ')}`);
-    if (bccEmails.length > 0) parts.push(`Bcc: ${bccEmails.join(', ')}`);
-
-    parts.push(`Subject: ${utf8Subject}`);
-    parts.push(`Content-Type: text/html; charset=utf-8`);
-    parts.push(`MIME-Version: 1.0`);
-    parts.push(``); // Línea en blanco obligatoria antes del cuerpo
-    parts.push(emailHtml);
-
-    const rawMessage = parts.join('\r\n');
+    console.log("📝 [Gmail API] Mensaje RFC 2822 construido");
+    console.log(`📧 [Gmail API] Destinatarios - TO: ${toEmails.length}, CC: ${ccEmails.length}, BCC: ${bccEmails.length}`);
 
     // Codificar el mensaje en base64url
     const encodedMessage = Buffer.from(rawMessage)
@@ -309,51 +286,56 @@ export default async function handler(req, res) {
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
+    console.log("🔐 [Gmail API] Mensaje codificado en base64url");
 
     // Enviar el email
-    debugMessages.push("📤 Preparando envío con Gmail API...");
-    debugMessages.push(`📧 Destinatarios: TO=${toEmails.length}, CC=${ccEmails.length}, BCC=${bccEmails.length}`);
-    debugMessages.push(`📋 Subject: ${resolvedSubject}`);
+    console.log("📤 [Gmail API] Enviando email...");
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+      },
+    });
+
+    console.log("✅ [Gmail API] Email enviado exitosamente!");
+    console.log(`📨 [Gmail API] Message ID: ${result.data.id}` .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    // Enviar el email
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+      },❌ [Gmail API] ERROR CRÍTICO:", error);
+    console.error("❌ [Gmail API] Error name:", error.name);
+    console.error("❌ [Gmail API] Error message:", error.message);
+    console.error("❌ [Gmail API] Error stack:", error.stack);
     
-    try {
-      const result = await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: encodedMessage,
-        },
-      });
-
-      debugMessages.push(`✅ Email enviado exitosamente: ${result.data.id}`);
-
-      res.status(200).json({
-        success: true,
-        message: "Email enviado exitosamente",
-        messageId: result.data.id,
-        provider: "Gmail API",
-        debug: debugMessages
-      });
-    } catch (sendError) {
-      debugMessages.push(`❌ Error en gmail.users.messages.send: ${sendError.message}`);
-      
-      // Extraer más detalles del error de Gmail
-      const gmailError = sendError.response?.data?.error || sendError;
-      debugMessages.push(`📋 Detalles Gmail: ${JSON.stringify(gmailError)}`);
-      
-      throw new Error(`Gmail API send failed: ${sendError.message} - Details: ${JSON.stringify(gmailError)}`);
+    // Si es un error de Google API, mostrar más detalles
+    if (error.response) {
+      console.error("❌ [Gmail API] Response status:", error.response.status);
+      console.error("❌ [Gmail API] Response data:", JSON.stringify(error.response.data, null, 2));
     }
-
-  } catch (error) {
-    debugMessages.push(`❌ Error: ${error.message}`);
-    debugMessages.push(`❌ Tipo: ${error.constructor.name}`);
     
     res.status(500).json({
       success: false,
       error: "Error al enviar el email",
       details: error.message,
       provider: "Gmail API",
-      errorType: error.constructor.name,
-      debug: debugMessages,
-      fullError: error.toString()
+      errorType: error.namea.id,
+      provider: "Gmail API"
+    });
+
+  } catch (error) {
+    console.error("Error enviando email con Gmail API:", error);
+    
+    res.status(500).json({
+      success: false,
+      error: "Error al enviar el email",
+      details: error.message,
+      provider: "Gmail API"
     });
   }
 }
