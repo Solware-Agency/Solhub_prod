@@ -158,6 +158,11 @@ export const ServiceSection = memo(
     const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
     const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
 
+    const formatTitleCase = (value: string): string =>
+      value
+        .toLowerCase()
+        .replace(/(^|[\s"'(])([a-záéíóúñü])/g, (_, prefix, char) => `${prefix}${char.toUpperCase()}`);
+
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
         <CardHeader className='p-3 sm:p-4 md:p-6'>
@@ -200,6 +205,7 @@ export const ServiceSection = memo(
                       iconRight={
                         <MapPin className='h-4 w-4 text-muted-foreground' />
                       }
+                      formatSuggestion={isLM ? formatTitleCase : undefined}
                       {...field}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const { value } = e.target;
@@ -263,6 +269,7 @@ export const ServiceSection = memo(
                       iconRight={
                         <Stethoscope className='h-4 w-4 text-muted-foreground' />
                       }
+                      formatSuggestion={isLM ? formatTitleCase : undefined}
                       {...field}
                       onChange={(e) => {
                         const { value } = e.target;

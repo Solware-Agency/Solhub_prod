@@ -11,13 +11,14 @@ interface AutocompleteInputProps extends React.ComponentProps<typeof Input> {
   minSearchLength?: number;
   iconRight?: React.ReactNode;
   iconLeft?: React.ReactNode;
+  formatSuggestion?: (value: string) => string;
 }
 
 // Use React.memo to prevent unnecessary re-renders
 export const AutocompleteInput = React.memo(React.forwardRef<
   HTMLInputElement,
   AutocompleteInputProps
->(({ className, fieldName, onValueChange, onPatientSelect, minSearchLength = 0, iconRight, iconLeft, ...props }, ref) => {
+>(({ className, fieldName, onValueChange, onPatientSelect, minSearchLength = 0, iconRight, iconLeft, formatSuggestion, ...props }, ref) => {
   const [inputValue, setInputValue] = React.useState(String(props.value || ""));
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(-1);
@@ -280,7 +281,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
               )}
               onClick={() => handleSuggestionClick(suggestion.value)}
             >
-              {suggestion.value}
+              {formatSuggestion ? formatSuggestion(suggestion.value) : suggestion.value}
             </div>
           ))}
         </div>
