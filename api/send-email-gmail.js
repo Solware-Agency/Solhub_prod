@@ -2,24 +2,17 @@
 // API específica para enviar emails usando Gmail API (SPT)
 
 export default async function handler(req, res) {
-  const debugMessages = [];
-  debugMessages.push("📧 Gmail API handler iniciado");
-  
   // Solo permitir POST
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
-      error: 'Method not allowed',
-      debug: [...debugMessages, `❌ Método no permitido: ${req.method}`]
+      error: 'Method not allowed'
     });
   }
 
   try {
-    debugMessages.push("🔧 Iniciando configuración Gmail API...");
-    
-    // Importaciones dinámicas para performance
+    // Importaciones dinámicas
     const { google } = await import('googleapis');
-    debugMessages.push("✅ Google APIs importado correctamente");
     
     const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
@@ -58,23 +51,17 @@ export default async function handler(req, res) {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
-      // Log extra para depurar en Vercel
       console.error("❌ Variables de entorno faltantes:", missingVars);
       console.log("🔍 Variables disponibles (keys):", Object.keys(process.env)); 
       
       return res.status(500).json({
         success: false,
-        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`,
-        debug: [...debugMessages, `❌ Variables faltantes: ${missingVars.join(', ')}`]
+        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`
       });
     }
 
-    debugMessages.push("✅ Variables de Gmail presentes");
-
     // Configurar OAuth2
-    debugMessages.push("🔑 Configurando OAuth2...");
-    
-    // Determinar la URL de callback correcta según el entorno
+    // Configurar OAuth2 - Determinar la URL de callback correcta según el entorno
     const isDevelopment = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
     const redirectUri = isDevelopment 
       ? 'https://dev.app.solhub.agency/oauth2callback'
@@ -321,24 +308,17 @@ export default async function handler(req, res) {
       success: true,
       message: "Email enviado exitosamente",
       messageId: result.data.id,
-      provider: "Gmail API",
-      debug: debugMessages
+      provider: "Gmail API"
     });
 
   } catch (error) {
-    debugMessages.push(`❌ Error: ${error.message}`);
-    debugMessages.push(`❌ Tipo: ${error.constructor.name}`);
-    
-    console.error("❌ Full Error:", error);
+    console.error("❌ Error enviando email con Gmail API:", error);
 
     res.status(500).json({
       success: false,
       error: "Error al enviar el email",
       details: error.message,
-      provider: "Gmail API",
-      errorType: error.constructor.name,
-      debug: debugMessages,
-      fullError: error.toString()
+      provider: "Gmail API"
     });
   }
 }
