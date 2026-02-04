@@ -266,25 +266,24 @@ export default async function handler(req, res) {
     const ccEmails = (cc && Array.isArray(cc)) ? cc.filter(email => email && email.trim()) : [];
     const bccEmails = (bcc && Array.isArray(bcc)) ? bcc.filter(email => email && email.trim()) : [];
 
-    const allRecipients = [...toEmails, ...ccEmails, ...bccEmails].join(', ');
+    // Crear el mensaje en formato RFC 2822 con saltos de línea estándar (\r\n)
+    const utf8Subject = `=?utf-8?B?${Buffer.from(resolvedSubject).toString('base64')}?=`;
+    
+    let parts = [
+      `From: ${labName} <${process.env.GMAIL_USER_EMAIL}>`,
+      `To: ${toEmails.join(', ')}`
+    ];
 
-    // Crear el mensaje en formato RFC 2822
-    let rawMessage = `From: ${labName} <${process.env.GMAIL_USER_EMAIL}>
-To: ${toEmails.join(', ')}`;
+    if (ccEmails.length > 0) parts.push(`Cc: ${ccEmails.join(', ')}`);
+    if (bccEmails.length > 0) parts.push(`Bcc: ${bccEmails.join(', ')}`);
 
-    if (ccEmails.length > 0) {
-      rawMessage += `\nCc: ${ccEmails.join(', ')}`;
-    }
+    parts.push(`Subject: ${utf8Subject}`);
+    parts.push(`Content-Type: text/html; charset=utf-8`);
+    parts.push(`MIME-Version: 1.0`);
+    parts.push(``); // Línea en blanco obligatoria antes del cuerpo
+    parts.push(emailHtml);
 
-    if (bccEmails.length > 0) {
-      rawMessage += `\nBcc: ${bccEmails.join(', ')}`;
-    }
-
-    rawMessage += `\nSubject: ${resolvedSubject}
-Content-Type: text/html; charset=utf-8
-MIME-Version: 1.0
-
-${emailHtml}`;
+    const rawMessage = parts.join('\r\n');
 
     // Codificar el mensaje en base64url
     const encodedMessage = Buffer.from(rawMessage)
