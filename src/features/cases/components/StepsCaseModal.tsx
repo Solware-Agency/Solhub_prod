@@ -5,6 +5,13 @@ import type { Tables } from '@shared/types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { supabase } from '@/services/supabase/config/config';
 import { updatePatient } from '@/services/supabase/patients/patients-service';
 import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
@@ -46,6 +53,15 @@ import SendEmailModal from './SendEmailModal';
 import type { Database } from '@shared/types/types';
 import { useLaboratory } from '@app/providers/LaboratoryContext';
 import { useAuth } from '@app/providers/AuthContext';
+
+const MARIHORGEN_TEMPLATES = [
+  { id: 'cx_doble_firma', label: 'CX DOBLE FIRMA' },
+  { id: 'biopsia', label: 'BIOPSIA' },
+  { id: 'biopsias_de_revision', label: 'BIOPSIAS DE REVISIÓN' },
+  { id: 'prostata', label: 'PROSTATA' },
+  { id: 'puncion_doble_pagina', label: 'PUNCIÓN DOBLE PAGINA' },
+  { id: 'ihq', label: 'IHQ' },
+] as const;
 
 interface MedicalRecord {
   id?: string;
@@ -119,6 +135,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const isMedicowner = profile?.role === 'medicowner';
   const isMedicoTratante = profile?.role === 'medico_tratante';
   const isSpt = laboratory?.slug === 'spt';
+  const isMarihorgen =
+    laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
+  const isSptAutoApprove = isSpt && (isMedicoTratante || isOwner);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
+    MARIHORGEN_TEMPLATES[0].id,
+  );
 
   const isCitoAdmin =
     profile?.role === 'residente' && case_?.exam_type === 'Citología';
@@ -155,7 +177,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     // Para SPT: también disponible para medico_tratante (flujo completo)
     // NO disponible para: employee, medicowner (ellos generan docs directamente)
     const shouldSkipDataStep = isSpt 
-      ? (isEmployee || isMedicowner || isOwner)
+      ? (isEmployee || isMedicowner)
       : (isEmployee || isMedicowner || isMedicoTratante);
     
     if (!shouldSkipDataStep) {
@@ -197,7 +219,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     // Paso de Aprobar: NO mostrar para medico_tratante en SPT (auto-aprueba)
-    const shouldShowApproveStep = isSpt && isMedicoTratante
+    const shouldShowApproveStep = isSptAutoApprove
       ? false
       : ((isCitotecno && isCitology) || isOwner || isMedicowner);
     
@@ -245,7 +267,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       return computedSteps.findIndex((step) => step.id === 'pdf');
     }
 
-    if (isOwner && docAprobado === 'pendiente' && !isCitology) {
+    if (!isSpt && isOwner && docAprobado === 'pendiente' && !isCitology) {
       return computedSteps.findIndex((step) => step.id === 'approve');
     }
 
@@ -265,6 +287,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     }
 
     if (
+      !isSpt &&
       isOwner &&
       docAprobado === 'pendiente' &&
       isCitology &&
@@ -575,17 +598,32 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       console.log('Generate Doc Webhook URL:', GENERATE_DOC);
       console.log('Patient ID:', caseData.patient_id);
 
+      if (isMarihorgen && !selectedTemplateId) {
+        toast({
+          title: '❌ Plantilla requerida',
+          description: 'Selecciona una plantilla para continuar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const requestBody: Record<string, string | null> = {
+        caseId: case_.id,
+        patientId: caseData.patient_id,
+        userId: user?.id || profile?.id || null, // User ID de quien hace clic en "Rellenar datos"
+      };
+
+      if (isMarihorgen) {
+        requestBody.templateId = selectedTemplateId;
+      }
+
       const webhookRes = await fetch(GENERATE_DOC, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          caseId: case_.id,
-          patientId: caseData.patient_id,
-          userId: user?.id || profile?.id || null, // User ID de quien hace clic en "Rellenar datos"
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       console.log('[2] Webhook enviado. Status:', webhookRes.status);
@@ -700,7 +738,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
       setIsSaving(true);
       
       // En SPT, médico_tratante puede aprobar directamente
-      if (isSpt && isMedicoTratante) {
+      if (isSptAutoApprove) {
         // Primero marcar como pendiente
         const { error: pendingError } = await markCaseAsPending(case_.id);
         if (pendingError) throw pendingError;
@@ -1349,7 +1387,29 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
             <div className='grid gap-4'>
               {/* Activa el nodo principal de n8n */}
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
-                <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
+                <div className='flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3'>
+                  {isMarihorgen && (
+                    <div className='w-full sm:max-w-xs'>
+                      <label className='text-sm font-medium text-foreground'>
+                        Plantilla de informe
+                      </label>
+                      <Select
+                        value={selectedTemplateId}
+                        onValueChange={setSelectedTemplateId}
+                      >
+                        <SelectTrigger className='mt-1'>
+                          <SelectValue placeholder='Selecciona una plantilla' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MARIHORGEN_TEMPLATES.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <Button
                     type='button'
                     className='flex-1 bg-primary hover:bg-primary/80'
@@ -1397,7 +1457,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                     disabled={
                       isSaving ||
                       // En SPT médico_tratante siempre puede marcar (sin validación owner)
-                      (isSpt && isMedicoTratante
+                      (isSptAutoApprove
                         ? false
                         : (docAprobado != 'faltante' &&
                             docAprobado !== 'rechazado')) ||
@@ -1411,7 +1471,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
               </div>
               <div className='bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800'>
                 <p className='text-teal-400 text-sm'>
-                  {isSpt && isMedicoTratante
+                  {isSptAutoApprove
                     ? 'Para completar este paso, haz clic en el botón de arriba. El documento se aprobará automáticamente y podrás continuar con la generación del PDF.'
                     : 'Marca el documento como completado y pasa al siguiente paso.'}
                 </p>
