@@ -119,6 +119,14 @@ export const PatientRelationshipManager = ({
 	// HANDLERS
 	// =====================================================================
 
+	// Validar formato de email: debe tener @ y al menos un punto en el dominio
+	const isValidEmail = (value: string): boolean => {
+		if (!value || !value.trim()) return true // vacío = válido (opcional)
+		const trimmed = value.trim()
+		// Debe contener @ y después del @ debe haber al menos un punto (ej: user@domain.com)
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
+	}
+
 	const handleSubmit = async () => {
 		// Validaciones
 		if (!nombre.trim()) {
@@ -143,6 +151,15 @@ export const PatientRelationshipManager = ({
 			toast({
 				title: 'Error',
 				description: 'Debe proporcionar fecha de nacimiento o edad',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (email.trim() && !isValidEmail(email)) {
+			toast({
+				title: 'Error',
+				description: 'El email debe tener un formato válido (ej: nombre@dominio.com)',
 				variant: 'destructive',
 			})
 			return
@@ -575,6 +592,7 @@ export const PatientRelationshipManager = ({
 							<Input
 								id="telefono"
 								value={telefono}
+
 								disabled
 								readOnly
 								placeholder="Teléfono del responsable"
