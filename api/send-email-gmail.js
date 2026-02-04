@@ -52,7 +52,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // Verificar variables de entorno de Gmail
+    // Verificar variables de entorno de Gmail CON DEBUG DETALLADO
+    debugMessages.push("🔍 Verificando variables de Gmail...");
+    
+    const envDebug = {
+      GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID ? `OK (${process.env.GMAIL_CLIENT_ID.substring(0, 30)}...)` : '❌ FALTA',
+      GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET ? `OK (${process.env.GMAIL_CLIENT_SECRET.substring(0, 15)}...)` : '❌ FALTA',
+      GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ? `OK (${process.env.GMAIL_REFRESH_TOKEN.substring(0, 30)}...)` : '❌ FALTA',
+      GMAIL_USER_EMAIL: process.env.GMAIL_USER_EMAIL ? `OK (${process.env.GMAIL_USER_EMAIL})` : '❌ FALTA'
+    };
+    
+    debugMessages.push(`📋 Estado variables: ${JSON.stringify(envDebug)}`);
+    
     const requiredEnvVars = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN', 'GMAIL_USER_EMAIL'];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
@@ -60,11 +71,12 @@ export default async function handler(req, res) {
       return res.status(500).json({
         success: false,
         error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`,
-        debug: [...debugMessages, `❌ Variables faltantes: ${missingVars.join(', ')}`]
+        debug: [...debugMessages, `❌ Variables faltantes: ${missingVars.join(', ')}`, `Estado completo: ${JSON.stringify(envDebug)}`],
+        envDebug
       });
     }
 
-    debugMessages.push("✅ Variables de Gmail presentes");
+    debugMessages.push("✅ Todas las variables de Gmail presentes");
 
     // Configurar OAuth2
     debugMessages.push("🔑 Configurando OAuth2...");
@@ -84,9 +96,15 @@ export default async function handler(req, res) {
     debugMessages.push(`🔗 OAuth URI: ${redirectUri}`);
 
     debugMessages.push("🔄 Configurando refresh token...");
-    oauth2Client.setCredentials({
-      refresh_token: process.env.GMAIL_REFRESH_TOKEN,
-    });
+    try {
+      oauth2Client.setCredentials({
+        refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+      });
+      debugMessages.push("✅ Refresh token configurado");
+    } catch (credError) {
+      debugMessages.push(`❌ Error configurando credentials: ${credError.message}`);
+      throw new Error(`OAuth credentials error: ${credError.message}`);
+    }
 
     debugMessages.push("📬 Inicializando Gmail client...");
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -297,22 +315,32 @@ export default async function handler(req, res) {
     debugMessages.push(`📧 Destinatarios: TO=${toEmails.length}, CC=${ccEmails.length}, BCC=${bccEmails.length}`);
     debugMessages.push(`📋 Subject: ${resolvedSubject}`);
     
-    const result = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: encodedMessage,
-      },
-    });
+    try {
+      const result = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage,
+        },
+      });
 
-    debugMessages.push(`✅ Email enviado exitosamente: ${result.data.id}`);
+      debugMessages.push(`✅ Email enviado exitosamente: ${result.data.id}`);
 
-    res.status(200).json({
-      success: true,
-      message: "Email enviado exitosamente",
-      messageId: result.data.id,
-      provider: "Gmail API",
-      debug: debugMessages
-    });
+      res.status(200).json({
+        success: true,
+        message: "Email enviado exitosamente",
+        messageId: result.data.id,
+        provider: "Gmail API",
+        debug: debugMessages
+      });
+    } catch (sendError) {
+      debugMessages.push(`❌ Error en gmail.users.messages.send: ${sendError.message}`);
+      
+      // Extraer más detalles del error de Gmail
+      const gmailError = sendError.response?.data?.error || sendError;
+      debugMessages.push(`📋 Detalles Gmail: ${JSON.stringify(gmailError)}`);
+      
+      throw new Error(`Gmail API send failed: ${sendError.message} - Details: ${JSON.stringify(gmailError)}`);
+    }
 
   } catch (error) {
     debugMessages.push(`❌ Error: ${error.message}`);
