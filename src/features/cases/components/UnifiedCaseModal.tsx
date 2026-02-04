@@ -1368,8 +1368,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         ? sptMessageLines.join('\n')
         : `Hola ${case_.nombre}, le escribimos desde el laboratorio ${laboratory?.name || 'nuestro laboratorio'} por su caso ${case_.code || 'N/A'}.`;
 
-      // Format phone number (remove spaces, dashes, etc.)
-      const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || '';
+      // Format phone number (remove non-digits) and ensure country code for SPT (VE)
+      const digitsOnly = case_.telefono?.replace(/\D/g, '') || '';
+      const cleanPhone = isSpt
+        ? (digitsOnly.startsWith('0') && digitsOnly.length === 11
+            ? `58${digitsOnly.slice(1)}`
+            : digitsOnly.startsWith('58')
+              ? digitsOnly
+              : digitsOnly.length === 10
+                ? `58${digitsOnly}`
+                : digitsOnly)
+        : digitsOnly;
       const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
         message,
       )}`;
