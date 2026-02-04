@@ -73,14 +73,10 @@ export default async function handler(req, res) {
       redirectUri
     );
     
-    debugMessages.push(`🔗 OAuth URI configurada: ${redirectUri}`);
-
-    debugMessages.push("🔄 Configurando refresh token...");
     oauth2Client.setCredentials({
       refresh_token: process.env.GMAIL_REFRESH_TOKEN,
     });
 
-    debugMessages.push("📬 Inicializando Gmail client...");
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
     // --- LÓGICA DE LABORATORIO (Supabase) ---
@@ -291,18 +287,13 @@ export default async function handler(req, res) {
       .replace(/=+$/, '');
 
     // Enviar el email
-    debugMessages.push("📤 Preparando envío con Gmail API...");
-    debugMessages.push(`📧 Destinatarios: TO=${toEmails.length}, CC=${ccEmails.length}, BCC=${bccEmails.length}`);
-    debugMessages.push(`📋 Subject: ${resolvedSubject}`);
-    
+    // Enviar el email
     const result = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
         raw: encodedMessage,
       },
     });
-
-    debugMessages.push(`✅ Email enviado exitosamente: ${result.data.id}`);
 
     res.status(200).json({
       success: true,
