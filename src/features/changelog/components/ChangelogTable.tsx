@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react'
-import { History, Filter, Calendar, FileText, RefreshCw, ArrowUpDown, Eye, Trash2, AlertCircle, Mail, MailX, Edit } from 'lucide-react'
-import { ChangeDetailsModal } from './ChangeDetailsModal'
-import { Card } from '@shared/components/ui/card'
-import { Input } from '@shared/components/ui/input'
-import { Button } from '@shared/components/ui/button'
-import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getAllChangeLogs } from '@/services/legacy/supabase-service'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { supabase } from '@/services/supabase/config/config'
+import { Button } from '@shared/components/ui/button'
+import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
+import { Card } from '@shared/components/ui/card'
+import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
+import { Input } from '@shared/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
-import { supabase } from '@/services/supabase/config/config'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { AlertCircle, ArrowUpDown, Calendar, Edit, Eye, FileText, Filter, History, Mail, MailX, RefreshCw, Trash2 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
+import { ChangeDetailsModal } from './ChangeDetailsModal'
 
 // Type for the actual data returned from the query - updated for new structure
 import type { ChangeLogData } from './ChangeDetailsModal'
@@ -292,7 +292,7 @@ const ChangelogTable: React.FC = () => {
 				totalLogs: filteredLogs.length,
 				totalGroups: groups.size,
 				groupsWithMultipleChanges: Array.from(groups.entries())
-					.filter(([_, changes]) => changes.length > 1)
+					.filter(([changes]) => changes.length > 1)
 					.map(([sessionId, changes]) => ({
 						sessionId,
 						count: changes.length,
@@ -670,13 +670,13 @@ const ChangelogTable: React.FC = () => {
 
 													{/* Resumen */}
 													<td className="px-4 py-4">
-														<div className="max-w-xs break-words overflow-wrap-anywhere">
+														<div className="max-w-xs wrap-break-word overflow-wrap-anywhere">
 															{log.field_name === 'created_record' ? (
-																<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
 																	Creación de nuevo registro médico
 																</span>
 															) : log.field_name === 'deleted_record' ? (
-																<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
 																	Eliminación del registro: {(() => {
 																			const value = log.old_value || '';
 																		if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
@@ -687,12 +687,12 @@ const ChangelogTable: React.FC = () => {
 																</span>
 																) : group.changeCount === 1 ? (
 																	// Si solo hay un cambio, mostrar resumen simple
-																<div className="text-sm break-words">
+																<div className="text-sm wrap-break-word">
 																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
 																	</p>
 																	<div className="flex flex-col gap-1">
-																		<div className="text-xs text-gray-500 dark:text-gray-400 break-words">
+																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																			<span className="line-through">Antes: {(() => {
 																						const value = log.old_value || '(vacío)';
 																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
@@ -701,7 +701,7 @@ const ChangelogTable: React.FC = () => {
 																				return value;
 																			})()}</span>
 																		</div>
-																		<div className="text-xs text-green-600 dark:text-green-400 break-words">
+																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																			<span>Ahora: {(() => {
 																						const value = log.new_value || '(vacío)';
 																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
@@ -763,7 +763,7 @@ const ChangelogTable: React.FC = () => {
 										return (
 											<div
 												key={group.sessionId}
-												className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm overflow-hidden"
+												className="bg-white dark:bg-background sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer rounded-lg p-3 shadow-sm overflow-hidden"
 											>
 												{/* Header with date and action type */}
 												<div className="flex items-center justify-between mb-2">
@@ -812,13 +812,13 @@ const ChangelogTable: React.FC = () => {
 												{/* Resumen */}
 												<div className="border-t border-gray-100 dark:border-gray-700 pt-2">
 													<span className="text-xs text-gray-500 dark:text-gray-400">Resumen:</span>
-													<div className="mt-1 break-words overflow-wrap-anywhere">
+													<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
 														{log.field_name === 'created_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
+															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
 																Creación de nuevo registro médico
 															</span>
 														) : log.field_name === 'deleted_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 break-words">
+															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
 																Eliminación del registro: {log.old_value}
 															</span>
 															) : group.changeCount === 1 ? (
@@ -826,8 +826,8 @@ const ChangelogTable: React.FC = () => {
 																<p className="font-medium text-gray-900 dark:text-gray-100">
 																	{translateFieldLabel(log.field_name, log.field_label)}
 																</p>
-																<div className="flex flex-col gap-1 break-words">
-																	<div className="text-xs text-gray-500 dark:text-gray-400 break-words">
+																<div className="flex flex-col gap-1 wrap-break-word">
+																	<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																		<span className="line-through">Antes: {(() => {
 																					const value = log.old_value || '(vacío)';
 																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
@@ -836,7 +836,7 @@ const ChangelogTable: React.FC = () => {
 																			return value;
 																		})()}</span>
 																	</div>
-																	<div className="text-xs text-green-600 dark:text-green-400 break-words">
+																	<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																		<span>Ahora: {(() => {
 																					const value = log.new_value || '(vacío)';
 																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {

@@ -1,42 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import {
-	Users,
-	Mail,
-	Calendar,
-	Crown,
-	Briefcase,
-	MapPin,
-	CheckCircle,
-	Clock,
-	User,
-	ShieldCheck,
-	Info,
-	Copy,
-	Phone,
-	Wand,
-	Microscope,
-	Shield,
-	Trash2,
-	TestTube,
-} from 'lucide-react'
-import { Card } from '@shared/components/ui/card'
-import { Input } from '@shared/components/ui/input'
-import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/services/supabase/config/config'
-import {
-	updateUserRole,
-	updateUserBranch,
 	canManageUsers,
-	updateUserApprovalStatus,
 	deleteUser,
+	updateUserApprovalStatus,
+	updateUserBranch,
+	updateUserRole,
 } from '@/services/supabase/auth/user-management'
+import { supabase } from '@/services/supabase/config/config'
+import { getAvailableRolesForLaboratory, type UserRole } from '@/services/supabase/laboratories/laboratory-roles-service'
 import { useAuth } from '@app/providers/AuthContext'
-import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { useToast } from '@shared/hooks/use-toast'
 import { Button } from '@shared/components/ui/button'
+import { Card } from '@shared/components/ui/card'
+import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
 import {
 	Dialog,
 	DialogContent,
@@ -45,10 +20,35 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@shared/components/ui/dialog'
-import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
+import { Input } from '@shared/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { useLaboratory } from '@/app/providers/LaboratoryContext'
-import { getAvailableRolesForLaboratory, ROLE_LABELS, type UserRole } from '@/services/supabase/laboratories/laboratory-roles-service'
+import { useToast } from '@shared/hooks/use-toast'
+import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { formatPhoneForDisplay } from '@shared/utils/phone-utils'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import {
+	Briefcase,
+	Calendar,
+	CheckCircle,
+	Clock,
+	Copy,
+	Crown,
+	Info,
+	Mail,
+	MapPin,
+	Microscope,
+	Phone,
+	Shield,
+	ShieldCheck,
+	TestTube,
+	Trash2,
+	User,
+	Users,
+	Wand,
+} from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 // Mapeo de descripciones específicas para instrucciones de uso
 const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
@@ -248,29 +248,29 @@ const MainUsers: React.FC = () => {
 		const colors = getRoleCardColor(role)
 		switch (role) {
 			case 'owner':
-				return <Crown className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Crown className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'employee':
-				return <Briefcase className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Briefcase className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'residente':
-				return <ShieldCheck className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <ShieldCheck className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'citotecno':
-				return <Wand className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Wand className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'patologo':
-				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Microscope className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'medicowner':
-				return <Shield className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Shield className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'medico_tratante':
-				return <Shield className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Shield className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'enfermero':
-				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Users className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'imagenologia':
-				return <Microscope className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Microscope className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'laboratorio':
-				return <TestTube className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <TestTube className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'call_center':
-				return <Phone className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Phone className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			default:
-				return <Users className={`w-4 h-4 ${colors.icon} flex-shrink-0`} />
+				return <Users className={`w-4 h-4 ${colors.icon} shrink-0`} />
 		}
 	}
 
@@ -969,7 +969,7 @@ const MainUsers: React.FC = () => {
 					{/* Primera línea: Búsqueda y filtros */}
 					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
 						{/* Búsqueda */}
-						<div className="relative w-full sm:w-56 flex-shrink-0">
+						<div className="relative w-full sm:w-56 shrink-0">
 							<Input
 								type="text"
 								placeholder="Buscar usuarios"
@@ -1011,11 +1011,11 @@ const MainUsers: React.FC = () => {
 					</div>
 
 					{/* Segunda línea: Todos los botones de tipos de usuarios */}
-					<div className="flex items-center gap-2 flex-wrap overflow-x-auto">
+					<div className="flex items-center xl:justify-between gap-2 flex-wrap overflow-x-auto w-full">
 						{/* Total Usuarios */}
 						<div
 							onClick={() => profile?.role !== 'residente' && setRoleFilter('')}
-							className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${profile?.role === 'residente'
+							className={`flex items-center gap-2 rounded px-3 py-2 w-32 shrink-0 ${profile?.role === 'residente'
 								? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
 								: 'cursor-pointer'
 								} ${roleFilter === '' || roleFilter === 'all'
@@ -1023,7 +1023,7 @@ const MainUsers: React.FC = () => {
 									: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
 								}`}
 						>
-							<User className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+							<User className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
 							<div className="flex flex-col min-w-0">
 								<span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</span>
 								<span className="text-sm font-bold text-green-700 dark:text-green-300">{stats.total}</span>
@@ -1055,7 +1055,7 @@ const MainUsers: React.FC = () => {
 											if (profile?.role === 'residente' && role.value !== 'residente') return
 											setRoleFilter(isActive ? '' : role.value)
 										}}
-										className={`flex items-center gap-2 rounded px-3 py-2 w-32 flex-shrink-0 ${profile?.role === 'residente' && role.value !== 'residente'
+										className={`flex items-center gap-2 rounded px-3 py-2 w-32 shrink-0 ${profile?.role === 'residente' && role.value !== 'residente'
 											? 'cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-900/20'
 											: 'cursor-pointer'
 											} ${isActive
@@ -1246,12 +1246,12 @@ const MainUsers: React.FC = () => {
 													<TooltipContent className="p-3 max-w-lg w-auto">
 														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
 															<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-																<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+																<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 shrink-0" />
 																<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{user.email}</span>
 																<Button
 																	variant="ghost"
 																	size="icon"
-																	className="h-6 w-6 flex-shrink-0"
+																	className="h-6 w-6 shrink-0"
 																	onClick={(e) => {
 																		e.stopPropagation()
 																		handleCopyToClipboard(user.email, 'Email')
@@ -1264,12 +1264,12 @@ const MainUsers: React.FC = () => {
 
 															{user.phone && (
 																<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-																	<Phone className="w-3 h-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+																	<Phone className="w-3 h-3 text-gray-600 dark:text-gray-400 shrink-0" />
 																	<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{formatPhoneForDisplay(user.phone)}</span>
 																	<Button
 																		variant="ghost"
 																		size="icon"
-																		className="h-6 w-6 flex-shrink-0"
+																		className="h-6 w-6 shrink-0"
 																		onClick={(e) => {
 																			e.stopPropagation()
 																			handleCopyToClipboard(formatPhoneForDisplay(user.phone), 'Teló©fono')

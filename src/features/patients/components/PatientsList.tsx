@@ -22,10 +22,19 @@ interface PatientsListProps {
 	onSortChange: (field: SortField, direction: SortDirection) => void
 }
 
-
 // Use React.memo to prevent unnecessary re-renders
 const PatientsList: React.FC<PatientsListProps> = React.memo(
-	({ patientsData, isLoading, error, currentPage, totalPages, onPageChange, sortField, sortDirection, onSortChange }) => {
+	({
+		patientsData,
+		isLoading,
+		error,
+		currentPage,
+		totalPages,
+		onPageChange,
+		sortField,
+		sortDirection,
+		onSortChange,
+	}) => {
 		const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 		const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -96,7 +105,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 				{/* Patients cards - responsive for all screen sizes */}
 				<Card className="overflow-hidden h-[calc(100vh-280px)] md:h-[calc(100vh-240px)] flex flex-col">
 					{/* Sort filters header */}
-					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 flex-shrink-0">
+					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0">
 						<div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4">
 							<button
 								onClick={() => handleSort('nombre')}
@@ -141,11 +150,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 						{patientsData.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4">
 								{patientsData.map((patient: Patient) => (
-									<PatientCard
-										key={patient.id}
-										patient={patient}
-										onClick={() => handlePatientClick(patient)}
-									/>
+									<PatientCard key={patient.id} patient={patient} onClick={() => handlePatientClick(patient)} />
 								))}
 							</div>
 						) : (
@@ -158,7 +163,7 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 
 					{/* Pagination */}
 					{totalPages > 1 && (
-						<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+						<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
 							<div className="text-sm text-gray-700 dark:text-gray-300">
 								Página {currentPage} de {totalPages}
 							</div>
@@ -202,34 +207,28 @@ interface PatientCardProps {
 const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
 	return (
 		<div
-			className="bg-white dark:bg-gray-800/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-1 transition-all duration-300 ease-in-out cursor-pointer"
+			className="bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
 			onClick={onClick}
 		>
 			<div className="mb-3">
 				<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
 					{patient.nombre}
 				</p>
-				<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-					CI: {patient.cedula || 'No disponible'}
-				</p>
+				<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">CI: {patient.cedula || 'No disponible'}</p>
 			</div>
 
 			<div className="space-y-2">
 				{patient.telefono && (
 					<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 text-xs sm:text-sm font-medium w-full">
-						<Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-						<span className="truncate">
-							{patient.telefono}
-						</span>
+						<Phone className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+						<span className="truncate">{patient.telefono}</span>
 					</div>
 				)}
 
 				{patient.email && (
 					<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 text-xs sm:text-sm font-medium w-full">
-						<Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-						<span className="truncate">
-							{patient.email}
-						</span>
+						<Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+						<span className="truncate">{patient.email}</span>
 					</div>
 				)}
 			</div>
