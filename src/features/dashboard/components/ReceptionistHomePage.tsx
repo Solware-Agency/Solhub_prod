@@ -122,7 +122,7 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 			title: 'Historial',
 			icon: History,
 			path: routes.changelog,
-			description: 'Ver historial de cambios',
+			description: 'Ver historial de acciones',
 		})
 	}
 

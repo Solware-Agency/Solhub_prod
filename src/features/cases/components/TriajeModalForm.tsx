@@ -1930,7 +1930,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Droplets className='h-4 w-4 text-blue-600 dark:text-blue-400' />
-                    SpO₂
+                    SpO₂ <span className='text-red-500'>*</span>
                     <TooltipPrimitive.Root delayDuration={0}>
                       <TooltipTrigger asChild>
                         <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
@@ -1974,7 +1974,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[150px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Gauge className='h-4 w-4 text-red-600 dark:text-red-400' />
-                    Presión arterial
+                    Presión arterial <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'
@@ -2018,7 +2018,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Ruler className='h-4 w-4 text-indigo-600 dark:text-indigo-400' />
-                    Talla
+                    Talla <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'
@@ -2033,7 +2033,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Scale className='h-4 w-4 text-purple-600 dark:text-purple-400' />
-                    Peso
+                    Peso <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'

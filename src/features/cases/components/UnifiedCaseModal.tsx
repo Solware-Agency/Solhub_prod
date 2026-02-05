@@ -1706,7 +1706,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={toggleChangelog}
-                            title={isChangelogOpen ? 'Ocultar historial de cambios' : 'Ver historial de cambios del caso'}
+                            title={isChangelogOpen ? 'Ocultar historial de acciones' : 'Ver historial de acciones del caso'}
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
                           >
@@ -1768,7 +1768,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                 <div className='p-4 sm:p-6 space-y-6'>
                   {/* Changelog Section */}
                   {isChangelogOpen && !isEditing && (
-                    <InfoSection title='Historial de Cambios' icon={History}>
+                    <InfoSection title='Historial de Acciones' icon={History}>
                       {isLoadingChangelogs ? (
                         <div className='flex items-center justify-center p-4'>
                           <Loader2 className='w-6 h-6 animate-spin text-primary mr-2' />
