@@ -64,13 +64,14 @@ export function MedicalFormContainer() {
 	const [patientSectionResetKey, setPatientSectionResetKey] = useState(0);
 	const [sampleTypeCosts, setSampleTypeCosts] = useState<SampleTypeCost[] | null>(null);
 
-	// Obtener configuración completa del módulo para pasar a registerMedicalCase
+	// Obtener configuración completa del módulo y laboratorio para schema y registerMedicalCase
 	const moduleConfig = useModuleConfig('registrationForm')
+	const { laboratory } = useLaboratory()
 
-	// Crear schema dinámico basado en la configuración del módulo
+	// Crear schema dinámico basado en la configuración del módulo y slug (marihorgen siempre tiene ciertos campos)
 	const dynamicFormSchema = useMemo(() => {
-		return createFormSchema(moduleConfig)
-	}, [moduleConfig])
+		return createFormSchema(moduleConfig, laboratory?.slug ?? null)
+	}, [moduleConfig, laboratory?.slug])
 
 	// Crear resolver dinámico que se actualiza cuando cambia el schema
 	const dynamicResolver = useMemo(() => {
@@ -363,7 +364,6 @@ export function MedicalFormContainer() {
 
 	const inputStyles = 'transition-transform duration-300 focus:border-primary focus:ring-primary'
 	const { profile } = useUserProfile()
-	const { laboratory } = useLaboratory()
 	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
 
 	useEffect(() => {

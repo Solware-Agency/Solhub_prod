@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getWaitingRoomCases,
   getActiveBranches,
   getWaitingRoomStats,
 } from '@/services/supabase/waiting-room/waiting-room-service';
+import type { WaitingRoomCase } from '@/services/supabase/waiting-room/waiting-room-service';
 import { WaitingRoomCaseCard } from '../components/WaitingRoomCaseCard';
+import {
+  WaitingRoomStatDetailModal,
+  type WaitingRoomStatCardType,
+} from '../components/WaitingRoomStatDetailModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { Card } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
-import { Loader2, Users, Clock } from 'lucide-react';
+import { Loader2, Users, Clock, Timer, Stethoscope } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
+import { useUserProfile } from '@shared/hooks/useUserProfile';
+
+/** Formatea minutos a "X min" o "X h Y min" */
+function formatWaitingTime(minutes: number): string {
+  if (minutes < 1) return '< 1 min';
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m > 0 ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** Dado un array de casos, devuelve los minutos del más antiguo (desde created_at hasta ahora) */
+function getOldestWaitingMinutes(cases: WaitingRoomCase[]): number | null {
+  if (cases.length === 0) return null;
+  const oldest = cases.reduce((prev, curr) =>
+    new Date(curr.created_at).getTime() < new Date(prev.created_at).getTime() ? curr : prev
+  );
+  return (Date.now() - new Date(oldest.created_at).getTime()) / (1000 * 60);
+}
 
 const WaitingRoomPage: React.FC = () => {
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
   const { toast } = useToast();
+
+  // Employee (y roles con sede asignada) solo ven su sede: sin "Todas" y con sede por defecto
+  const isRestrictedToBranch = Boolean(
+    profile?.role === 'employee' && profile?.assigned_branch
+  );
+  const defaultBranch = isRestrictedToBranch ? profile!.assigned_branch! : null;
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(defaultBranch);
+  const [selectedStatCard, setSelectedStatCard] = useState<WaitingRoomStatCardType | null>(null);
 
   // Verificar que es SPT
   const isSpt = laboratory?.slug === 'spt';
@@ -80,6 +112,10 @@ const WaitingRoomPage: React.FC = () => {
   const pendienteTriaje = cases.filter((c) => c.estado_spt === 'pendiente_triaje');
   const esperandoConsulta = cases.filter((c) => c.estado_spt === 'esperando_consulta');
 
+  // Tiempos del más antiguo en cada estado (para owner/prueba)
+  const oldestTriajeMinutes = useMemo(() => getOldestWaitingMinutes(pendienteTriaje), [pendienteTriaje]);
+  const oldestConsultaMinutes = useMemo(() => getOldestWaitingMinutes(esperandoConsulta), [esperandoConsulta]);
+
   const handleCaseClick = (caseId: string) => {
     // TODO: Navegar a detalles del caso o abrir modal
     console.log('Caso clickeado:', caseId);
@@ -96,53 +132,125 @@ const WaitingRoomPage: React.FC = () => {
   return (
     <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Sala de Espera</h1>
-          <p className="hidden sm:block text-sm sm:text-base text-muted-foreground mt-1">
-            Monitoreo en tiempo real de casos activos
-          </p>
-        </div>
-
-        {/* Estadísticas */}
-        {!statsLoading && stats && (
-          <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-3">
-            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
-                <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Total: {stats.total}</span>
-              </div>
-            </Card>
-            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <Badge variant="destructive" className="text-xs sm:text-sm mr-0.5 shrink-0">
-                  {stats.pendiente_triaje}
-                </Badge>
-                <span className="text-xs sm:text-sm whitespace-nowrap">Pendiente triaje</span>
-              </div>
-            </Card>
-            <Card className="px-1.5 py-1 sm:px-2 md:px-2.5 sm:py-1.5 md:py-2 shrink-0">
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <Badge variant="secondary" className="text-xs sm:text-sm mr-0.5 shrink-0">
-                  {stats.esperando_consulta}
-                </Badge>
-                <span className="text-xs sm:text-sm whitespace-nowrap">Esperando consulta</span>
-              </div>
-            </Card>
-          </div>
-        )}
+      <div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Sala de Espera</h1>
+        <p className="hidden sm:block text-sm sm:text-base text-muted-foreground mt-1">
+          Monitoreo en tiempo real de casos activos
+        </p>
       </div>
 
-      {/* Tabs por sede */}
+      {/* Cards de estadísticas (owner / prueba) - hover + click abre modal */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+        {/* Total en sala */}
+        <Card
+          className="p-3 sm:p-4 bg-white dark:bg-background rounded-xl shadow-lg border cursor-pointer transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20"
+          onClick={() => setSelectedStatCard('total')}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-muted rounded-lg">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            </div>
+          </div>
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Total en sala</h3>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5">
+            {statsLoading ? '...' : (stats?.total ?? 0)}
+          </p>
+        </Card>
+
+        {/* Pendiente triaje */}
+        <Card
+          className="p-3 sm:p-4 bg-white dark:bg-background rounded-xl shadow-lg border cursor-pointer transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20"
+          onClick={() => setSelectedStatCard('pendiente_triaje')}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-destructive/10 rounded-lg">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
+            </div>
+            {!statsLoading && (stats?.pendiente_triaje ?? 0) > 0 && (
+              <Badge variant="destructive" className="text-xs">{stats.pendiente_triaje}</Badge>
+            )}
+          </div>
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Pendiente triaje</h3>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5">
+            {statsLoading ? '...' : (stats?.pendiente_triaje ?? 0)}
+          </p>
+        </Card>
+
+        {/* Esperando consulta */}
+        <Card
+          className="p-3 sm:p-4 bg-white dark:bg-background rounded-xl shadow-lg border cursor-pointer transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20"
+          onClick={() => setSelectedStatCard('esperando_consulta')}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-secondary/50 rounded-lg">
+              <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            </div>
+            {!statsLoading && (stats?.esperando_consulta ?? 0) > 0 && (
+              <Badge variant="secondary" className="text-xs">{stats.esperando_consulta}</Badge>
+            )}
+          </div>
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Esperando consulta</h3>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5">
+            {statsLoading ? '...' : (stats?.esperando_consulta ?? 0)}
+          </p>
+        </Card>
+
+        {/* Mayor tiempo en triaje */}
+        <Card
+          className="p-3 sm:p-4 bg-white dark:bg-background rounded-xl shadow-lg border cursor-pointer transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20"
+          onClick={() => setSelectedStatCard('tiempo_triaje')}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-amber-500/10 rounded-lg">
+              <Timer className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Mayor tiempo en triaje</h3>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5">
+            {oldestTriajeMinutes != null ? formatWaitingTime(oldestTriajeMinutes) : '—'}
+          </p>
+        </Card>
+
+        {/* Mayor tiempo esperando consulta */}
+        <Card
+          className="p-3 sm:p-4 bg-white dark:bg-background rounded-xl shadow-lg border cursor-pointer transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20"
+          onClick={() => setSelectedStatCard('tiempo_consulta')}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-blue-500/10 rounded-lg">
+              <Timer className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Mayor tiempo en consulta</h3>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5">
+            {oldestConsultaMinutes != null ? formatWaitingTime(oldestConsultaMinutes) : '—'}
+          </p>
+        </Card>
+      </div>
+
+      {/* Panel lateral (entra desde la derecha, como en Stats) */}
+      <WaitingRoomStatDetailModal
+        isOpen={selectedStatCard !== null}
+        onClose={() => setSelectedStatCard(null)}
+        cardType={selectedStatCard}
+        stats={stats ?? null}
+        cases={cases}
+        pendienteTriaje={pendienteTriaje}
+        esperandoConsulta={esperandoConsulta}
+      />
+
+      {/* Tabs por sede (employee con sede asignada solo ve su sede, sin "Todas") */}
       <Tabs
         value={selectedBranch || 'todas'}
         onValueChange={(value) => setSelectedBranch(value === 'todas' ? null : value)}
       >
         <TabsList className="w-fit sm:w-fit md:w-fit flex-wrap">
-          <TabsTrigger value="todas">
-            <span className="hidden sm:inline">Todas las sedes</span>
-            <span className="sm:hidden">Todas</span>
-          </TabsTrigger>
+          {!isRestrictedToBranch && (
+            <TabsTrigger value="todas">
+              <span className="hidden sm:inline">Todas las sedes</span>
+              <span className="sm:hidden">Todas</span>
+            </TabsTrigger>
+          )}
           {branchesLoading ? (
             <TabsTrigger value="loading" disabled>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

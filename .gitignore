@@ -26,3 +26,8 @@ dist-ssr
 *.sw?
 
 *.todo
+
+# Gmail OAuth temporary files
+get-gmail-*.js
+get-gmail-*.mjs
+client_secret_*.json

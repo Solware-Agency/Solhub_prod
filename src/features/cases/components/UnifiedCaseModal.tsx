@@ -435,6 +435,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+
+    const { data: pathologistData } = useQuery({
+      queryKey: ['case-pathologist', currentCase?.patologo_id],
+      queryFn: async () => {
+        if (!currentCase?.patologo_id) return null;
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, email')
+          .eq('id', currentCase.patologo_id)
+          .single();
+        return data || null;
+      },
+      enabled: !!currentCase?.patologo_id && isOpen,
+    });
     
     // Query to get responsable if patient is a minor/animal
     const { data: responsableData } = useQuery({
@@ -584,7 +598,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             origin: currentCase.origin,
             branch: currentCase.branch,
             comments: currentCase.comments,
+            consulta: (currentCase as MedicalCaseWithPatient).consulta ?? '',
+            image_url: (currentCase as any).image_url ?? null,
             owner_display_code: (currentCase as any).owner_display_code ?? '',
+            bloques_biopsia: (currentCase as any).bloques_biopsia ?? null,
             // Financial data
             total_amount: currentCase.total_amount,
             exchange_rate: currentCase.exchange_rate,
@@ -783,6 +800,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'consulta',
           'image_url',
           ...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner ? ['owner_display_code' as const] : []),
+          ...(isMarihorgen ? ['bloques_biopsia' as const] : []),
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -822,6 +840,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               const raw = newValue as string | null | undefined;
               const trimmed = typeof raw === 'string' ? raw.trim().replace(/\D/g, '').slice(0, 5) : '';
               caseChanges.owner_display_code = trimmed === '' ? null : trimmed;
+            } else if (field === 'bloques_biopsia') {
+              const raw = newValue as number | string | null | undefined;
+              const parsed =
+                raw === '' || raw === null || raw === undefined ? null : Number(raw);
+              caseChanges.bloques_biopsia = Number.isNaN(parsed) ? null : parsed;
             }
             caseChangeLogs.push({
               field,
@@ -1193,9 +1216,21 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         if (!response.ok) {
           console.error('Error del servidor:', result);
-          throw new Error(
-            result.error || result.details || 'Error al enviar el email',
-          );
+          
+          // Crear mensaje de error detallado
+          let errorMessage = result.error || result.details || 'Error al enviar el email';
+          
+          // Agregar información de debug si está disponible
+          if (result.debug && Array.isArray(result.debug)) {
+            const debugSteps = result.debug.join(' → ');
+            errorMessage = `${errorMessage}\n\nPasos: ${debugSteps}`;
+            
+            if (result.fullError) {
+              errorMessage += `\n\nDetalle técnico: ${result.fullError}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         // Actualizar el campo email_sent en la base de datos
@@ -1238,6 +1273,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       } catch (error) {
         console.error('Error enviando correo:', error);
         
+        // Extraer mensaje detallado del error - versión mejorada
+        let errorMessage = 'No se pudo enviar el correo. Inténtalo de nuevo.';
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          console.log('Error message completo:', errorMessage);
+        }
+        
         // Registrar el error en email_send_logs
         if (case_?.id) {
           await logEmailSend({
@@ -1253,7 +1296,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
         toast({
           title: '❌ Error',
-          description: 'No se pudo enviar el correo. Inténtalo de nuevo.',
+          description: error instanceof Error ? error.message : 'No se pudo enviar el correo. Inténtalo de nuevo.',
           variant: 'destructive',
         });
       } finally {
@@ -1261,7 +1304,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
     };
 
-    const handleSendWhatsApp = () => {
+    const handleSendWhatsApp = async () => {
       if (!case_?.telefono) {
         toast({
           title: '❌ Error',
@@ -1272,13 +1315,91 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       }
 
       // Create WhatsApp message with case information
-      // Para SPT, usar formato específico: "le escribimos desde Salud para todos"
+      // Para SPT, usar formato específico y adjuntar enlaces por orden si existen
+      const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url;
+      const uploadedPdfUrl = (currentCase as any)?.uploaded_pdf_url || null;
+      const caseImages =
+        (currentCase as any)?.images_urls &&
+        Array.isArray((currentCase as any).images_urls) &&
+        (currentCase as any).images_urls.length > 0
+          ? (currentCase as any).images_urls
+          : (currentCase as any)?.image_url
+            ? [(currentCase as any).image_url]
+            : [];
+
+      const SIGNED_URL_TTL_SECONDS = 60 * 30;
+      const createSignedUrlIfSupabase = async (url: string | null): Promise<string | null> => {
+        if (!url) return null;
+        try {
+          const parsedUrl = new URL(url);
+          const match = parsedUrl.pathname.match(
+            /\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/,
+          );
+
+          if (!match) {
+            return url;
+          }
+
+          const bucket = match[1];
+          const filePath = decodeURIComponent(match[2]);
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+
+          if (error || !data?.signedUrl) {
+            console.warn('No se pudo generar URL firmada, usando URL original:', error);
+            return url;
+          }
+
+          return data.signedUrl;
+        } catch (error) {
+          console.warn('Error al generar URL firmada, usando URL original:', error);
+          return url;
+        }
+      };
+
+      const [signedPdfUrl, signedUploadedPdfUrl, signedImageUrls] = isSpt
+        ? await Promise.all([
+            createSignedUrlIfSupabase(pdfUrl),
+            createSignedUrlIfSupabase(uploadedPdfUrl),
+            Promise.all(caseImages.map((url: string) => createSignedUrlIfSupabase(url))),
+          ])
+        : [pdfUrl, uploadedPdfUrl, caseImages];
+
+      const safeImageUrls = (signedImageUrls || []).filter(Boolean) as string[];
+
+      const sptMessageLines = [
+        `Hola ${case_.nombre}, te escribimos desde Salud Para Todos.`,
+      ];
+
+      if (signedPdfUrl) {
+        sptMessageLines.push('', 'Reporte (PDF):', signedPdfUrl);
+      }
+
+      if (signedUploadedPdfUrl) {
+        sptMessageLines.push('', 'PDF adjunto:', signedUploadedPdfUrl);
+      }
+
+      if (safeImageUrls.length > 0) {
+        sptMessageLines.push('', 'Imágenes:', ...safeImageUrls.map((url: string) => `- ${url}`));
+      }
+
+      // Para SPT, no incluir código de caso
       const message = isSpt
-        ? `Hola ${case_.nombre}, le escribimos desde Salud para todos por su caso ${case_.code || 'N/A'}.`
+        ? sptMessageLines.join('\n')
         : `Hola ${case_.nombre}, le escribimos desde el laboratorio ${laboratory?.name || 'nuestro laboratorio'} por su caso ${case_.code || 'N/A'}.`;
 
-      // Format phone number (remove spaces, dashes, etc.)
-      const cleanPhone = case_.telefono?.replace(/[\s-()]/g, '') || '';
+      // Format phone number (remove non-digits) and ensure country code for SPT (VE)
+      const digitsOnly = case_.telefono?.replace(/\D/g, '') || '';
+      const cleanPhone = isSpt
+        ? (digitsOnly.startsWith('0') && digitsOnly.length === 11
+            ? `58${digitsOnly.slice(1)}`
+            : digitsOnly.startsWith('58')
+              ? digitsOnly
+              : digitsOnly.length === 10
+                ? `58${digitsOnly}`
+                : digitsOnly)
+        : digitsOnly;
       const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
         message,
       )}`;
@@ -1397,6 +1518,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         comments: 'Comentarios',
         consulta: 'Tipo de Consulta',
         owner_display_code: 'Código (visible)',
+        bloques_biopsia: 'Bloques de biopsia',
         // Legacy fields (for backward compatibility)
         full_name: 'Nombre Completo',
         id_number: 'Cédula',
@@ -1975,8 +2097,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Medical Information */}
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
-                      {/* Estudio - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.examType?.enabled && (
+                      {/* Estudio - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.examType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Estudio:
@@ -2006,8 +2128,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                      {/* Médico Tratante - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.medicoTratante?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Médico tratante:
@@ -2092,8 +2214,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Procedencia - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.procedencia?.enabled && (
+                      {/* Procedencia - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.procedencia?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Procedencia:
@@ -2121,14 +2243,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.origin || 'N/A'}
+                              {(() => {
+                                const originValue = currentCase.origin
+                                const trimmed = originValue?.trim()
+                                const display = trimmed ? originValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - origin display:', { 
+                                    originValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!originValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Sede - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.branch?.enabled && (
+                      {/* Sede - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.branch?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Sede:
@@ -2156,8 +2292,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Muestra - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.sampleType?.enabled && (
+                      {/* Muestra - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.sampleType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Muestra:
@@ -2183,14 +2319,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.sample_type || 'N/A'}
+                              {(() => {
+                                const sampleTypeValue = currentCase.sample_type
+                                const trimmed = sampleTypeValue?.trim()
+                                const display = trimmed ? sampleTypeValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - sample_type display:', { 
+                                    sampleTypeValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!sampleTypeValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
-                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                      {/* Cantidad de muestras - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.numberOfSamples?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Cantidad de muestras:
@@ -2253,21 +2403,58 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
-                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
-                      {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
-                      <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
-                          Imágenes (Imagenología):
-                        </span>
-                        <div className='w-full'>
-                          <MultipleImageUrls
-                            images={imageUrls}
-                            onChange={setImageUrls}
-                            maxImages={10}
-                            isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
-                          />
+                      {isMarihorgen &&
+                        currentCase.exam_type?.toLowerCase().includes('biopsia') && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Bloques de biopsia:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <Input
+                                id='bloques-biopsia-input'
+                                name='bloques_biopsia'
+                                type='number'
+                                placeholder='0'
+                                value={
+                                  editedCase.bloques_biopsia !== undefined
+                                    ? (editedCase.bloques_biopsia as number | null) ?? ''
+                                    : (currentCase as any).bloques_biopsia ?? ''
+                                }
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    'bloques_biopsia',
+                                    e.target.value === '' ? null : Number(e.target.value),
+                                  )
+                                }
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {(currentCase as any).bloques_biopsia ?? '-'}
+                            </span>
+                          )}
                         </div>
-                      </div>
+                      )}
+
+                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
+                      {/* Oculto para marihorgen */}
+                      {!isMarihorgen && (
+                        <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                            Imágenes (Imagenología):
+                          </span>
+                          <div className='w-full'>
+                            <MultipleImageUrls
+                              images={imageUrls}
+                              onChange={setImageUrls}
+                              maxImages={10}
+                              isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* Comentarios */}
                       <div className='py-2 border-t border-gray-200 dark:border-gray-700 pt-3'>
@@ -2870,6 +3057,29 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           ).toLocaleDateString('es-ES')}
                           editable={false}
                         />
+                        {currentCase.fecha_entrega && (
+                          <div className='flex items-center justify-between py-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              Fecha de entrega
+                            </span>
+                            <span className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'>
+                              {new Date(
+                                `${currentCase.fecha_entrega}T00:00:00`,
+                              ).toLocaleDateString('es-ES')}
+                            </span>
+                          </div>
+                        )}
+                        {isMarihorgen && currentCase.patologo_id && (
+                          <InfoRow
+                            label='Patólogo'
+                            value={
+                              pathologistData?.display_name ||
+                              pathologistData?.email ||
+                              'Usuario'
+                            }
+                            editable={false}
+                          />
+                        )}
                         <InfoRow
                           label='Última actualización'
                           value={new Date(

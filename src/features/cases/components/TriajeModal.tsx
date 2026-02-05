@@ -142,6 +142,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     },
     enabled: !!case_?.id && isOpen,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnMount: 'always',
     retry: 1,
   });
 
@@ -276,7 +277,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       )}
                     </p>
                   </div>
-                  {existingTriage && canEditTriaje && !forceEditMode && (
+                  {existingTriage && !existingTriage.is_draft && canEditTriaje && !forceEditMode && (
                     <Button
                       onClick={() => setForceEditMode(true)}
                       variant='outline'

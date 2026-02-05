@@ -8,6 +8,7 @@ import { LaboratoryThemeProvider } from '@app/providers/LaboratoryThemeProvider.
 import { SessionTimeoutProvider } from '@app/providers/SessionTimeoutProvider.tsx';
 import { SessionTimeoutWarning } from '@shared/components/ui/session-timeout-warning.tsx';
 import { ThemeProvider } from '@app/providers/ThemeProvider.tsx';
+import { SptThemeEnforcer } from '@app/providers/SptThemeEnforcer.tsx';
 
 // Crear contenedor para tooltips que se renderice después de los modales
 if (typeof document !== 'undefined') {
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
   <ThemeProvider defaultTheme='system' storageKey='ui-theme'>
     <AuthProvider>
       <LaboratoryProvider>
+        <SptThemeEnforcer />
         <LaboratoryThemeProvider>
           <SessionTimeoutProvider>
             <App />

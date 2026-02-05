@@ -42,6 +42,7 @@ type ExtendedDatabase = Database & {
           plan_de_accion: string | null;
           lugar_de_nacimiento: string | null;
           telefono_emergencia: string | null;
+          is_draft: boolean | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -76,6 +77,7 @@ type ExtendedDatabase = Database & {
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
           telefono_emergencia?: string | null;
+          is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -110,6 +112,7 @@ type ExtendedDatabase = Database & {
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
           telefono_emergencia?: string | null;
+          is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -155,6 +158,7 @@ export interface TriageRecord {
   plan_de_accion: string | null;
   lugar_de_nacimiento: string | null;
   telefono_emergencia: string | null;
+  is_draft: boolean | null;
   created_by: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -190,6 +194,7 @@ export interface TriageRecordInsert {
   plan_de_accion?: string | null;
   lugar_de_nacimiento?: string | null;
   telefono_emergencia?: string | null;
+  is_draft?: boolean | null;
   created_by?: string | null;
 }
 
@@ -446,6 +451,10 @@ const getTriageErrorMessage = (error: any): string => {
  * Validar que la historia clínica tenga datos mínimos necesarios
  */
 const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>): void => {
+  if (data.is_draft) {
+    return;
+  }
+
   const missingFields: string[] = [];
   
   // Validar datos antropométricos obligatorios
@@ -649,6 +658,10 @@ export const getTriageByCase = async (
       .select('*')
       .eq('case_id', case_id)
       .eq('laboratory_id', laboratoryId)
+      .order('is_draft', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .order('measurement_date', { ascending: false })
+      .limit(1)
       .single();
 
     if (error) {

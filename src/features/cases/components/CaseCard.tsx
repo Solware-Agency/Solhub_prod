@@ -54,6 +54,14 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 
 	const isMenor = patientType === 'menor'
 	const isAnimal = patientType === 'animal'
+
+	const formatBadgeDate = (value: string) => {
+		const normalized = value.trim()
+		if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+			return format(new Date(`${normalized}T00:00:00`), 'dd/MM/yyyy')
+		}
+		return format(new Date(normalized), 'dd/MM/yyyy')
+	}
 	
 	const handleCardClick = (e: React.MouseEvent) => {
 		// Evitar que el click se propague si se hace clic en el menú de acciones
@@ -151,11 +159,18 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 						<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
 						<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
 					</div>
-					{case_.created_at && (
-						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 mb-0.5">
-							{format(new Date(case_.created_at), 'dd/MM/yyyy')}
-						</span>
-					)}
+					<div className="flex flex-col items-end gap-1">
+						{case_.created_at && (
+							<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 mb-0.5">
+								{format(new Date(case_.created_at), 'dd/MM/yyyy')}
+							</span>
+						)}
+						{case_.fecha_entrega && (
+							<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+								{formatBadgeDate(case_.fecha_entrega)}
+							</span>
+						)}
+					</div>
 				</div>
 			</div>
 

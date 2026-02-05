@@ -142,17 +142,25 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const [pendingEmailCases, setPendingEmailCases] = useState<MedicalCaseWithPatient[]>([]);
   const [activeTab, setActiveTab] = useState('cases');
   const [selectedRepresentadoId, setSelectedRepresentadoId] = useState<string | null>(null);
+  const [selectedRepresentadoCases, setSelectedRepresentadoCases] = useState<Set<string>>(new Set());
   const [representadoToDelete, setRepresentadoToDelete] = useState<{ responsabilidadId: string; nombre: string; dependienteId: string } | null>(null);
   const [isDeletingRepresentado, setIsDeletingRepresentado] = useState(false);
+  const [pendingEmailFromRepresentado, setPendingEmailFromRepresentado] = useState(false);
 
   const queryClient = useQueryClient();
 
-  // Reset selected representado when tab changes or modal closes
+  // Reset selected representado and representado cases selection when tab changes or modal closes
   useEffect(() => {
     if (activeTab !== 'representados' || !isOpen) {
       setSelectedRepresentadoId(null);
+      setSelectedRepresentadoCases(new Set());
     }
   }, [activeTab, isOpen]);
+
+  // Reset selected representado cases when changing selected representado
+  useEffect(() => {
+    setSelectedRepresentadoCases(new Set());
+  }, [selectedRepresentadoId]);
   useBodyScrollLock(isOpen);
   useGlobalOverlayOpen(isOpen);
 
@@ -209,6 +217,187 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
   const clearSelection = () => {
     setSelectedCases(new Set());
+  };
+
+  const clearRepresentadoSelection = () => {
+    setSelectedRepresentadoCases(new Set());
+  };
+
+  const toggleRepresentadoCaseSelection = (caseId: string) => {
+    setSelectedRepresentadoCases((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(caseId)) {
+        newSet.delete(caseId);
+      } else {
+        newSet.add(caseId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllRepresentado = () => {
+    if (!filteredDependentsCases) return;
+    const approvedCases = filteredDependentsCases.filter(
+      (caseItem) => caseItem.doc_aprobado === 'aprobado',
+    );
+    if (selectedRepresentadoCases.size === approvedCases.length) {
+      setSelectedRepresentadoCases(new Set());
+    } else {
+      setSelectedRepresentadoCases(
+        new Set(approvedCases.map((caseItem) => caseItem.id)),
+      );
+    }
+  };
+
+  const handleDownloadMultiplePDFsRepresentado = async () => {
+    if (selectedRepresentadoCases.size === 0) {
+      toast({
+        title: '⚠️ No hay casos seleccionados',
+        description: 'Por favor selecciona al menos un caso para descargar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const casesToDownload =
+      filteredDependentsCases?.filter(
+        (caseItem) =>
+          selectedRepresentadoCases.has(caseItem.id) &&
+          caseItem.doc_aprobado === 'aprobado',
+      ) || [];
+    if (casesToDownload.length === 0) {
+      toast({
+        title: '⚠️ No hay casos válidos',
+        description:
+          'Los casos seleccionados deben estar aprobados para poder descargar sus PDFs.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsDownloadingMultiple(true);
+    setDownloadProgress({ current: 0, total: casesToDownload.length });
+    const zip = new JSZip();
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+    try {
+      toast({
+        title: '📦 Preparando ZIP...',
+        description: `Obteniendo ${casesToDownload.length} PDF${casesToDownload.length > 1 ? 's' : ''} para el archivo ZIP.`,
+      });
+      for (let i = 0; i < casesToDownload.length; i++) {
+        const caseItem = casesToDownload[i];
+        try {
+          setDownloadProgress({ current: i + 1, total: casesToDownload.length });
+          const pdfResult = await getPDFBlob(caseItem);
+          if (pdfResult) {
+            zip.file(pdfResult.filename, pdfResult.blob);
+            successCount++;
+          } else {
+            errorCount++;
+            errors.push(`No se pudo obtener PDF para caso ${caseItem.code || caseItem.id}`);
+          }
+        } catch (err) {
+          errorCount++;
+          errors.push(`Error: ${caseItem.code || caseItem.id}`);
+        }
+      }
+      if (successCount === 0) {
+        toast({
+          title: '❌ Error en la descarga',
+          description: 'No se pudo obtener ningún PDF. Por favor intenta de nuevo.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({
+        title: '📦 Generando archivo ZIP...',
+        description: `Comprimiendo ${successCount} PDF${successCount > 1 ? 's' : ''}...`,
+      });
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const representadoName =
+        representadosList?.find((r) => r.id === selectedRepresentadoId)?.nombre
+          ?.normalize('NFD')
+          ?.replace(/[\u0300-\u036f]/g, '')
+          ?.replace(/[^a-zA-Z0-9\s]/g, '')
+          ?.replace(/\s+/g, '_')
+          ?.trim() || 'Representado';
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const zipFilename = `Casos_${representadoName}_${dateStr}.zip`;
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = zipFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      if (successCount > 0 && errorCount === 0) {
+        toast({
+          title: '✅ ZIP descargado correctamente',
+          description: `Se descargaron ${successCount} PDF${successCount > 1 ? 's' : ''} en el archivo ZIP.`,
+        });
+      } else if (successCount > 0 && errorCount > 0) {
+        toast({
+          title: '⚠️ ZIP descargado parcialmente',
+          description: `Se descargaron ${successCount} PDF correctamente, pero ${errorCount} fallaron.`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error creando ZIP:', error);
+      toast({
+        title: '❌ Error',
+        description: 'Hubo un problema al crear el archivo ZIP. Por favor intenta de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloadingMultiple(false);
+      setDownloadProgress({ current: 0, total: 0 });
+      clearRepresentadoSelection();
+    }
+  };
+
+  const handleSendMultipleEmailsRepresentado = () => {
+    if (selectedRepresentadoCases.size === 0) {
+      toast({
+        title: '⚠️ No hay casos seleccionados',
+        description: 'Por favor selecciona al menos un caso para enviar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!patient?.email) {
+      toast({
+        title: '⚠️ Sin email',
+        description: 'El paciente no tiene un email registrado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const casesToEmail =
+      filteredDependentsCases?.filter((caseItem) => {
+        if (!selectedRepresentadoCases.has(caseItem.id) || caseItem.doc_aprobado !== 'aprobado') return false;
+        const hasPdf = !!caseItem.informepdf_url;
+        const hasUploadedPdf = !!(caseItem as any)?.uploaded_pdf_url;
+        const hasImages =
+          ((caseItem as any)?.images_urls &&
+            Array.isArray((caseItem as any).images_urls) &&
+            (caseItem as any).images_urls.length > 0) ||
+          !!(caseItem as any)?.image_url;
+        return hasPdf || hasUploadedPdf || hasImages;
+      }) || [];
+    if (casesToEmail.length === 0) {
+      toast({
+        title: '⚠️ No hay casos válidos',
+        description:
+          'Los casos seleccionados deben estar aprobados y tener al menos PDF, PDF adjunto o imágenes para enviar por email.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setPendingEmailCases(casesToEmail);
+    setPendingEmailFromRepresentado(true);
+    setIsSendEmailModalOpen(true);
   };
 
   const [selectedCaseForModal, setSelectedCaseForModal] = useState<MedicalCaseWithPatient | null>(null);
@@ -782,7 +971,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     } finally {
       setIsSendingEmails(false);
       setEmailProgress({ current: 0, total: 0 });
-      clearSelection();
+      if (pendingEmailFromRepresentado) {
+        clearRepresentadoSelection();
+        setPendingEmailFromRepresentado(false);
+      } else {
+        clearSelection();
+      }
     }
   };
 
@@ -1174,19 +1368,25 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     isGeneratingPDF ||
                                     isSaving
                                   }
+                                  title={
+                                    selectedCases.size ===
+                                    filteredCases.filter((c) => c.doc_aprobado === 'aprobado').length
+                                      ? 'Deseleccionar todos'
+                                      : 'Seleccionar todos'
+                                  }
                                 >
                                   {selectedCases.size ===
                                   filteredCases.filter(
                                     (c) => c.doc_aprobado === 'aprobado',
                                   ).length ? (
                                     <>
-                                      <Square className='h-4 w-4 mr-2' />
-                                      Deseleccionar todos
+                                      <Square className='h-4 w-4 lg:mr-2' />
+                                      <span className='hidden lg:inline'>Deseleccionar todos</span>
                                     </>
                                   ) : (
                                     <>
-                                      <CheckSquare className='h-4 w-4 mr-2' />
-                                      Seleccionar todos
+                                      <CheckSquare className='h-4 w-4 lg:mr-2' />
+                                      <span className='hidden lg:inline'>Seleccionar todos</span>
                                     </>
                                   )}
                                 </Button>
@@ -1413,7 +1613,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               isSaving ||
                                               caseItem.doc_aprobado !==
                                                 'aprobado' ||
-                                              selectedCases.size > 0 ||
+                                              selectedRepresentadoCases.size >
+                                                0 ||
                                               isDownloadingMultiple
                                             }
                                           >
@@ -1540,9 +1741,111 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             </div>
                           </div>
 
-                          {/* Right Panel: Casos del Representado Seleccionado (sin título) */}
+                          {/* Right Panel: Casos del Representado Seleccionado */}
                           <div className='flex-1 flex flex-col overflow-hidden'>
-                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0' />
+                            {/* Barra de acciones: Seleccionar todos, Descargar, Enviar Email */}
+                            {selectedRepresentadoId &&
+                              filteredDependentsCases &&
+                              filteredDependentsCases.length > 0 && (
+                                <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex flex-wrap gap-2'>
+                                  <Button
+                                    variant='outline'
+                                    onClick={toggleSelectAllRepresentado}
+                                    disabled={
+                                      isDownloadingMultiple ||
+                                      isGeneratingPDF ||
+                                      isSaving
+                                    }
+                                    title={
+                                      selectedRepresentadoCases.size ===
+                                      filteredDependentsCases.filter((c) => c.doc_aprobado === 'aprobado').length
+                                        ? 'Deseleccionar todos'
+                                        : 'Seleccionar todos'
+                                    }
+                                  >
+                                    {selectedRepresentadoCases.size ===
+                                    filteredDependentsCases.filter(
+                                      (c) => c.doc_aprobado === 'aprobado',
+                                    ).length ? (
+                                      <>
+                                        <Square className='h-4 w-4 lg:mr-2' />
+                                        <span className='hidden lg:inline'>Deseleccionar todos</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckSquare className='h-4 w-4 lg:mr-2' />
+                                        <span className='hidden lg:inline'>Seleccionar todos</span>
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant='default'
+                                    onClick={handleDownloadMultiplePDFsRepresentado}
+                                    disabled={
+                                      selectedRepresentadoCases.size === 0 ||
+                                      isDownloadingMultiple ||
+                                      isSendingEmails ||
+                                      isGeneratingPDF ||
+                                      isSaving
+                                    }
+                                  >
+                                    {isDownloadingMultiple ? (
+                                      <>
+                                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white sm:mr-2' />
+                                        <span className='hidden sm:inline'>
+                                          Descargando ({downloadProgress.current}/
+                                          {downloadProgress.total})...
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Download className='h-4 w-4 sm:mr-2' />
+                                        <span className='hidden sm:inline'>
+                                          {selectedRepresentadoCases.size > 0 ? (
+                                            <>Descargar ({selectedRepresentadoCases.size})</>
+                                          ) : (
+                                            <>Descargar</>
+                                          )}
+                                        </span>
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant='default'
+                                    onClick={handleSendMultipleEmailsRepresentado}
+                                    disabled={
+                                      selectedRepresentadoCases.size === 0 ||
+                                      isDownloadingMultiple ||
+                                      isSendingEmails ||
+                                      isGeneratingPDF ||
+                                      isSaving ||
+                                      !patient?.email
+                                    }
+                                    className='bg-blue-600 hover:bg-blue-700'
+                                  >
+                                    {isSendingEmails ? (
+                                      <>
+                                        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white sm:mr-2' />
+                                        <span className='hidden sm:inline'>
+                                          Enviando ({emailProgress.current}/
+                                          {emailProgress.total})...
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Mail className='h-4 w-4 sm:mr-2' />
+                                        <span className='hidden sm:inline'>
+                                          {selectedRepresentadoCases.size > 0 ? (
+                                            <>Enviar Email ({selectedRepresentadoCases.size})</>
+                                          ) : (
+                                            <>Enviar Email</>
+                                          )}
+                                        </span>
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
                             <div className='flex-1 overflow-y-auto p-4'>
                               {!selectedRepresentadoId ? (
                                 <div className='text-center py-12'>
@@ -1579,15 +1882,35 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                     <div
                                       key={caseItem.id || caseItem.code || `case-dep-${index}`}
                                       onClick={(e) => {
-                                        // Prevenir que el click se propague a los botones internos
                                         if ((e.target as HTMLElement).closest('button, input, [role="checkbox"]')) {
                                           return;
                                         }
                                         setSelectedCaseForModal(caseItem);
                                       }}
-                                      className='bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer'
+                                      className={`bg-white dark:bg-background border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                        selectedRepresentadoCases.has(caseItem.id)
+                                          ? 'border-primary border-2'
+                                          : 'border-gray-200 dark:border-gray-700'
+                                      }`}
                                     >
                                       <div className='space-y-3'>
+                                        {/* Checkbox para selección múltiple */}
+                                        <div className='flex items-center gap-2'>
+                                          {caseItem.doc_aprobado === 'aprobado' && (
+                                            <Checkbox
+                                              checked={selectedRepresentadoCases.has(caseItem.id)}
+                                              onCheckedChange={() =>
+                                                toggleRepresentadoCaseSelection(caseItem.id)
+                                              }
+                                              disabled={
+                                                isDownloadingMultiple ||
+                                                isGeneratingPDF ||
+                                                isSaving
+                                              }
+                                              className='mr-1'
+                                            />
+                                          )}
+                                        </div>
                                         {/* Primera línea: Código y Fecha */}
                                         <div className='grid grid-cols-2 gap-4'>
                                           <div>
@@ -1632,14 +1955,14 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                                 isGeneratingPDF ||
                                                 isSaving ||
                                                 caseItem.doc_aprobado !== 'aprobado' ||
-                                                selectedCases.size > 0 ||
+                                                selectedRepresentadoCases.size > 0 ||
                                                 isDownloadingMultiple
                                               }
                                               size='sm'
                                             >
                                               {isGeneratingPDF || isSaving ? (
                                                 <>
-                                                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
+                                                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2' />
                                                   Generando...
                                                 </>
                                               ) : (

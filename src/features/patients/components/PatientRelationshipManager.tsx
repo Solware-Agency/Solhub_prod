@@ -25,6 +25,8 @@ import { format } from 'date-fns'
 import { createResponsibility } from '@services/supabase/patients/responsabilidades-service'
 import { createPatient, updatePatient, findPatientById } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
+import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
+import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import type { PatientProfile } from './PatientSearchAutocomplete'
 
 // =====================================================================
@@ -63,6 +65,8 @@ export const PatientRelationshipManager = ({
 	const [gender, setGender] = useState<'Masculino' | 'Femenino' | ''>('')
 
 	const { toast } = useToast()
+	useBodyScrollLock(isOpen)
+	useGlobalOverlayOpen(isOpen)
 
 	// =====================================================================
 	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
@@ -119,6 +123,14 @@ export const PatientRelationshipManager = ({
 	// HANDLERS
 	// =====================================================================
 
+	// Validar formato de email: debe tener @ y al menos un punto en el dominio
+	const isValidEmail = (value: string): boolean => {
+		if (!value || !value.trim()) return true // vacío = válido (opcional)
+		const trimmed = value.trim()
+		// Debe contener @ y después del @ debe haber al menos un punto (ej: user@domain.com)
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
+	}
+
 	const handleSubmit = async () => {
 		// Validaciones
 		if (!nombre.trim()) {
@@ -143,6 +155,15 @@ export const PatientRelationshipManager = ({
 			toast({
 				title: 'Error',
 				description: 'Debe proporcionar fecha de nacimiento o edad',
+				variant: 'destructive',
+			})
+			return
+		}
+
+		if (email.trim() && !isValidEmail(email)) {
+			toast({
+				title: 'Error',
+				description: 'El email debe tener un formato válido (ej: nombre@dominio.com)',
 				variant: 'destructive',
 			})
 			return
@@ -575,6 +596,7 @@ export const PatientRelationshipManager = ({
 							<Input
 								id="telefono"
 								value={telefono}
+
 								disabled
 								readOnly
 								placeholder="Teléfono del responsable"

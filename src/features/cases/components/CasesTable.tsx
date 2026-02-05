@@ -65,7 +65,13 @@ interface CasesTableProps {
   };
 }
 
-type SortField = 'id' | 'created_at' | 'nombre' | 'total_amount' | 'code';
+type SortField =
+  | 'id'
+  | 'created_at'
+  | 'fecha_entrega'
+  | 'nombre'
+  | 'total_amount'
+  | 'code';
 type SortDirection = 'asc' | 'desc';
 
 type ServerFilters = {
@@ -1216,7 +1222,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (bValue === null || bValue === undefined) bValue = '';
 
         // Optimize date sorting by using string comparison when possible
-        if (sortField === 'created_at') {
+        if (sortField === 'created_at' || sortField === 'fecha_entrega') {
           // Use string comparison for ISO dates (they sort correctly)
           aValue = aValue || '0000-00-00';
           bValue = bValue || '0000-00-00';
@@ -1345,7 +1351,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     if (isFullscreen) {
       return (
         <>
-          <div className='fixed inset-0 z-[999999] bg-white dark:bg-background h-screen flex flex-col overflow-hidden'>
+          <div className='fixed inset-0 z-999999 bg-white dark:bg-background h-screen flex flex-col overflow-hidden'>
             <div className='px-3 sm:px-6'>
               <ActiveFiltersDisplay
                 statusFilter={statusFilter}
@@ -1366,7 +1372,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               />
             </div>
             {/* Fixed Header with Controls */}
-            <div className='flex-shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
+            <div className='shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
               <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
                 {/* Close button - Above search and filters in responsive */}
                 <div className='flex justify-end md:hidden w-full'>
@@ -1399,7 +1405,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 </div>
 
                 {/* Buttons Row - Below search on mobile, beside on desktop */}
-                <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
+                <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:shrink-0'>
                   {/* Unified Filters Modal */}
                   <FiltersModal
                     isOpen={isFiltersModalOpen}
@@ -1498,7 +1504,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               {/* Unified Cards View - Responsive for all screen sizes */}
               <div className='h-full flex flex-col overflow-hidden'>
                 {/* Sort filters header */}
-                <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 flex-shrink-0'>
+                <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0'>
                   <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
                     <button
                       onClick={() => handleSort('code')}
@@ -1513,6 +1519,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     >
                       Registro
                       <SortIcon field='created_at' />
+                    </button>
+                    <button
+                      onClick={() => handleSort('fecha_entrega')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Entrega
+                      <SortIcon field='fecha_entrega' />
                     </button>
                     <button
                       onClick={() => handleSort('nombre')}
@@ -1724,7 +1737,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               </div>
 
               {/* Buttons Row - Below search on mobile, beside on desktop */}
-              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:flex-shrink-0'>
+              <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:shrink-0'>
                 {/* Unified Filters Modal */}
                 <FiltersModal
                   isOpen={isFiltersModalOpen}
@@ -1827,6 +1840,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 >
                   Registro
                   <SortIcon field='created_at' />
+                </button>
+                <button
+                  onClick={() => handleSort('fecha_entrega')}
+                  className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                >
+                  Entrega
+                  <SortIcon field='fecha_entrega' />
                 </button>
                 <button
                   onClick={() => handleSort('nombre')}

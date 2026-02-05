@@ -158,6 +158,11 @@ export const ServiceSection = memo(
     const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
     const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
 
+    const formatTitleCase = (value: string): string =>
+      value
+        .toLowerCase()
+        .replace(/(^|[\s"'(])([a-záéíóúñü])/g, (_, prefix, char) => `${prefix}${char.toUpperCase()}`);
+
     return (
       <Card className='transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20'>
         <CardHeader className='p-3 sm:p-4 md:p-6'>
@@ -200,6 +205,7 @@ export const ServiceSection = memo(
                       iconRight={
                         <MapPin className='h-4 w-4 text-muted-foreground' />
                       }
+                      formatSuggestion={isLM ? formatTitleCase : undefined}
                       {...field}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const { value } = e.target;
@@ -263,6 +269,7 @@ export const ServiceSection = memo(
                       iconRight={
                         <Stethoscope className='h-4 w-4 text-muted-foreground' />
                       }
+                      formatSuggestion={isLM ? formatTitleCase : undefined}
                       {...field}
                       onChange={(e) => {
                         const { value } = e.target;
@@ -283,8 +290,8 @@ export const ServiceSection = memo(
           {/* Para otros laboratorios: Tipo de Muestra y Cantidad de Muestras van antes de Relación */}
           {isConspat ? (
             <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
-              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -319,8 +326,8 @@ export const ServiceSection = memo(
                 />
               )}
 
-              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
@@ -369,8 +376,8 @@ export const ServiceSection = memo(
             </div>
           ) : (
             <>
-              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -405,8 +412,8 @@ export const ServiceSection = memo(
                 />
               )}
 
-              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
