@@ -290,8 +290,8 @@ export const ServiceSection = memo(
           {/* Para otros laboratorios: Tipo de Muestra y Cantidad de Muestras van antes de Relación */}
           {isConspat ? (
             <div className='w-full flex flex-wrap gap-2 sm:gap-3'>
-              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -326,8 +326,8 @@ export const ServiceSection = memo(
                 />
               )}
 
-              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'
@@ -376,8 +376,8 @@ export const ServiceSection = memo(
             </div>
           ) : (
             <>
-              {/* Tipo de Muestra - Dropdown para Marihorgen (costos), Autocomplete para otros */}
-              {(sampleTypeConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
+              {(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='sampleType'
@@ -412,8 +412,8 @@ export const ServiceSection = memo(
                 />
               )}
 
-              {/* Cantidad de Muestras - PLACEHOLDER ACTUALIZADO */}
-              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts) && (
+              {/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
+              {(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
                 <FormField
                   control={control}
                   name='numberOfSamples'

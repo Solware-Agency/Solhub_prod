@@ -139,7 +139,7 @@ function MainHome() {
 							<div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 mb-1 sm:mb-2">
 								<div>
 									<h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-										Bienvenido a SolHub
+										{laboratory?.slug === 'spt' ? 'Bienvenido a Salud Para Todos' : 'Bienvenido a SolHub'}
 									</h1>
 									<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
 										{profile?.display_name && (

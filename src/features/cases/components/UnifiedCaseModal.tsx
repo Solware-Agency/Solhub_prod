@@ -2097,8 +2097,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Medical Information */}
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
-                      {/* Estudio - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.examType?.enabled && (
+                      {/* Estudio - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.examType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Estudio:
@@ -2128,8 +2128,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                      {/* Médico Tratante - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.medicoTratante?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Médico tratante:
@@ -2214,8 +2214,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Procedencia - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.procedencia?.enabled && (
+                      {/* Procedencia - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.procedencia?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Procedencia:
@@ -2243,14 +2243,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.origin || 'N/A'}
+                              {(() => {
+                                const originValue = currentCase.origin
+                                const trimmed = originValue?.trim()
+                                const display = trimmed ? originValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - origin display:', { 
+                                    originValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!originValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Sede - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.branch?.enabled && (
+                      {/* Sede - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.branch?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Sede:
@@ -2278,8 +2292,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Muestra - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.sampleType?.enabled && (
+                      {/* Muestra - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.sampleType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Muestra:
@@ -2305,14 +2319,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.sample_type || 'N/A'}
+                              {(() => {
+                                const sampleTypeValue = currentCase.sample_type
+                                const trimmed = sampleTypeValue?.trim()
+                                const display = trimmed ? sampleTypeValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - sample_type display:', { 
+                                    sampleTypeValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!sampleTypeValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
-                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                      {/* Cantidad de muestras - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.numberOfSamples?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Cantidad de muestras:
@@ -2411,20 +2439,22 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       )}
 
                       {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
-                      {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
-                      <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
-                          Imágenes (Imagenología):
-                        </span>
-                        <div className='w-full'>
-                          <MultipleImageUrls
-                            images={imageUrls}
-                            onChange={setImageUrls}
-                            maxImages={10}
-                            isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
-                          />
+                      {/* Oculto para marihorgen */}
+                      {!isMarihorgen && (
+                        <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                            Imágenes (Imagenología):
+                          </span>
+                          <div className='w-full'>
+                            <MultipleImageUrls
+                              images={imageUrls}
+                              onChange={setImageUrls}
+                              maxImages={10}
+                              isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Comentarios */}
                       <div className='py-2 border-t border-gray-200 dark:border-gray-700 pt-3'>

@@ -46,46 +46,81 @@ export function prepareDefaultValues(
 	laboratorySlug?: string | null
 ): Partial<MedicalCaseInsert> {
 	const isSPT = laboratorySlug?.toLowerCase() === 'spt'
+	const isMarihorgen = laboratorySlug?.toLowerCase() === 'marihorgen' || laboratorySlug?.toLowerCase() === 'lm'
 	const defaults: Partial<MedicalCaseInsert> = {}
 
-	// origin (NOT NULL) - string vacío si deshabilitado
+	// origin (NOT NULL) - Para marihorgen siempre usar valor del formulario
 	const originConfig = moduleConfig?.fields?.procedencia
-	defaults.origin = (getDefaultFieldValue(
-		originConfig,
-		formData.origin || '',
-		'' // String vacío para NOT NULL
-	) || '') as string // Asegurar que nunca sea null/undefined
+	if (isMarihorgen) {
+		// Para marihorgen, siempre usar el valor del formulario (aunque el campo esté deshabilitado en config)
+		const originValue = (formData.origin || '').trim()
+		defaults.origin = originValue || ''
+		console.log('🔍 Marihorgen - origin value:', { 
+			formDataOrigin: formData.origin, 
+			trimmed: originValue, 
+			final: defaults.origin 
+		})
+	} else {
+		defaults.origin = (getDefaultFieldValue(
+			originConfig,
+			formData.origin || '',
+			'' // String vacío para NOT NULL
+		) || '') as string // Asegurar que nunca sea null/undefined
+	}
 
-	// treating_doctor (NOT NULL) - "No especificado" si deshabilitado
+	// treating_doctor (NOT NULL) - Para marihorgen siempre usar valor del formulario
 	const doctorConfig = moduleConfig?.fields?.medicoTratante
 	const doctorValue = (formData.treatingDoctor || formData.doctorName || '').trim()
 	
-	// Si el campo está habilitado, usar el valor del formulario (o "No especificado" si no hay)
-	// Si está deshabilitado, usar "No especificado"
-	if (doctorConfig?.enabled) {
+	if (isMarihorgen) {
+		// Para marihorgen, siempre usar el valor del formulario (aunque el campo esté deshabilitado en config)
 		defaults.treating_doctor = doctorValue || 'No especificado'
 	} else {
-		defaults.treating_doctor = 'No especificado' // Campo deshabilitado
+		// Si el campo está habilitado, usar el valor del formulario (o "No especificado" si no hay)
+		// Si está deshabilitado, usar "No especificado"
+		if (doctorConfig?.enabled) {
+			defaults.treating_doctor = doctorValue || 'No especificado'
+		} else {
+			defaults.treating_doctor = 'No especificado' // Campo deshabilitado
+		}
 	}
 	
 	// Asegurar que nunca sea null/undefined
 	defaults.treating_doctor = (defaults.treating_doctor || 'No especificado') as string
 
-	// sample_type (NOT NULL) - string vacío si deshabilitado
+	// sample_type (NOT NULL) - Para marihorgen siempre usar valor del formulario
 	const sampleConfig = moduleConfig?.fields?.sampleType
-	defaults.sample_type = (getDefaultFieldValue(
-		sampleConfig,
-		formData.sampleType || '',
-		'' // String vacío para NOT NULL
-	) || '') as string // Asegurar que nunca sea null/undefined
+	if (isMarihorgen) {
+		// Para marihorgen, siempre usar el valor del formulario (aunque el campo esté deshabilitado en config)
+		const sampleTypeValue = (formData.sampleType || '').trim()
+		defaults.sample_type = sampleTypeValue || ''
+		console.log('🔍 Marihorgen - sample_type value:', { 
+			formDataSampleType: formData.sampleType, 
+			trimmed: sampleTypeValue, 
+			final: defaults.sample_type 
+		})
+	} else {
+		defaults.sample_type = (getDefaultFieldValue(
+			sampleConfig,
+			formData.sampleType || '',
+			'' // String vacío para NOT NULL
+		) || '') as string // Asegurar que nunca sea null/undefined
+	}
 
-	// number_of_samples (NOT NULL, CHECK > 0) - 1 si deshabilitado
+	// number_of_samples (NOT NULL, CHECK > 0) - Para marihorgen siempre usar valor del formulario
 	const samplesConfig = moduleConfig?.fields?.numberOfSamples
-	defaults.number_of_samples = getDefaultFieldValue(
-		samplesConfig,
-		formData.numberOfSamples,
-		1 // Mínimo válido para CHECK constraint
-	)
+	if (isMarihorgen) {
+		// Para marihorgen, siempre usar el valor del formulario (aunque el campo esté deshabilitado en config)
+		defaults.number_of_samples = formData.numberOfSamples && formData.numberOfSamples > 0 
+			? formData.numberOfSamples 
+			: 1
+	} else {
+		defaults.number_of_samples = getDefaultFieldValue(
+			samplesConfig,
+			formData.numberOfSamples,
+			1 // Mínimo válido para CHECK constraint
+		)
+	}
 
 	// branch (nullable en BD)
 	// IMPORTANTE: Para SPT la sede es 100% OBLIGATORIA - lanzar error si está vacía
