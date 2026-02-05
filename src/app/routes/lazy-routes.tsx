@@ -184,6 +184,50 @@ export const SampleCostsPage = lazy(() =>
   )
 )
 
+// Aseguradoras (Inntegras) pages - lazy loaded
+export const AseguradorasHomePage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/AseguradorasHomePage'),
+    'AseguradorasHomePage'
+  )
+)
+export const AseguradosPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/AseguradosPage'),
+    'AseguradosPage'
+  )
+)
+export const PolizasPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/PolizasPage'),
+    'PolizasPage'
+  )
+)
+export const PagosPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/PagosPage'),
+    'PagosPage'
+  )
+)
+export const RecordatoriosPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/RecordatoriosPage'),
+    'RecordatoriosPage'
+  )
+)
+export const DocumentosPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/DocumentosPage'),
+    'DocumentosPage'
+  )
+)
+export const CompaniasPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/aseguradoras/pages/CompaniasPage'),
+    'CompaniasPage'
+  )
+)
+
 // Form pages - lazy loaded
 export const DoctorsSection = lazy(() =>
   lazyRetry(

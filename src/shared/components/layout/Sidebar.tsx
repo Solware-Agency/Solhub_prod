@@ -20,6 +20,7 @@ import {
   FolderSearch,
   Activity,
   DollarSign,
+  Bell,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -380,6 +381,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isPrueba = profile?.role === 'prueba' as any;
   const isImagenologia = profile?.role === 'imagenologia';
   const isLaboratorio = profile?.role === 'laboratorio';
+  const isInntegras = laboratory?.slug === 'inntegras';
+  const canSeeAseguradoras = isInntegras && (isOwner || isEmployee || isPrueba);
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -416,7 +419,74 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className='flex flex-col justify-center gap-2'>
-          {isOwner && (
+          {canSeeAseguradoras && (
+            <>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/home'
+                  icon={<Home className='stroke-2 size-5 shrink-0' />}
+                  label='Aseguradoras'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/asegurados'
+                  icon={<Users className='stroke-2 size-5 shrink-0' />}
+                  label='Asegurados'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/companias'
+                  icon={<FolderSearch className='stroke-2 size-5 shrink-0' />}
+                  label='Compañías'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/polizas'
+                  icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                  label='Pólizas'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/pagos'
+                  icon={<DollarSign className='stroke-2 size-5 shrink-0' />}
+                  label='Pagos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/recordatorios'
+                  icon={<Bell className='stroke-2 size-5 shrink-0' />}
+                  label='Recordatorios'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+              <div className='py-1'>
+                <NavItem
+                  to='/aseguradoras/documentos'
+                  icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
+                  label='Documentos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </div>
+            </>
+          )}
+          {isOwner && !isInntegras && (
             <>
               <FeatureGuard feature='hasStats'>
                 <div className='py-1'>
@@ -605,7 +675,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* Employee specific routes */}
-          {isEmployee && (
+          {isEmployee && !isInntegras && (
             <>
               <NavItem
                 to='/employee/home'
@@ -984,7 +1054,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </>
           )}
 
-          {isPrueba && (
+          {isPrueba && !isInntegras && (
             <>
               <FeatureGuard feature='hasStats'>
                 <NavItem

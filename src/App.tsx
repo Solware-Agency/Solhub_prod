@@ -26,9 +26,11 @@ import {
   CasesPage,
   PrivateRoute,
   StandaloneChatPage,
+  AseguradorasHomePage,
 } from '@app/routes/lazy-routes';
-import { imagenologiaRoutes, laboratorioRoutes } from '@app/routes/route-config';
+import { imagenologiaRoutes, laboratorioRoutes, aseguradorasRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
+import InntegrasGuard from '@shared/components/InntegrasGuard';
 import {
   dashboardRoutes,
   employeeRoutes,
@@ -462,6 +464,37 @@ function App() {
                           <FeatureRoute
                             feature={routeConfig.feature}
                             fallbackPath='/prueba/home'
+                          >
+                            <Component />
+                          </FeatureRoute>
+                        }
+                      />
+                    );
+                  })}
+                </Route>
+
+                {/* Protected aseguradoras routes (Inntegras) */}
+                <Route
+                  path='/aseguradoras'
+                  element={
+                    <PrivateRoute requiredRole={['employee', 'owner', 'prueba']}>
+                      <InntegrasGuard>
+                        <Layout />
+                      </InntegrasGuard>
+                    </PrivateRoute>
+                  }
+                >
+                  <Route index element={<AseguradorasHomePage />} />
+                  {aseguradorasRoutes.map((routeConfig) => {
+                    const Component = routeConfig.component;
+                    return (
+                      <Route
+                        key={routeConfig.path}
+                        path={routeConfig.path}
+                        element={
+                          <FeatureRoute
+                            feature={routeConfig.feature}
+                            fallbackPath='/aseguradoras/home'
                           >
                             <Component />
                           </FeatureRoute>
