@@ -26,6 +26,8 @@ export type StatType =
 	| 'remainingAmount'
 	| 'originRevenue'
 	| 'doctorRevenue'
+	| 'casesByReceptionist'
+	| 'casesByPathologist'
 
 interface StatDetailPanelProps {
 	isOpen: boolean
@@ -81,6 +83,10 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return 'Ingreso por Procedencia'
 			case 'doctorRevenue':
 				return 'Ingreso por Médico Tratante'
+			case 'casesByReceptionist':
+				return 'Casos por Recepcionista'
+			case 'casesByPathologist':
+				return 'Casos por Patólogo'
 			default:
 				return 'Detalles'
 		}
@@ -1226,6 +1232,113 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 					</div>
 				)
+
+			case 'casesByReceptionist': {
+				const data = stats.casesByReceptionist || []
+				const maxCases = Math.max(...data.map((item: any) => item.cases || 0), 1)
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Top recepcionistas
+							</h3>
+							{data.length === 0 ? (
+								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos</p>
+							) : (
+								<div className="space-y-3">
+									{data.slice(0, 5).map((item: any) => (
+										<div key={item.id} className="space-y-1">
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+													{formatNumber(item.cases)}
+												</span>
+											</div>
+											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+												<div
+													className="h-2 rounded-full bg-blue-500"
+													style={{ width: `${(item.cases / maxCases) * 100}%` }}
+												/>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Todos los recepcionistas
+							</h3>
+							<div className="max-h-72 overflow-auto space-y-2 pr-2">
+								{data.map((item: any) => (
+									<div key={item.id} className="flex items-center justify-between">
+										<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
+										<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+											{formatNumber(item.cases)}
+										</span>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				)
+			}
+
+			case 'casesByPathologist': {
+				const data = stats.casesByPathologist || []
+				const maxCases = Math.max(...data.map((item: any) => item.cases || 0), 1)
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Top patólogos
+							</h3>
+							{data.length === 0 ? (
+								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos</p>
+							) : (
+								<div className="space-y-3">
+									{data.slice(0, 5).map((item: any) => (
+										<div key={item.id} className="space-y-1">
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+													{formatNumber(item.cases)} casos
+												</span>
+											</div>
+											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+												<div
+													className="h-2 rounded-full bg-purple-500"
+													style={{ width: `${(item.cases / maxCases) * 100}%` }}
+												/>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Todos los patólogos
+							</h3>
+							<div className="max-h-72 overflow-auto space-y-2 pr-2">
+								{data.map((item: any) => (
+									<div key={item.id} className="flex items-center justify-between">
+										<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
+										<div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+											{formatNumber(item.cases)} casos
+											<span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+												• {formatNumber(item.blocks)} bloques
+											</span>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				)
+			}
 
 			case 'examTypes':
 				return (

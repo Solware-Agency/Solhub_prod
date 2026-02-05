@@ -435,6 +435,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+
+    const { data: pathologistData } = useQuery({
+      queryKey: ['case-pathologist', currentCase?.patologo_id],
+      queryFn: async () => {
+        if (!currentCase?.patologo_id) return null;
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, email')
+          .eq('id', currentCase.patologo_id)
+          .single();
+        return data || null;
+      },
+      enabled: !!currentCase?.patologo_id && isOpen,
+    });
     
     // Query to get responsable if patient is a minor/animal
     const { data: responsableData } = useQuery({
@@ -587,6 +601,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             consulta: (currentCase as MedicalCaseWithPatient).consulta ?? '',
             image_url: (currentCase as any).image_url ?? null,
             owner_display_code: (currentCase as any).owner_display_code ?? '',
+            bloques_biopsia: (currentCase as any).bloques_biopsia ?? null,
             // Financial data
             total_amount: currentCase.total_amount,
             exchange_rate: currentCase.exchange_rate,
@@ -785,6 +800,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'consulta',
           'image_url',
           ...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner ? ['owner_display_code' as const] : []),
+          ...(isMarihorgen ? ['bloques_biopsia' as const] : []),
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -824,6 +840,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               const raw = newValue as string | null | undefined;
               const trimmed = typeof raw === 'string' ? raw.trim().replace(/\D/g, '').slice(0, 5) : '';
               caseChanges.owner_display_code = trimmed === '' ? null : trimmed;
+            } else if (field === 'bloques_biopsia') {
+              const raw = newValue as number | string | null | undefined;
+              const parsed =
+                raw === '' || raw === null || raw === undefined ? null : Number(raw);
+              caseChanges.bloques_biopsia = Number.isNaN(parsed) ? null : parsed;
             }
             caseChangeLogs.push({
               field,
@@ -1497,6 +1518,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         comments: 'Comentarios',
         consulta: 'Tipo de Consulta',
         owner_display_code: 'Código (visible)',
+        bloques_biopsia: 'Bloques de biopsia',
         // Legacy fields (for backward compatibility)
         full_name: 'Nombre Completo',
         id_number: 'Cédula',
@@ -2353,6 +2375,41 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
+                      {isMarihorgen &&
+                        currentCase.exam_type?.toLowerCase().includes('biopsia') && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Bloques de biopsia:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <Input
+                                id='bloques-biopsia-input'
+                                name='bloques_biopsia'
+                                type='number'
+                                placeholder='0'
+                                value={
+                                  editedCase.bloques_biopsia !== undefined
+                                    ? (editedCase.bloques_biopsia as number | null) ?? ''
+                                    : (currentCase as any).bloques_biopsia ?? ''
+                                }
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    'bloques_biopsia',
+                                    e.target.value === '' ? null : Number(e.target.value),
+                                  )
+                                }
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {(currentCase as any).bloques_biopsia ?? '-'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
                       {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
                       <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
@@ -2970,6 +3027,29 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           ).toLocaleDateString('es-ES')}
                           editable={false}
                         />
+                        {currentCase.fecha_entrega && (
+                          <div className='flex items-center justify-between py-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              Fecha de entrega
+                            </span>
+                            <span className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'>
+                              {new Date(
+                                `${currentCase.fecha_entrega}T00:00:00`,
+                              ).toLocaleDateString('es-ES')}
+                            </span>
+                          </div>
+                        )}
+                        {isMarihorgen && currentCase.patologo_id && (
+                          <InfoRow
+                            label='Patólogo'
+                            value={
+                              pathologistData?.display_name ||
+                              pathologistData?.email ||
+                              'Usuario'
+                            }
+                            editable={false}
+                          />
+                        )}
                         <InfoRow
                           label='Última actualización'
                           value={new Date(

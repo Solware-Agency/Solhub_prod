@@ -65,7 +65,13 @@ interface CasesTableProps {
   };
 }
 
-type SortField = 'id' | 'created_at' | 'nombre' | 'total_amount' | 'code';
+type SortField =
+  | 'id'
+  | 'created_at'
+  | 'fecha_entrega'
+  | 'nombre'
+  | 'total_amount'
+  | 'code';
 type SortDirection = 'asc' | 'desc';
 
 type ServerFilters = {
@@ -1216,7 +1222,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (bValue === null || bValue === undefined) bValue = '';
 
         // Optimize date sorting by using string comparison when possible
-        if (sortField === 'created_at') {
+        if (sortField === 'created_at' || sortField === 'fecha_entrega') {
           // Use string comparison for ISO dates (they sort correctly)
           aValue = aValue || '0000-00-00';
           bValue = bValue || '0000-00-00';
@@ -1513,6 +1519,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     >
                       Registro
                       <SortIcon field='created_at' />
+                    </button>
+                    <button
+                      onClick={() => handleSort('fecha_entrega')}
+                      className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                    >
+                      Entrega
+                      <SortIcon field='fecha_entrega' />
                     </button>
                     <button
                       onClick={() => handleSort('nombre')}
@@ -1827,6 +1840,13 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 >
                   Registro
                   <SortIcon field='created_at' />
+                </button>
+                <button
+                  onClick={() => handleSort('fecha_entrega')}
+                  className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
+                >
+                  Entrega
+                  <SortIcon field='fecha_entrega' />
                 </button>
                 <button
                   onClick={() => handleSort('nombre')}

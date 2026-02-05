@@ -82,6 +82,9 @@ interface MedicalRecord {
   cito_status?: Database['public']['Enums']['cito_status_type'];
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
   laboratory_id?: string; // ID del laboratorio
+  bloques_biopsia?: number | null;
+  fecha_entrega?: string | null;
+  patologo_id?: string | null;
 }
 
 interface StepsCaseModalProps {
@@ -525,6 +528,19 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
 
     try {
       setIsSaving(true);
+
+      // En Marihorgen/LM: registrar automáticamente el patólogo que genera el documento
+      if (isMarihorgen && profile?.role === 'patologo' && case_?.id && user?.id) {
+        const { error: patologoError } = await supabase
+          .from('medical_records_clean')
+          .update({ patologo_id: user.id })
+          .eq('id', case_.id)
+          .is('patologo_id', null);
+
+        if (patologoError) {
+          console.warn('Error actualizando patologo_id:', patologoError);
+        }
+      }
 
       console.log(
         '[1] Verificando si ya existe googledocs_url para el caso',
@@ -1315,9 +1331,10 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
 
       // Actualizar el campo email_sent en la base de datos
       if (case_?.id) {
+        const deliveryDate = new Date().toISOString().split('T')[0];
         const { error: updateError } = await supabase
           .from('medical_records_clean')
-          .update({ email_sent: true })
+          .update({ email_sent: true, fecha_entrega: deliveryDate })
           .eq('id', case_.id);
 
         if (updateError) {
