@@ -3,6 +3,7 @@ import { getUserLaboratoryId } from './aseguradoras-utils'
 
 export interface Asegurado {
 	id: string
+	codigo: string | null
 	laboratory_id: string
 	full_name: string
 	document_id: string

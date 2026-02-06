@@ -28,6 +28,7 @@ import {
 } from '@services/supabase/aseguradoras/polizas-service'
 import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
+import PolizaCard from '@features/aseguradoras/components/PolizaCard'
 
 const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
 
@@ -523,6 +524,7 @@ const PolizasPage = () => {
 							exportRowsToExcel(
 								'polizas',
 								polizas.map((row) => ({
+									Código: row.codigo ?? '',
 									'Número de póliza': row.numero_poliza,
 									Asegurado: row.asegurado?.full_name || '',
 									Aseguradora: row.aseguradora?.nombre || '',
@@ -582,19 +584,7 @@ const PolizasPage = () => {
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{polizas.map((row: Poliza) => (
-							<Card
-								key={row.id}
-								className="p-3 flex flex-col gap-2 cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition"
-								onClick={() => openDetailPanel(row)}
-							>
-								<div>
-									<p className="font-medium">{row.numero_poliza}</p>
-									<p className="text-sm text-gray-600 dark:text-gray-400">
-										{row.asegurado?.full_name || 'Asegurado'} · {row.aseguradora?.nombre || 'Aseguradora'}
-									</p>
-									<p className="text-xs text-gray-500">{row.estatus_poliza}</p>
-								</div>
-							</Card>
+							<PolizaCard key={row.id} poliza={row} onClick={() => openDetailPanel(row)} />
 						))}
 					</div>
 				</div>

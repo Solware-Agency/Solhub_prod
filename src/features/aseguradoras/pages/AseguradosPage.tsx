@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
+import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
 	createAsegurado,
 	getAsegurados,
@@ -140,6 +141,7 @@ const AseguradosPage = () => {
 							exportRowsToExcel(
 								'asegurados',
 								asegurados.map((row) => ({
+									Código: row.codigo ?? '',
 									Nombre: row.full_name,
 									Documento: row.document_id,
 									Teléfono: row.phone,
@@ -196,19 +198,7 @@ const AseguradosPage = () => {
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{asegurados.map((row) => (
-							<Card
-								key={row.id}
-								className="p-3 flex flex-col gap-2 cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition"
-								onClick={() => openDetailPanel(row)}
-							>
-								<div>
-									<p className="font-medium">{row.full_name}</p>
-									<p className="text-sm text-gray-600 dark:text-gray-400">
-										{row.document_id} · {row.phone}
-									</p>
-									<p className="text-xs text-gray-500">{row.email || 'Sin email'}</p>
-								</div>
-							</Card>
+							<AseguradoCard key={row.id} asegurado={row} onClick={() => openDetailPanel(row)} />
 						))}
 					</div>
 				</div>

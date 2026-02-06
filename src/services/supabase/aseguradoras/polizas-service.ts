@@ -20,6 +20,7 @@ const shouldMarkEnMora = (poliza: Poliza, today = new Date()) => {
 
 export interface Poliza {
 	id: string
+	codigo: string | null
 	laboratory_id: string
 	asegurado_id: string
 	aseguradora_id: string
