@@ -152,13 +152,21 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 										Entidad
 									</p>
-									<p className="text-sm text-gray-900 dark:text-gray-100">
-										{entityName}
-									</p>
-									{entityId && firstChange.entity_type === 'patient' && (
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											Cédula: {entityId}
-										</p>
+									{firstChange.entity_type === 'patient' ? (
+										<>
+											<p className="text-sm text-gray-900 dark:text-gray-100">
+												{entityName}
+											</p>
+											{entityId && (
+												<p className="text-xs text-gray-500 dark:text-gray-400">
+													Cédula: {entityId}
+												</p>
+											)}
+										</>
+									) : (
+										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
+											{entityName}
+										</span>
 									)}
 								</div>
 							</div>

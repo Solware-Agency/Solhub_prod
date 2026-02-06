@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from './useUserProfile'
+import { supabase } from '@services/supabase/config/config'
 
 interface UseSecureRedirectOptions {
 	/** Whether to redirect immediately on mount */
@@ -42,6 +43,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	} = options
 
 	const navigate = useNavigate()
+	const location = useLocation()
 	const { user, loading: authLoading } = useAuth()
 	const { profile, isLoading: profileLoading, error: profileError } = useUserProfile()
 	const [isRedirecting, setIsRedirecting] = useState(false)
@@ -49,7 +51,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Performs the actual redirect based on user role
 	 */
-	const redirectUser = () => {
+	const redirectUser = async () => {
 		// ⚠️ CRÍTICO: No redirigir si estamos en proceso de logout
 		const isLoggingOut = localStorage.getItem('is_logging_out') === 'true'
 		if (isLoggingOut) {
@@ -149,6 +151,26 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 				redirectPath = employeePath // fallback
 		}
 
+		// Inntegras: enviar a módulo aseguradoras si corresponde
+		try {
+			const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id
+			if (laboratoryId) {
+				const { data: laboratory } = await supabase
+					.from('laboratories' as any)
+					.select('slug')
+					.eq('id', laboratoryId)
+					.single()
+
+				const isInntegras = (laboratory as any)?.slug === 'inntegras'
+				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'owner' || profile.role === 'prueba'
+				if (isInntegras && canSeeAseguradoras) {
+					redirectPath = '/aseguradoras/home'
+				}
+			}
+		} catch (error) {
+			console.warn('⚠️ No se pudo obtener laboratorio para redirect:', error)
+		}
+
 		console.log(`Redirecting user with role "${profile.role}" to: ${redirectPath}`)
 
 		// Call callback if provided
@@ -210,10 +232,46 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		})
 
 		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut) {
+			const currentPath = location.pathname
+			const authPaths = [
+				'/',
+				'/register',
+				'/forgot-password',
+				'/reset-password',
+				'/new-password',
+				'/email-verification-notice',
+				'/pending-approval',
+				'/auth/callback',
+			]
+
+			const roleAllowedPrefixes: Record<string, string[]> = {
+				owner: ['/dashboard', '/chat', '/aseguradoras'],
+				employee: ['/employee', '/aseguradoras'],
+				prueba: ['/prueba', '/aseguradoras'],
+				residente: ['/medic'],
+				citotecno: ['/cito'],
+				patologo: ['/patolo'],
+				imagenologia: ['/imagenologia'],
+				medico_tratante: ['/medico-tratante'],
+				enfermero: ['/enfermero'],
+				call_center: ['/call-center'],
+				admin: ['/medic'],
+				laboratorio: ['/laboratorio'],
+				medicowner: ['/dashboard'],
+			}
+
+			const allowedPrefixes = roleAllowedPrefixes[profile.role] || []
+			const isOnAllowedRoute = allowedPrefixes.some((prefix) => currentPath.startsWith(prefix))
+			const isAuthRoute = authPaths.includes(currentPath)
+
+			// Si el usuario ya está en una ruta permitida, no forzar redirect en refresh
+			if (!isAuthRoute && isOnAllowedRoute) {
+				return
+			}
 			console.log('Calling redirectUser from useEffect')
 			redirectUser()
 		}
-	}, [redirectOnMount, authLoading, profileLoading, user, profile, profileError, isRedirecting])
+	}, [redirectOnMount, authLoading, profileLoading, user, profile, profileError, isRedirecting, location.pathname])
 
 	return {
 		isRedirecting,

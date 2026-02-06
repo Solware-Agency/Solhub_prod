@@ -455,7 +455,7 @@ const ChangelogTable: React.FC = () => {
 						<h2 className="text-xl font-bold text-red-800 dark:text-red-300">Error al cargar el historial</h2>
 					</div>
 					<p className="text-red-700 dark:text-red-400 mb-4">
-						No se pudo cargar el historial de cambios. Por favor, intenta de nuevo más tarde.
+						No se pudo cargar el historial de acciones. Por favor, intenta de nuevo más tarde.
 					</p>
 					<Button onClick={() => refetch()} className="bg-red-600 hover:bg-red-700">
 						<RefreshCw className="w-4 h-4 mr-2" />
@@ -470,7 +470,7 @@ const ChangelogTable: React.FC = () => {
 		<div>
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
 				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold">Historial de Cambios</h1>
+					<h1 className="text-2xl sm:text-3xl font-bold">Historial de Acciones</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 					<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
 						Registro de todas las acciones realizadas en el sistema
@@ -577,7 +577,7 @@ const ChangelogTable: React.FC = () => {
 							<p className="text-sm text-gray-400 dark:text-gray-500">
 								{searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to
 									? 'Intenta ajustar los filtros de búsqueda'
-									: 'Aún no hay registros en el historial de cambios'}
+									: 'Aún no hay registros en el historial de acciones'}
 							</p>
 						</div>
 					) : (
@@ -661,7 +661,7 @@ const ChangelogTable: React.FC = () => {
 																	)}
 																</>
 															) : (
-																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
 																	{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
 																</span>
 															)}
@@ -802,7 +802,7 @@ const ChangelogTable: React.FC = () => {
 																)}
 															</>
 														) : (
-															<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+															<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
 																{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
 															</span>
 														)}

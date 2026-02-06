@@ -16,6 +16,13 @@ import {
   WaitingRoomPage,
   SampleCostsPage,
   ErrorBoundaryTest,
+  AseguradorasHomePage,
+  AseguradosPage,
+  PolizasPage,
+  PagosPage,
+  RecordatoriosPage,
+  DocumentosPage,
+  CompaniasPage,
 } from './lazy-routes';
 
 export interface RouteConfig {
@@ -382,5 +389,37 @@ export const pruebaRoutes: RouteConfig[] = [
   {
     path: 'sample-costs',
     component: SampleCostsPage,
+  },
+];
+
+// Configuración de rutas para aseguradoras (Inntegras)
+export const aseguradorasRoutes: RouteConfig[] = [
+  {
+    path: 'home',
+    component: AseguradorasHomePage,
+  },
+  {
+    path: 'asegurados',
+    component: AseguradosPage,
+  },
+  {
+    path: 'polizas',
+    component: PolizasPage,
+  },
+  {
+    path: 'pagos',
+    component: PagosPage,
+  },
+  {
+    path: 'recordatorios',
+    component: RecordatoriosPage,
+  },
+  {
+    path: 'documentos',
+    component: DocumentosPage,
+  },
+  {
+    path: 'companias',
+    component: CompaniasPage,
   },
 ];

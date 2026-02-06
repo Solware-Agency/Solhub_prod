@@ -35,6 +35,39 @@ const getUserLaboratoryId = async (): Promise<string> => {
 };
 
 /**
+ * Para employee (y otros roles con sede asignada): restringe datos a su sede.
+ * Owner/prueba sin sede asignada ven todas las sedes.
+ * @returns Sede a la que restringir, o null si el usuario puede ver todas.
+ */
+const getBranchRestrictionForCurrentUser = async (): Promise<string | null> => {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role, assigned_branch')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile) return null;
+
+    const p = profile as { role?: string; assigned_branch?: string | null };
+    // Rol prueba (godmode) y owner pueden ver todas las sedes
+    if (p.role === 'prueba' || p.role === 'owner') return null;
+    if (p.role === 'employee' && p.assigned_branch) return p.assigned_branch;
+    // Otros roles con sede asignada (ej. residente) también restringidos
+    if (p.assigned_branch) return p.assigned_branch;
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo restricción de sede:', error);
+    return null;
+  }
+};
+
+/**
  * Estado del caso en el flujo de sala de espera SPT
  */
 export type EstadoSpt = 'pendiente_triaje' | 'esperando_consulta' | 'finalizado';
@@ -68,6 +101,8 @@ export const getWaitingRoomCases = async (
 ): Promise<WaitingRoomCase[]> => {
   try {
     const laboratoryId = await getUserLaboratoryId();
+    const restrictedBranch = await getBranchRestrictionForCurrentUser();
+    const effectiveBranch = restrictedBranch ?? branch;
 
     // Construir query base
     let query = supabase
@@ -89,9 +124,9 @@ export const getWaitingRoomCases = async (
       .in('estado_spt', ['pendiente_triaje', 'esperando_consulta'])
       .order('created_at', { ascending: true });
 
-    // Filtrar por sede si se proporciona
-    if (branch) {
-      query = query.eq('branch', branch);
+    // Filtrar por sede si se proporciona o si el usuario está restringido a una (ej. employee)
+    if (effectiveBranch) {
+      query = query.eq('branch', effectiveBranch);
     }
 
     const { data, error } = await query;
@@ -135,6 +170,11 @@ export const getWaitingRoomCases = async (
  */
 export const getActiveBranches = async (): Promise<string[]> => {
   try {
+    const restrictedBranch = await getBranchRestrictionForCurrentUser();
+    if (restrictedBranch) {
+      return [restrictedBranch];
+    }
+
     const laboratoryId = await getUserLaboratoryId();
 
     // Obtener configuración del laboratorio
@@ -208,6 +248,8 @@ export const getWaitingRoomStats = async (
 }> => {
   try {
     const laboratoryId = await getUserLaboratoryId();
+    const restrictedBranch = await getBranchRestrictionForCurrentUser();
+    const effectiveBranch = restrictedBranch ?? branch;
 
     let query = supabase
       .from('medical_records_clean')
@@ -215,8 +257,8 @@ export const getWaitingRoomStats = async (
       .eq('laboratory_id', laboratoryId)
       .in('estado_spt', ['pendiente_triaje', 'esperando_consulta']);
 
-    if (branch) {
-      query = query.eq('branch', branch);
+    if (effectiveBranch) {
+      query = query.eq('branch', effectiveBranch);
     }
 
     const { data, error, count } = await query;

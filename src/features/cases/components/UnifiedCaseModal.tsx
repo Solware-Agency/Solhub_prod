@@ -435,6 +435,20 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
     // Use updated case data if available, otherwise fall back to original case
     const currentCase = updatedCaseData || case_;
+
+    const { data: pathologistData } = useQuery({
+      queryKey: ['case-pathologist', currentCase?.patologo_id],
+      queryFn: async () => {
+        if (!currentCase?.patologo_id) return null;
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, email')
+          .eq('id', currentCase.patologo_id)
+          .single();
+        return data || null;
+      },
+      enabled: !!currentCase?.patologo_id && isOpen,
+    });
     
     // Query to get responsable if patient is a minor/animal
     const { data: responsableData } = useQuery({
@@ -587,6 +601,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
             consulta: (currentCase as MedicalCaseWithPatient).consulta ?? '',
             image_url: (currentCase as any).image_url ?? null,
             owner_display_code: (currentCase as any).owner_display_code ?? '',
+            bloques_biopsia: (currentCase as any).bloques_biopsia ?? null,
             // Financial data
             total_amount: currentCase.total_amount,
             exchange_rate: currentCase.exchange_rate,
@@ -785,6 +800,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
           'consulta',
           'image_url',
           ...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner ? ['owner_display_code' as const] : []),
+          ...(isMarihorgen ? ['bloques_biopsia' as const] : []),
         ];
         const financialFields = ['total_amount', 'exchange_rate'];
 
@@ -824,6 +840,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
               const raw = newValue as string | null | undefined;
               const trimmed = typeof raw === 'string' ? raw.trim().replace(/\D/g, '').slice(0, 5) : '';
               caseChanges.owner_display_code = trimmed === '' ? null : trimmed;
+            } else if (field === 'bloques_biopsia') {
+              const raw = newValue as number | string | null | undefined;
+              const parsed =
+                raw === '' || raw === null || raw === undefined ? null : Number(raw);
+              caseChanges.bloques_biopsia = Number.isNaN(parsed) ? null : parsed;
             }
             caseChangeLogs.push({
               field,
@@ -1497,6 +1518,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
         comments: 'Comentarios',
         consulta: 'Tipo de Consulta',
         owner_display_code: 'Código (visible)',
+        bloques_biopsia: 'Bloques de biopsia',
         // Legacy fields (for backward compatibility)
         full_name: 'Nombre Completo',
         id_number: 'Cédula',
@@ -1806,7 +1828,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           </button>
                           <button
                             onClick={toggleChangelog}
-                            title={isChangelogOpen ? 'Ocultar historial de cambios' : 'Ver historial de cambios del caso'}
+                            title={isChangelogOpen ? 'Ocultar historial de acciones' : 'Ver historial de acciones del caso'}
                             className='inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 flex-shrink-0'
                             aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
                           >
@@ -1868,7 +1890,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                 <div className='p-4 sm:p-6 space-y-6'>
                   {/* Changelog Section */}
                   {isChangelogOpen && !isEditing && (
-                    <InfoSection title='Historial de Cambios' icon={History}>
+                    <InfoSection title='Historial de Acciones' icon={History}>
                       {isLoadingChangelogs ? (
                         <div className='flex items-center justify-center p-4'>
                           <Loader2 className='w-6 h-6 animate-spin text-primary mr-2' />
@@ -2075,8 +2097,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                   {/* Medical Information */}
                   <InfoSection title='Información Médica' icon={Stethoscope}>
                     <div className='space-y-1'>
-                      {/* Estudio - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.examType?.enabled && (
+                      {/* Estudio - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.examType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Estudio:
@@ -2106,8 +2128,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Médico Tratante - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.medicoTratante?.enabled && (
+                      {/* Médico Tratante - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.medicoTratante?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Médico tratante:
@@ -2192,8 +2214,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Procedencia - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.procedencia?.enabled && (
+                      {/* Procedencia - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.procedencia?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Procedencia:
@@ -2221,14 +2243,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.origin || 'N/A'}
+                              {(() => {
+                                const originValue = currentCase.origin
+                                const trimmed = originValue?.trim()
+                                const display = trimmed ? originValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - origin display:', { 
+                                    originValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!originValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Sede - Dropdown - Solo si está habilitado */}
-                      {moduleConfig?.fields?.branch?.enabled && (
+                      {/* Sede - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.branch?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Sede:
@@ -2256,8 +2292,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       )}
 
-                      {/* Muestra - Autocompletado - Solo si está habilitado */}
-                      {moduleConfig?.fields?.sampleType?.enabled && (
+                      {/* Muestra - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.sampleType?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Muestra:
@@ -2283,14 +2319,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                             </div>
                           ) : (
                             <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
-                              {currentCase.sample_type || 'N/A'}
+                              {(() => {
+                                const sampleTypeValue = currentCase.sample_type
+                                const trimmed = sampleTypeValue?.trim()
+                                const display = trimmed ? sampleTypeValue : 'N/A'
+                                if (isMarihorgen) {
+                                  console.log('🔍 Marihorgen - sample_type display:', { 
+                                    sampleTypeValue, 
+                                    trimmed, 
+                                    display,
+                                    hasValue: !!sampleTypeValue,
+                                    hasTrimmed: !!trimmed
+                                  })
+                                }
+                                return display
+                              })()}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Cantidad de muestras - Numérico - Solo si está habilitado */}
-                      {moduleConfig?.fields?.numberOfSamples?.enabled && (
+                      {/* Cantidad de muestras - Siempre visible para marihorgen */}
+                      {(isMarihorgen || moduleConfig?.fields?.numberOfSamples?.enabled) && (
                         <div className='flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
                             Cantidad de muestras:
@@ -2353,21 +2403,58 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
-                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
-                      {/* Visible en la sección de Información Médica, después de PDF Adjunto */}
-                      <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
-                        <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
-                          Imágenes (Imagenología):
-                        </span>
-                        <div className='w-full'>
-                          <MultipleImageUrls
-                            images={imageUrls}
-                            onChange={setImageUrls}
-                            maxImages={10}
-                            isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
-                          />
+                      {isMarihorgen &&
+                        currentCase.exam_type?.toLowerCase().includes('biopsia') && (
+                        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                            Bloques de biopsia:
+                          </span>
+                          {isEditing ? (
+                            <div className='sm:w-1/2'>
+                              <Input
+                                id='bloques-biopsia-input'
+                                name='bloques_biopsia'
+                                type='number'
+                                placeholder='0'
+                                value={
+                                  editedCase.bloques_biopsia !== undefined
+                                    ? (editedCase.bloques_biopsia as number | null) ?? ''
+                                    : (currentCase as any).bloques_biopsia ?? ''
+                                }
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    'bloques_biopsia',
+                                    e.target.value === '' ? null : Number(e.target.value),
+                                  )
+                                }
+                                className='text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50'
+                              />
+                            </div>
+                          ) : (
+                            <span className='text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium'>
+                              {(currentCase as any).bloques_biopsia ?? '-'}
+                            </span>
+                          )}
                         </div>
-                      </div>
+                      )}
+
+                      {/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
+                      {/* Oculto para marihorgen */}
+                      {!isMarihorgen && (
+                        <div className='flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
+                          <span className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                            Imágenes (Imagenología):
+                          </span>
+                          <div className='w-full'>
+                            <MultipleImageUrls
+                              images={imageUrls}
+                              onChange={setImageUrls}
+                              maxImages={10}
+                              isEditing={(profile?.role === 'imagenologia' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'call_center') && isEditing}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* Comentarios */}
                       <div className='py-2 border-t border-gray-200 dark:border-gray-700 pt-3'>
@@ -2970,6 +3057,29 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                           ).toLocaleDateString('es-ES')}
                           editable={false}
                         />
+                        {currentCase.fecha_entrega && (
+                          <div className='flex items-center justify-between py-2'>
+                            <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                              Fecha de entrega
+                            </span>
+                            <span className='inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'>
+                              {new Date(
+                                `${currentCase.fecha_entrega}T00:00:00`,
+                              ).toLocaleDateString('es-ES')}
+                            </span>
+                          </div>
+                        )}
+                        {isMarihorgen && currentCase.patologo_id && (
+                          <InfoRow
+                            label='Patólogo'
+                            value={
+                              pathologistData?.display_name ||
+                              pathologistData?.email ||
+                              'Usuario'
+                            }
+                            editable={false}
+                          />
+                        )}
                         <InfoRow
                           label='Última actualización'
                           value={new Date(

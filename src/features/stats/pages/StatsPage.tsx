@@ -1,9 +1,10 @@
 import React, { useState, Suspense } from 'react'
-import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info } from 'lucide-react'
+import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info, Stethoscope } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { YearSelector } from '@shared/components/ui/year-selector'
 import DateRangeSelector from '@shared/components/ui/date-range-selector'
 import { useDateRange } from '@app/providers/DateRangeContext'
+import { useLaboratory } from '@app/providers/LaboratoryContext'
 import StatCard from '@shared/components/ui/stat-card'
 import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
@@ -31,6 +32,8 @@ const ComponentFallback = () => (
 
 const StatsPage: React.FC = () => {
 	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
+	const { laboratory } = useLaboratory()
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
 	const [selectedStat, setSelectedStat] = useState<StatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
@@ -170,6 +173,29 @@ const StatsPage: React.FC = () => {
 						statType="incompleteCases"
 						isSelected={selectedStat === 'incompleteCases' && isDetailPanelOpen}
 					/>
+				</div>
+
+				{/* KPI Cards: Recepcionistas / Patólogos */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6">
+					<StatCard
+						title="Casos por Recepcionista"
+						value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCases || 0)}`}
+						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
+						onClick={() => handleStatCardClick('casesByReceptionist')}
+						statType="casesByReceptionist"
+						isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}
+					/>
+
+					{isMarihorgen && (
+						<StatCard
+							title="Casos por Patólogo"
+							value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCasesWithPathologist || 0)}`}
+							icon={<Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />}
+							onClick={() => handleStatCardClick('casesByPathologist')}
+							statType="casesByPathologist"
+							isSelected={selectedStat === 'casesByPathologist' && isDetailPanelOpen}
+						/>
+					)}
 				</div>
 
 				{/* Charts Section */}

@@ -1,0 +1,661 @@
+import React, { useMemo, useState, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button } from '@shared/components/ui/button'
+import { Card } from '@shared/components/ui/card'
+import { Input } from '@shared/components/ui/input'
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
+} from '@shared/components/ui/dialog'
+import { Label } from '@shared/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
+import { Calendar } from '@shared/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { useToast } from '@shared/hooks/use-toast'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react'
+import { cn } from '@shared/lib/cn'
+import { format } from 'date-fns'
+import { exportRowsToExcel } from '@shared/utils/exportToExcel'
+import { getAseguradoras } from '@services/supabase/aseguradoras/aseguradoras-service'
+import { type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import {
+	createPoliza,
+	getPolizas,
+	type Poliza,
+} from '@services/supabase/aseguradoras/polizas-service'
+import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
+import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
+import PolizaCard from '@features/aseguradoras/components/PolizaCard'
+
+const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
+
+const PolizasPage = () => {
+	const queryClient = useQueryClient()
+	const { toast } = useToast()
+	const [searchTerm, setSearchTerm] = useState('')
+	const [currentPage, setCurrentPage] = useState(1)
+	const [itemsPerPage, setItemsPerPage] = useState(24)
+	const [openModal, setOpenModal] = useState(false)
+	const [step, setStep] = useState(0)
+	const [saving, setSaving] = useState(false)
+	const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null)
+	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
+	const [panelOpen, setPanelOpen] = useState(false)
+	const [form, setForm] = useState({
+		asegurado_id: '',
+		aseguradora_id: '',
+		agente_nombre: '',
+		numero_poliza: '',
+		ramo: '',
+		suma_asegurada: '',
+		modalidad_pago: 'Mensual' as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
+		estatus_poliza: 'Activa' as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+		estatus_pago: 'Pendiente' as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
+		fecha_inicio: '',
+		fecha_vencimiento: '',
+		dia_vencimiento: '',
+		fecha_prox_vencimiento: '',
+		tipo_alerta: '',
+		dias_alerta: '',
+		dias_frecuencia: '',
+		dias_frecuencia_post: '',
+		dias_recordatorio: '',
+		pdf_url: '',
+		notas: '',
+	})
+
+	const parseIsoDate = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
+
+	const { data, isLoading, error } = useQuery({
+		queryKey: ['polizas', searchTerm, currentPage, itemsPerPage],
+		queryFn: () => getPolizas(currentPage, itemsPerPage, searchTerm),
+		staleTime: 1000 * 60 * 5,
+	})
+
+	const { data: aseguradorasData } = useQuery({
+		queryKey: ['aseguradoras-catalogo'],
+		queryFn: getAseguradoras,
+		staleTime: 1000 * 60 * 5,
+	})
+
+	const polizas = useMemo(() => data?.data ?? [], [data])
+	const totalPages = data?.totalPages ?? 1
+
+	const handleSearch = useCallback((value: string) => {
+		setSearchTerm(value)
+		setCurrentPage(1)
+	}, [])
+
+	const handlePageChange = useCallback((page: number) => {
+		setCurrentPage(page)
+	}, [])
+
+	const handleItemsPerPage = useCallback((value: string) => {
+		const parsed = Number(value)
+		if (!Number.isNaN(parsed)) {
+			setItemsPerPage(parsed)
+			setCurrentPage(1)
+		}
+	}, [])
+
+	const resetForm = () => {
+		setForm({
+			asegurado_id: '',
+			aseguradora_id: '',
+			agente_nombre: '',
+			numero_poliza: '',
+			ramo: '',
+			suma_asegurada: '',
+			modalidad_pago: 'Mensual',
+			estatus_poliza: 'Activa',
+			estatus_pago: 'Pendiente',
+			fecha_inicio: '',
+			fecha_vencimiento: '',
+			dia_vencimiento: '',
+			fecha_prox_vencimiento: '',
+			tipo_alerta: '',
+			dias_alerta: '',
+			dias_frecuencia: '',
+			dias_frecuencia_post: '',
+			dias_recordatorio: '',
+			pdf_url: '',
+			notas: '',
+		})
+		setStep(0)
+		setSelectedAsegurado(null)
+	}
+
+	const openNewModal = () => {
+		resetForm()
+		setOpenModal(true)
+	}
+
+	const openDetailPanel = (row: Poliza) => {
+		setSelectedPoliza(row)
+		setPanelOpen(true)
+	}
+
+	const handleSave = async () => {
+		setSaving(true)
+		try {
+			await createPoliza({
+				asegurado_id: form.asegurado_id,
+				aseguradora_id: form.aseguradora_id,
+				agente_nombre: form.agente_nombre,
+				numero_poliza: form.numero_poliza,
+				ramo: form.ramo,
+				suma_asegurada: form.suma_asegurada ? Number(form.suma_asegurada) : null,
+				modalidad_pago: form.modalidad_pago,
+				estatus_poliza: form.estatus_poliza,
+				estatus_pago: form.estatus_pago,
+				fecha_inicio: form.fecha_inicio,
+				fecha_vencimiento: form.fecha_vencimiento,
+				dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
+				fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
+				tipo_alerta: form.tipo_alerta || null,
+				dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
+				dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
+				dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
+				dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
+				pdf_url: form.pdf_url || null,
+				notas: form.notas || null,
+			})
+			queryClient.invalidateQueries({ queryKey: ['polizas'] })
+			setOpenModal(false)
+			toast({ title: 'Póliza creada' })
+		} catch (err) {
+			console.error(err)
+			toast({ title: 'Error al crear póliza', variant: 'destructive' })
+		} finally {
+			setSaving(false)
+		}
+	}
+
+	const stepContent = () => {
+		switch (step) {
+			case 0:
+				return (
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<Label>Buscar asegurado</Label>
+							<AseguradoSearchAutocomplete
+								onSelect={(asegurado) => {
+									setForm((prev) => ({ ...prev, asegurado_id: asegurado.id }))
+									setSelectedAsegurado(asegurado)
+								}}
+								onSearchChange={(value) => {
+									const label = selectedAsegurado
+										? `${selectedAsegurado.full_name} · ${selectedAsegurado.document_id}`
+										: ''
+									if (selectedAsegurado && value !== label) {
+										setSelectedAsegurado(null)
+										setForm((prev) => ({ ...prev, asegurado_id: '' }))
+									}
+								}}
+								placeholder="Buscar por documento o nombre"
+							/>
+						</div>
+						{selectedAsegurado && (
+							<div className="border rounded-md p-3 text-sm">
+								<p className="font-medium">{selectedAsegurado.full_name}</p>
+								<p className="text-xs text-gray-500">
+									{selectedAsegurado.document_id} · {selectedAsegurado.phone || 'Sin teléfono'}
+								</p>
+							</div>
+						)}
+					</div>
+				)
+			case 1:
+				return (
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label>Aseguradora</Label>
+							<Select
+								value={form.aseguradora_id}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, aseguradora_id: value }))}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccione aseguradora" />
+								</SelectTrigger>
+								<SelectContent>
+									{(aseguradorasData || []).map((row) => (
+										<SelectItem key={row.id} value={row.id}>
+											{row.nombre}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2">
+							<Label>Agente / Productor</Label>
+							<Input value={form.agente_nombre} onChange={(e) => setForm((prev) => ({ ...prev, agente_nombre: e.target.value }))} />
+						</div>
+						<div className="space-y-2">
+							<Label>Número de póliza</Label>
+							<Input
+								value={form.numero_poliza}
+								onChange={(e) => setForm((prev) => ({ ...prev, numero_poliza: e.target.value }))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Ramo</Label>
+							<Input value={form.ramo} onChange={(e) => setForm((prev) => ({ ...prev, ramo: e.target.value }))} />
+						</div>
+						<div className="space-y-2">
+							<Label>Suma asegurada</Label>
+							<Input
+								type="number"
+								value={form.suma_asegurada}
+								onChange={(e) => setForm((prev) => ({ ...prev, suma_asegurada: e.target.value }))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Modalidad de pago</Label>
+							<Select
+								value={form.modalidad_pago}
+								onValueChange={(value) =>
+									setForm((prev) => ({
+										...prev,
+										modalidad_pago: value as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
+									}))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Mensual">Mensual</SelectItem>
+									<SelectItem value="Trimestral">Trimestral</SelectItem>
+									<SelectItem value="Semestral">Semestral</SelectItem>
+									<SelectItem value="Anual">Anual</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2">
+							<Label>Estatus póliza</Label>
+							<Select
+								value={form.estatus_poliza}
+								onValueChange={(value) =>
+									setForm((prev) => ({
+										...prev,
+										estatus_poliza: value as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+									}))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Activa">Activa</SelectItem>
+									<SelectItem value="En emisión">En emisión</SelectItem>
+									<SelectItem value="Renovación pendiente">Renovación pendiente</SelectItem>
+									<SelectItem value="Vencida">Vencida</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2">
+							<Label>Estatus pago</Label>
+							<Select
+								value={form.estatus_pago}
+								onValueChange={(value) =>
+									setForm((prev) => ({
+										...prev,
+										estatus_pago: value as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
+									}))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Pagado">Pagado</SelectItem>
+									<SelectItem value="Parcial">Parcial</SelectItem>
+									<SelectItem value="Pendiente">Pendiente</SelectItem>
+									<SelectItem value="En mora">En mora</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+				)
+			case 2:
+				return (
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label>Fecha inicio</Label>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className={cn(
+											'w-full justify-start text-left font-normal',
+											!form.fecha_inicio && 'text-muted-foreground',
+										)}
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{form.fecha_inicio ? format(parseIsoDate(form.fecha_inicio)!, 'dd/MM/yyyy') : 'Fecha'}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0">
+									<Calendar
+										mode="single"
+										selected={parseIsoDate(form.fecha_inicio)}
+										onSelect={(date) =>
+											setForm((prev) => ({
+												...prev,
+												fecha_inicio: date ? format(date, 'yyyy-MM-dd') : '',
+											}))
+										}
+										initialFocus
+									/>
+								</PopoverContent>
+							</Popover>
+						</div>
+						<div className="space-y-2">
+							<Label>Fecha vencimiento</Label>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className={cn(
+											'w-full justify-start text-left font-normal',
+											!form.fecha_vencimiento && 'text-muted-foreground',
+										)}
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{form.fecha_vencimiento ? format(parseIsoDate(form.fecha_vencimiento)!, 'dd/MM/yyyy') : 'Fecha'}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0">
+									<Calendar
+										mode="single"
+										selected={parseIsoDate(form.fecha_vencimiento)}
+										onSelect={(date) =>
+											setForm((prev) => ({
+												...prev,
+												fecha_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
+											}))
+										}
+										initialFocus
+									/>
+								</PopoverContent>
+							</Popover>
+						</div>
+						<div className="space-y-2">
+							<Label>Día de vencimiento</Label>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className={cn(
+											'w-full justify-start text-left font-normal',
+											!form.dia_vencimiento && 'text-muted-foreground',
+										)}
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{form.dia_vencimiento ? `Día ${form.dia_vencimiento}` : 'Seleccionar día'}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0">
+									<Calendar
+										mode="single"
+										selected={
+											form.dia_vencimiento
+												? new Date(new Date().getFullYear(), new Date().getMonth(), Number(form.dia_vencimiento))
+												: undefined
+										}
+										onSelect={(date) =>
+											setForm((prev) => ({
+												...prev,
+												dia_vencimiento: date ? String(date.getDate()) : '',
+											}))
+										}
+										initialFocus
+									/>
+								</PopoverContent>
+							</Popover>
+						</div>
+						<div className="space-y-2">
+							<Label>Fecha próximo vencimiento</Label>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className={cn(
+											'w-full justify-start text-left font-normal',
+											!form.fecha_prox_vencimiento && 'text-muted-foreground',
+										)}
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{form.fecha_prox_vencimiento
+											? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
+											: 'Fecha'}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0">
+									<Calendar
+										mode="single"
+										selected={parseIsoDate(form.fecha_prox_vencimiento)}
+										onSelect={(date) =>
+											setForm((prev) => ({
+												...prev,
+												fecha_prox_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
+											}))
+										}
+										initialFocus
+									/>
+								</PopoverContent>
+							</Popover>
+						</div>
+					</div>
+				)
+			case 3:
+				return (
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label>Tipo de alerta</Label>
+							<Input value={form.tipo_alerta} onChange={(e) => setForm((prev) => ({ ...prev, tipo_alerta: e.target.value }))} />
+						</div>
+						<div className="space-y-2">
+							<Label>Días de alerta</Label>
+							<Input
+								type="number"
+								value={form.dias_alerta}
+								onChange={(e) => setForm((prev) => ({ ...prev, dias_alerta: e.target.value }))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Días frecuencia</Label>
+							<Input
+								type="number"
+								value={form.dias_frecuencia}
+								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia: e.target.value }))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Frecuencia post</Label>
+							<Input
+								type="number"
+								value={form.dias_frecuencia_post}
+								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia_post: e.target.value }))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Días recordatorio</Label>
+							<Input
+								type="number"
+								value={form.dias_recordatorio}
+								onChange={(e) => setForm((prev) => ({ ...prev, dias_recordatorio: e.target.value }))}
+							/>
+						</div>
+					</div>
+				)
+			case 4:
+				return (
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<Label>PDF póliza (URL)</Label>
+							<Input value={form.pdf_url} onChange={(e) => setForm((prev) => ({ ...prev, pdf_url: e.target.value }))} />
+						</div>
+						<div className="space-y-2">
+							<Label>Notas</Label>
+							<Input value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
+						</div>
+					</div>
+				)
+			default:
+				return null
+		}
+	}
+
+	return (
+		<div>
+			<div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
+				<div>
+					<h1 className="text-2xl sm:text-3xl font-bold">Pólizas</h1>
+					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+				</div>
+				<div className="flex gap-2">
+					<Button
+						variant="outline"
+						onClick={() =>
+							exportRowsToExcel(
+								'polizas',
+								polizas.map((row) => ({
+									Código: row.codigo ?? '',
+									'Número de póliza': row.numero_poliza,
+									Asegurado: row.asegurado?.full_name || '',
+									Aseguradora: row.aseguradora?.nombre || '',
+									Ramo: row.ramo,
+									'Modalidad de pago': row.modalidad_pago,
+									'Estatus póliza': row.estatus_poliza,
+									'Estatus pago': row.estatus_pago || '',
+									'Fecha vencimiento': row.fecha_vencimiento,
+								})),
+							)
+						}
+						className="gap-2"
+					>
+						<Download className="w-4 h-4" />
+						Exportar
+					</Button>
+					<Button onClick={openNewModal} className="gap-2">
+						<Plus className="w-4 h-4" />
+						Nueva póliza
+					</Button>
+				</div>
+			</div>
+
+			<Card className="overflow-hidden">
+				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
+						<div className="relative flex-1">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+							<Input
+								className="pl-9"
+								placeholder="Buscar por número o ramo"
+								value={searchTerm}
+								onChange={(e) => handleSearch(e.target.value)}
+							/>
+						</div>
+						<div className="flex items-center gap-2 text-sm text-gray-500">
+							<span>Filas:</span>
+							<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
+								<SelectTrigger className="w-20">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="12">12</SelectItem>
+									<SelectItem value="24">24</SelectItem>
+									<SelectItem value="36">36</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+				</div>
+
+				<div className="p-4 min-h-[320px]">
+					{isLoading && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
+					{error && <p className="text-sm text-red-500">Error al cargar pólizas</p>}
+					{!isLoading && !error && polizas.length === 0 && (
+						<p className="text-sm text-gray-500">No hay pólizas registradas.</p>
+					)}
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+						{polizas.map((row: Poliza) => (
+							<PolizaCard key={row.id} poliza={row} onClick={() => openDetailPanel(row)} />
+						))}
+					</div>
+				</div>
+
+				<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+					<div className="text-sm text-gray-600 dark:text-gray-400">
+						Página {currentPage} de {totalPages}
+					</div>
+					<div className="flex gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={currentPage <= 1}
+							onClick={() => handlePageChange(currentPage - 1)}
+						>
+							<ChevronLeft className="w-4 h-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={currentPage >= totalPages}
+							onClick={() => handlePageChange(currentPage + 1)}
+						>
+							<ChevronRight className="w-4 h-4" />
+						</Button>
+					</div>
+				</div>
+			</Card>
+
+			<Dialog open={openModal} onOpenChange={setOpenModal}>
+				<DialogContent
+					className="max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					overlayClassName="bg-black/60"
+				>
+					<DialogHeader>
+						<DialogTitle>Nueva póliza</DialogTitle>
+					</DialogHeader>
+					<div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+						{STEPS.map((label, idx) => (
+							<span key={label} className={idx === step ? 'text-primary font-medium' : ''}>
+								{label}
+								{idx < STEPS.length - 1 ? ' · ' : ''}
+							</span>
+						))}
+					</div>
+					{stepContent()}
+					<DialogFooter className="mt-6">
+						<Button variant="outline" onClick={() => setOpenModal(false)}>
+							Cancelar
+						</Button>
+						<div className="flex gap-2">
+							{step > 0 && (
+								<Button variant="outline" onClick={() => setStep((prev) => prev - 1)}>
+									Anterior
+								</Button>
+							)}
+							{step < STEPS.length - 1 ? (
+								<Button onClick={() => setStep((prev) => prev + 1)}>Siguiente</Button>
+							) : (
+								<Button onClick={handleSave} disabled={saving}>
+									{saving ? 'Guardando...' : 'Guardar póliza'}
+								</Button>
+							)}
+						</div>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<PolizaDetailPanel poliza={selectedPoliza} isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
+		</div>
+	)
+}
+
+export default PolizasPage

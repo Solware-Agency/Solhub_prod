@@ -14,23 +14,37 @@ export const paymentSchema = z.object({
 /**
  * Crea un schema de validación dinámico basado en la configuración del módulo
  * Si un campo está deshabilitado, no se valida como requerido
- * 
+ *
  * Campos siempre obligatorios (sin importar configuración):
  * - branch: Siempre requerido para todos los clientes
- * 
+ *
  * Para SPT: examType y consulta son opcionales, pero al menos uno debe estar presente
+ * Para marihorgen/lm: procedencia, muestra y cantidad de muestras se tratan como habilitados y requeridos
  */
-export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
-	// Obtener configuraciones de campos
+export const createFormSchema = (
+	moduleConfig?: ModuleConfig | null,
+	laboratorySlug?: string | null,
+) => {
+	const isMarihorgen = laboratorySlug === 'marihorgen' || laboratorySlug === 'lm'
+
+	// Obtener configuraciones de campos; para marihorgen considerar habilitados si no lo están en config
 	const originConfig = moduleConfig?.fields?.procedencia
 	const sampleTypeConfig = moduleConfig?.fields?.sampleType
 	const numberOfSamplesConfig = moduleConfig?.fields?.numberOfSamples
 	const medicoTratanteConfig = moduleConfig?.fields?.medicoTratante
 
+	const originRequired = (originConfig?.enabled && originConfig?.required) || isMarihorgen
+	const sampleTypeEnabled = sampleTypeConfig?.enabled || isMarihorgen
+	const sampleTypeRequired = (sampleTypeConfig?.enabled && sampleTypeConfig?.required) || isMarihorgen
+	const numberOfSamplesEnabled = numberOfSamplesConfig?.enabled || isMarihorgen
+	const numberOfSamplesRequired = (numberOfSamplesConfig?.enabled && numberOfSamplesConfig?.required) || isMarihorgen
+	const medicoTratanteEnabled = medicoTratanteConfig?.enabled || isMarihorgen
+	const medicoTratanteRequired = medicoTratanteConfig?.enabled && medicoTratanteConfig?.required
+
 	// examType: Opcional, pero validado condicionalmente con consulta
 	const examTypeSchema = z.string().optional().or(z.literal(''))
 
-	const originSchema = originConfig?.enabled && originConfig?.required
+	const originSchema = originRequired
 		? z
 			.string()
 			.min(1, 'El origen es requerido')
@@ -47,11 +61,11 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
 			.optional()
 			.or(z.literal(''))
 
-	const sampleTypeSchema = sampleTypeConfig?.enabled && sampleTypeConfig?.required
+	const sampleTypeSchema = sampleTypeRequired
 		? z.string().min(1, 'El tipo de muestra es requerido')
 		: z.string().optional().or(z.literal(''))
 
-	const numberOfSamplesSchema = numberOfSamplesConfig?.enabled && numberOfSamplesConfig?.required
+	const numberOfSamplesSchema = numberOfSamplesRequired
 		? z.coerce
 			.number({ invalid_type_error: 'El número de muestras es requerido' })
 			.int()
@@ -131,7 +145,7 @@ export const createFormSchema = (moduleConfig?: ModuleConfig | null) => {
 		}),
 		examType: examTypeSchema,
 		origin: originSchema,
-		treatingDoctor: medicoTratanteConfig?.enabled && medicoTratanteConfig?.required
+		treatingDoctor: medicoTratanteRequired
 			? z
 				.string()
 				.min(1, 'El doctor tratante es requerido')

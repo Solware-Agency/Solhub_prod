@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Loader2,
@@ -583,6 +583,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     },
     enabled: !!case_?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnMount: 'always',
   });
 
   // Calcular IMC automáticamente cuando cambian peso o talla
@@ -676,6 +677,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   // Función para determinar si la historia clínica está completa
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) return false;
+    if (triage.is_draft) return false;
 
     // Obtener tipo de paciente del case
     const patientType = (case_ as any)?.tipo_paciente;
@@ -1052,6 +1054,173 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     return { isValid: true, errorMessage: '' };
   };
 
+  const hasRealValue = (value: string | HabitLevel | undefined | null): boolean => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+    return !!value;
+  };
+
+  const hasAnyData = (): boolean =>
+    hasRealValue(formData.frecuenciaCardiaca) ||
+    hasRealValue(formData.frecuenciaRespiratoria) ||
+    hasRealValue(formData.saturacionOxigeno) ||
+    hasRealValue(formData.temperatura) ||
+    hasRealValue(formData.presionArterial) ||
+    hasRealValue(formData.glicemia) ||
+    hasRealValue(formData.talla) ||
+    hasRealValue(formData.peso) ||
+    hasRealValue(formData.motivoConsulta) ||
+    hasRealValue(formData.enfermedadActual) ||
+    hasRealValue(formData.antecedentesPersonales) ||
+    hasRealValue(formData.antecedentesFamiliares) ||
+    hasRealValue(formData.antecedentesQuirurgicos) ||
+    hasRealValue(formData.antecedentesSexuales) ||
+    hasRealValue(formData.habitosPsicobiologicos) ||
+    hasRealValue(formData.examenFisico) ||
+    hasRealValue(formData.diagnostico) ||
+    hasRealValue(formData.planDeAccion) ||
+    hasRealValue(formData.tabaco) ||
+    hasRealValue(formData.cafe) ||
+    hasRealValue(formData.alcohol) ||
+    hasRealValue(formData.comentario);
+
+  const buildVitalSignsData = () => ({
+    heart_rate: formData.frecuenciaCardiaca
+      ? parseInt(formData.frecuenciaCardiaca, 10)
+      : null,
+    respiratory_rate: formData.frecuenciaRespiratoria
+      ? parseInt(formData.frecuenciaRespiratoria, 10)
+      : null,
+    oxygen_saturation: formData.saturacionOxigeno
+      ? parseInt(formData.saturacionOxigeno, 10)
+      : null,
+    temperature_celsius: formData.temperatura
+      ? parseFloat(formData.temperatura)
+      : null,
+    blood_pressure: formData.presionArterial || null,
+    blood_glucose: formData.glicemia ? parseFloat(formData.glicemia) : null,
+    height_cm: formData.talla ? parseFloat(formData.talla) : null,
+    weight_kg: formData.peso ? parseFloat(formData.peso) : null,
+  });
+
+  const buildFullTriageData = () => ({
+    reason: formData.motivoConsulta || null,
+    personal_background: formData.antecedentesPersonales || null,
+    family_history: formData.antecedentesFamiliares || null,
+    psychobiological_habits: formData.habitosPsicobiologicos || null,
+    tabaco: formData.indiceTabaquico
+      ? parseFloat(
+          formData.indiceTabaquico
+            .split(':')[1]
+            ?.split('paq')[0]
+            ?.trim() || '0',
+        ) || null
+      : formData.tabaco === 'No'
+      ? 0
+      : null,
+    cafe: formData.cafe ? parseInt(formData.cafe, 10) : null,
+    alcohol: formData.alcohol || null,
+    examen_fisico: formData.examenFisico || null,
+    comment: formData.comentario || null,
+    enfermedad_actual: formData.enfermedadActual || null,
+    antecedentes_quirurgicos: formData.antecedentesQuirurgicos || null,
+    antecedentes_sexuales: formData.antecedentesSexuales || null,
+    diagnostico: formData.diagnostico || null,
+    plan_de_accion: formData.planDeAccion || null,
+    lugar_de_nacimiento: formData.lugarNacimiento || null,
+    telefono_emergencia: formData.telefonoEmergencia || null,
+    ...buildVitalSignsData(),
+  });
+
+  const lastDraftPayloadRef = React.useRef<string>('');
+  const draftRecordIdRef = React.useRef<string | null>(null);
+  const draftSavingRef = React.useRef(false);
+  const saveDraft = useCallback(async () => {
+    if (!case_?.id || !case_?.patient_id) return;
+    if (loading) return;
+    if (!hasAnyData()) return;
+    if (triageComplete && !isEditing) return;
+    if (draftSavingRef.current) return;
+
+    try {
+      draftSavingRef.current = true;
+      if (isEnfermero) {
+        const payload = { ...buildVitalSignsData(), is_draft: true };
+        const payloadHash = JSON.stringify(payload);
+        if (payloadHash === lastDraftPayloadRef.current) return;
+
+        const targetId =
+          (existingTriage?.is_draft ? existingTriage.id : null) ||
+          draftRecordIdRef.current;
+        if (targetId) {
+          await updateTriageRecord(targetId, payload);
+        } else {
+          const created = await createTriageRecord({
+            patient_id: case_.patient_id,
+            case_id: case_.id,
+            ...payload,
+          });
+          draftRecordIdRef.current = created.id;
+          await refetchTriage();
+        }
+        lastDraftPayloadRef.current = payloadHash;
+      } else {
+        const payload = { ...buildFullTriageData(), is_draft: true };
+        const payloadHash = JSON.stringify(payload);
+        if (payloadHash === lastDraftPayloadRef.current) return;
+
+        const targetId =
+          (existingTriage?.is_draft ? existingTriage.id : null) ||
+          draftRecordIdRef.current;
+        if (targetId) {
+          await updateTriageRecord(targetId, payload);
+        } else {
+          const created = await createTriageRecord({
+            patient_id: case_.patient_id,
+            case_id: case_.id,
+            ...payload,
+          });
+          draftRecordIdRef.current = created.id;
+          await refetchTriage();
+        }
+        lastDraftPayloadRef.current = payloadHash;
+      }
+    } catch (draftError) {
+      console.warn('Error guardando borrador de triaje:', draftError);
+    } finally {
+      draftSavingRef.current = false;
+    }
+  }, [
+    case_,
+    existingTriage,
+    hasAnyData,
+    isEditing,
+    isEnfermero,
+    loading,
+    refetchTriage,
+    triageComplete,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      void saveDraft();
+    };
+  }, [saveDraft]);
+
+  useEffect(() => {
+    if (!hasAnyData()) return;
+    if (triageComplete && !isEditing) return;
+    if (loading) return;
+
+    const timer = setTimeout(() => {
+      void saveDraft();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [formData, hasAnyData, isEditing, loading, saveDraft, triageComplete]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -1110,36 +1279,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     // Validación adicional: Si estamos editando una historia clínica existente, 
     // verificar que no se esté intentando guardar todo vacío
     if (existingTriage) {
-      // Helper para verificar si un campo tiene valor real
-      const hasRealValue = (value: string | HabitLevel | undefined | null): boolean => {
-        if (value === null || value === undefined) return false;
-        if (typeof value === 'string') {
-          return value.trim().length > 0;
-        }
-        return !!value;
-      };
-
-      // Verificar que al menos haya algún dato válido en el formulario
-      const hasAnyData =
-        hasRealValue(formData.frecuenciaCardiaca) ||
-        hasRealValue(formData.frecuenciaRespiratoria) ||
-        hasRealValue(formData.saturacionOxigeno) ||
-        hasRealValue(formData.temperatura) ||
-        hasRealValue(formData.presionArterial) ||
-        hasRealValue(formData.talla) ||
-        hasRealValue(formData.peso) ||
-        hasRealValue(formData.motivoConsulta) ||
-        hasRealValue(formData.antecedentesPersonales) ||
-        hasRealValue(formData.antecedentesFamiliares) ||
-        hasRealValue(formData.antecedentesSexuales) ||
-        hasRealValue(formData.habitosPsicobiologicos) ||
-        hasRealValue(formData.examenFisico) ||
-        hasRealValue(formData.tabaco) ||
-        hasRealValue(formData.cafe) ||
-        hasRealValue(formData.alcohol) ||
-        hasRealValue(formData.comentario);
-
-      if (!hasAnyData) {
+      if (!hasAnyData()) {
         setError(
           'No puede guardar un triaje completamente vacío. Debe ingresar al menos un dato.',
         );
@@ -1158,24 +1298,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
       // Preparar datos de signos vitales (siempre se incluyen)
       const vitalSignsData = {
-        heart_rate: formData.frecuenciaCardiaca
-          ? parseInt(formData.frecuenciaCardiaca, 10)
-          : null,
-        respiratory_rate: formData.frecuenciaRespiratoria
-          ? parseInt(formData.frecuenciaRespiratoria, 10)
-          : null,
-        oxygen_saturation: formData.saturacionOxigeno
-          ? parseInt(formData.saturacionOxigeno, 10)
-          : null,
-        temperature_celsius: formData.temperatura
-          ? parseFloat(formData.temperatura)
-          : null,
-        blood_pressure: formData.presionArterial || null,
-        blood_glucose: formData.glicemia
-          ? parseFloat(formData.glicemia)
-          : null,
-        height_cm: formData.talla ? parseFloat(formData.talla) : null,
-        weight_kg: formData.peso ? parseFloat(formData.peso) : null,
+        ...buildVitalSignsData(),
+        is_draft: false,
       };
 
       // Si es enfermero, solo guardar signos vitales
@@ -1209,32 +1333,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         const fullTriageData = {
           patient_id: case_.patient_id,
           case_id: case_.id,
-          reason: formData.motivoConsulta || null,
-          personal_background: formData.antecedentesPersonales || null,
-          family_history: formData.antecedentesFamiliares || null,
-          psychobiological_habits: formData.habitosPsicobiologicos || null,
-          tabaco: formData.indiceTabaquico
-            ? parseFloat(
-                formData.indiceTabaquico
-                  .split(':')[1]
-                  ?.split('paq')[0]
-                  ?.trim() || '0',
-              ) || null
-            : formData.tabaco === 'No'
-            ? 0
-            : null,
-          cafe: formData.cafe ? parseInt(formData.cafe, 10) : null,
-          alcohol: formData.alcohol || null,
-          examen_fisico: formData.examenFisico || null,
-          comment: formData.comentario || null,
-          enfermedad_actual: formData.enfermedadActual || null,
-          antecedentes_quirurgicos: formData.antecedentesQuirurgicos || null,
-          antecedentes_sexuales: formData.antecedentesSexuales || null,
-          diagnostico: formData.diagnostico || null,
-          plan_de_accion: formData.planDeAccion || null,
-          lugar_de_nacimiento: formData.lugarNacimiento || null,
-          telefono_emergencia: formData.telefonoEmergencia || null,
-          ...vitalSignsData,
+          ...buildFullTriageData(),
+          is_draft: false,
         };
 
         if (existingTriage) {
@@ -1930,7 +2030,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Droplets className='h-4 w-4 text-blue-600 dark:text-blue-400' />
-                    SpO₂
+                    SpO₂ <span className='text-red-500'>*</span>
                     <TooltipPrimitive.Root delayDuration={0}>
                       <TooltipTrigger asChild>
                         <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
@@ -1974,7 +2074,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[150px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Gauge className='h-4 w-4 text-red-600 dark:text-red-400' />
-                    Presión arterial
+                    Presión arterial <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'
@@ -2018,7 +2118,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Ruler className='h-4 w-4 text-indigo-600 dark:text-indigo-400' />
-                    Talla
+                    Talla <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'
@@ -2033,7 +2133,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[100px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Scale className='h-4 w-4 text-purple-600 dark:text-purple-400' />
-                    Peso
+                    Peso <span className='text-red-500'>*</span>
                   </label>
                   <Input
                     type='text'
@@ -2161,6 +2261,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             <Button
               type='button'
               onClick={() => {
+                void saveDraft();
                 // Cerrar el modal inmediatamente cuando se cancela la edición
                 onClose();
               }}

@@ -6,6 +6,77 @@ interface AutocompleteOption {
 	count: number
 }
 
+const MARIHORGEN_TREATING_DOCTORS = [
+	'CARLOS MORA',
+	'JAQUELINE BELLO',
+	'DANIEL LORETO',
+	'MANUELIS LOPEZ',
+	'JESÚS CARRILLO',
+	'FERNANDO JIMÉNEZ',
+	'JESÚS VERA',
+	'JOSÉ MIGUEL MARIN',
+	'JENIREE CORONADO',
+	'GARWIN CALLES',
+	'ISABEL GARCIA FLEURY',
+	'ELBA SERRANO',
+	'MARÍA JOSÉ TAPIA',
+	'JAYKEL BAJANCHI',
+	'NAELVI AZÓCAR',
+	'JESÚS CARRASCO',
+	'RICHARD NODA',
+	'JOSÉ FRANCISCO MATA',
+	'NELSON DELLAN',
+	'GABRIELA DELLAN',
+	'ANA LUTMARY CAMPOS',
+	'JOSÉ SUAREZ',
+	'VITELIO PATIÑO',
+	'GERKA TREMONT',
+	'MARGALIT MIZRACHI',
+	'ROBERTO PENOTT',
+	'MAYKOL TERAN',
+	'TERESA PIÑERO',
+	'MARIA EUGENIA PEREZ',
+	'GLORIA COLMENARES',
+	'TIBISAY SARAVIA',
+	'DEYSI MENDOZA',
+	'ANDRÉS RODRÍGUEZ',
+	'JUAN MANUITT',
+	'EVELYN RICHARDS',
+]
+
+const MARIHORGEN_ORIGINS = [
+	'OPIOLID',
+	'CLÍNICA VIRGEN DEL VALLE',
+	'HOSP. MILITAR "DR. CARLOS ARVELO"',
+	'CLÍNICA HERRERA LYNCH',
+	'HOSP. "DR. JOSÉ IGNACIO BALDÓ"',
+	'INSTITUTO MÉDICO QUIRÚRGICO "DR. JIMÉNEZ ROJAS"',
+	'HOSP. GENERAL DEL ESTE "DR. DOMINGO LUCIANI"',
+	'POLICLÍNICA LA ARBOLEDA',
+	'HOSP. "DR. MIGUEL PEREZ CARREÑO"',
+	'CONSULTA PRIVADA',
+	'HOSPITAL PERIFÈRICO "DR. MIGUEL ANGEL RANGEL"',
+	'CENTRO MÉDICO DE CARACAS',
+	'HOSP. MILITAR "DR. VICENTE SALIAS"',
+	'SERVICIO BOLIVARIANO DE INTELIGENCIA',
+	'CLINICA NUEVA CARACAS',
+	'CLÍNICA BRICEÑO ROSSI',
+	'INSTITUTO ONCOLÓGICO "DR. LUIS RAZETTI"',
+	'CLÍNICA ATÍAS',
+	'CLÍNICA ATIAS',
+	'UNIDAD DE CIRUGÍA CMB',
+	'CENTRO MÉDICO BUENAVENTURA',
+	'CENTRO MÉDICO REMBRANDT',
+	'CLÍNICA LEOPOLDO AGUERREVERE',
+	'HOME CARE SOLUCIONES MÉDICAS',
+]
+
+const normalizeForSearch = (text: string): string =>
+	text
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+
 // Función para normalizar nombres y eliminar duplicados
 const normalizeAndDeduplicateNames = (valueCounts: Record<string, number>, fieldName: string): Record<string, number> => {
 	// Campos que requieren normalización de nombres
@@ -21,6 +92,8 @@ const normalizeAndDeduplicateNames = (valueCounts: Record<string, number>, field
 	Object.entries(valueCounts).forEach(([value, count]) => {
 		// Normalizar: convertir a mayúsculas, eliminar espacios extra, y caracteres especiales
 		const normalized = value
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
 			.toUpperCase()
 			.replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
 			.trim()
@@ -128,6 +201,9 @@ export const useAutocomplete = (fieldName: string) => {
 					userLaboratoryId = profile?.laboratory_id || null
 				}
 
+			const isMarihorgenLab =
+				userLaboratoryId === '7fcd5a54-1f48-4dc0-b5b2-84d5ce9755b8'
+
 				// Updated field mapping to match the actual database schema
 				const fieldMapping: Record<string, string> = {
 					// Datos del paciente (ahora en tabla patients)
@@ -224,6 +300,22 @@ export const useAutocomplete = (fieldName: string) => {
 					}
 				})
 
+				if (isMarihorgenLab) {
+					const extraValues =
+						fieldName === 'treatingDoctor'
+							? MARIHORGEN_TREATING_DOCTORS
+							: fieldName === 'origin'
+								? MARIHORGEN_ORIGINS
+								: []
+
+					extraValues.forEach((value) => {
+						const trimmed = value.trim()
+						if (trimmed) {
+							valueCounts[trimmed] = (valueCounts[trimmed] || 0) + 1
+						}
+					})
+				}
+
 				// Aplicar normalización y deduplicación
 				const normalizedCounts = normalizeAndDeduplicateNames(valueCounts, fieldName)
 
@@ -268,7 +360,9 @@ export const useAutocomplete = (fieldName: string) => {
 				}
 
 				// Para otros campos, búsqueda normal
-				return item.value.toLowerCase().includes(searchTerm.toLowerCase())
+				const normalizedValue = normalizeForSearch(item.value)
+				const normalizedSearch = normalizeForSearch(searchTerm)
+				return normalizedValue.includes(normalizedSearch)
 			})
 
 			// Sort filtered results by relevance
@@ -293,8 +387,9 @@ export const useAutocomplete = (fieldName: string) => {
 						if (!aStartsWith && bStartsWith) return 1
 					} else {
 						// Para otros campos, priorizar items que empiecen con el término de búsqueda
-						const aStartsWith = a.value.toLowerCase().startsWith(searchTerm.toLowerCase())
-						const bStartsWith = b.value.toLowerCase().startsWith(searchTerm.toLowerCase())
+						const normalizedSearch = normalizeForSearch(searchTerm)
+						const aStartsWith = normalizeForSearch(a.value).startsWith(normalizedSearch)
+						const bStartsWith = normalizeForSearch(b.value).startsWith(normalizedSearch)
 
 						if (aStartsWith && !bStartsWith) return -1
 						if (!aStartsWith && bStartsWith) return 1
