@@ -92,6 +92,20 @@ export const findAseguradoById = async (id: string): Promise<Asegurado | null> =
 	return data as Asegurado
 }
 
+export const getAseguradosByIds = async (ids: string[]): Promise<Asegurado[]> => {
+	if (ids.length === 0) return []
+	const laboratoryId = await getUserLaboratoryId()
+	const { data, error } = await supabase
+		.from('asegurados')
+		.select('*')
+		.eq('laboratory_id', laboratoryId)
+		.in('id', ids)
+		.order('full_name')
+
+	if (error) throw error
+	return (data || []) as Asegurado[]
+}
+
 export const findAseguradoByDocumentId = async (documentId: string): Promise<Asegurado | null> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase

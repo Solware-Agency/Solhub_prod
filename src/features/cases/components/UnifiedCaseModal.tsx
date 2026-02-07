@@ -2403,11 +2403,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                         </div>
                       </div>
 
-                      {isMarihorgen &&
-                        currentCase.exam_type?.toLowerCase().includes('biopsia') && (
+                      {isMarihorgen && (
                         <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2'>
                           <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                            Bloques de biopsia:
+                            Bloques:
                           </span>
                           {isEditing ? (
                             <div className='sm:w-1/2'>

@@ -33,8 +33,11 @@ const ComponentFallback = () => (
 const StatsPage: React.FC = () => {
 	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
 	const { laboratory } = useLaboratory()
-	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
+	const hasMedicalTypeRoles =
+		laboratory?.available_roles?.includes('patologo') || laboratory?.available_roles?.includes('citotecno')
+	const totalCasesByMedicalType =
+		(stats?.totalCasesWithPathologist || 0) + (stats?.totalCasesWithCitotecno || 0)
 	const [selectedStat, setSelectedStat] = useState<StatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 	const [selectedChart, setSelectedChart] = useState<StatType | null>(null)
@@ -186,14 +189,14 @@ const StatsPage: React.FC = () => {
 						isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}
 					/>
 
-					{isMarihorgen && (
+					{hasMedicalTypeRoles && (
 						<StatCard
-							title="Casos por Patólogo"
-							value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCasesWithPathologist || 0)}`}
+							title="Casos por tipo de médico"
+							value={isLoading ? '...' : `Total ${formatNumber(totalCasesByMedicalType)}`}
 							icon={<Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />}
-							onClick={() => handleStatCardClick('casesByPathologist')}
-							statType="casesByPathologist"
-							isSelected={selectedStat === 'casesByPathologist' && isDetailPanelOpen}
+							onClick={() => handleStatCardClick('casesByMedicalType')}
+							statType="casesByMedicalType"
+							isSelected={selectedStat === 'casesByMedicalType' && isDetailPanelOpen}
 						/>
 					)}
 				</div>

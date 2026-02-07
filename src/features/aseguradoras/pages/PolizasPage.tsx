@@ -19,8 +19,8 @@ import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon } from 
 import { cn } from '@shared/lib/cn'
 import { format } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
-import { getAseguradoras } from '@services/supabase/aseguradoras/aseguradoras-service'
-import { type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import { getAseguradoras, type Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
+import { findAseguradoById, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import {
 	createPoliza,
 	getPolizas,
@@ -28,6 +28,8 @@ import {
 } from '@services/supabase/aseguradoras/polizas-service'
 import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
+import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
+import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import PolizaCard from '@features/aseguradoras/components/PolizaCard'
 
 const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
@@ -44,6 +46,10 @@ const PolizasPage = () => {
 	const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null)
 	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
 	const [panelOpen, setPanelOpen] = useState(false)
+	const [aseguradoHistoryOpen, setAseguradoHistoryOpen] = useState(false)
+	const [selectedAseguradoForHistory, setSelectedAseguradoForHistory] = useState<Asegurado | null>(null)
+	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = useState(false)
+	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = useState<Aseguradora | null>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
 		aseguradora_id: '',
@@ -100,6 +106,25 @@ const PolizasPage = () => {
 			setCurrentPage(1)
 		}
 	}, [])
+
+	const handleAseguradoClick = useCallback(async (aseguradoId: string) => {
+		const a = await findAseguradoById(aseguradoId)
+		if (a) {
+			setSelectedAseguradoForHistory(a)
+			setAseguradoHistoryOpen(true)
+		}
+	}, [])
+
+	const handleAseguradoraClick = useCallback(
+		(aseguradoraId: string) => {
+			const a = (aseguradorasData || []).find((r) => r.id === aseguradoraId)
+			if (a) {
+				setSelectedAseguradoraForHistory(a)
+				setAseguradoraHistoryOpen(true)
+			}
+		},
+		[aseguradorasData],
+	)
 
 	const resetForm = () => {
 		setForm({
@@ -512,46 +537,15 @@ const PolizasPage = () => {
 
 	return (
 		<div>
-			<div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold">Pólizas</h1>
-					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-				</div>
-				<div className="flex gap-2">
-					<Button
-						variant="outline"
-						onClick={() =>
-							exportRowsToExcel(
-								'polizas',
-								polizas.map((row) => ({
-									Código: row.codigo ?? '',
-									'Número de póliza': row.numero_poliza,
-									Asegurado: row.asegurado?.full_name || '',
-									Aseguradora: row.aseguradora?.nombre || '',
-									Ramo: row.ramo,
-									'Modalidad de pago': row.modalidad_pago,
-									'Estatus póliza': row.estatus_poliza,
-									'Estatus pago': row.estatus_pago || '',
-									'Fecha vencimiento': row.fecha_vencimiento,
-								})),
-							)
-						}
-						className="gap-2"
-					>
-						<Download className="w-4 h-4" />
-						Exportar
-					</Button>
-					<Button onClick={openNewModal} className="gap-2">
-						<Plus className="w-4 h-4" />
-						Nueva póliza
-					</Button>
-				</div>
+			<div className="mb-4 sm:mb-6">
+				<h1 className="text-2xl sm:text-3xl font-bold">Pólizas</h1>
+				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 			</div>
 
 			<Card className="overflow-hidden">
 				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
 					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
-						<div className="relative flex-1">
+						<div className="relative flex-1 min-w-0">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 							<Input
 								className="pl-9"
@@ -560,7 +554,7 @@ const PolizasPage = () => {
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
+						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
 							<span>Filas:</span>
 							<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
 								<SelectTrigger className="w-20">
@@ -572,6 +566,35 @@ const PolizasPage = () => {
 									<SelectItem value="36">36</SelectItem>
 								</SelectContent>
 							</Select>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									exportRowsToExcel(
+										'polizas',
+										polizas.map((row) => ({
+											Código: row.codigo ?? '',
+											'Número de póliza': row.numero_poliza,
+											Asegurado: row.asegurado?.full_name || '',
+											Aseguradora: row.aseguradora?.nombre || '',
+											Ramo: row.ramo,
+											'Modalidad de pago': row.modalidad_pago,
+											'Estatus póliza': row.estatus_poliza,
+											'Estatus pago': row.estatus_pago || '',
+											'Fecha vencimiento': row.fecha_vencimiento,
+										})),
+									)
+								}
+								className="gap-1.5 sm:gap-2 shrink-0"
+								title="Exportar"
+							>
+								<Download className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Exportar</span>
+							</Button>
+							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nueva póliza">
+								<Plus className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Nueva póliza</span>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -653,7 +676,25 @@ const PolizasPage = () => {
 				</DialogContent>
 			</Dialog>
 
-			<PolizaDetailPanel poliza={selectedPoliza} isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
+			<PolizaDetailPanel
+				poliza={selectedPoliza}
+				isOpen={panelOpen}
+				onClose={() => setPanelOpen(false)}
+				onAseguradoClick={handleAseguradoClick}
+				onAseguradoraClick={handleAseguradoraClick}
+			/>
+
+			<AseguradoHistoryModal
+				isOpen={aseguradoHistoryOpen}
+				onClose={() => setAseguradoHistoryOpen(false)}
+				asegurado={selectedAseguradoForHistory}
+			/>
+
+			<AseguradoraHistoryModal
+				isOpen={aseguradoraHistoryOpen}
+				onClose={() => setAseguradoraHistoryOpen(false)}
+				aseguradora={selectedAseguradoraForHistory}
+			/>
 		</div>
 	)
 }

@@ -155,6 +155,111 @@ export const getPolizas = async (
 	}
 }
 
+export const getPolizasByAseguradoId = async (aseguradoId: string): Promise<Poliza[]> => {
+	const laboratoryId = await getUserLaboratoryId()
+
+	const { data, error } = await supabase
+		.from('polizas')
+		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.eq('laboratory_id', laboratoryId)
+		.eq('asegurado_id', aseguradoId)
+		.order('fecha_vencimiento', { ascending: true })
+
+	if (error) throw error
+
+	const today = new Date()
+	const overdueIds = (data || [])
+		.filter((row) => shouldMarkEnMora(row as Poliza, today))
+		.map((row) => row.id)
+
+	if (overdueIds.length > 0) {
+		await supabase
+			.from('polizas')
+			.update({ estatus_pago: 'En mora', updated_at: new Date().toISOString() })
+			.in('id', overdueIds)
+			.eq('laboratory_id', laboratoryId)
+	}
+
+	const normalized = (data || []).map((row) =>
+		overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row,
+	)
+
+	return normalized as Poliza[]
+}
+
+export const getPolizasByAseguradoraId = async (aseguradoraId: string): Promise<Poliza[]> => {
+	const laboratoryId = await getUserLaboratoryId()
+
+	const { data, error } = await supabase
+		.from('polizas')
+		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.eq('laboratory_id', laboratoryId)
+		.eq('aseguradora_id', aseguradoraId)
+		.order('fecha_vencimiento', { ascending: true })
+
+	if (error) throw error
+
+	const today = new Date()
+	const overdueIds = (data || [])
+		.filter((row) => shouldMarkEnMora(row as Poliza, today))
+		.map((row) => row.id)
+
+	if (overdueIds.length > 0) {
+		await supabase
+			.from('polizas')
+			.update({ estatus_pago: 'En mora', updated_at: new Date().toISOString() })
+			.in('id', overdueIds)
+			.eq('laboratory_id', laboratoryId)
+	}
+
+	const normalized = (data || []).map((row) =>
+		overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row,
+	)
+
+	return normalized as Poliza[]
+}
+
+/** Estado para filtrar pólizas por fecha de próximo vencimiento */
+export type PolizaEstadoFilter = 'vigentes' | 'por_vencer' | 'vencidas'
+
+export const getPolizasByEstado = async (estado: PolizaEstadoFilter): Promise<Poliza[]> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const today = new Date()
+	const todayStr = today.toISOString().slice(0, 10)
+	const in30Days = new Date(today)
+	in30Days.setDate(in30Days.getDate() + 30)
+	const in30DaysStr = in30Days.toISOString().slice(0, 10)
+
+	let query = supabase
+		.from('polizas')
+		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.eq('laboratory_id', laboratoryId)
+		.order('fecha_prox_vencimiento', { ascending: true })
+
+	if (estado === 'vencidas') {
+		query = query.lt('fecha_prox_vencimiento', todayStr)
+	} else if (estado === 'por_vencer') {
+		query = query.gte('fecha_prox_vencimiento', todayStr).lte('fecha_prox_vencimiento', in30DaysStr)
+	} else {
+		// vigentes = después de 30 días
+		query = query.gt('fecha_prox_vencimiento', in30DaysStr)
+	}
+
+	const { data, error } = await query
+	if (error) throw error
+	const list = (data || []) as Poliza[]
+	const todayObj = new Date()
+	const overdueIds = list.filter((row) => shouldMarkEnMora(row, todayObj)).map((row) => row.id)
+	if (overdueIds.length > 0) {
+		await supabase
+			.from('polizas')
+			.update({ estatus_pago: 'En mora', updated_at: new Date().toISOString() })
+			.in('id', overdueIds)
+			.eq('laboratory_id', laboratoryId)
+	}
+	return list.map((row) => (overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' as const } : row))
+}
+
 export const getPolizaById = async (id: string): Promise<Poliza | null> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase

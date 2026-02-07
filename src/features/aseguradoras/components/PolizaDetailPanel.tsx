@@ -8,6 +8,10 @@ interface PolizaDetailPanelProps {
 	poliza: Poliza | null
 	isOpen: boolean
 	onClose: () => void
+	/** Al hacer clic en el nombre del asegurado (requiere asegurado_id) */
+	onAseguradoClick?: (aseguradoId: string) => void
+	/** Al hacer clic en el nombre de la compañía (requiere aseguradora_id) */
+	onAseguradoraClick?: (aseguradoraId: string) => void
 }
 
 const formatDate = (value?: string | null) => {
@@ -16,7 +20,7 @@ const formatDate = (value?: string | null) => {
 	return Number.isNaN(parsed.getTime()) ? value : format(parsed, 'dd/MM/yyyy')
 }
 
-export const PolizaDetailPanel = ({ poliza, isOpen, onClose }: PolizaDetailPanelProps) => {
+export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, onAseguradoraClick }: PolizaDetailPanelProps) => {
 	const InfoSection = useCallback(
 		({
 			title,
@@ -103,11 +107,31 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose }: PolizaDetailPanel
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
 							<p className="text-xs text-gray-500">Asegurado</p>
-							<p className="text-sm font-medium">{poliza.asegurado?.full_name || 'Asegurado'}</p>
+							{onAseguradoClick && poliza.asegurado_id ? (
+								<button
+									type="button"
+									onClick={() => onAseguradoClick(poliza.asegurado_id)}
+									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
+								>
+									{poliza.asegurado?.full_name || 'Asegurado'}
+								</button>
+							) : (
+								<p className="text-sm font-medium">{poliza.asegurado?.full_name || 'Asegurado'}</p>
+							)}
 						</div>
 						<div>
 							<p className="text-xs text-gray-500">Compañía</p>
-							<p className="text-sm font-medium">{poliza.aseguradora?.nombre || 'Aseguradora'}</p>
+							{onAseguradoraClick && poliza.aseguradora_id ? (
+								<button
+									type="button"
+									onClick={() => onAseguradoraClick(poliza.aseguradora_id)}
+									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
+								>
+									{poliza.aseguradora?.nombre || 'Aseguradora'}
+								</button>
+							) : (
+								<p className="text-sm font-medium">{poliza.aseguradora?.nombre || 'Aseguradora'}</p>
+							)}
 						</div>
 					</div>
 				</InfoSection>

@@ -42,6 +42,22 @@ export const getAseguradoras = async () => {
 	return (data || []) as Aseguradora[]
 }
 
+export const findAseguradoraById = async (id: string): Promise<Aseguradora | null> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const { data, error } = await supabase
+		.from('aseguradoras')
+		.select('*')
+		.eq('id', id)
+		.eq('laboratory_id', laboratoryId)
+		.single()
+
+	if (error) {
+		if (error.code === 'PGRST116') return null
+		throw error
+	}
+	return data as Aseguradora
+}
+
 export const createAseguradora = async (payload: AseguradoraInsert): Promise<Aseguradora> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase

@@ -860,6 +860,8 @@ export interface Laboratory {
   config: LaboratoryConfig
   created_at: string
   updated_at: string
+  /** Roles habilitados en el lab (ej. patologo, citotecno). Usado para estadísticas por tipo de médico. */
+  available_roles?: string[]
   // Propiedades opcionales para estructura sin nivel branding (retrocompatibilidad)
   logo?: string | null
   icon?: string

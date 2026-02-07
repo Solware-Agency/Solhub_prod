@@ -26,6 +26,9 @@ const PolizaCard = ({ poliza, onClick }: PolizaCardProps) => {
 				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">
 					{poliza.estatus_pago || 'Pendiente'}
 				</span>
+				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+					{poliza.modalidad_pago}
+				</span>
 			</div>
 
 			<div className="grid grid-cols-1 gap-1.5 mb-1.5">

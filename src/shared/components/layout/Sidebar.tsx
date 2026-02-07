@@ -20,7 +20,6 @@ import {
   FolderSearch,
   Activity,
   DollarSign,
-  Bell,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -462,15 +461,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/aseguradoras/pagos'
                   icon={<DollarSign className='stroke-2 size-5 shrink-0' />}
                   label='Pagos'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
-              <div className='py-1'>
-                <NavItem
-                  to='/aseguradoras/recordatorios'
-                  icon={<Bell className='stroke-2 size-5 shrink-0' />}
-                  label='Recordatorios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

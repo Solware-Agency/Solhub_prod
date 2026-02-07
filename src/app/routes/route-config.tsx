@@ -20,7 +20,6 @@ import {
   AseguradosPage,
   PolizasPage,
   PagosPage,
-  RecordatoriosPage,
   DocumentosPage,
   CompaniasPage,
 } from './lazy-routes';
@@ -409,10 +408,6 @@ export const aseguradorasRoutes: RouteConfig[] = [
   {
     path: 'pagos',
     component: PagosPage,
-  },
-  {
-    path: 'recordatorios',
-    component: RecordatoriosPage,
   },
   {
     path: 'documentos',

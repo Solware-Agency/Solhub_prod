@@ -16,13 +16,12 @@ import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoraCard from '@features/aseguradoras/components/AseguradoraCard'
+import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import {
 	createAseguradora,
 	getAseguradoras,
-	updateAseguradora,
 	type Aseguradora,
 } from '@services/supabase/aseguradoras/aseguradoras-service'
-import { AseguradoraDetailPanel } from '@features/aseguradoras/components/AseguradoraDetailPanel'
 
 const CompaniasPage = () => {
 	const queryClient = useQueryClient()
@@ -32,8 +31,7 @@ const CompaniasPage = () => {
 	const [itemsPerPage, setItemsPerPage] = useState(16)
 	const [openModal, setOpenModal] = useState(false)
 	const [selectedAseguradora, setSelectedAseguradora] = useState<Aseguradora | null>(null)
-	const [panelOpen, setPanelOpen] = useState(false)
-	const [panelSaving, setPanelSaving] = useState(false)
+	const [historyModalOpen, setHistoryModalOpen] = useState(false)
 	const [form, setForm] = useState({
 		nombre: '',
 		codigo_interno: '',
@@ -105,28 +103,15 @@ const CompaniasPage = () => {
 		setOpenModal(true)
 	}
 
-	const openDetailPanel = (row: Aseguradora) => {
+	const openHistoryModal = (row: Aseguradora) => {
 		setSelectedAseguradora(row)
-		setPanelOpen(true)
+		setHistoryModalOpen(true)
 	}
 
-	const handlePanelSave = async (payload: Parameters<typeof updateAseguradora>[1]) => {
-		if (!selectedAseguradora) return false
-		setPanelSaving(true)
-		try {
-			const updated = await updateAseguradora(selectedAseguradora.id, payload)
-			setSelectedAseguradora(updated)
-			queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
-			toast({ title: 'Aseguradora actualizada' })
-			return true
-		} catch (err) {
-			console.error(err)
-			toast({ title: 'Error al guardar aseguradora', variant: 'destructive' })
-			return false
-		} finally {
-			setPanelSaving(false)
-		}
-	}
+	const handleAseguradoraUpdated = useCallback((updated: Aseguradora) => {
+		setSelectedAseguradora(updated)
+		queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
+	}, [queryClient])
 
 	const handleSave = async () => {
 		setSaving(true)
@@ -146,45 +131,15 @@ const CompaniasPage = () => {
 
 	return (
 		<div>
-			<div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold">Compañías aseguradoras</h1>
-					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-				</div>
-				<div className="flex gap-2">
-					<Button
-						variant="outline"
-						onClick={() =>
-							exportRowsToExcel(
-								'aseguradoras',
-								filteredCatalogo.map((row) => ({
-									Código: row.codigo ?? '',
-									Nombre: row.nombre,
-									'Código interno': row.codigo_interno || '',
-									RIF: row.rif || '',
-									Teléfono: row.telefono || '',
-									Email: row.email || '',
-									Web: row.web || '',
-									Activo: row.activo ? 'Sí' : 'No',
-								})),
-							)
-						}
-						className="gap-2"
-					>
-						<Download className="w-4 h-4" />
-						Exportar
-					</Button>
-					<Button onClick={openNewModal} className="gap-2">
-						<Plus className="w-4 h-4" />
-						Nueva aseguradora
-					</Button>
-				</div>
+			<div className="mb-4 sm:mb-6">
+				<h1 className="text-2xl sm:text-3xl font-bold">Compañías aseguradoras</h1>
+				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 			</div>
 
 			<Card className="overflow-hidden">
 				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
 					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
-						<div className="relative flex-1">
+						<div className="relative flex-1 min-w-0">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 							<Input
 								className="pl-9"
@@ -193,7 +148,7 @@ const CompaniasPage = () => {
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
+						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
 							<span>Filas:</span>
 							<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
 								<SelectTrigger className="w-20">
@@ -205,6 +160,34 @@ const CompaniasPage = () => {
 									<SelectItem value="32">32</SelectItem>
 								</SelectContent>
 							</Select>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									exportRowsToExcel(
+										'aseguradoras',
+										filteredCatalogo.map((row) => ({
+											Código: row.codigo ?? '',
+											Nombre: row.nombre,
+											'Código interno': row.codigo_interno || '',
+											RIF: row.rif || '',
+											Teléfono: row.telefono || '',
+											Email: row.email || '',
+											Web: row.web || '',
+											Activo: row.activo ? 'Sí' : 'No',
+										})),
+									)
+								}
+								className="gap-1.5 sm:gap-2 shrink-0"
+								title="Exportar"
+							>
+								<Download className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Exportar</span>
+							</Button>
+							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nueva aseguradora">
+								<Plus className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Nueva aseguradora</span>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -217,7 +200,7 @@ const CompaniasPage = () => {
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{pageData.map((row) => (
-							<AseguradoraCard key={row.id} aseguradora={row} onClick={() => openDetailPanel(row)} />
+							<AseguradoraCard key={row.id} aseguradora={row} onClick={() => openHistoryModal(row)} />
 						))}
 					</div>
 				</div>
@@ -322,12 +305,11 @@ const CompaniasPage = () => {
 				</DialogContent>
 			</Dialog>
 
-			<AseguradoraDetailPanel
+			<AseguradoraHistoryModal
+				isOpen={historyModalOpen}
+				onClose={() => setHistoryModalOpen(false)}
 				aseguradora={selectedAseguradora}
-				isOpen={panelOpen}
-				onClose={() => setPanelOpen(false)}
-				onSave={handlePanelSave}
-				saving={panelSaving}
+				onAseguradoraUpdated={handleAseguradoraUpdated}
 			/>
 		</div>
 	)

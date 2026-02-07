@@ -209,12 +209,6 @@ export const PagosPage = lazy(() =>
     'PagosPage'
   )
 )
-export const RecordatoriosPage = lazy(() =>
-  lazyRetry(
-    () => import('@features/aseguradoras/pages/RecordatoriosPage'),
-    'RecordatoriosPage'
-  )
-)
 export const DocumentosPage = lazy(() =>
   lazyRetry(
     () => import('@features/aseguradoras/pages/DocumentosPage'),
