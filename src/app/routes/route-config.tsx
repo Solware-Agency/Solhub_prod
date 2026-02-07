@@ -391,30 +391,36 @@ export const pruebaRoutes: RouteConfig[] = [
   },
 ];
 
-// Configuración de rutas para aseguradoras (Inntegras)
+// Configuración de rutas para aseguradoras (por feature hasAseguradoras)
 export const aseguradorasRoutes: RouteConfig[] = [
   {
     path: 'home',
+    feature: 'hasAseguradoras',
     component: AseguradorasHomePage,
   },
   {
     path: 'asegurados',
+    feature: 'hasAseguradoras',
     component: AseguradosPage,
   },
   {
     path: 'polizas',
+    feature: 'hasAseguradoras',
     component: PolizasPage,
   },
   {
     path: 'pagos',
+    feature: 'hasAseguradoras',
     component: PagosPage,
   },
   {
     path: 'documentos',
+    feature: 'hasAseguradoras',
     component: DocumentosPage,
   },
   {
     path: 'companias',
+    feature: 'hasAseguradoras',
     component: CompaniasPage,
   },
 ];

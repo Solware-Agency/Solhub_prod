@@ -30,7 +30,6 @@ import {
 } from '@app/routes/lazy-routes';
 import { imagenologiaRoutes, laboratorioRoutes, aseguradorasRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
-import InntegrasGuard from '@shared/components/InntegrasGuard';
 import {
   dashboardRoutes,
   employeeRoutes,
@@ -473,18 +472,31 @@ function App() {
                   })}
                 </Route>
 
-                {/* Protected aseguradoras routes (Inntegras) */}
+                {/* Protected aseguradoras routes (por feature hasAseguradoras) */}
                 <Route
                   path='/aseguradoras'
                   element={
                     <PrivateRoute requiredRole={['employee', 'owner', 'prueba']}>
-                      <InntegrasGuard>
+                      <FeatureRoute
+                        feature="hasAseguradoras"
+                        fallbackPath="/dashboard/home"
+                      >
                         <Layout />
-                      </InntegrasGuard>
+                      </FeatureRoute>
                     </PrivateRoute>
                   }
                 >
-                  <Route index element={<AseguradorasHomePage />} />
+                  <Route
+                    index
+                    element={
+                      <FeatureRoute
+                        feature="hasAseguradoras"
+                        fallbackPath="/dashboard/home"
+                      >
+                        <AseguradorasHomePage />
+                      </FeatureRoute>
+                    }
+                  />
                   {aseguradorasRoutes.map((routeConfig) => {
                     const Component = routeConfig.component;
                     return (
