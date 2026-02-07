@@ -280,6 +280,7 @@ const AseguradorasHomePage = () => {
 								{ name: 'Por vencer (30d)', value: data?.porVencer ?? 0, color: '#f59e0b' },
 								{ name: 'Vencidas', value: data?.vencidas ?? 0, color: '#ef4444' },
 							].filter((d) => d.value > 0)
+							const totalPorEstado = (data?.vigentes ?? 0) + (data?.porVencer ?? 0) + (data?.vencidas ?? 0)
 							return (
 							<div className="flex flex-col sm:flex-row items-center gap-4">
 								<div className="h-56 w-full sm:w-56 relative flex-shrink-0">
@@ -312,7 +313,7 @@ const AseguradorasHomePage = () => {
 									</ResponsiveContainer>
 									<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
 										<div className="text-center">
-											<p className="text-lg font-bold text-gray-700 dark:text-gray-300">{data?.polizas ?? 0}</p>
+											<p className="text-lg font-bold text-gray-700 dark:text-gray-300">{totalPorEstado}</p>
 											<p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
 										</div>
 									</div>

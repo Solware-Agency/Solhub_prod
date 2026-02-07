@@ -54,28 +54,24 @@ export const getAseguradorasStats = async (): Promise<AseguradorasStats> => {
 		supabase.from('pagos_poliza').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId),
 	])
 
-	const [
-		{ count: porVencer },
-		{ count: vencidas },
-		{ count: vigentes },
-	] = await Promise.all([
-		supabase
-			.from('polizas')
-			.select('*', { count: 'exact', head: true })
-			.eq('laboratory_id', laboratoryId)
-			.gte('fecha_prox_vencimiento', todayStr)
-			.lte('fecha_prox_vencimiento', in30DaysStr),
-		supabase
-			.from('polizas')
-			.select('*', { count: 'exact', head: true })
-			.eq('laboratory_id', laboratoryId)
-			.lt('fecha_prox_vencimiento', todayStr),
-		supabase
-			.from('polizas')
-			.select('*', { count: 'exact', head: true })
-			.eq('laboratory_id', laboratoryId)
-			.gt('fecha_prox_vencimiento', in30DaysStr),
-	])
+	// Clasificación por estado: usamos fecha_prox_vencimiento y, si es null, fecha_vencimiento
+	const { data: polizasFechas } = await supabase
+		.from('polizas')
+		.select('fecha_prox_vencimiento, fecha_vencimiento')
+		.eq('laboratory_id', laboratoryId)
+
+	let vigentes = 0
+	let porVencer = 0
+	let vencidas = 0
+	const _today = todayStr
+	const _in30 = in30DaysStr
+	;(polizasFechas || []).forEach((p: { fecha_prox_vencimiento: string | null; fecha_vencimiento: string | null }) => {
+		const fecha = (p.fecha_prox_vencimiento || p.fecha_vencimiento || '').slice(0, 10)
+		if (!fecha) return
+		if (fecha > _in30) vigentes += 1
+		else if (fecha >= _today && fecha <= _in30) porVencer += 1
+		else if (fecha < _today) vencidas += 1
+	})
 
 	// Últimos 12 meses: pagos agrupados por mes
 	const startMonth = new Date(today.getFullYear(), today.getMonth() - 11, 1)
