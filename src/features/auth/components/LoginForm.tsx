@@ -276,13 +276,9 @@ function LoginForm() {
 
   return (
     <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
-      {/* Aurora Background with Dynamic or Default Color Palette */}
+      {/* Aurora Background with Default Color Palette */}
       <Aurora
-        colorStops={
-          hasBranding && branding?.primaryColor
-            ? [branding.primaryColor, branding.primaryColor + 'aa', branding.primaryColor]
-            : ['#3d84f5', '#06337b', '#3d84f5']
-        }
+        colorStops={['#3d84f5', '#06337b', '#3d84f5']}
         blend={0.7}
         amplitude={1.3}
         speed={0.3}
@@ -413,11 +409,6 @@ function LoginForm() {
               <button
                 type='submit'
                 disabled={loading || isRedirecting}
-                style={
-                  hasBranding && branding?.primaryColor
-                    ? { borderColor: branding.primaryColor }
-                    : undefined
-                }
                 className='w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm dark:shadow-primary/20 transform hover:scale-[1.02] active:scale-[0.98]'
               >
                 {loading || isRedirecting ? (
