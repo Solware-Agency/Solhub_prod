@@ -19,14 +19,20 @@ export function useDynamicBranding() {
 
   // Cargar branding desde localStorage al montar el componente
   useEffect(() => {
+    console.log('🔍 [Branding] Cargando branding desde localStorage...');
     try {
       const savedBranding = localStorage.getItem(BRANDING_STORAGE_KEY);
+      console.log('🔍 [Branding] Valor en localStorage:', savedBranding);
+      
       if (savedBranding) {
         const parsed = JSON.parse(savedBranding) as BrandingConfig;
         setBranding(parsed);
+        console.log('✅ [Branding] Branding cargado:', parsed.laboratoryName);
+      } else {
+        console.log('⚠️ [Branding] No hay branding guardado');
       }
     } catch (error) {
-      console.error('Error cargando branding desde localStorage:', error);
+      console.error('❌ [Branding] Error cargando branding desde localStorage:', error);
       // Si hay error, limpiar el localStorage corrupto
       localStorage.removeItem(BRANDING_STORAGE_KEY);
     } finally {
@@ -39,11 +45,20 @@ export function useDynamicBranding() {
    * Se debe llamar después de un login exitoso
    */
   const saveBranding = (config: BrandingConfig) => {
+    console.log('💾 [Branding] Intentando guardar branding:', config);
     try {
-      localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(config));
+      const jsonString = JSON.stringify(config);
+      console.log('💾 [Branding] JSON a guardar:', jsonString);
+      
+      localStorage.setItem(BRANDING_STORAGE_KEY, jsonString);
       setBranding(config);
+      
+      // Verificar que se guardó correctamente
+      const verification = localStorage.getItem(BRANDING_STORAGE_KEY);
+      console.log('✅ [Branding] Verificación - Guardado correctamente:', verification === jsonString);
+      console.log('✅ [Branding] Branding guardado para:', config.laboratoryName);
     } catch (error) {
-      console.error('Error guardando branding en localStorage:', error);
+      console.error('❌ [Branding] Error guardando branding en localStorage:', error);
     }
   };
 
@@ -52,11 +67,13 @@ export function useDynamicBranding() {
    * Útil para computadoras compartidas o cuando el usuario quiere cambiar de laboratorio
    */
   const clearBranding = () => {
+    console.log('🧹 [Branding] Limpiando branding...');
     try {
       localStorage.removeItem(BRANDING_STORAGE_KEY);
       setBranding(null);
+      console.log('✅ [Branding] Branding limpiado exitosamente');
     } catch (error) {
-      console.error('Error limpiando branding:', error);
+      console.error('❌ [Branding] Error limpiando branding:', error);
     }
   };
 

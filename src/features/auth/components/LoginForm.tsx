@@ -198,26 +198,56 @@ function LoginForm() {
 
       // 🎨 Guardar branding del laboratorio después de login exitoso
       try {
-        const { data: profile } = await supabase
+        console.log('🎨 Intentando obtener branding del laboratorio...');
+        
+        // Primero obtener el profile con laboratory_id
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('laboratory_id, laboratories(name, branding)')
+          .select('laboratory_id')
           .eq('id', user.id)
           .single();
 
-        if (profile?.laboratory_id && profile.laboratories) {
-          const lab = profile.laboratories as { name: string; branding?: { logo?: string; primaryColor?: string; icon?: string } };
-          if (lab.branding) {
-            saveBranding({
+        if (profileError) {
+          console.error('Error obteniendo profile:', profileError);
+        } else {
+          console.log('Profile obtenido:', profile);
+        }
+
+        if (profile?.laboratory_id) {
+          console.log('Laboratory ID encontrado:', profile.laboratory_id);
+          
+          // Luego obtener el laboratorio con su branding
+          const { data: lab, error: labError } = await supabase
+            .from('laboratories')
+            .select('name, branding, slug')
+            .eq('id', profile.laboratory_id)
+            .single();
+
+          if (labError) {
+            console.error('Error obteniendo laboratory:', labError);
+          } else {
+            console.log('Laboratory obtenido:', lab);
+          }
+
+          if (lab?.branding) {
+            const brandingData = {
               logo: lab.branding.logo || '',
               primaryColor: lab.branding.primaryColor || '#3d84f5',
               laboratoryName: lab.name,
-              icon: lab.branding.icon,
-            });
-            console.log('✅ Branding guardado:', lab.name);
+              icon: lab.branding.icon || lab.slug,
+            };
+            
+            console.log('🎨 Guardando branding:', brandingData);
+            saveBranding(brandingData);
+            console.log('✅ Branding guardado exitosamente');
+          } else {
+            console.log('⚠️ Laboratorio sin branding configurado');
           }
+        } else {
+          console.log('⚠️ Usuario sin laboratory_id asignado');
         }
       } catch (brandingError) {
-        console.error('Error guardando branding:', brandingError);
+        console.error('❌ Error guardando branding:', brandingError);
         // No bloquear el login si falla el branding
       }
 
