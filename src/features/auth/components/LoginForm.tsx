@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { signIn } from '@services/supabase/auth/auth';
 import { useAuth } from '@app/providers/AuthContext';
@@ -9,6 +9,7 @@ import FadeContent from '@shared/components/ui/FadeContent';
 import { supabase } from '@services/supabase/config/config';
 import { toast } from '@shared/hooks/use-toast';
 import SolHubIcon from '@shared/components/icons/SolHubIcon';
+import { useDynamicBranding } from '@shared/hooks/useDynamicBranding';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -19,6 +20,9 @@ function LoginForm() {
   const retryTimerRef = useRef<number | null>(null);
   const { refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Hook para branding dinámico
+  const { branding, isLoading: isBrandingLoading, hasBranding, saveBranding, clearBranding } = useDynamicBranding();
 
   // Use secure redirect hook for role-based navigation
   const { isRedirecting } = useSecureRedirect({
@@ -192,6 +196,31 @@ function LoginForm() {
       // Refresh user data and let the secure redirect handle the navigation
       await refreshUser();
 
+      // 🎨 Guardar branding del laboratorio después de login exitoso
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('laboratory_id, laboratories(name, branding)')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.laboratory_id && profile.laboratories) {
+          const lab = profile.laboratories as { name: string; branding?: { logo?: string; primaryColor?: string; icon?: string } };
+          if (lab.branding) {
+            saveBranding({
+              logo: lab.branding.logo || '',
+              primaryColor: lab.branding.primaryColor || '#3d84f5',
+              laboratoryName: lab.name,
+              icon: lab.branding.icon,
+            });
+            console.log('✅ Branding guardado:', lab.name);
+          }
+        }
+      } catch (brandingError) {
+        console.error('Error guardando branding:', brandingError);
+        // No bloquear el login si falla el branding
+      }
+
       // Debug: Verificar si la sesión se mantiene después del refresh
       setTimeout(async () => {
         const {
@@ -217,9 +246,13 @@ function LoginForm() {
 
   return (
     <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
-      {/* Aurora Background with New Color Palette */}
+      {/* Aurora Background with Dynamic or Default Color Palette */}
       <Aurora
-        colorStops={['#3d84f5', '#06337b', '#3d84f5']}
+        colorStops={
+          hasBranding && branding?.primaryColor
+            ? [branding.primaryColor, branding.primaryColor + 'aa', branding.primaryColor]
+            : ['#3d84f5', '#06337b', '#3d84f5']
+        }
         blend={0.7}
         amplitude={1.3}
         speed={0.3}
@@ -236,14 +269,53 @@ function LoginForm() {
           className='w-full h-full flex items-center justify-center'
         >
           <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none md:rounded-2xl p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20'>
-            <div className='text-center mb-4 flex flex-col items-center justify-center'>
-              <SolHubIcon
-                fill='#fff'
-                className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
-              />
+            <div className='text-center mb-4 flex flex-col items-center justify-center relative'>
+              {/* Logo Dinámico o Genérico */}
+              {!isBrandingLoading && (
+                <>
+                  {hasBranding && branding?.logo ? (
+                    <img
+                      src={branding.logo}
+                      alt={branding.laboratoryName || 'Logo'}
+                      className='h-16 w-auto mb-4 object-contain drop-shadow-xl'
+                      onError={(e) => {
+                        // Si falla la carga, mostrar logo genérico
+                        console.error('Error cargando logo del laboratorio:', branding.logo);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <SolHubIcon
+                      fill='#fff'
+                      className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
+                    />
+                  )}
+                </>
+              )}
+
+              {/* Botón "No es mi laboratorio" - Solo visible si hay branding */}
+              {hasBranding && (
+                <button
+                  onClick={() => {
+                    clearBranding();
+                    toast({
+                      title: 'Branding limpiado',
+                      description: 'Ahora verás el logo genérico del sistema.',
+                    });
+                  }}
+                  className='absolute -top-2 -right-2 text-white/60 hover:text-white/90 transition-colors text-xs flex items-center gap-1 bg-black/20 hover:bg-black/40 px-2 py-1 rounded-full border border-white/10'
+                  title='Cambiar de laboratorio'
+                >
+                  <RefreshCw size={12} />
+                  <span>Cambiar lab</span>
+                </button>
+              )}
+
               <div>
                 <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
-                  Bienvenido a SolHub
+                  {hasBranding && branding?.laboratoryName
+                    ? `Bienvenido a ${branding.laboratoryName}`
+                    : 'Bienvenido a SolHub'}
                 </h1>
               </div>
               <p className='text-slate-300'>
@@ -311,6 +383,11 @@ function LoginForm() {
               <button
                 type='submit'
                 disabled={loading || isRedirecting}
+                style={
+                  hasBranding && branding?.primaryColor
+                    ? { borderColor: branding.primaryColor }
+                    : undefined
+                }
                 className='w-full bg-transparent border border-primary text-white rounded-md p-2 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm dark:shadow-primary/20 transform hover:scale-[1.02] active:scale-[0.98]'
               >
                 {loading || isRedirecting ? (
