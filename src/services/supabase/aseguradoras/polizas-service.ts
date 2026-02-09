@@ -55,6 +55,7 @@ export interface Poliza {
 	fecha_pago_ultimo_backup: string | null
 	pdf_url: string | null
 	notas: string | null
+	activo: boolean
 	created_at: string | null
 	updated_at: string | null
 	asegurado?: { id: string; full_name: string; document_id: string } | null
@@ -87,14 +88,16 @@ export interface PolizaInsert {
 	notas?: string | null
 }
 
-export interface PolizaUpdate extends Partial<PolizaInsert> {}
+export interface PolizaUpdate extends Partial<PolizaInsert> {
+	activo?: boolean
+}
 
 export const getPolizas = async (
 	page = 1,
 	limit = 50,
 	searchTerm?: string,
-	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' = 'fecha_vencimiento',
-	sortDirection: 'asc' | 'desc' = 'asc',
+	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' = 'created_at',
+	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
 	const laboratoryId = await getUserLaboratoryId()
 
@@ -105,6 +108,7 @@ export const getPolizas = async (
 			{ count: 'exact' },
 		)
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 
 	if (searchTerm) {
 		query = query.or(
@@ -162,6 +166,7 @@ export const getPolizasByAseguradoId = async (aseguradoId: string): Promise<Poli
 		.from('polizas')
 		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.eq('asegurado_id', aseguradoId)
 		.order('fecha_vencimiento', { ascending: true })
 
@@ -194,6 +199,7 @@ export const getPolizasByAseguradoraId = async (aseguradoraId: string): Promise<
 		.from('polizas')
 		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.eq('aseguradora_id', aseguradoraId)
 		.order('fecha_vencimiento', { ascending: true })
 
@@ -234,6 +240,7 @@ export const getPolizasByEstado = async (estado: PolizaEstadoFilter): Promise<Po
 		.from('polizas')
 		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.order('fecha_prox_vencimiento', { ascending: true })
 
 	if (estado === 'vencidas') {
@@ -324,6 +331,11 @@ export const updatePoliza = async (id: string, payload: PolizaUpdate): Promise<P
 
 	if (error) throw error
 	return data as Poliza
+}
+
+/** Soft delete: marca póliza como inactiva; deja de mostrarse en listados pero se conserva en BD */
+export const deactivatePoliza = async (id: string): Promise<Poliza> => {
+	return updatePoliza(id, { activo: false })
 }
 
 export const deletePoliza = async (id: string) => {

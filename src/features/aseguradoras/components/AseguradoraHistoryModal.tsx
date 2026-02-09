@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Building2, FileText, MapPin, Phone, Edit, Globe, Send } from 'lucide-react'
+import { X, Building2, FileText, MapPin, Phone, Edit, Globe, Send, Trash2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
+import { deactivateAseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { getAseguradosByIds } from '@services/supabase/aseguradoras/asegurados-service'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { getPolizasByAseguradoraId, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
@@ -14,6 +15,7 @@ import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetai
 import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon'
 import { EditAseguradoraModal } from '@features/aseguradoras/components/EditAseguradoraModal'
+import { useToast } from '@shared/hooks/use-toast'
 
 interface AseguradoraHistoryModalProps {
 	isOpen: boolean
@@ -60,7 +62,9 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 	const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
 	const [selectedAsegurado, setSelectedAsegurado] = React.useState<Asegurado | null>(null)
 	const [aseguradoHistoryOpen, setAseguradoHistoryOpen] = React.useState(false)
+	const [isDeleting, setIsDeleting] = React.useState(false)
 	const queryClient = useQueryClient()
+	const { toast } = useToast()
 
 	useBodyScrollLock(isOpen)
 
@@ -119,6 +123,32 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 		if (!email) return
 		window.location.href = `mailto:${email}`
 	}, [aseguradora?.email])
+
+	const handleEliminarAseguradora = useCallback(async () => {
+		if (!aseguradora?.id) return
+		const confirmar = window.confirm(
+			'¿Eliminar esta compañía? Dejará de mostrarse en listados. Los datos se conservan en el sistema.',
+		)
+		if (!confirmar) return
+		setIsDeleting(true)
+		try {
+			await deactivateAseguradora(aseguradora.id)
+			toast({ title: 'Compañía eliminada', description: 'Ya no aparecerá en la lista de compañías.' })
+			onClose()
+			await queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
+			await queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
+			await queryClient.invalidateQueries({ queryKey: ['polizas'] })
+		} catch (err) {
+			console.error(err)
+			toast({
+				title: 'Error',
+				description: 'No se pudo eliminar la compañía.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsDeleting(false)
+		}
+	}, [aseguradora?.id, onClose, queryClient, toast])
 
 	if (!aseguradora) return null
 
@@ -201,6 +231,18 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 										aria-label="Enviar correo"
 									>
 										<Send className="w-4 h-4" />
+									</button>
+									<div className="flex-1 min-w-[2rem]" />
+									<button
+										type="button"
+										onClick={handleEliminarAseguradora}
+										disabled={isDeleting}
+										title="Eliminar compañía"
+										className="inline-flex items-center justify-center p-1.5 sm:p-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+										aria-label="Eliminar compañía"
+									>
+										<Trash2 className="w-4 h-4" />
+										<span className="ml-1 hidden sm:inline">Eliminar compañía</span>
 									</button>
 								</div>
 

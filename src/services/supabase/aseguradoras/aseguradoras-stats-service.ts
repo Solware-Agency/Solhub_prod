@@ -48,9 +48,9 @@ export const getAseguradorasStats = async (): Promise<AseguradorasStats> => {
 	const in30DaysStr = in30Days.toISOString().slice(0, 10)
 
 	const [{ count: asegurados }, { count: aseguradoras }, { count: polizas }, { count: pagos }] = await Promise.all([
-		supabase.from('asegurados').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId),
-		supabase.from('aseguradoras').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId),
-		supabase.from('polizas').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId),
+		supabase.from('asegurados').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId).eq('activo', true),
+		supabase.from('aseguradoras').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId).eq('activo', true),
+		supabase.from('polizas').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId).eq('activo', true),
 		supabase.from('pagos_poliza').select('*', { count: 'exact', head: true }).eq('laboratory_id', laboratoryId),
 	])
 
@@ -59,6 +59,7 @@ export const getAseguradorasStats = async (): Promise<AseguradorasStats> => {
 		.from('polizas')
 		.select('fecha_prox_vencimiento, fecha_vencimiento')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 
 	let vigentes = 0
 	let porVencer = 0
@@ -115,6 +116,7 @@ export const getAseguradorasStats = async (): Promise<AseguradorasStats> => {
 		.from('polizas')
 		.select('id, numero_poliza, fecha_prox_vencimiento, asegurado:asegurados(full_name)')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.gte('fecha_prox_vencimiento', todayStr)
 		.order('fecha_prox_vencimiento', { ascending: true })
 		.limit(5)
@@ -130,6 +132,7 @@ export const getAseguradorasStats = async (): Promise<AseguradorasStats> => {
 		.from('polizas')
 		.select('aseguradora_id')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 	const countByAseguradora: Record<string, number> = {}
 	;(polizasByAseguradora || []).forEach((p: any) => {
 		if (p.aseguradora_id) {

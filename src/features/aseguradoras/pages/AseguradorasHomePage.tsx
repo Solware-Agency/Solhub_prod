@@ -184,23 +184,30 @@ const AseguradorasHomePage = () => {
 								<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
 							</div>
 						) : (data?.proximosVencimientos?.length ?? 0) > 0 ? (
-							<ul className="space-y-2">
-								{data!.proximosVencimientos.map((p) => (
-									<li
-										key={p.id}
-										className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-primary/30"
-									>
-										<div className="min-w-0">
-											<p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-												{p.numero_poliza} · {p.asegurado_nombre}
-											</p>
-											<p className="text-xs text-gray-500 dark:text-gray-400">
-												{format(new Date(p.fecha_prox_vencimiento), "d MMM yyyy", { locale: es })}
-											</p>
-										</div>
-									</li>
-								))}
-							</ul>
+							<>
+								<ul className="space-y-2">
+									{data!.proximosVencimientos.slice(0, 4).map((p) => (
+										<li
+											key={p.id}
+											className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-primary/30"
+										>
+											<div className="min-w-0">
+												<p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+													{p.numero_poliza} · {p.asegurado_nombre}
+												</p>
+												<p className="text-xs text-gray-500 dark:text-gray-400">
+													{format(new Date(p.fecha_prox_vencimiento), "d MMM yyyy", { locale: es })}
+												</p>
+											</div>
+										</li>
+									))}
+								</ul>
+								{data!.proximosVencimientos.length > 4 && (
+									<p className="text-xs text-primary font-medium mt-3 text-center">
+										Haz clic para ver los {data!.proximosVencimientos.length - 4} restantes
+									</p>
+								)}
+							</>
 						) : (
 							<p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
 								No hay vencimientos próximos
@@ -223,33 +230,43 @@ const AseguradorasHomePage = () => {
 								<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
 							</div>
 						) : (data?.topAseguradorasPorPolizas?.length ?? 0) > 0 ? (
-							<div className="space-y-2">
-								{data!.topAseguradorasPorPolizas.map((a, i) => {
-									const maxP = Math.max(...data!.topAseguradorasPorPolizas.map((x) => x.polizas), 1)
-									const pct = (a.polizas / maxP) * 100
-									return (
-										<div
-											key={a.id}
-											className="group space-y-1 rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
-										>
-											<div className="flex items-center justify-between text-sm">
-												<span className="font-medium text-gray-700 dark:text-gray-300 truncate pr-2">
-													{a.nombre}
-												</span>
-												<span className="text-gray-500 dark:text-gray-400 font-semibold">
-													{a.polizas} pólizas
-												</span>
-											</div>
-											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-												<div
-													className="h-2 rounded-full bg-primary/80 transition-all duration-300 group-hover:bg-primary"
-													style={{ width: `${pct}%` }}
-												/>
+							<>
+								<div className="space-y-2">
+									{(() => {
+										const displayed = data!.topAseguradorasPorPolizas.slice(0, 4)
+										const maxP = Math.max(...displayed.map((x) => x.polizas), 1)
+										return displayed.map((a) => {
+											const pct = (a.polizas / maxP) * 100
+										return (
+											<div
+												key={a.id}
+												className="group space-y-1 rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+											>
+												<div className="flex items-center justify-between text-sm">
+													<span className="font-medium text-gray-700 dark:text-gray-300 truncate pr-2">
+														{a.nombre}
+													</span>
+													<span className="text-gray-500 dark:text-gray-400 font-semibold">
+														{a.polizas} pólizas
+													</span>
+												</div>
+												<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+													<div
+														className="h-2 rounded-full bg-primary/80 transition-all duration-300 group-hover:bg-primary"
+														style={{ width: `${pct}%` }}
+													/>
 											</div>
 										</div>
-									)
-								})}
-							</div>
+											)
+										})
+									})()}
+								</div>
+								{data!.topAseguradorasPorPolizas.length > 4 && (
+									<p className="text-xs text-primary font-medium mt-3 text-center">
+										Haz clic para ver las {data!.topAseguradorasPorPolizas.length - 4} restantes
+									</p>
+								)}
+							</>
 						) : (
 							<p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
 								Sin datos

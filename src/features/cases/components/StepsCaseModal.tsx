@@ -141,9 +141,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const isMarihorgen =
     laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
   const isSptAutoApprove = isSpt && (isMedicoTratante || isOwner);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    MARIHORGEN_TEMPLATES[0].id,
-  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   const isCitoAdmin =
     profile?.role === 'residente' && case_?.exam_type === 'Citología';
@@ -1411,11 +1409,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                         Plantilla de informe
                       </label>
                       <Select
-                        value={selectedTemplateId}
+                        value={selectedTemplateId || undefined}
                         onValueChange={setSelectedTemplateId}
                       >
                         <SelectTrigger className='mt-1'>
-                          <SelectValue placeholder='Selecciona una plantilla' />
+                          <SelectValue placeholder='Seleccionar' />
                         </SelectTrigger>
                         <SelectContent>
                           {MARIHORGEN_TEMPLATES.map((template) => (

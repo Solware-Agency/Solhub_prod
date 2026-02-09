@@ -36,10 +36,16 @@ export const getAseguradoras = async () => {
 		.from('aseguradoras')
 		.select('*')
 		.eq('laboratory_id', laboratoryId)
-		.order('nombre')
+		.eq('activo', true)
+		.order('created_at', { ascending: false })
 
 	if (error) throw error
 	return (data || []) as Aseguradora[]
+}
+
+/** Soft delete: marca aseguradora como inactiva; deja de mostrarse en listados pero se conserva en BD */
+export const deactivateAseguradora = async (id: string): Promise<Aseguradora> => {
+	return updateAseguradora(id, { activo: false })
 }
 
 export const findAseguradoraById = async (id: string): Promise<Aseguradora | null> => {

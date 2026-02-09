@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from 'react'
-import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info, Stethoscope } from 'lucide-react'
+import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info, Stethoscope, Layers } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { YearSelector } from '@shared/components/ui/year-selector'
 import DateRangeSelector from '@shared/components/ui/date-range-selector'
@@ -178,8 +178,8 @@ const StatsPage: React.FC = () => {
 					/>
 				</div>
 
-				{/* KPI Cards: Recepcionistas / Patólogos */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6">
+				{/* KPI Cards: Recepcionistas / Bloques / Patólogos */}
+				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6">
 					<StatCard
 						title="Casos por Recepcionista"
 						value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCases || 0)}`}
@@ -187,6 +187,15 @@ const StatsPage: React.FC = () => {
 						onClick={() => handleStatCardClick('casesByReceptionist')}
 						statType="casesByReceptionist"
 						isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}
+					/>
+
+					<StatCard
+						title="Bloques del período"
+						value={isLoading ? '...' : formatNumber(stats?.totalBlocks ?? 0)}
+						icon={<Layers className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400" />}
+						onClick={() => handleStatCardClick('totalBlocks')}
+						statType="totalBlocks"
+						isSelected={selectedStat === 'totalBlocks' && isDetailPanelOpen}
 					/>
 
 					{hasMedicalTypeRoles && (

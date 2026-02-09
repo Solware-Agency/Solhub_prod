@@ -29,6 +29,7 @@ export type StatType =
 	| 'casesByReceptionist'
 	| 'casesByPathologist'
 	| 'casesByMedicalType'
+	| 'totalBlocks'
 
 interface StatDetailPanelProps {
 	isOpen: boolean
@@ -90,6 +91,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return 'Casos por Patólogo'
 			case 'casesByMedicalType':
 				return 'Casos por tipo de médico'
+			case 'totalBlocks':
+				return 'Bloques del período'
 			default:
 				return 'Detalles'
 		}
@@ -1288,6 +1291,18 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				)
 			}
 
+			case 'totalBlocks': {
+				const total = stats?.totalBlocks ?? 0
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total de bloques de biopsia en el período seleccionado.</p>
+							<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatNumber(total)}</p>
+						</div>
+					</div>
+				)
+			}
+
 			case 'casesByPathologist': {
 				const data = stats.casesByPathologist || []
 				const maxCases = Math.max(...data.map((item: any) => item.cases || 0), 1)
@@ -1329,12 +1344,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								{data.map((item: any) => (
 									<div key={item.id} className="flex items-center justify-between">
 										<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
-										<div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+										<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
 											{formatNumber(item.cases)} casos
-											<span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-												• {formatNumber(item.blocks)} bloques
-											</span>
-										</div>
+										</span>
 									</div>
 								))}
 							</div>
@@ -1385,12 +1397,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										{pathologistData.map((item: any) => (
 											<div key={item.id} className="flex items-center justify-between">
 												<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
-												<div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
 													{formatNumber(item.cases)} casos
-													<span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-														• {formatNumber(item.blocks)} bloques
-													</span>
-												</div>
+												</span>
 											</div>
 										))}
 									</div>

@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, User, FileText, MapPin, Phone, Edit, Send } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { X, User, FileText, MapPin, Phone, Edit, Send, Trash2 } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import { deactivateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { findAseguradoraById } from '@services/supabase/aseguradoras/aseguradoras-service'
 import type { Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { getPolizasByAseguradoId, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
@@ -12,6 +13,7 @@ import PolizaCard from '@features/aseguradoras/components/PolizaCard'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import { EditAseguradoModal } from '@features/aseguradoras/components/EditAseguradoModal'
+import { useToast } from '@shared/hooks/use-toast'
 
 interface AseguradoHistoryModalProps {
 	isOpen: boolean
@@ -59,6 +61,9 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 	const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
 	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = React.useState(false)
 	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = React.useState<Aseguradora | null>(null)
+	const [isDeleting, setIsDeleting] = React.useState(false)
+	const queryClient = useQueryClient()
+	const { toast } = useToast()
 
 	useBodyScrollLock(isOpen)
 
@@ -95,6 +100,31 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 			setAseguradoraHistoryOpen(true)
 		}
 	}, [])
+
+	const handleEliminarAsegurado = useCallback(async () => {
+		if (!asegurado?.id) return
+		const confirmar = window.confirm(
+			'¿Eliminar este asegurado? Dejará de mostrarse en listados. Los datos se conservan en el sistema.',
+		)
+		if (!confirmar) return
+		setIsDeleting(true)
+		try {
+			await deactivateAsegurado(asegurado.id)
+			toast({ title: 'Asegurado eliminado', description: 'Ya no aparecerá en la lista de asegurados.' })
+			onClose()
+			await queryClient.invalidateQueries({ queryKey: ['asegurados'] })
+			await queryClient.invalidateQueries({ queryKey: ['polizas'] })
+		} catch (err) {
+			console.error(err)
+			toast({
+				title: 'Error',
+				description: 'No se pudo eliminar el asegurado.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsDeleting(false)
+		}
+	}, [asegurado?.id, onClose, queryClient, toast])
 
 	const handleWhatsApp = useCallback(() => {
 		const raw = asegurado?.phone
@@ -190,6 +220,18 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 										aria-label="Enviar correo"
 									>
 										<Send className="w-4 h-4" />
+									</button>
+									<div className="flex-1 min-w-[2rem]" />
+									<button
+										type="button"
+										onClick={handleEliminarAsegurado}
+										disabled={isDeleting}
+										title="Eliminar asegurado"
+										className="inline-flex items-center justify-center p-1.5 sm:p-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+										aria-label="Eliminar asegurado"
+									>
+										<Trash2 className="w-4 h-4" />
+										<span className="ml-1 hidden sm:inline">Eliminar asegurado</span>
 									</button>
 								</div>
 

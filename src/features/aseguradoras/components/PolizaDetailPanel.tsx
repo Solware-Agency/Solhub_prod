@@ -1,8 +1,10 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import { format } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
 import { SideDetailPanel } from './SideDetailPanel'
-import type { Poliza } from '@services/supabase/aseguradoras/polizas-service'
-import { CalendarDays, FileText, ShieldCheck, User } from 'lucide-react'
+import { deactivatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
+import { useToast } from '@shared/hooks/use-toast'
+import { CalendarDays, Edit, FileText, ShieldCheck, Trash2, User } from 'lucide-react'
 
 interface PolizaDetailPanelProps {
 	poliza: Poliza | null
@@ -12,6 +14,8 @@ interface PolizaDetailPanelProps {
 	onAseguradoClick?: (aseguradoId: string) => void
 	/** Al hacer clic en el nombre de la compañía (requiere aseguradora_id) */
 	onAseguradoraClick?: (aseguradoraId: string) => void
+	/** Al hacer clic en Editar póliza (abre modal de edición en el padre) */
+	onEditClick?: (poliza: Poliza) => void
 }
 
 const formatDate = (value?: string | null) => {
@@ -20,7 +24,42 @@ const formatDate = (value?: string | null) => {
 	return Number.isNaN(parsed.getTime()) ? value : format(parsed, 'dd/MM/yyyy')
 }
 
-export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, onAseguradoraClick }: PolizaDetailPanelProps) => {
+export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, onAseguradoraClick, onEditClick }: PolizaDetailPanelProps) => {
+	const queryClient = useQueryClient()
+	const { toast } = useToast()
+	const [isDeleting, setIsDeleting] = useState(false)
+
+	const handleEliminarPoliza = useCallback(async () => {
+		if (!poliza?.id) return
+		const confirmar = window.confirm(
+			'¿Eliminar esta póliza? Dejará de mostrarse en listados. Los datos se conservan.',
+		)
+		if (!confirmar) return
+		setIsDeleting(true)
+		try {
+			await deactivatePoliza(poliza.id)
+			toast({ title: 'Póliza eliminada', description: 'Ya no aparecerá en la lista de pólizas.' })
+			onClose()
+			await queryClient.invalidateQueries({ queryKey: ['polizas'] })
+			await queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
+			if (poliza.asegurado_id) {
+				await queryClient.invalidateQueries({ queryKey: ['polizas-by-asegurado', poliza.asegurado_id] })
+			}
+			if (poliza.aseguradora_id) {
+				await queryClient.invalidateQueries({ queryKey: ['polizas-by-aseguradora', poliza.aseguradora_id] })
+			}
+		} catch (err) {
+			console.error(err)
+			toast({
+				title: 'Error',
+				description: 'No se pudo eliminar la póliza.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsDeleting(false)
+		}
+	}, [poliza?.id, poliza?.asegurado_id, poliza?.aseguradora_id, onClose, queryClient, toast])
+
 	const InfoSection = useCallback(
 		({
 			title,
@@ -62,6 +101,30 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
 						{poliza.modalidad_pago}
 					</span>
+					{onEditClick && (
+						<button
+							type="button"
+							onClick={() => onEditClick(poliza)}
+							title="Editar póliza"
+							className="inline-flex items-center justify-center p-1.5 sm:p-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 cursor-pointer"
+							aria-label="Editar póliza"
+						>
+							<Edit className="w-4 h-4" />
+							<span className="ml-1 hidden sm:inline">Editar</span>
+						</button>
+					)}
+					<div className="flex-1 min-w-[2rem]" />
+					<button
+						type="button"
+						onClick={handleEliminarPoliza}
+						disabled={isDeleting}
+						title="Eliminar póliza"
+						className="inline-flex items-center justify-center p-1.5 sm:p-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+						aria-label="Eliminar póliza"
+					>
+						<Trash2 className="w-4 h-4" />
+						<span className="ml-1 hidden sm:inline">Eliminar póliza</span>
+					</button>
 				</div>
 
 				<InfoSection title="Información de póliza" icon={ShieldCheck}>

@@ -24,6 +24,7 @@ import { findAseguradoById, type Asegurado } from '@services/supabase/asegurador
 import {
 	createPoliza,
 	getPolizas,
+	updatePoliza,
 	type Poliza,
 } from '@services/supabase/aseguradoras/polizas-service'
 import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
@@ -50,6 +51,7 @@ const PolizasPage = () => {
 	const [selectedAseguradoForHistory, setSelectedAseguradoForHistory] = useState<Asegurado | null>(null)
 	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = useState(false)
 	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = useState<Aseguradora | null>(null)
+	const [editingPoliza, setEditingPoliza] = useState<Poliza | null>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
 		aseguradora_id: '',
@@ -151,6 +153,7 @@ const PolizasPage = () => {
 		})
 		setStep(0)
 		setSelectedAsegurado(null)
+		setEditingPoliza(null)
 	}
 
 	const openNewModal = () => {
@@ -158,15 +161,85 @@ const PolizasPage = () => {
 		setOpenModal(true)
 	}
 
+	const openForEdit = useCallback((poliza: Poliza) => {
+		setForm({
+			asegurado_id: poliza.asegurado_id,
+			aseguradora_id: poliza.aseguradora_id,
+			agente_nombre: poliza.agente_nombre ?? '',
+			numero_poliza: poliza.numero_poliza ?? '',
+			ramo: poliza.ramo ?? '',
+			suma_asegurada: poliza.suma_asegurada != null ? String(poliza.suma_asegurada) : '',
+			modalidad_pago: poliza.modalidad_pago,
+			estatus_poliza: poliza.estatus_poliza,
+			estatus_pago: (poliza.estatus_pago ?? 'Pendiente') as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
+			fecha_inicio: poliza.fecha_inicio?.slice(0, 10) ?? '',
+			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
+			dia_vencimiento: poliza.dia_vencimiento != null ? String(poliza.dia_vencimiento) : '',
+			fecha_prox_vencimiento: poliza.fecha_prox_vencimiento?.slice(0, 10) ?? '',
+			tipo_alerta: poliza.tipo_alerta ?? '',
+			dias_alerta: poliza.dias_alerta != null ? String(poliza.dias_alerta) : '',
+			dias_frecuencia: poliza.dias_frecuencia != null ? String(poliza.dias_frecuencia) : '',
+			dias_frecuencia_post: poliza.dias_frecuencia_post != null ? String(poliza.dias_frecuencia_post) : '',
+			dias_recordatorio: poliza.dias_recordatorio != null ? String(poliza.dias_recordatorio) : '',
+			pdf_url: poliza.pdf_url ?? '',
+			notas: poliza.notas ?? '',
+		})
+		setSelectedAsegurado(
+			poliza.asegurado
+				? ({ id: poliza.asegurado.id, full_name: poliza.asegurado.full_name, document_id: poliza.asegurado.document_id } as Asegurado)
+				: null,
+		)
+		setEditingPoliza(poliza)
+		setPanelOpen(false)
+		setOpenModal(true)
+		setStep(1)
+	}, [])
+
 	const openDetailPanel = (row: Poliza) => {
 		setSelectedPoliza(row)
 		setPanelOpen(true)
 	}
 
 	const handleSave = async () => {
+		if (!editingPoliza) {
+			setSaving(true)
+			try {
+				await createPoliza({
+					asegurado_id: form.asegurado_id,
+					aseguradora_id: form.aseguradora_id,
+					agente_nombre: form.agente_nombre,
+					numero_poliza: form.numero_poliza,
+					ramo: form.ramo,
+					suma_asegurada: form.suma_asegurada ? Number(form.suma_asegurada) : null,
+					modalidad_pago: form.modalidad_pago,
+					estatus_poliza: form.estatus_poliza,
+					estatus_pago: form.estatus_pago,
+					fecha_inicio: form.fecha_inicio,
+					fecha_vencimiento: form.fecha_vencimiento,
+					dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
+					fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
+					tipo_alerta: form.tipo_alerta || null,
+					dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
+					dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
+					dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
+					dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
+					pdf_url: form.pdf_url || null,
+					notas: form.notas || null,
+				})
+				queryClient.invalidateQueries({ queryKey: ['polizas'] })
+				setOpenModal(false)
+				toast({ title: 'Póliza creada' })
+			} catch (err) {
+				console.error(err)
+				toast({ title: 'Error al crear póliza', variant: 'destructive' })
+			} finally {
+				setSaving(false)
+			}
+			return
+		}
 		setSaving(true)
 		try {
-			await createPoliza({
+			await updatePoliza(editingPoliza.id, {
 				asegurado_id: form.asegurado_id,
 				aseguradora_id: form.aseguradora_id,
 				agente_nombre: form.agente_nombre,
@@ -189,11 +262,19 @@ const PolizasPage = () => {
 				notas: form.notas || null,
 			})
 			queryClient.invalidateQueries({ queryKey: ['polizas'] })
+			queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
+			if (editingPoliza.asegurado_id) {
+				queryClient.invalidateQueries({ queryKey: ['polizas-by-asegurado', editingPoliza.asegurado_id] })
+			}
+			if (editingPoliza.aseguradora_id) {
+				queryClient.invalidateQueries({ queryKey: ['polizas-by-aseguradora', editingPoliza.aseguradora_id] })
+			}
 			setOpenModal(false)
-			toast({ title: 'Póliza creada' })
+			setEditingPoliza(null)
+			toast({ title: 'Póliza actualizada' })
 		} catch (err) {
 			console.error(err)
-			toast({ title: 'Error al crear póliza', variant: 'destructive' })
+			toast({ title: 'Error al actualizar póliza', variant: 'destructive' })
 		} finally {
 			setSaving(false)
 		}
@@ -202,7 +283,20 @@ const PolizasPage = () => {
 	const stepContent = () => {
 		switch (step) {
 			case 0:
-				return (
+				return editingPoliza ? (
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<Label>Asegurado</Label>
+							<p className="text-xs text-muted-foreground">El asegurado no se puede cambiar al editar la póliza.</p>
+							{selectedAsegurado && (
+								<div className="border rounded-md p-3 text-sm bg-muted/30">
+									<p className="font-medium">{selectedAsegurado.full_name}</p>
+									<p className="text-xs text-gray-500">{selectedAsegurado.document_id}</p>
+								</div>
+							)}
+						</div>
+					</div>
+				) : (
 					<div className="space-y-4">
 						<div className="space-y-2">
 							<Label>Buscar asegurado</Label>
@@ -643,7 +737,7 @@ const PolizasPage = () => {
 					overlayClassName="bg-black/60"
 				>
 					<DialogHeader>
-						<DialogTitle>Nueva póliza</DialogTitle>
+						<DialogTitle>{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
 					</DialogHeader>
 					<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-4">
 						{STEPS.map((label, idx) => (
@@ -668,7 +762,7 @@ const PolizasPage = () => {
 								<Button onClick={() => setStep((prev) => prev + 1)}>Siguiente</Button>
 							) : (
 								<Button onClick={handleSave} disabled={saving}>
-									{saving ? 'Guardando...' : 'Guardar póliza'}
+									{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
 								</Button>
 							)}
 						</div>
@@ -682,6 +776,7 @@ const PolizasPage = () => {
 				onClose={() => setPanelOpen(false)}
 				onAseguradoClick={handleAseguradoClick}
 				onAseguradoraClick={handleAseguradoraClick}
+				onEditClick={openForEdit}
 			/>
 
 			<AseguradoHistoryModal

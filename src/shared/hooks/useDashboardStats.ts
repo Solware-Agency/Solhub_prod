@@ -348,6 +348,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						return sum
 					}, 0) || 0
 
+				// Total de bloques (bloques_biopsia) de todos los casos del período
+				const totalBlocks =
+					transformedFilteredRecords?.reduce((sum, record) => sum + Number(record.bloques_biopsia || 0), 0) || 0
+
 				// Calculate revenue for the filtered period (REAL paid amounts in USD)
 				let monthlyRevenue = 0
 				transformedFilteredRecords?.forEach((record) => {
@@ -654,6 +658,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					topTreatingDoctors,
 					revenueByOrigin,
 					totalCases,
+					totalBlocks,
 					totalCasesWithPathologist,
 					totalCasesWithCitotecno,
 					casesByReceptionist,
