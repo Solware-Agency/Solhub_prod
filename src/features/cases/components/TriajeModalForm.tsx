@@ -1514,7 +1514,19 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     );
   }
 
+  // Debug: Ver por qué no se muestra la vista de solo lectura
+  console.log('🔍 Debug TriageView Condition:', {
+    existingTriage: !!existingTriage,
+    triageComplete,
+    isEditing,
+    forceEditMode,
+    isDraft: existingTriage?.is_draft,
+    userRole: { isMedico, isEnfermero },
+    patientType: (case_ as any)?.tipo_paciente,
+  });
+
   if (existingTriage && triageComplete && !isEditing && !forceEditMode) {
+    console.log('✅ Mostrando vista de solo lectura');
     return (
       <div className='p-4'>
         <TriageInfoDisplay
@@ -1523,6 +1535,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       </div>
     );
   }
+
+  console.log('⚠️ Mostrando formulario de edición');
 
   // Mostrar formulario (ya sea porque no existe triaje, o porque estamos editando)
   return (
