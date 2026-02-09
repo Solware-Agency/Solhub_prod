@@ -170,7 +170,6 @@ export const AseguradoraDetailPanel = ({
 				<div className="space-y-4">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-							<Building2 className="w-3 h-3" />
 							{aseguradora.codigo_interno || 'Sin código'}
 						</span>
 						{aseguradora.activo ? (

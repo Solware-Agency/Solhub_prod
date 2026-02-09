@@ -20,7 +20,6 @@ const PolizaCard = ({ poliza, onClick }: PolizaCardProps) => {
 					</span>
 				)}
 				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-					<ShieldCheck className="w-3 h-3" />
 					{poliza.estatus_poliza}
 				</span>
 				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">

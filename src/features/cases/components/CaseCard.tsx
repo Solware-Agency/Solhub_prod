@@ -24,13 +24,6 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 	const { laboratory } = useLaboratory()
 	const isSpt = laboratory?.slug === 'spt'
 	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
-	// Marihorgen + Inmunohistoquímica: mostrar código de exhibición (puede estar vacío); si no, código interno
-	const displayCode =
-		isMarihorgen && case_.exam_type === 'Inmunohistoquímica'
-			? (case_.owner_display_code ?? '')
-			: (case_.code ?? '')
-	const showCodeBadge = isMarihorgen && case_.exam_type === 'Inmunohistoquímica' ? true : !!case_.code
-
 	// Obtener tipo de paciente para mostrar badge si es menor o animal
 	const { data: patientType } = useQuery({
 		queryKey: ['patient-type', case_?.patient_id],
@@ -54,6 +47,16 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 
 	const isMenor = patientType === 'menor'
 	const isAnimal = patientType === 'animal'
+
+	// Marihorgen + Inmunohistoquímica: mostrar código de exhibición; Marihorgen + Animal: badge sin código; resto: código interno
+	const hideCodeForAnimal = isMarihorgen && isAnimal
+	const displayCode = hideCodeForAnimal
+		? ''
+		: isMarihorgen && case_.exam_type === 'Inmunohistoquímica'
+			? (case_.owner_display_code ?? '')
+			: (case_.code ?? '')
+	const showCodeBadge =
+		isMarihorgen && (case_.exam_type === 'Inmunohistoquímica' || !!case_.code || isAnimal) ? true : !!case_.code
 
 	const formatBadgeDate = (value: string) => {
 		const normalized = value.trim()

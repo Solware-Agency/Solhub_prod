@@ -477,6 +477,22 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
       },
       enabled: !!currentCase?.patient_id && isOpen,
     });
+
+    // Marihorgen: tipo de paciente para ocultar código en casos Animal (badge visible, sin texto)
+    const { data: patientTipoData } = useQuery({
+      queryKey: ['patient-tipo', currentCase?.patient_id],
+      queryFn: async () => {
+        if (!currentCase?.patient_id) return null;
+        const { data } = await supabase
+          .from('patients')
+          .select('tipo_paciente')
+          .eq('id', currentCase.patient_id)
+          .single();
+        return (data as { tipo_paciente?: string } | null) ?? null;
+      },
+      enabled: !!currentCase?.patient_id && isOpen && isMarihorgen,
+    });
+    const isPatientAnimal = (patientTipoData?.tipo_paciente ?? '') === 'animal';
     
     // Load patient data for EditPatientInfoModal - COMMENTED OUT (not needed, using inline image_url field)
     /*
@@ -1739,7 +1755,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                     </div>
                   </div>
                   <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden'>
-                    {isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' ? (
+                    {isMarihorgen && isPatientAnimal ? (
+                      <span className='inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-[2rem] text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 flex-shrink-0'>
+                        {''}
+                      </span>
+                    ) : isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' ? (
                       isEditing && isOwner ? (
                         <Input
                           type="text"

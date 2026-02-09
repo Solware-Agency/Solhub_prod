@@ -155,8 +155,7 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 							<div className="p-4 sm:p-6 flex-shrink-0">
 								<div className="flex flex-wrap items-center gap-2 mb-4">
 									<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-										<User className="w-3 h-3" />
-										{asegurado.tipo_asegurado === 'Persona natural' ? 'Natural' : 'Jurídico'}
+										{asegurado.tipo_asegurado === 'Persona natural' ? 'Natural' : 'Jurídica'}
 									</span>
 									{asegurado.codigo && (
 										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">

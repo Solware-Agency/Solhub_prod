@@ -55,11 +55,11 @@ import { useLaboratory } from '@app/providers/LaboratoryContext';
 import { useAuth } from '@app/providers/AuthContext';
 
 const MARIHORGEN_TEMPLATES = [
-  { id: 'cx_doble_firma', label: 'CX DOBLE FIRMA' },
-  { id: 'biopsia', label: 'BIOPSIA' },
-  { id: 'biopsias_de_revision', label: 'BIOPSIAS DE REVISIÓN' },
-  { id: 'prostata', label: 'PROSTATA' },
-  { id: 'puncion_doble_pagina', label: 'PUNCIÓN DOBLE PAGINA' },
+  { id: 'biopsia', label: 'Biopsia' },
+  { id: 'biopsias_de_revision', label: 'Biopsia revisión' },
+  { id: 'CX', label: 'Citología' },
+  { id: 'cx_doble_firma', label: 'Citología Doble firma' },
+  { id: 'prostata', label: 'Próstata por punción' },
   { id: 'ihq', label: 'IHQ' },
 ] as const;
 

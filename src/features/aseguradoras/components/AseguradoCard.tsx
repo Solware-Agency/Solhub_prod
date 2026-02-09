@@ -20,8 +20,7 @@ const AseguradoCard = ({ asegurado, onClick }: AseguradoCardProps) => {
 					</span>
 				)}
 				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-					<User className="w-3 h-3" />
-					{asegurado.tipo_asegurado}
+					{asegurado.tipo_asegurado === 'Persona natural' ? 'Natural' : 'Jurídica'}
 				</span>
 			</div>
 

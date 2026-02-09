@@ -321,9 +321,7 @@ function LoginForm() {
 
               <div>
                 <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
-                  {hasBranding && branding?.laboratoryName
-                    ? `Bienvenido a ${branding.laboratoryName}`
-                    : 'Bienvenido a SolHub'}
+                  Bienvenido a SolHub
                 </h1>
               </div>
               <p className='text-slate-300'>
