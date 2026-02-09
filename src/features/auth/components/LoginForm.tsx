@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { signIn } from '@services/supabase/auth/auth';
 import { useAuth } from '@app/providers/AuthContext';
@@ -317,24 +317,6 @@ function LoginForm() {
                     />
                   )}
                 </>
-              )}
-
-              {/* Botón "No es mi laboratorio" - Solo visible si hay branding */}
-              {hasBranding && (
-                <button
-                  onClick={() => {
-                    clearBranding();
-                    toast({
-                      title: 'Branding limpiado',
-                      description: 'Ahora verás el logo genérico del sistema.',
-                    });
-                  }}
-                  className='absolute -top-2 -right-2 text-white/60 hover:text-white/90 transition-colors text-xs flex items-center gap-1 bg-black/20 hover:bg-black/40 px-2 py-1 rounded-full border border-white/10'
-                  title='Cambiar de laboratorio'
-                >
-                  <RefreshCw size={12} />
-                  <span>Cambiar lab</span>
-                </button>
               )}
 
               <div>
