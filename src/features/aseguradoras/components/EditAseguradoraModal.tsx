@@ -204,8 +204,8 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="true">Activa</SelectItem>
-													<SelectItem value="false">No disponible</SelectItem>
+													<SelectItem value="true">Activo</SelectItem>
+													<SelectItem value="false">Inactivo</SelectItem>
 												</SelectContent>
 											</Select>
 										</div>

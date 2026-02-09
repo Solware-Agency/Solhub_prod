@@ -19,9 +19,15 @@ const AseguradoraCard = ({ aseguradora, onClick }: AseguradoraCardProps) => {
 						{aseguradora.codigo}
 					</span>
 				)}
-				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-					{aseguradora.activo ? 'Activa' : 'No disponible'}
-				</span>
+				{aseguradora.activo ? (
+					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+						Activo
+					</span>
+				) : (
+					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+						Inactivo
+					</span>
+				)}
 			</div>
 
 			<div className="grid grid-cols-1 gap-1.5 mb-1.5">

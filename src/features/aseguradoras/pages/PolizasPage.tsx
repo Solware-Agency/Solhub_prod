@@ -645,7 +645,7 @@ const PolizasPage = () => {
 					<DialogHeader>
 						<DialogTitle>Nueva póliza</DialogTitle>
 					</DialogHeader>
-					<div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+					<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-4">
 						{STEPS.map((label, idx) => (
 							<span key={label} className={idx === step ? 'text-primary font-medium' : ''}>
 								{label}

@@ -174,7 +174,7 @@ const CompaniasPage = () => {
 											Teléfono: row.telefono || '',
 											Email: row.email || '',
 											Web: row.web || '',
-											Activo: row.activo ? 'Sí' : 'No',
+											Activo: row.activo ? 'Activo' : 'Inactivo',
 										})),
 									)
 								}
@@ -288,8 +288,8 @@ const CompaniasPage = () => {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="true">Activa</SelectItem>
-									<SelectItem value="false">No disponible</SelectItem>
+									<SelectItem value="true">Activo</SelectItem>
+									<SelectItem value="false">Inactivo</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

@@ -166,11 +166,11 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 									</span>
 									{aseguradora.activo ? (
 										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-											Activa
+											Activo
 										</span>
 									) : (
 										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-											No disponible
+											Inactivo
 										</span>
 									)}
 									<button
@@ -241,7 +241,7 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.direccion || 'Sin dirección'}</p>
 									</InfoSection>
 									<InfoSection title="Estado" icon={Globe}>
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.activo ? 'Activa' : 'No disponible'}</p>
+										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.activo ? 'Activo' : 'Inactivo'}</p>
 									</InfoSection>
 								</div>
 							</div>
