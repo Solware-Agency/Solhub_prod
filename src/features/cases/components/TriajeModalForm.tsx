@@ -81,12 +81,15 @@ interface TriajeFormData {
   planDeAccion: string;
   lugarNacimiento: string;
   telefonoEmergencia: string;
+  parentesco: string;
+  personaQuienLlama: string;
 }
 
 interface TriajeModalFormProps {
   case_: MedicalCaseWithPatient | null;
   onClose: () => void;
   onSave?: () => void;
+  onCancelEdit?: () => void;
   showOnlyVitalSigns?: boolean;
   userRole?: string;
   forceEditMode?: boolean;
@@ -95,7 +98,8 @@ interface TriajeModalFormProps {
 // Componente para mostrar información de la historia clínica existente
 const TriageInfoDisplay: React.FC<{
   record: TriageRecord;
-}> = ({ record }) => {
+  onClose: () => void;
+}> = ({ record, onClose }) => {
   // Validar que el record existe
   if (!record) {
     return (
@@ -491,7 +495,7 @@ const TriageInfoDisplay: React.FC<{
       )}
 
       {/* Datos adicionales - al final */}
-      {(record.lugar_de_nacimiento || record.telefono_emergencia) && (
+      {(record.lugar_de_nacimiento || record.telefono_emergencia || (record as any).parentesco || (record as any).persona_quien_llama) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
@@ -516,9 +520,37 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{record.telefono_emergencia}</p>
               </div>
             )}
+            {(record as any).parentesco && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Parentesco
+                </p>
+                <p className='text-sm'>{(record as any).parentesco}</p>
+              </div>
+            )}
+            {(record as any).persona_quien_llama && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Persona quien llama
+                </p>
+                <p className='text-sm'>{(record as any).persona_quien_llama}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* Botón Cerrar */}
+      <div className='flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700'>
+        <Button
+          type='button'
+          onClick={onClose}
+          variant='outline'
+          className='px-6'
+        >
+          Cerrar
+        </Button>
+      </div>
     </div>
   );
 };
@@ -527,6 +559,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   case_,
   onClose,
   onSave,
+  onCancelEdit,
   showOnlyVitalSigns = false,
   userRole,
   forceEditMode = false,
@@ -563,6 +596,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     planDeAccion: '',
     lugarNacimiento: '',
     telefonoEmergencia: '',
+    parentesco: '',
+    personaQuienLlama: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -761,6 +796,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           planDeAccion: existingTriage.plan_de_accion || '',
           lugarNacimiento: existingTriage.lugar_de_nacimiento || '',
           telefonoEmergencia: existingTriage.telefono_emergencia || '',
+          parentesco: (existingTriage as any).parentesco || '',
+          personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
           cafe: existingTriage.cafe?.toString() || '',
           alcohol: existingTriage.alcohol || '',
           ...(existingTriage.tabaco !== null &&
@@ -826,6 +863,57 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     // Si inicia con ".", prefijar "0" para mejor UX/parseo
     if (v.startsWith('.')) v = `0${v}`;
     handleInputChange(field, v);
+  };
+
+  // Función para cancelar la edición y resetear los datos al estado original
+  const handleCancelEdit = () => {
+    if (!existingTriage) {
+      // Si no hay triaje existente, simplemente cerrar
+      onClose();
+      return;
+    }
+
+    // Resetear el formulario a los valores originales del triaje existente
+    setFormData({
+      frecuenciaCardiaca: existingTriage.heart_rate?.toString() || '',
+      frecuenciaRespiratoria: existingTriage.respiratory_rate?.toString() || '',
+      saturacionOxigeno: existingTriage.oxygen_saturation?.toString() || '',
+      temperatura: existingTriage.temperature_celsius?.toString() || '',
+      presionArterial: existingTriage.blood_pressure?.toString() || '',
+      glicemia: existingTriage.blood_glucose?.toString() || '',
+      talla: existingTriage.height_cm?.toString() || '',
+      peso: existingTriage.weight_kg?.toString() || '',
+      imc: existingTriage.bmi?.toString() || '',
+      motivoConsulta: existingTriage.reason || '',
+      antecedentesPersonales: existingTriage.personal_background || '',
+      antecedentesFamiliares: existingTriage.family_history || '',
+      habitosPsicobiologicos: existingTriage.psychobiological_habits || '',
+      examenFisico: existingTriage.examen_fisico || '',
+      comentario: existingTriage.comment || '',
+      enfermedadActual: existingTriage.enfermedad_actual || '',
+      antecedentesQuirurgicos: existingTriage.antecedentes_quirurgicos || '',
+      antecedentesSexuales: (existingTriage as { antecedentes_sexuales?: string | null }).antecedentes_sexuales || '',
+      diagnostico: existingTriage.diagnostico || '',
+      planDeAccion: existingTriage.plan_de_accion || '',
+      lugarNacimiento: existingTriage.lugar_de_nacimiento || '',
+      telefonoEmergencia: existingTriage.telefono_emergencia || '',
+      parentesco: (existingTriage as any).parentesco || '',
+      personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
+      cafe: existingTriage.cafe?.toString() || '',
+      alcohol: existingTriage.alcohol || '',
+      tabaco: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0 ? 'Si' : 'No',
+      indiceTabaquico: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0
+        ? `Índice: ${existingTriage.tabaco} paq/año (${getSmokingRiskCategory(existingTriage.tabaco)})`
+        : '',
+      cigarrillosPorDia: '',
+      anosFumando: '',
+    });
+
+    // Notificar al componente padre que se canceló la edición (para resetear forceEditMode)
+    onCancelEdit?.();
+
+    // Cambiar a vista de solo lectura
+    setIsEditing(false);
   };
 
   // Función para validar rangos de signos vitales
@@ -1107,6 +1195,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     plan_de_accion: formData.planDeAccion || null,
     lugar_de_nacimiento: formData.lugarNacimiento || null,
     telefono_emergencia: formData.telefonoEmergencia || null,
+    parentesco: formData.parentesco || null,
+    persona_quien_llama: formData.personaQuienLlama || null,
     ...buildVitalSignsData(),
   });
 
@@ -1505,6 +1595,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       <div className='p-4'>
         <TriageInfoDisplay
           record={existingTriage}
+          onClose={onClose}
         />
       </div>
     );
@@ -2229,6 +2320,36 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Users className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Parentesco
+                  </label>
+                  <Input
+                    placeholder='Ej: Padre, Madre, Hijo'
+                    value={formData.parentesco}
+                    onChange={(e) =>
+                      handleInputChange('parentesco', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Persona quien llama
+                  </label>
+                  <Input
+                    placeholder='Nombre de a quién realiza la llamada'
+                    value={formData.personaQuienLlama}
+                    onChange={(e) =>
+                      handleInputChange('personaQuienLlama', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
@@ -2276,9 +2397,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             <Button
               type='button'
               onClick={() => {
-                void saveDraft();
-                // Cerrar el modal inmediatamente cuando se cancela la edición
-                onClose();
+                // Si está editando un triaje completo, volver a vista de solo lectura sin guardar
+                // Si no, cerrar el modal completamente
+                if (isEditing && triageComplete) {
+                  handleCancelEdit();
+                } else {
+                  onClose();
+                }
               }}
               disabled={loading}
               variant='outline'
