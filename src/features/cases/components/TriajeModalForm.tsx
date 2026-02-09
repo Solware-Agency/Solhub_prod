@@ -675,66 +675,37 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   }, [formData.cigarrillosPorDia, formData.anosFumando]);
 
   // Función para determinar si la historia clínica está completa
+  // Función para determinar si la historia clínica está completa
+  // Campos obligatorios: Motivo de consulta, SpO2, PA, Talla, Peso
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
-    if (!triage) return false;
-    if (triage.is_draft) return false;
-
-    // Obtener tipo de paciente del case
-    const patientType = (case_ as any)?.tipo_paciente;
-    const isDependiente = patientType === 'menor' || patientType === 'animal';
-
-    // Para enfermero: solo necesita signos vitales
-    if (isEnfermero) {
-      return !!(
-        triage.heart_rate ||
-        triage.respiratory_rate ||
-        triage.oxygen_saturation ||
-        triage.temperature_celsius ||
-        triage.blood_pressure ||
-        triage.height_cm ||
-        triage.weight_kg
-      );
+    if (!triage) {
+      console.log('🔍 isTriageComplete: No hay triage');
+      return false;
+    }
+    if (triage.is_draft) {
+      console.log('🔍 isTriageComplete: Es borrador');
+      return false;
     }
 
-    // Para médico: lógica diferente según tipo de paciente
-    if (isMedico) {
-      const hasVitalSigns = !!(
-        triage.heart_rate ||
-        triage.respiratory_rate ||
-        triage.oxygen_saturation ||
-        triage.temperature_celsius ||
-        triage.blood_pressure ||
-        triage.height_cm ||
-        triage.weight_kg
-      );
-
-      const hasClinicalData = !!(
-        triage.reason ||
-        triage.personal_background ||
-        triage.family_history ||
-        triage.examen_fisico ||
-        triage.psychobiological_habits ||
-        triage.tabaco !== null ||
-        triage.cafe !== null ||
-        triage.alcohol
-      );
-
-      // Para dependientes (menores/animales): solo necesitan signos vitales O datos clínicos
-      if (isDependiente) {
-        return hasVitalSigns || hasClinicalData;
-      }
-
-      // Para adultos: necesitan signos vitales Y datos clínicos
-      return hasVitalSigns && hasClinicalData;
-    }
-
-    // Para otros usuarios: necesita datos clínicos
-    return !!(
-      triage.reason ||
-      triage.personal_background ||
-      triage.family_history ||
-      triage.examen_fisico
+    // Campos obligatorios: Motivo de consulta, SpO2, Presión Arterial, Talla, Peso
+    const hasRequired = !!(
+      triage.reason &&
+      triage.oxygen_saturation &&
+      triage.blood_pressure &&
+      triage.height_cm &&
+      triage.weight_kg
     );
+
+    console.log('🔍 isTriageComplete:', {
+      hasRequired,
+      reason: triage.reason,
+      oxygen_saturation: triage.oxygen_saturation,
+      blood_pressure: triage.blood_pressure,
+      height_cm: triage.height_cm,
+      weight_kg: triage.weight_kg,
+    });
+
+    return hasRequired;
   };
 
   // Si el triaje está completo y no estamos editando, mostrar vista
@@ -939,6 +910,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return value !== null && value !== undefined && value.trim().length > 0;
     };
     
+    // Verificar Motivo de consulta (obligatorio)
+    if (!hasValue(formData.motivoConsulta)) {
+      missingFields.push('Motivo de consulta');
+    }
+
     // Verificar cada signo vital obligatorio
     // FC (Frecuencia Cardíaca) - No es obligatorio
     // FR (Frecuencia Respiratoria) - No es obligatorio
@@ -946,11 +922,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     // Glicemia - No es obligatorio
 
     if (!hasValue(formData.saturacionOxigeno)) {
-      missingFields.push('Saturación de Oxígeno');
+      missingFields.push('SpO₂ (Saturación de Oxígeno)');
     }
 
     if (!hasValue(formData.presionArterial)) {
-      missingFields.push('Presión Arterial');
+      missingFields.push('P.A. (Presión Arterial)');
     }
     
     if (!hasValue(formData.peso)) {
@@ -969,7 +945,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         
       return {
         isValid: false,
-        errorMessage: `Es obligatorio completar todos los signos vitales. Falta(n): ${fieldsText}.`
+        errorMessage: `Es obligatorio completar todos los campos requeridos. Falta(n): ${fieldsText}.`
       };
     }
     
@@ -1151,9 +1127,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         const payloadHash = JSON.stringify(payload);
         if (payloadHash === lastDraftPayloadRef.current) return;
 
-        const targetId =
-          (existingTriage?.is_draft ? existingTriage.id : null) ||
-          draftRecordIdRef.current;
+        // Si estamos editando un triaje existente, SIEMPRE usar su ID (sea draft o completo)
+        const targetId = existingTriage?.id || draftRecordIdRef.current;
         if (targetId) {
           await updateTriageRecord(targetId, payload);
         } else {
@@ -1171,9 +1146,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         const payloadHash = JSON.stringify(payload);
         if (payloadHash === lastDraftPayloadRef.current) return;
 
-        const targetId =
-          (existingTriage?.is_draft ? existingTriage.id : null) ||
-          draftRecordIdRef.current;
+        // Si estamos editando un triaje existente, SIEMPRE usar su ID (sea draft o completo)
+        const targetId = existingTriage?.id || draftRecordIdRef.current;
         if (targetId) {
           await updateTriageRecord(targetId, payload);
         } else {
@@ -1255,7 +1229,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     if (!requiredValidation.isValid) {
       setError(requiredValidation.errorMessage);
       toast({
-        title: '⚠️ Signos vitales incompletos',
+        title: '⚠️ Campos obligatorios incompletos',
         description: requiredValidation.errorMessage,
         variant: 'destructive',
       });
@@ -1543,6 +1517,21 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     <TooltipProvider delayDuration={0}>
       <div className='p-4 sm:p-6'>
         <form onSubmit={handleSubmit} className='space-y-3 sm:space-y-4'>
+          {/* Banner informativo de campos obligatorios */}
+          <div className='bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 p-3 rounded-r-lg'>
+            <div className='flex items-start gap-2'>
+              <Info className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
+              <div>
+                <p className='text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1'>
+                  Campos obligatorios para guardar
+                </p>
+                <p className='text-xs text-blue-700 dark:text-blue-300'>
+                  <span className='font-medium'>Motivo de consulta</span>, <span className='font-medium'>SpO₂</span>, <span className='font-medium'>P.A.</span>, <span className='font-medium'>Talla</span> y <span className='font-medium'>Peso</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Sección 1: Examen Físico y Observaciones (6 campos en 2 filas de 3) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
@@ -1557,7 +1546,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
                       <MessageSquare className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
-                      Motivo de consulta
+                      Motivo de consulta <span className='text-red-500'>*</span>
                     </label>
                     <Textarea
                       placeholder='Ingrese el motivo de consulta'
@@ -2088,7 +2077,19 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 <div className='flex-1 min-w-[150px]'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Gauge className='h-4 w-4 text-red-600 dark:text-red-400' />
-                    Presión arterial <span className='text-red-500'>*</span>
+                    P.A. <span className='text-red-500'>*</span>
+                    <TooltipPrimitive.Root delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Info className='h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors' />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side='top'
+                        sideOffset={5}
+                        className='!z-[1000001]'
+                      >
+                        <p>Presión Arterial</p>
+                      </TooltipContent>
+                    </TooltipPrimitive.Root>
                   </label>
                   <Input
                     type='text'
