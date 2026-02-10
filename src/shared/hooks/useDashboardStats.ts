@@ -86,6 +86,8 @@ export interface DashboardStats {
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number
+	/** Casos del período con al menos un pago en bolívares */
+	casesWithPaymentInBolivares?: number
 	// Porcentajes de crecimiento vs periodo anterior
 	revenueGrowthPercentage: number
 	casesGrowthPercentage: number
@@ -376,8 +378,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 			// Calculate revenue by currency (Bs vs $) for filtered period
 			let monthlyRevenueBolivares = 0
 				let monthlyRevenueDollars = 0
+				let casesWithPaymentInBolivares = 0
 
 				transformedFilteredRecords?.forEach((record) => {
+					let hasVESPayment = false
 					// Revisar todos los métodos de pago del caso
 					for (let i = 1; i <= 4; i++) {
 						const method = record[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string | null
@@ -387,12 +391,14 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 							if (isVESPaymentMethod(method)) {
 								// Si es método en bolívares, sumar directamente
 								monthlyRevenueBolivares += amount
+								hasVESPayment = true
 							} else {
 								// Si es método en dólares, sumar directamente
 								monthlyRevenueDollars += amount
 							}
 						}
 					}
+					if (hasVESPayment) casesWithPaymentInBolivares += 1
 				})
 
 				// Calculate new patients in the filtered period - usando patient_id de la nueva estructura
@@ -666,6 +672,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					casesByCitotecno: hasCitotecno ? casesByCitotecno : [],
 					monthlyRevenueBolivares,
 					monthlyRevenueDollars,
+					casesWithPaymentInBolivares,
 					revenueGrowthPercentage,
 					casesGrowthPercentage,
 				}
