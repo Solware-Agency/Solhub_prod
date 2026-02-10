@@ -55,14 +55,31 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 	// Obtener información común del primer cambio (todos tienen la misma sesión)
 	const firstChange = changes[0]
 	const changedAt = new Date(firstChange.changed_at)
+
+	// Para casos: mismo criterio que ChangelogTable (evitar "Caso eliminado" en creaciones, solo código en badge, rojo si eliminado)
+	const getCaseEntityDisplay = (c: ChangeLogData) => {
+		const isCreated = c.field_name === 'created_record'
+		const hasCode = !!c.medical_records_clean?.code
+		const hasDeletedInfo = !!c.deleted_record_info?.trim()
+		if (isCreated && !hasCode && !hasDeletedInfo) {
+			const newVal = c.new_value || ''
+			const match = newVal.match(/Registro médico creado:\s*(.+)/)
+			return { text: match ? match[1].trim() : 'Nuevo registro', isDeletedCase: false }
+		}
+		const raw = c.medical_records_clean?.code || c.deleted_record_info || 'Caso eliminado'
+		const text = raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw
+		return { text, isDeletedCase: raw === 'Caso eliminado' }
+	}
+
 	const entityName =
 		firstChange.entity_type === 'patient'
 			? firstChange.patients?.nombre || 'Paciente eliminado'
-			: firstChange.medical_records_clean?.code || 'Caso eliminado'
+			: getCaseEntityDisplay(firstChange).text
 	const entityId =
 		firstChange.entity_type === 'patient'
 			? firstChange.patients?.cedula
 			: firstChange.medical_records_clean?.code
+	const isCaseDeletedBadge = firstChange.entity_type !== 'patient' && getCaseEntityDisplay(firstChange).isDeletedCase
 
 	// Función para traducir nombres de campos
 	const translateFieldLabel = (fieldName: string, fieldLabel: string): string => {
@@ -164,7 +181,13 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											)}
 										</>
 									) : (
-										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
+										<span
+											className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+												isCaseDeletedBadge
+													? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+													: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+											}`}
+										>
 											{entityName}
 										</span>
 									)}
