@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { useToast } from './use-toast'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { getAllCasesWithPatientInfo } from '@/services/supabase/cases/medical-cases-service'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
-import { EXPORT_COLUMN_OPTIONS, EXPORT_COLUMN_KEYS } from '@shared/constants/exportColumns'
+import { EXPORT_COLUMN_OPTIONS } from '@shared/constants/exportColumns'
+import { useToast } from './use-toast'
 
 type UnifiedMedicalRecord = MedicalCaseWithPatient
 
@@ -62,6 +63,21 @@ interface ServerFilters {
 
 export const useExportToExcel = () => {
 	const { toast } = useToast()
+	const { laboratory } = useLaboratory()
+	// SPT tiene pagos deshabilitados: no mostrar columnas de Pagos (por feature o por slug)
+	const hasPayment =
+		Boolean(laboratory?.features?.hasPayment) && laboratory?.slug !== 'spt'
+
+	// Columnas visibles según features del lab (ej. SPT sin hasPayment no ve columnas de Pagos)
+	const effectiveOptions = useMemo(
+		() =>
+			EXPORT_COLUMN_OPTIONS.filter(
+				(c) => !c.feature || (c.feature === 'hasPayment' && hasPayment),
+			),
+		[hasPayment],
+	)
+	const effectiveKeys = useMemo(() => effectiveOptions.map((c) => c.key), [effectiveOptions])
+
 	const [isModalOpen, setIsModalOpen] = useState(false)
 	const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false)
 	const [selectedColumnKeys, setSelectedColumnKeys] = useState<string[] | null>(null)
@@ -118,7 +134,7 @@ export const useExportToExcel = () => {
 					return
 				}
 
-				const keysToExport = selectedKeys && selectedKeys.length > 0 ? selectedKeys : EXPORT_COLUMN_KEYS
+				const keysToExport = selectedKeys && selectedKeys.length > 0 ? selectedKeys : effectiveKeys
 
 				// Preparar los datos para Excel
 				const fullRows = cases.map((case_) => {
@@ -170,7 +186,7 @@ export const useExportToExcel = () => {
 				const ws = XLSX.utils.json_to_sheet(fullRows)
 
 				// Ancho de columnas según catálogo (mismo orden que keysToExport)
-				const keyToWidth = Object.fromEntries(EXPORT_COLUMN_OPTIONS.map((c) => [c.key, c.defaultWidth]))
+				const keyToWidth = Object.fromEntries(effectiveOptions.map((c) => [c.key, c.defaultWidth]))
 				const colWidths = keysToExport.map((k) => ({ wch: keyToWidth[k] ?? 15 }))
 				ws['!cols'] = colWidths
 
@@ -224,7 +240,7 @@ export const useExportToExcel = () => {
 				})
 			}
 		},
-		[toast],
+		[toast, effectiveKeys, effectiveOptions],
 	)
 
 	const handleConfirmExport = useCallback(async () => {
@@ -241,15 +257,19 @@ export const useExportToExcel = () => {
 	}, [])
 
 	const handleApplyColumnSelection = useCallback((keys: string[]) => {
-		setSelectedColumnKeys(keys.length === EXPORT_COLUMN_KEYS.length ? null : keys)
+		setSelectedColumnKeys(keys.length === effectiveKeys.length ? null : keys)
 		setIsColumnsModalOpen(false)
-	}, [])
+	}, [effectiveKeys.length])
 
-	const exportColumnOptions = EXPORT_COLUMN_OPTIONS.map((c) => ({
-		key: c.key,
-		label: c.label,
-		group: c.group,
-	}))
+	const exportColumnOptions = useMemo(
+		() =>
+			effectiveOptions.map((c) => ({
+				key: c.key,
+				label: c.label,
+				group: c.group,
+			})),
+		[effectiveOptions],
+	)
 
 	return {
 		exportToExcel,
