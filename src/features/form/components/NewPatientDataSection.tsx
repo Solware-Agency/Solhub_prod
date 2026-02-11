@@ -8,21 +8,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { type Control } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
-import { FormField, FormItem, FormLabel, FormControl } from '@shared/components/ui/form'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
-import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
-import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { CheckCircle, CalendarIcon, Phone, Mail, User, Edit, Baby, Dog, Info } from 'lucide-react'
+import { CheckCircle, Phone, Mail, User, Edit, Baby, Dog, Info } from 'lucide-react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { cn } from '@shared/lib/cn'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { Calendar } from '@shared/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { PatientSearchAutocomplete, type PatientProfile } from '@features/patients/components/PatientSearchAutocomplete'
-import { PatientProfileSelector } from '@features/patients/components/PatientProfileSelector'
 import { PatientRelationshipManager } from '@features/patients/components/PatientRelationshipManager'
 import { NewResponsableForm } from '@features/patients/components/NewResponsableForm'
 import { EditResponsableForm } from '@features/patients/components/EditResponsableForm'
@@ -38,7 +30,7 @@ interface NewPatientDataSectionProps {
 // COMPONENTE
 // =====================================================================
 
-export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSectionProps) => {
+export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) => {
 	const { setValue } = useFormContext<FormValues>()
 	const [selectedResponsable, setSelectedResponsable] = useState<PatientProfile | null>(null)
 	const [selectedResponsableData, setSelectedResponsableData] = useState<Patient | null>(null) // Información completa del responsable
@@ -46,12 +38,11 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 	const [dependentsRefreshKey, setDependentsRefreshKey] = useState(0) // Key para refrescar lista de dependientes
 	const [dependents, setDependents] = useState<PatientProfile[]>([]) // Lista de dependientes
 	const [isLoadingDependents, setIsLoadingDependents] = useState(false)
-	const [editableFechaNacimiento, setEditableFechaNacimiento] = useState<Date | undefined>(undefined) // Fecha de nacimiento editable
+	const [, setEditableFechaNacimiento] = useState<Date | undefined>(undefined) // Fecha de nacimiento editable
 	const [editResponsableOpen, setEditResponsableOpen] = useState(false) // Modal de edición de responsable
 	const [editDependentOpen, setEditDependentOpen] = useState(false) // Modal de edición de dependiente
 	const [dependentToEdit, setDependentToEdit] = useState<PatientProfile | null>(null) // Dependiente a editar
 	const justSelectedRef = useRef(false) // Ref para rastrear selección reciente
-	const ageValue = useWatch({ control, name: 'ageValue' }) // Observar edad para deshabilitar fecha
 
 	// Exponer selectedProfile globalmente para que PatientDataSection pueda acceder
 	useEffect(() => {
@@ -373,40 +364,6 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 		setEditDependentOpen(true)
 	}, [])
 
-	const handleDeleteResponsable = useCallback(() => {
-		// Limpiar todo y volver al paso 1
-		setSelectedResponsable(null)
-		setSelectedProfile(null)
-		setDependentsRefreshKey((prev) => prev + 1)
-		// Limpiar formulario
-		setValue('fullName', '')
-		setValue('idType', 'V')
-		setValue('idNumber', '')
-		setValue('phone', '')
-		setValue('email', '')
-		setValue('gender', '')
-		setEditableFechaNacimiento(undefined)
-	}, [setValue])
-
-	const handleDeleteDependent = useCallback(async () => {
-		if (!dependentToEdit) return
-
-		// Si el dependiente eliminado estaba seleccionado, limpiar selección
-		if (selectedProfile && selectedProfile.id === dependentToEdit.id) {
-			setSelectedProfile(null)
-			setValue('fullName', '')
-			setValue('idType', 'V')
-			setValue('idNumber', '')
-			setValue('phone', '')
-			setValue('email', '')
-			setValue('gender', '')
-			setEditableFechaNacimiento(undefined)
-		}
-		// Incrementar refreshKey para forzar recarga de dependientes
-		setDependentsRefreshKey((prev) => prev + 1)
-		setDependentToEdit(null)
-	}, [selectedProfile, dependentToEdit, setValue])
-
 	// =====================================================================
 	// RENDER
 	// =====================================================================
@@ -423,7 +380,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 								<TooltipTrigger asChild>
 									<Info className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
 								</TooltipTrigger>
-								<TooltipContent className="!max-w-lg w-auto" style={{ maxWidth: '32rem' }}>
+								<TooltipContent className="max-w-lg! w-auto" style={{ maxWidth: '32rem' }}>
 									<p className="text-sm whitespace-normal text-left">
 										Busca un paciente existente por cédula, nombre o teléfono. Si el paciente no existe, puedes registrarlo como nuevo paciente.
 									</p>
@@ -483,7 +440,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 										</p>
 									</div>
 
-									<div className="space-y-2 flex-grow">
+									<div className="space-y-2 grow">
 										{selectedResponsableData.edad && (
 											<div className="flex items-center text-xs sm:text-sm">
 												<span className="text-gray-600 dark:text-gray-300">{selectedResponsableData.edad}</span>
@@ -492,7 +449,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 
 										{selectedResponsableData.telefono && (
 											<div className="flex items-center text-xs sm:text-sm">
-												<Phone className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
+												<Phone className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 shrink-0" />
 												<span className="text-gray-600 dark:text-gray-300 truncate">
 													{selectedResponsableData.telefono}
 												</span>
@@ -501,7 +458,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 
 										{selectedResponsableData.email && (
 											<div className="flex items-center text-xs sm:text-sm">
-												<Mail className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 flex-shrink-0" />
+												<Mail className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-2 shrink-0" />
 												<span className="text-gray-600 dark:text-gray-300 truncate">
 													{selectedResponsableData.email}
 												</span>
@@ -542,7 +499,7 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 													<TooltipTrigger asChild>
 														<Info className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
 													</TooltipTrigger>
-													<TooltipContent className="!max-w-lg w-auto" style={{ maxWidth: '32rem' }}>
+													<TooltipContent className="max-w-lg! w-auto" style={{ maxWidth: '32rem' }}>
 														<p className="text-sm whitespace-normal text-left">
 															Los dependientes son pacientes asociados a un responsable (por ejemplo, hijos menores, mascotas u otros familiares). Puedes seleccionar un dependiente para registrar un caso médico en su nombre.
 														</p>
@@ -558,9 +515,9 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 									</div>
 
 									{isLoadingDependents ? (
-										<div className="text-sm text-muted-foreground py-4 text-center flex-grow flex items-center justify-center">Cargando dependientes...</div>
+										<div className="text-sm text-muted-foreground py-4 text-center grow flex items-center justify-center">Cargando dependientes...</div>
 									) : dependents.length === 0 ? (
-										<div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex-grow flex items-center justify-center">
+										<div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg grow flex items-center justify-center">
 											No hay dependientes registrados
 										</div>
 									) : (
@@ -586,15 +543,15 @@ export const NewPatientDataSection = ({ control, inputStyles }: NewPatientDataSe
 													<div className="flex items-center justify-between gap-1.5">
 														<div className="flex items-center gap-1.5 flex-1 min-w-0">
 															{dep.tipo_paciente === 'menor' ? (
-																<Baby className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+																<Baby className="w-3.5 h-3.5 text-blue-500 shrink-0" />
 															) : dep.tipo_paciente === 'animal' ? (
-																<Dog className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+																<Dog className="w-3.5 h-3.5 text-green-500 shrink-0" />
 															) : (
-																<User className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+																<User className="w-3.5 h-3.5 text-gray-500 shrink-0" />
 															)}
 															<div className="font-medium text-xs truncate">{dep.nombre}</div>
 														</div>
-														<div className="flex items-center gap-0.5 flex-shrink-0">
+														<div className="flex items-center gap-0.5 shrink-0">
 															{selectedProfile?.id === dep.id && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
 															<Button
 																type="button"
