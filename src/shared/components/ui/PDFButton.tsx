@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, Eye, X } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Eye, X, Download } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
@@ -16,6 +16,7 @@ interface PDFButtonProps {
   className?: string;
   label?: string; // Opcional: texto personalizado
   isAttached?: boolean; // Si es true, es PDF adjunto; si es false o undefined, es PDF generado
+  downloadFileName?: string; // Nombre del archivo al descargar (ej: código del caso)
 }
 
 export function PDFButton({ 
@@ -24,9 +25,34 @@ export function PDFButton({
   variant = 'outline',
   className = '',
   label,
-  isAttached = false
+  isAttached = false,
+  downloadFileName
 }: PDFButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!pdfUrl) return;
+    setIsDownloading(true);
+    try {
+      const res = await fetch(pdfUrl, { mode: 'cors' });
+      if (!res.ok) throw new Error('Error al obtener el PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = downloadFileName || (isAttached ? 'documento-adjunto.pdf' : 'informe.pdf');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: abrir en nueva pestaña para que el usuario pueda guardar manualmente
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (!pdfUrl) {
     return (
@@ -46,6 +72,16 @@ export function PDFButton({
         title={label || "Ver PDF"}
       >
         <Eye className='w-4 h-4' />
+      </Button>
+      <Button
+        size={size}
+        variant={variant}
+        onClick={handleDownload}
+        disabled={isDownloading}
+        className={`p-2 ${className}`}
+        title={isAttached ? "Descargar PDF adjunto" : "Descargar PDF"}
+      >
+        <Download className="w-4 h-4" />
       </Button>
 
       <Dialog

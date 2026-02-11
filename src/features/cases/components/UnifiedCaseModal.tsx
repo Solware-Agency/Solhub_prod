@@ -20,7 +20,7 @@ import {
 	Copy,
 	ChevronDown,
 	ChevronUp,
-	Download,
+	// Download,
 	Phone,
 } from 'lucide-react'
 import type { MedicalCaseWithPatient, MedicalCaseUpdate } from '@/services/supabase/cases/medical-cases-service'
@@ -278,7 +278,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const [isUploadingImages, setIsUploadingImages] = useState(false)
+		const [isUploadingImages] = useState(false)
 
 		// Image URLs state for imagenologia role (hasta 10 imágenes)
 		const [imageUrls, setImageUrls] = useState<string[]>([])
@@ -1383,69 +1383,69 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			})
 		}
 
-		const handleDownloadCase = async () => {
-			if (!currentCase) {
-				toast({
-					title: '❌ Error',
-					description: 'No se encontró información del caso.',
-					variant: 'destructive',
-				})
-				return
-			}
+		// const handleDownloadCase = async () => {
+		// 	if (!currentCase) {
+		// 		toast({
+		// 			title: '❌ Error',
+		// 			description: 'No se encontró información del caso.',
+		// 			variant: 'destructive',
+		// 		})
+		// 		return
+		// 	}
 
-			const pdfUrl = (currentCase as any)?.informepdf_url || (currentCase as any)?.informe_qr
+		// 	const pdfUrl = (currentCase as any)?.informepdf_url || (currentCase as any)?.informe_qr
 
-			if (!pdfUrl) {
-				toast({
-					title: '❌ Error',
-					description: 'No hay PDF disponible para descargar.',
-					variant: 'destructive',
-				})
-				return
-			}
+		// 	if (!pdfUrl) {
+		// 		toast({
+		// 			title: '❌ Error',
+		// 			description: 'No hay PDF disponible para descargar.',
+		// 			variant: 'destructive',
+		// 		})
+		// 		return
+		// 	}
 
-			try {
-				setIsSaving(true)
+		// 	try {
+		// 		setIsSaving(true)
 
-				const response = await fetch(pdfUrl)
-				if (!response.ok) {
-					throw new Error(`Error al descargar: ${response.status}`)
-				}
+		// 		const response = await fetch(pdfUrl)
+		// 		if (!response.ok) {
+		// 			throw new Error(`Error al descargar: ${response.status}`)
+		// 		}
 
-				const sanitizedName =
-					currentCase.nombre ||
-					'Paciente'
-						.normalize('NFD')
-						.replace(/[\u0300-\u036f]/g, '')
-						.replace(/[^a-zA-Z0-9\s]/g, '')
-						.replace(/\s+/g, '_')
-						.trim()
+		// 		const sanitizedName =
+		// 			currentCase.nombre ||
+		// 			'Paciente'
+		// 				.normalize('NFD')
+		// 				.replace(/[\u0300-\u036f]/g, '')
+		// 				.replace(/[^a-zA-Z0-9\s]/g, '')
+		// 				.replace(/\s+/g, '_')
+		// 				.trim()
 
-				const blob = await response.blob()
-				const url = window.URL.createObjectURL(blob)
-				const link = document.createElement('a')
-				link.href = url
-				link.download = `${currentCase.code || currentCase.id}-${sanitizedName}.pdf`
-				document.body.appendChild(link)
-				link.click()
-				document.body.removeChild(link)
-				window.URL.revokeObjectURL(url)
+		// 		const blob = await response.blob()
+		// 		const url = window.URL.createObjectURL(blob)
+		// 		const link = document.createElement('a')
+		// 		link.href = url
+		// 		link.download = `${currentCase.code || currentCase.id}-${sanitizedName}.pdf`
+		// 		document.body.appendChild(link)
+		// 		link.click()
+		// 		document.body.removeChild(link)
+		// 		window.URL.revokeObjectURL(url)
 
-				toast({
-					title: '✅ PDF descargado',
-					description: 'El documento se ha descargado correctamente.',
-				})
-			} catch (error) {
-				console.error('Error al descargar el PDF:', error)
-				toast({
-					title: '❌ Error',
-					description: 'No se pudo descargar el PDF. Intenta nuevamente.',
-					variant: 'destructive',
-				})
-			} finally {
-				setIsSaving(false)
-			}
-		}
+		// 		toast({
+		// 			title: '✅ PDF descargado',
+		// 			description: 'El documento se ha descargado correctamente.',
+		// 		})
+		// 	} catch (error) {
+		// 		console.error('Error al descargar el PDF:', error)
+		// 		toast({
+		// 			title: '❌ Error',
+		// 			description: 'No se pudo descargar el PDF. Intenta nuevamente.',
+		// 			variant: 'destructive',
+		// 		})
+		// 	} finally {
+		// 		setIsSaving(false)
+		// 	}
+		// }
 
 		const getFieldLabel = (field: string): string => {
 			const labels: Record<string, string> = {
@@ -1783,7 +1783,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													>
 														<Phone className="w-4 h-4" />
 													</button>
-													<button
+													{/* <button
 														onClick={handleDownloadCase}
 														disabled={isSaving}
 														title="Descargar el PDF del informe del caso"
@@ -1791,7 +1791,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														aria-label="Descargar caso"
 													>
 														{isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-													</button>
+													</button> */}
 													<button
 														onClick={handleSendWhatsApp}
 														title="Enviar mensaje por WhatsApp al paciente"
@@ -2283,6 +2283,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															size="sm"
 															variant="outline"
 															isAttached={true}
+															downloadFileName={case_?.code ? `${case_.code}.pdf` : undefined}
 														/>
 													) : (
 														<span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
