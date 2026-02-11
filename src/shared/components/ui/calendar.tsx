@@ -126,12 +126,24 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 				</div>
 
 				<div 
-					className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto"
+					className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-48 sm:max-h-64 overflow-y-auto overflow-x-hidden year-picker-scroll"
 					style={{
 						WebkitOverflowScrolling: 'touch',
 						overscrollBehavior: 'contain',
 						touchAction: 'pan-y',
 						willChange: 'scroll-position'
+					}}
+					onWheel={(e) => {
+						// En desktop, el wheel a veces no hace scroll en el div dentro del Popover.
+						// Aplicar scroll manualmente y evitar que el documento/popover hagan scroll.
+						const el = e.currentTarget
+						const { scrollTop, scrollHeight, clientHeight } = el
+						const canScrollUp = scrollTop > 0
+						const canScrollDown = scrollTop < scrollHeight - clientHeight - 1
+						if ((e.deltaY < 0 && canScrollUp) || (e.deltaY > 0 && canScrollDown)) {
+							e.preventDefault()
+							el.scrollTop += e.deltaY
+						}
 					}}
 					onTouchStart={(e) => {
 						// Prevenir que el scroll se propague al body

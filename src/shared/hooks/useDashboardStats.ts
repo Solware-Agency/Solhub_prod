@@ -79,11 +79,15 @@ export interface DashboardStats {
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
 	totalCases: number
 	totalCasesWithPathologist?: number
+	totalCasesWithCitotecno?: number
 	casesByReceptionist: Array<{ id: string; name: string; cases: number }>
 	casesByPathologist: Array<{ id: string; name: string; cases: number; blocks: number }>
+	casesByCitotecno?: Array<{ id: string; name: string; cases: number }>
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number
+	/** Casos del período con al menos un pago en bolívares */
+	casesWithPaymentInBolivares?: number
 	// Porcentajes de crecimiento vs periodo anterior
 	revenueGrowthPercentage: number
 	casesGrowthPercentage: number
@@ -129,8 +133,6 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					.single()
 
 				const laboratoryId = extractLaboratoryId(profile)
-				const isMarihorgenLab =
-					laboratoryId === '7fcd5a54-1f48-4dc0-b5b2-84d5ce9755b8'
 
 				if (profileError || !laboratoryId) {
 					throw new Error('Usuario no tiene laboratorio asignado')
@@ -139,6 +141,16 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				// Get date range for filtering - use provided dates or default to current month
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
+
+				// Roles del laboratorio para estadísticas por tipo de médico
+				const { data: labRow } = await supabase
+					.from('laboratories')
+					.select('available_roles')
+					.eq('id', laboratoryId)
+					.single()
+				const availableRoles: string[] = Array.isArray(labRow?.available_roles) ? (labRow.available_roles as string[]) : []
+				const hasPatologo = availableRoles.includes('patologo')
+				const hasCitotecno = availableRoles.includes('citotecno')
 
 				// OPTIMIZACIÓN: Filtrar en el servidor en lugar de traer todos los registros
 				// Solo traer campos necesarios para las estadísticas
@@ -155,6 +167,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						origin,
 						treating_doctor,
 						created_by,
+						generated_by,
 						patologo_id,
 						bloques_biopsia,
 						created_at,
@@ -195,6 +208,31 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					version: item.version || null,
 				})) as MedicalCaseWithPatient[]
 
+				// Todos los user IDs que aparecen en casos (para saber rol y nombre)
+				const allUserIds = new Set<string>()
+				transformedFilteredRecords.forEach((r) => {
+					if (r.created_by) allUserIds.add(r.created_by)
+					if (r.generated_by) allUserIds.add(r.generated_by)
+					if (r.patologo_id) allUserIds.add(r.patologo_id)
+				})
+				let profileMap: Record<string, { name: string; role?: string }> = {}
+				if (allUserIds.size > 0) {
+					const { data: profilesData } = await supabase
+						.from('profiles')
+						.select('id, display_name, email, role')
+						.in('id', Array.from(allUserIds))
+					profileMap = (profilesData || []).reduce(
+						(acc: Record<string, { name: string; role?: string }>, p: any) => {
+							acc[p.id] = {
+								name: p.display_name || p.email || 'Usuario',
+								role: p.role,
+							}
+							return acc
+						},
+						{},
+					)
+				}
+
 				// Casos por recepcionista (created_by)
 				const receptionistCounts: Record<string, number> = {}
 				transformedFilteredRecords.forEach((record) => {
@@ -204,40 +242,38 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					}
 				})
 
-				// Casos por patólogo (solo Marihorgen/LM)
+				// Casos por patólogo: patologo_id asignado O quien creó el caso es patólogo
 				const pathologistCounts: Record<string, { cases: number; blocks: number }> = {}
-				if (isMarihorgenLab) {
+				if (hasPatologo) {
 					transformedFilteredRecords.forEach((record) => {
-						if (record.patologo_id) {
-							if (!pathologistCounts[record.patologo_id]) {
-								pathologistCounts[record.patologo_id] = { cases: 0, blocks: 0 }
+						const userId = record.patologo_id || (record.created_by && profileMap[record.created_by]?.role === 'patologo' ? record.created_by : null)
+						if (userId) {
+							if (!pathologistCounts[userId]) {
+								pathologistCounts[userId] = { cases: 0, blocks: 0 }
 							}
-							pathologistCounts[record.patologo_id].cases += 1
-							pathologistCounts[record.patologo_id].blocks += Number(record.bloques_biopsia || 0)
+							pathologistCounts[userId].cases += 1
+							pathologistCounts[userId].blocks += Number(record.bloques_biopsia || 0)
+						}
+					})
+				}
+
+				// Casos por citotecnólogo: generated_by es citotecno O quien creó el caso es citotecno
+				const citotecnoCounts: Record<string, number> = {}
+				if (hasCitotecno) {
+					transformedFilteredRecords.forEach((record) => {
+						const byGenerated = record.generated_by && profileMap[record.generated_by]?.role === 'citotecno'
+						const byCreated = record.created_by && profileMap[record.created_by]?.role === 'citotecno'
+						const userId = byGenerated ? record.generated_by! : byCreated ? record.created_by! : null
+						if (userId) {
+							citotecnoCounts[userId] = (citotecnoCounts[userId] || 0) + 1
 						}
 					})
 				}
 
 				const receptionistIds = Object.keys(receptionistCounts)
 				const pathologistIds = Object.keys(pathologistCounts)
-				const profileIds = Array.from(new Set([...receptionistIds, ...pathologistIds]))
-
-				let profileMap: Record<string, { name: string }> = {}
-				if (profileIds.length > 0) {
-					const { data: profilesData } = await supabase
-						.from('profiles')
-						.select('id, display_name, email')
-						.in('id', profileIds)
-
-					profileMap = (profilesData || []).reduce(
-						(acc: Record<string, { name: string }>, profileItem: any) => {
-							const name = profileItem.display_name || profileItem.email || 'Usuario'
-							acc[profileItem.id] = { name }
-							return acc
-						},
-						{},
-					)
-				}
+				const citotecnoIds = Object.keys(citotecnoCounts)
+				const profileIds = Array.from(new Set([...receptionistIds, ...pathologistIds, ...citotecnoIds]))
 
 				const casesByReceptionist = receptionistIds
 					.map((id) => ({
@@ -256,7 +292,19 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					}))
 					.sort((a, b) => b.cases - a.cases)
 
+				const casesByCitotecno = citotecnoIds
+					.map((id) => ({
+						id,
+						name: profileMap[id]?.name || 'Usuario',
+						cases: citotecnoCounts[id],
+					}))
+					.sort((a, b) => b.cases - a.cases)
+
 				const totalCasesWithPathologist = casesByPathologist.reduce(
+					(sum, item) => sum + item.cases,
+					0,
+				)
+				const totalCasesWithCitotecno = casesByCitotecno.reduce(
 					(sum, item) => sum + item.cases,
 					0,
 				)
@@ -302,6 +350,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						return sum
 					}, 0) || 0
 
+				// Total de bloques (bloques_biopsia) de todos los casos del período
+				const totalBlocks =
+					transformedFilteredRecords?.reduce((sum, record) => sum + Number(record.bloques_biopsia || 0), 0) || 0
+
 				// Calculate revenue for the filtered period (REAL paid amounts in USD)
 				let monthlyRevenue = 0
 				transformedFilteredRecords?.forEach((record) => {
@@ -326,8 +378,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 			// Calculate revenue by currency (Bs vs $) for filtered period
 			let monthlyRevenueBolivares = 0
 				let monthlyRevenueDollars = 0
+				let casesWithPaymentInBolivares = 0
 
 				transformedFilteredRecords?.forEach((record) => {
+					let hasVESPayment = false
 					// Revisar todos los métodos de pago del caso
 					for (let i = 1; i <= 4; i++) {
 						const method = record[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string | null
@@ -337,12 +391,14 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 							if (isVESPaymentMethod(method)) {
 								// Si es método en bolívares, sumar directamente
 								monthlyRevenueBolivares += amount
+								hasVESPayment = true
 							} else {
 								// Si es método en dólares, sumar directamente
 								monthlyRevenueDollars += amount
 							}
 						}
 					}
+					if (hasVESPayment) casesWithPaymentInBolivares += 1
 				})
 
 				// Calculate new patients in the filtered period - usando patient_id de la nueva estructura
@@ -608,11 +664,15 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					topTreatingDoctors,
 					revenueByOrigin,
 					totalCases,
+					totalBlocks,
 					totalCasesWithPathologist,
+					totalCasesWithCitotecno,
 					casesByReceptionist,
-					casesByPathologist: isMarihorgenLab ? casesByPathologist : [],
+					casesByPathologist: hasPatologo ? casesByPathologist : [],
+					casesByCitotecno: hasCitotecno ? casesByCitotecno : [],
 					monthlyRevenueBolivares,
 					monthlyRevenueDollars,
+					casesWithPaymentInBolivares,
 					revenueGrowthPercentage,
 					casesGrowthPercentage,
 				}

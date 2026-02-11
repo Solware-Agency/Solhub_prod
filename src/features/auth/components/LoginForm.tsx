@@ -9,6 +9,7 @@ import FadeContent from '@shared/components/ui/FadeContent';
 import { supabase } from '@services/supabase/config/config';
 import { toast } from '@shared/hooks/use-toast';
 import SolHubIcon from '@shared/components/icons/SolHubIcon';
+import { useDynamicBranding } from '@shared/hooks/useDynamicBranding';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -19,6 +20,9 @@ function LoginForm() {
   const retryTimerRef = useRef<number | null>(null);
   const { refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Hook para branding dinámico
+  const { branding, isLoading: isBrandingLoading, hasBranding, saveBranding, clearBranding } = useDynamicBranding();
 
   // Use secure redirect hook for role-based navigation
   const { isRedirecting } = useSecureRedirect({
@@ -192,6 +196,61 @@ function LoginForm() {
       // Refresh user data and let the secure redirect handle the navigation
       await refreshUser();
 
+      // 🎨 Guardar branding del laboratorio después de login exitoso
+      try {
+        console.log('🎨 Intentando obtener branding del laboratorio...');
+        
+        // Primero obtener el profile con laboratory_id
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('laboratory_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error obteniendo profile:', profileError);
+        } else {
+          console.log('Profile obtenido:', profile);
+        }
+
+        if (profile?.laboratory_id) {
+          console.log('Laboratory ID encontrado:', profile.laboratory_id);
+          
+          // Luego obtener el laboratorio con su branding
+          const { data: lab, error: labError } = await supabase
+            .from('laboratories')
+            .select('name, branding, slug')
+            .eq('id', profile.laboratory_id)
+            .single();
+
+          if (labError) {
+            console.error('Error obteniendo laboratory:', labError);
+          } else {
+            console.log('Laboratory obtenido:', lab);
+          }
+
+          if (lab?.branding) {
+            const brandingData = {
+              logo: lab.branding.logo || '',
+              primaryColor: lab.branding.primaryColor || '#3d84f5',
+              laboratoryName: lab.name,
+              icon: lab.branding.icon || lab.slug,
+            };
+            
+            console.log('🎨 Guardando branding:', brandingData);
+            saveBranding(brandingData);
+            console.log('✅ Branding guardado exitosamente');
+          } else {
+            console.log('⚠️ Laboratorio sin branding configurado');
+          }
+        } else {
+          console.log('⚠️ Usuario sin laboratory_id asignado');
+        }
+      } catch (brandingError) {
+        console.error('❌ Error guardando branding:', brandingError);
+        // No bloquear el login si falla el branding
+      }
+
       // Debug: Verificar si la sesión se mantiene después del refresh
       setTimeout(async () => {
         const {
@@ -217,7 +276,7 @@ function LoginForm() {
 
   return (
     <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
-      {/* Aurora Background with New Color Palette */}
+      {/* Aurora Background with Default Color Palette */}
       <Aurora
         colorStops={['#3d84f5', '#06337b', '#3d84f5']}
         blend={0.7}
@@ -236,11 +295,30 @@ function LoginForm() {
           className='w-full h-full flex items-center justify-center'
         >
           <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none md:rounded-2xl p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20'>
-            <div className='text-center mb-4 flex flex-col items-center justify-center'>
-              <SolHubIcon
-                fill='#fff'
-                className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
-              />
+            <div className='text-center mb-4 flex flex-col items-center justify-center relative'>
+              {/* Logo Dinámico o Genérico */}
+              {!isBrandingLoading && (
+                <>
+                  {hasBranding && branding?.logo ? (
+                    <img
+                      src={branding.logo}
+                      alt={branding.laboratoryName || 'Logo'}
+                      className='h-16 w-auto mb-4 object-contain drop-shadow-xl'
+                      onError={(e) => {
+                        // Si falla la carga, mostrar logo genérico
+                        console.error('Error cargando logo del laboratorio:', branding.logo);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <SolHubIcon
+                      fill='#fff'
+                      className='size-16 mb-4 drop-shadow-xl drop-shadow-[#3d84f5]'
+                    />
+                  )}
+                </>
+              )}
+
               <div>
                 <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>
                   Bienvenido a SolHub

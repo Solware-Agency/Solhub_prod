@@ -57,6 +57,28 @@ const ChangelogTable: React.FC = () => {
 
 		return translations[fieldName] || fieldLabel
 	}
+
+	// Helper: texto de entidad para casos médicos y si debe mostrarse como "Caso eliminado" (badge rojo)
+	const getCaseEntityDisplay = (log: ChangeLogData): { text: string; isDeletedCase: boolean } => {
+		const isCreated = log.field_name === 'created_record'
+		const hasCode = !!log.medical_records_clean?.code
+		const hasDeletedInfo = !!log.deleted_record_info?.trim()
+
+		if (isCreated && !hasCode && !hasDeletedInfo) {
+			// Creación: el caso puede estar ya eliminado (join devuelve null). Mostrar código desde new_value o "Nuevo registro"
+			const newVal = log.new_value || ''
+			const match = newVal.match(/Registro médico creado:\s*(.+)/)
+			const text = match ? match[1].trim() : 'Nuevo registro'
+			return { text, isDeletedCase: false }
+		}
+
+		let raw = log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'
+		// Evitar truncamiento: si deleted_record_info es "CODE - Nombre tipo", mostrar solo el código
+		const displayText = raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw
+		const isDeletedCase = raw === 'Caso eliminado'
+		return { text: displayText, isDeletedCase }
+	}
+
 	useUserProfile()
 	const { laboratory } = useLaboratory()
 
@@ -660,11 +682,20 @@ const ChangelogTable: React.FC = () => {
 																		</span>
 																	)}
 																</>
-															) : (
-																<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
-																	{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
-																</span>
-															)}
+															) : (() => {
+																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																	return (
+																		<span
+																			className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																				isDeletedCase
+																					? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																					: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																			}`}
+																		>
+																			{text}
+																		</span>
+																	)
+																})()}
 														</div>
 													</td>
 
@@ -801,11 +832,20 @@ const ChangelogTable: React.FC = () => {
 																	</span>
 																)}
 															</>
-														) : (
-															<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 w-fit">
-																{log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'}
-															</span>
-														)}
+														) : (() => {
+																const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																return (
+																	<span
+																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																			isDeletedCase
+																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																		}`}
+																	>
+																		{text}
+																	</span>
+																)
+															})()}
 													</div>
 												</div>
 

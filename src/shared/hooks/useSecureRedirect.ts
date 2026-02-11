@@ -157,13 +157,13 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			if (laboratoryId) {
 				const { data: laboratory } = await supabase
 					.from('laboratories' as any)
-					.select('slug')
+					.select('slug, features')
 					.eq('id', laboratoryId)
 					.single()
 
-				const isInntegras = (laboratory as any)?.slug === 'inntegras'
+				const hasAseguradoras = (laboratory as any)?.features?.hasAseguradoras === true
 				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'owner' || profile.role === 'prueba'
-				if (isInntegras && canSeeAseguradoras) {
+				if (hasAseguradoras && canSeeAseguradoras) {
 					redirectPath = '/aseguradoras/home'
 				}
 			}

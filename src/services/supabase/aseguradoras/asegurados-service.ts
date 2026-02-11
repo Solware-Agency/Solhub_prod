@@ -12,6 +12,7 @@ export interface Asegurado {
 	address: string | null
 	notes: string | null
 	tipo_asegurado: 'Persona natural' | 'Persona jurídica'
+	activo: boolean
 	created_at: string | null
 	updated_at: string | null
 }
@@ -34,14 +35,15 @@ export interface AseguradoUpdate {
 	address?: string | null
 	notes?: string | null
 	tipo_asegurado?: 'Persona natural' | 'Persona jurídica'
+	activo?: boolean
 }
 
 export const getAsegurados = async (
 	page = 1,
 	limit = 50,
 	searchTerm?: string,
-	sortField: 'full_name' | 'document_id' | 'phone' | 'email' | 'created_at' = 'full_name',
-	sortDirection: 'asc' | 'desc' = 'asc',
+	sortField: 'full_name' | 'document_id' | 'phone' | 'email' | 'created_at' = 'created_at',
+	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
 	const laboratoryId = await getUserLaboratoryId()
 
@@ -49,6 +51,7 @@ export const getAsegurados = async (
 		.from('asegurados')
 		.select('*', { count: 'exact' })
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 
 	if (searchTerm) {
 		query = query.or(
@@ -92,6 +95,20 @@ export const findAseguradoById = async (id: string): Promise<Asegurado | null> =
 	return data as Asegurado
 }
 
+export const getAseguradosByIds = async (ids: string[]): Promise<Asegurado[]> => {
+	if (ids.length === 0) return []
+	const laboratoryId = await getUserLaboratoryId()
+	const { data, error } = await supabase
+		.from('asegurados')
+		.select('*')
+		.eq('laboratory_id', laboratoryId)
+		.in('id', ids)
+		.order('full_name')
+
+	if (error) throw error
+	return (data || []) as Asegurado[]
+}
+
 export const findAseguradoByDocumentId = async (documentId: string): Promise<Asegurado | null> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase
@@ -99,6 +116,7 @@ export const findAseguradoByDocumentId = async (documentId: string): Promise<Ase
 		.select('*')
 		.eq('document_id', documentId)
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.single()
 
 	if (error) {
@@ -115,6 +133,7 @@ export const searchAsegurados = async (searchTerm: string, limit = 10): Promise<
 		.from('asegurados')
 		.select('id, full_name, document_id, phone, email, tipo_asegurado')
 		.eq('laboratory_id', laboratoryId)
+		.eq('activo', true)
 		.or(`full_name.ilike.%${searchTerm}%,document_id.ilike.%${searchTerm}%`)
 		.limit(limit)
 		.order('full_name')
@@ -150,6 +169,11 @@ export const updateAsegurado = async (id: string, payload: AseguradoUpdate): Pro
 
 	if (error) throw error
 	return data as Asegurado
+}
+
+/** Soft delete: marca asegurado como inactivo; deja de mostrarse en listados pero se conserva en BD */
+export const deactivateAsegurado = async (id: string): Promise<Asegurado> => {
+	return updateAsegurado(id, { activo: false })
 }
 
 export const deleteAsegurado = async (id: string) => {

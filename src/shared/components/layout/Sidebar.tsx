@@ -20,7 +20,6 @@ import {
   FolderSearch,
   Activity,
   DollarSign,
-  Bell,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -382,7 +381,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isImagenologia = profile?.role === 'imagenologia';
   const isLaboratorio = profile?.role === 'laboratorio';
   const isInntegras = laboratory?.slug === 'inntegras';
-  const canSeeAseguradoras = isInntegras && (isOwner || isEmployee || isPrueba);
+  const canSeeAseguradoras =
+    (laboratory?.features?.hasAseguradoras === true) &&
+    (isOwner || isEmployee || isPrueba);
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -462,15 +463,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/aseguradoras/pagos'
                   icon={<DollarSign className='stroke-2 size-5 shrink-0' />}
                   label='Pagos'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
-              <div className='py-1'>
-                <NavItem
-                  to='/aseguradoras/recordatorios'
-                  icon={<Bell className='stroke-2 size-5 shrink-0' />}
-                  label='Recordatorios'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

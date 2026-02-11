@@ -55,11 +55,11 @@ import { useLaboratory } from '@app/providers/LaboratoryContext';
 import { useAuth } from '@app/providers/AuthContext';
 
 const MARIHORGEN_TEMPLATES = [
-  { id: 'cx_doble_firma', label: 'CX DOBLE FIRMA' },
-  { id: 'biopsia', label: 'BIOPSIA' },
-  { id: 'biopsias_de_revision', label: 'BIOPSIAS DE REVISIÓN' },
-  { id: 'prostata', label: 'PROSTATA' },
-  { id: 'puncion_doble_pagina', label: 'PUNCIÓN DOBLE PAGINA' },
+  { id: 'biopsia', label: 'Biopsia' },
+  { id: 'biopsias_de_revision', label: 'Biopsia revisión' },
+  { id: 'CX', label: 'Citología' },
+  { id: 'cx_doble_firma', label: 'Citología Doble firma' },
+  { id: 'prostata', label: 'Próstata por punción' },
   { id: 'ihq', label: 'IHQ' },
 ] as const;
 
@@ -141,9 +141,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
   const isMarihorgen =
     laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
   const isSptAutoApprove = isSpt && (isMedicoTratante || isOwner);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    MARIHORGEN_TEMPLATES[0].id,
-  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   const isCitoAdmin =
     profile?.role === 'residente' && case_?.exam_type === 'Citología';
@@ -1411,11 +1409,11 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                         Plantilla de informe
                       </label>
                       <Select
-                        value={selectedTemplateId}
+                        value={selectedTemplateId || undefined}
                         onValueChange={setSelectedTemplateId}
                       >
                         <SelectTrigger className='mt-1'>
-                          <SelectValue placeholder='Selecciona una plantilla' />
+                          <SelectValue placeholder='Seleccionar' />
                         </SelectTrigger>
                         <SelectContent>
                           {MARIHORGEN_TEMPLATES.map((template) => (

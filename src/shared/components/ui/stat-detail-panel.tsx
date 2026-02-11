@@ -28,6 +28,8 @@ export type StatType =
 	| 'doctorRevenue'
 	| 'casesByReceptionist'
 	| 'casesByPathologist'
+	| 'casesByMedicalType'
+	| 'totalBlocks'
 
 interface StatDetailPanelProps {
 	isOpen: boolean
@@ -87,6 +89,10 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return 'Casos por Recepcionista'
 			case 'casesByPathologist':
 				return 'Casos por Patólogo'
+			case 'casesByMedicalType':
+				return 'Casos por tipo de médico'
+			case 'totalBlocks':
+				return 'Bloques del período'
 			default:
 				return 'Detalles'
 		}
@@ -1285,6 +1291,18 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				)
 			}
 
+			case 'totalBlocks': {
+				const total = stats?.totalBlocks ?? 0
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total de bloques de biopsia en el período seleccionado.</p>
+							<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatNumber(total)}</p>
+						</div>
+					</div>
+				)
+			}
+
 			case 'casesByPathologist': {
 				const data = stats.casesByPathologist || []
 				const maxCases = Math.max(...data.map((item: any) => item.cases || 0), 1)
@@ -1326,16 +1344,113 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								{data.map((item: any) => (
 									<div key={item.id} className="flex items-center justify-between">
 										<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
-										<div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+										<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
 											{formatNumber(item.cases)} casos
-											<span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-												• {formatNumber(item.blocks)} bloques
-											</span>
-										</div>
+										</span>
 									</div>
 								))}
 							</div>
 						</div>
+					</div>
+				)
+			}
+
+			case 'casesByMedicalType': {
+				const pathologistData = stats.casesByPathologist || []
+				const citotecnoData = stats.casesByCitotecno || []
+				const hasPathologists = pathologistData.length > 0
+				const hasCitotecnos = citotecnoData.length > 0
+				const maxPathCases = Math.max(...pathologistData.map((item: any) => item.cases || 0), 1)
+				const maxCitoCases = Math.max(...citotecnoData.map((item: any) => item.cases || 0), 1)
+				return (
+					<div className="space-y-6">
+						{hasPathologists && (
+							<>
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+										Top patólogos
+									</h3>
+									<div className="space-y-3">
+										{pathologistData.slice(0, 5).map((item: any) => (
+											<div key={item.id} className="space-y-1">
+												<div className="flex items-center justify-between">
+													<span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+													<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+														{formatNumber(item.cases)} casos
+													</span>
+												</div>
+												<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+													<div
+														className="h-2 rounded-full bg-purple-500"
+														style={{ width: `${(item.cases / maxPathCases) * 100}%` }}
+													/>
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+										Todos los patólogos
+									</h3>
+									<div className="max-h-72 overflow-auto space-y-2 pr-2">
+										{pathologistData.map((item: any) => (
+											<div key={item.id} className="flex items-center justify-between">
+												<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+													{formatNumber(item.cases)} casos
+												</span>
+											</div>
+										))}
+									</div>
+								</div>
+							</>
+						)}
+						{hasCitotecnos && (
+							<>
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+										Top citotecnólogos
+									</h3>
+									<div className="space-y-3">
+										{citotecnoData.slice(0, 5).map((item: any) => (
+											<div key={item.id} className="space-y-1">
+												<div className="flex items-center justify-between">
+													<span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+													<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+														{formatNumber(item.cases)} casos
+													</span>
+												</div>
+												<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+													<div
+														className="h-2 rounded-full bg-teal-500"
+														style={{ width: `${(item.cases / maxCitoCases) * 100}%` }}
+													/>
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+										Todos los citotecnólogos
+									</h3>
+									<div className="max-h-72 overflow-auto space-y-2 pr-2">
+										{citotecnoData.map((item: any) => (
+											<div key={item.id} className="flex items-center justify-between">
+												<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+													{formatNumber(item.cases)} casos
+												</span>
+											</div>
+										))}
+									</div>
+								</div>
+							</>
+						)}
+						{!hasPathologists && !hasCitotecnos && (
+							<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
+						)}
 					</div>
 				)
 			}

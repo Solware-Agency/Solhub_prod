@@ -159,8 +159,8 @@ export const AseguradoraDetailPanel = ({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="true">Activa</SelectItem>
-									<SelectItem value="false">No disponible</SelectItem>
+									<SelectItem value="true">Activo</SelectItem>
+									<SelectItem value="false">Inactivo</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -170,16 +170,15 @@ export const AseguradoraDetailPanel = ({
 				<div className="space-y-4">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-							<Building2 className="w-3 h-3" />
 							{aseguradora.codigo_interno || 'Sin código'}
 						</span>
 						{aseguradora.activo ? (
 							<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-								Activa
+								Activo
 							</span>
 						) : (
 							<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-								No disponible
+								Inactivo
 							</span>
 						)}
 						{aseguradora.rif && (
@@ -224,7 +223,7 @@ export const AseguradoraDetailPanel = ({
 					</InfoSection>
 
 					<InfoSection title="Estado" icon={Globe}>
-						<p className="text-sm font-medium">{aseguradora.activo ? 'Activa' : 'No disponible'}</p>
+						<p className="text-sm font-medium">{aseguradora.activo ? 'Activo' : 'Inactivo'}</p>
 					</InfoSection>
 				</div>
 			)}

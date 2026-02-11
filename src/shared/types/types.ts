@@ -10,11 +10,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
-  }  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '12.2.3 (519615d)';
-  };
+  }
   public: {
     Tables: {
       change_logs: {
@@ -798,6 +794,7 @@ export interface LaboratoryFeatures {
   hasReports: boolean
   hasNewPatientSystem: boolean
   hasSampleTypeCosts: boolean
+  hasAseguradoras: boolean
 }
 
 export interface LaboratoryBranding {
@@ -860,6 +857,8 @@ export interface Laboratory {
   config: LaboratoryConfig
   created_at: string
   updated_at: string
+  /** Roles habilitados en el lab (ej. patologo, citotecno). Usado para estadísticas por tipo de médico. */
+  available_roles?: string[]
   // Propiedades opcionales para estructura sin nivel branding (retrocompatibilidad)
   logo?: string | null
   icon?: string

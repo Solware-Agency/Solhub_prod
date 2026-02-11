@@ -1597,10 +1597,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           <UnifiedCaseModal
             case_={selectedCaseForView}
             isOpen={isViewModalOpen}
-            onClose={() => {
-              setIsViewModalOpen(false);
-              setSelectedCaseForView(null);
-            }}
+            onClose={() => setIsViewModalOpen(false)}
+            onCloseComplete={() => setSelectedCaseForView(null)}
             onSave={() => {
               // Refetch the data to update the cases list
               refetch();
@@ -1917,10 +1915,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <UnifiedCaseModal
           case_={selectedCaseForView}
           isOpen={isViewModalOpen}
-          onClose={() => {
-            setIsViewModalOpen(false);
-            setSelectedCaseForView(null);
-          }}
+          onClose={() => setIsViewModalOpen(false)}
+          onCloseComplete={() => setSelectedCaseForView(null)}
           onSave={() => {
             // Refetch the data to update the cases list
             refetch();

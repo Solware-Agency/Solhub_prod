@@ -19,10 +19,9 @@ import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
 	createAsegurado,
 	getAsegurados,
-	updateAsegurado,
 	type Asegurado,
 } from '@services/supabase/aseguradoras/asegurados-service'
-import { AseguradoDetailPanel } from '@features/aseguradoras/components/AseguradoDetailPanel'
+import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 
 const AseguradosPage = () => {
 	const queryClient = useQueryClient()
@@ -32,8 +31,7 @@ const AseguradosPage = () => {
 	const [itemsPerPage, setItemsPerPage] = useState(32)
 	const [openModal, setOpenModal] = useState(false)
 	const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null)
-	const [panelOpen, setPanelOpen] = useState(false)
-	const [panelSaving, setPanelSaving] = useState(false)
+	const [historyModalOpen, setHistoryModalOpen] = useState(false)
 	const [form, setForm] = useState({
 		full_name: '',
 		document_id: '',
@@ -88,27 +86,9 @@ const AseguradosPage = () => {
 		setOpenModal(true)
 	}
 
-	const openDetailPanel = (row: Asegurado) => {
+	const openHistoryModal = (row: Asegurado) => {
 		setSelectedAsegurado(row)
-		setPanelOpen(true)
-	}
-
-	const handlePanelSave = async (payload: Parameters<typeof updateAsegurado>[1]) => {
-		if (!selectedAsegurado) return false
-		setPanelSaving(true)
-		try {
-			const updated = await updateAsegurado(selectedAsegurado.id, payload)
-			setSelectedAsegurado(updated)
-			queryClient.invalidateQueries({ queryKey: ['asegurados'] })
-			toast({ title: 'Asegurado actualizado' })
-			return true
-		} catch (err) {
-			console.error(err)
-			toast({ title: 'Error al guardar asegurado', variant: 'destructive' })
-			return false
-		} finally {
-			setPanelSaving(false)
-		}
+		setHistoryModalOpen(true)
 	}
 
 	const handleSave = async () => {
@@ -129,43 +109,15 @@ const AseguradosPage = () => {
 
 	return (
 		<div>
-			<div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold">Asegurados</h1>
-					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-				</div>
-				<div className="flex gap-2">
-					<Button
-						variant="outline"
-						onClick={() =>
-							exportRowsToExcel(
-								'asegurados',
-								asegurados.map((row) => ({
-									Código: row.codigo ?? '',
-									Nombre: row.full_name,
-									Documento: row.document_id,
-									Teléfono: row.phone,
-									Email: row.email ?? '',
-									Tipo: row.tipo_asegurado,
-								})),
-							)
-						}
-						className="gap-2"
-					>
-						<Download className="w-4 h-4" />
-						Exportar
-					</Button>
-					<Button onClick={openNewModal} className="gap-2">
-						<Plus className="w-4 h-4" />
-						Nuevo asegurado
-					</Button>
-				</div>
+			<div className="mb-4 sm:mb-6">
+				<h1 className="text-2xl sm:text-3xl font-bold">Asegurados</h1>
+				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 			</div>
 
 			<Card className="overflow-hidden">
 				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
 					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
-						<div className="relative flex-1">
+						<div className="relative flex-1 min-w-0">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 							<Input
 								className="pl-9"
@@ -174,7 +126,7 @@ const AseguradosPage = () => {
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
+						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
 							<span>Filas:</span>
 							<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
 								<SelectTrigger className="w-20">
@@ -186,6 +138,32 @@ const AseguradosPage = () => {
 									<SelectItem value="50">50</SelectItem>
 								</SelectContent>
 							</Select>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									exportRowsToExcel(
+										'asegurados',
+										asegurados.map((row) => ({
+											Código: row.codigo ?? '',
+											Nombre: row.full_name,
+											Documento: row.document_id,
+											Teléfono: row.phone,
+											Email: row.email ?? '',
+											Tipo: row.tipo_asegurado,
+										})),
+									)
+								}
+								className="gap-1.5 sm:gap-2 shrink-0"
+								title="Exportar"
+							>
+								<Download className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Exportar</span>
+							</Button>
+							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nuevo asegurado">
+								<Plus className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Nuevo asegurado</span>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -198,7 +176,7 @@ const AseguradosPage = () => {
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{asegurados.map((row) => (
-							<AseguradoCard key={row.id} asegurado={row} onClick={() => openDetailPanel(row)} />
+							<AseguradoCard key={row.id} asegurado={row} onClick={() => openHistoryModal(row)} />
 						))}
 					</div>
 				</div>
@@ -299,12 +277,14 @@ const AseguradosPage = () => {
 				</DialogContent>
 			</Dialog>
 
-			<AseguradoDetailPanel
+			<AseguradoHistoryModal
+				isOpen={historyModalOpen}
+				onClose={() => setHistoryModalOpen(false)}
 				asegurado={selectedAsegurado}
-				isOpen={panelOpen}
-				onClose={() => setPanelOpen(false)}
-				onSave={handlePanelSave}
-				saving={panelSaving}
+				onAseguradoUpdated={(updated) => {
+					setSelectedAsegurado(updated)
+					queryClient.invalidateQueries({ queryKey: ['asegurados'] })
+				}}
 			/>
 		</div>
 	)

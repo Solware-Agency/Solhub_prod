@@ -10,7 +10,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getTriageByCase } from '@/services/supabase/triage/triage-service';
 import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
-import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service';
 import { supabase } from '@/services/supabase/config/config';
 
 // Error Boundary para capturar errores en el formulario
@@ -146,34 +145,6 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     retry: 1,
   });
 
-  // Verificar si el paciente es un representado (menor o animal) y obtener responsable
-  const { data: responsableData } = useQuery({
-    queryKey: ['patient-responsable-triaje', case_?.patient_id],
-    queryFn: async () => {
-      if (!case_?.patient_id) return null;
-      try {
-        // Verificar si el paciente es menor o animal
-        const { data: patient } = await supabase
-          .from('patients')
-          .select('tipo_paciente')
-          .eq('id', case_.patient_id)
-          .single();
-        
-        if (patient && ((patient as any).tipo_paciente === 'menor' || (patient as any).tipo_paciente === 'animal')) {
-          const responsable = await getResponsableByDependiente(case_.patient_id);
-          return responsable;
-        }
-        
-        return null;
-      } catch (error) {
-        console.error('Error obteniendo responsable:', error);
-        return null;
-      }
-    },
-    enabled: !!case_?.patient_id && isOpen,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
   // Reset forceEditMode when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -250,43 +221,50 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             >
               {/* Header */}
               <div className='p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
-                <div className='flex items-start justify-between gap-4'>
-                  <div className='flex-1 min-w-0'>
+                <div className='flex items-center justify-between gap-4'>
+                  <div className='flex items-center gap-6'>
                     <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap'>
                       Historia Clínica
                     </h2>
+                    <div className='flex items-center gap-2 text-sm sm:text-base'>
+                      <div className='flex items-center gap-1.5'>
+                        <span className='font-semibold text-gray-900 dark:text-gray-100'>
+                          {case_.nombre || 'Sin nombre'}
+                        </span>
+                        <span className='text-gray-400 dark:text-gray-600'>•</span>
+                        <span className='text-gray-600 dark:text-gray-400'>
+                          {case_.cedula || 'Sin cédula'}
+                        </span>
+                        {case_.edad && (
+                          <>
+                            <span className='text-gray-400 dark:text-gray-600'>•</span>
+                            <span className='text-gray-600 dark:text-gray-400'>
+                              {case_.edad}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={onClose}
-                    className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0'
-                    aria-label='Cerrar modal'
-                  >
-                    <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
-                  </button>
-                </div>
-                <div className='flex items-center justify-end gap-3 sm:gap-4 mt-6'>
-                  <div className='text-right'>
-                    <p className='text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100'>
-                      {case_.nombre || 'Sin nombre'}
-                    </p>
-                    <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5'>
-                      {responsableData?.responsable ? (
-                        `Representado por: ${responsableData.responsable.nombre}`
-                      ) : (
-                        case_.cedula || 'Sin cédula'
-                      )}
-                    </p>
-                  </div>
-                  {existingTriage && !existingTriage.is_draft && canEditTriaje && !forceEditMode && (
-                    <Button
-                      onClick={() => setForceEditMode(true)}
-                      variant='outline'
-                      className='flex items-center gap-2 flex-shrink-0'
+                  <div className='flex items-center gap-3'>
+                    {existingTriage && !existingTriage.is_draft && canEditTriaje && !forceEditMode && (
+                      <Button
+                        onClick={() => setForceEditMode(true)}
+                        variant='outline'
+                        className='flex items-center gap-2 flex-shrink-0'
+                      >
+                        <Edit className='w-4 h-4' />
+                        Editar Historia Clínica
+                      </Button>
+                    )}
+                    <button
+                      onClick={onClose}
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0'
+                      aria-label='Cerrar modal'
                     >
-                      <Edit className='w-4 h-4' />
-                      Editar Historia Clínica
-                    </Button>
-                  )}
+                      <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -301,6 +279,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                         setForceEditMode(false);
                         onSave?.();
                       }}
+                      onCancelEdit={() => setForceEditMode(false)}
                       showOnlyVitalSigns={isEnfermero}
                       userRole={profile?.role}
                       forceEditMode={forceEditMode}

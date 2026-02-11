@@ -42,6 +42,8 @@ type ExtendedDatabase = Database & {
           plan_de_accion: string | null;
           lugar_de_nacimiento: string | null;
           telefono_emergencia: string | null;
+          parentesco: string | null;
+          persona_quien_llama: string | null;
           is_draft: boolean | null;
           created_by: string | null;
           created_at: string;
@@ -77,6 +79,8 @@ type ExtendedDatabase = Database & {
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
           telefono_emergencia?: string | null;
+          parentesco?: string | null;
+          persona_quien_llama?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -112,6 +116,8 @@ type ExtendedDatabase = Database & {
           plan_de_accion?: string | null;
           lugar_de_nacimiento?: string | null;
           telefono_emergencia?: string | null;
+          parentesco?: string | null;
+          persona_quien_llama?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -158,6 +164,8 @@ export interface TriageRecord {
   plan_de_accion: string | null;
   lugar_de_nacimiento: string | null;
   telefono_emergencia: string | null;
+  parentesco: string | null;
+  persona_quien_llama: string | null;
   is_draft: boolean | null;
   created_by: string | null;
   created_at: string | null;
@@ -194,6 +202,8 @@ export interface TriageRecordInsert {
   plan_de_accion?: string | null;
   lugar_de_nacimiento?: string | null;
   telefono_emergencia?: string | null;
+  parentesco?: string | null;
+  persona_quien_llama?: string | null;
   is_draft?: boolean | null;
   created_by?: string | null;
 }

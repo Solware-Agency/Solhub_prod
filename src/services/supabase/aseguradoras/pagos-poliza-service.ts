@@ -40,6 +40,26 @@ export const getPagosByPoliza = async (polizaId: string): Promise<PagoPoliza[]> 
 	return (data || []) as PagoPoliza[]
 }
 
+/** Pagos en un mes dado (año y mes 1-12) */
+export const getPagosByMonth = async (year: number, month: number): Promise<(PagoPoliza & { poliza?: { id: string; numero_poliza: string } })[]> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const start = new Date(year, month - 1, 1)
+	const end = new Date(year, month, 0)
+	const startStr = start.toISOString().slice(0, 10)
+	const endStr = end.toISOString().slice(0, 10)
+
+	const { data, error } = await supabase
+		.from('pagos_poliza')
+		.select('*, poliza:polizas(id, numero_poliza)')
+		.eq('laboratory_id', laboratoryId)
+		.gte('fecha_pago', startStr)
+		.lte('fecha_pago', endStr)
+		.order('fecha_pago', { ascending: false })
+
+	if (error) throw error
+	return (data || []) as (PagoPoliza & { poliza?: { id: string; numero_poliza: string } })[]
+}
+
 export const getPagosPoliza = async (page = 1, limit = 50) => {
 	const laboratoryId = await getUserLaboratoryId()
 	const from = (page - 1) * limit
