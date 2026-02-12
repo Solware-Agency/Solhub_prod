@@ -34,7 +34,9 @@ interface ServiceSectionProps {
 }
 
 const sampleTypeOptionsFromCosts = (costs: SampleTypeCost[]) =>
-  costs.map((c) => ({ value: c.name, label: c.name }));
+  costs
+    .map((c) => ({ value: c.name, label: c.name }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es'));
 
 export const ServiceSection = memo(
   ({ control, inputStyles, sampleTypeCosts }: ServiceSectionProps) => {

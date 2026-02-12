@@ -453,7 +453,7 @@ const TriageInfoDisplay: React.FC<{
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
               <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
-              Examen Físico y Observaciones
+              Examen Físico y Examen Funcional
             </CardTitle>
           </CardHeader>
           <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
@@ -469,7 +469,7 @@ const TriageInfoDisplay: React.FC<{
             {record.comment && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
-                  Comentarios
+                  Examen Funcional
                 </p>
                 <p className='text-sm'>{record.comment}</p>
               </div>
@@ -1623,13 +1623,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             </div>
           </div>
 
-          {/* Sección 1: Examen Físico y Observaciones (6 campos en 2 filas de 3) */}
+          {/* Sección 1: Examen Físico y Examen Funcional (6 campos en 2 filas de 3) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
               <CardHeader className='p-4 sm:p-6'>
                 <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
                   <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
-                  Examen Físico y Observaciones
+                  Examen Físico y Examen Funcional
                 </CardTitle>
               </CardHeader>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
@@ -1684,10 +1684,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
                       <FileText className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
-                      Observaciones
+                      Examen Funcional
                     </label>
                     <Textarea
-                      placeholder='Ingrese observaciones adicionales'
+                      placeholder='Ingrese el examen funcional'
                       value={formData.comentario}
                       onChange={(e) =>
                         handleInputChange('comentario', e.target.value)
