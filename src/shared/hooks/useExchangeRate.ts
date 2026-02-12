@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-const baseUrl = import.meta.env.VITE_API_EXCHANGE_URL
+const baseUrl = 'https://ve.dolarapi.com'
 const fullUrl = `${baseUrl}/v1/dolares/oficial`
 
 export const useExchangeRate = () => {
