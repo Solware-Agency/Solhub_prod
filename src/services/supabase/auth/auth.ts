@@ -182,6 +182,46 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 			}
 		}
 
+		// Evitar que useSecureRedirect redirija mientras comprobamos el laboratorio (evita parpadeo/recarga)
+		const CHECKING_LAB_KEY = 'auth_checking_lab_status'
+		try {
+			localStorage.setItem(CHECKING_LAB_KEY, '1')
+
+			// CRITICAL: Check if user's laboratory is active (block login if inactive)
+			if (data.user) {
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('laboratory_id')
+					.eq('id', data.user.id)
+					.single()
+
+				const labId = (profile as { laboratory_id?: string | null } | null)?.laboratory_id
+				if (labId) {
+					const { data: lab, error: labError } = await supabase
+						.from('laboratories' as never)
+						.select('id, status')
+						.eq('id', labId)
+						.maybeSingle()
+
+					// RLS solo permite ver laboratorios activos; si no hay fila o status es 'inactive', bloqueamos
+					const status = (lab as { status?: string })?.status
+					const isInactive = labError || !lab || status === 'inactive'
+					if (isInactive) {
+						await supabase.auth.signOut()
+						return {
+							user: null,
+							error: {
+								message: 'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.',
+								name: 'LaboratoryInactive',
+							} as AuthError,
+						}
+					}
+				}
+			}
+		} finally {
+			localStorage.removeItem(CHECKING_LAB_KEY)
+		}
+
 		console.log('Signin successful for verified user:', email)
 		
 		// ⚠️ CRÍTICO: Limpiar el flag de logout si existe (por si quedó de un logout previo)

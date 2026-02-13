@@ -59,6 +59,12 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			return
 		}
 
+		// No redirigir mientras se comprueba si el laboratorio está activo (evita parpadeo al rechazar por inactivo)
+		if (localStorage.getItem('auth_checking_lab_status') === '1') {
+			console.log('🚫 Redirect bloqueado - comprobando estado del laboratorio')
+			return
+		}
+
 		// Don't redirect if still loading
 		if (authLoading || profileLoading || isRedirecting) {
 			console.log('Redirect skipped - still loading or already redirecting')
@@ -234,7 +240,8 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			isLoggingOut,
 		})
 
-		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut) {
+		const checkingLab = localStorage.getItem('auth_checking_lab_status') === '1'
+		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut && !checkingLab) {
 			const currentPath = location.pathname
 			const authPaths = [
 				'/',

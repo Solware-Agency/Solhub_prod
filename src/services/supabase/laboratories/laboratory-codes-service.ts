@@ -68,6 +68,20 @@ export async function validateLaboratoryCode(
       };
     }
 
+    // Verificar que el laboratorio esté activo (no permitir registro si está inactive)
+    const { data: lab, error: labError } = await (supabase as any)
+      .from('laboratories')
+      .select('id, status')
+      .eq('id', data.laboratory_id)
+      .maybeSingle();
+
+    if (labError || !lab || lab.status === 'inactive') {
+      return {
+        success: false,
+        error: 'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.'
+      };
+    }
+
     console.log('✅ Código válido:', data);
 
     return {

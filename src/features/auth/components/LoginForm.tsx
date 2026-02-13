@@ -11,6 +11,10 @@ import { toast } from '@shared/hooks/use-toast';
 import SolHubIcon from '@shared/components/icons/SolHubIcon';
 import { useDynamicBranding } from '@shared/hooks/useDynamicBranding';
 
+const LABORATORY_INACTIVE_MESSAGE =
+  'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.';
+const STORAGE_KEY_LAB_INACTIVE = 'login_error_laboratory_inactive';
+
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +34,15 @@ function LoginForm() {
       console.log(`User with role "${role}" being redirected to: ${path}`);
     },
   });
+
+  // Restaurar mensaje de cuenta inactiva si hubo redirección/recarga (evita que se pierda el mensaje)
+  useEffect(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEY_LAB_INACTIVE);
+    if (stored) {
+      sessionStorage.removeItem(STORAGE_KEY_LAB_INACTIVE);
+      setError(stored);
+    }
+  }, []);
 
   // Efecto para detectar parámetros de URL y pre-llenar campos
   useEffect(() => {
@@ -146,6 +159,12 @@ function LoginForm() {
               return;
             }
           }, 5000);
+        } else if (
+          signInError.name === 'LaboratoryInactive' ||
+          signInError.message.includes('Cuenta inactiva')
+        ) {
+          setError(LABORATORY_INACTIVE_MESSAGE);
+          sessionStorage.setItem(STORAGE_KEY_LAB_INACTIVE, LABORATORY_INACTIVE_MESSAGE);
         } else if (
           signInError.name === 'EmailNotConfirmed' ||
           signInError.message.includes('Email not confirmed')
