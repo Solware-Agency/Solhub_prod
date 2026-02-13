@@ -19,6 +19,15 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		changelog: '/employee/changelog',
 		users: '/employee/users',
 	},
+	coordinador: {
+		home: '/employee/home',
+		cases: '/employee/records',
+		patients: '/employee/patients',
+		settings: '/employee/settings',
+		form: '/employee/form',
+		changelog: '/employee/changelog',
+		users: '/employee/users',
+	},
 	residente: {
 		home: '/medic/home',
 		cases: '/medic/cases',
