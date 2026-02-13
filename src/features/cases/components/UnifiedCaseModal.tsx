@@ -2251,7 +2251,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* PDF Subido - Solo para SPT, roles: laboratorio, employee, owner, prueba (godmode), call_center */}
+											{/* PDF Subido - Solo para SPT, roles: laboratorio, coordinador, employee, owner, prueba, imagenologia, call_center */}
 											{/* Visible en la sección de Información Médica */}
 											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjunto:</span>
