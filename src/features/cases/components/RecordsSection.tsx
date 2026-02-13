@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo, useEffect, useRef } from 'react'
 import CasesTable from '@features/cases/components/CasesTable'
 import { MapPin } from 'lucide-react'
 import { type MedicalRecord } from '@shared/types/types'
@@ -48,6 +48,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 	pagination,
 }) => {
 	const queryClient = useQueryClient()
+	const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
 	useEffect(() => {
 		console.log('🚀 [RecordsSection] Iniciando suscripción realtime...')
@@ -93,13 +94,16 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 					}
 				})
 
-			// Store channel reference for cleanup
-			return channel
+			channelRef.current = channel
 		}, 2000) // Esperar 2 segundos
 
 		return () => {
 			console.log('🧹 [RecordsSection] Limpiando suscripción')
 			clearTimeout(timeoutId)
+			if (channelRef.current) {
+				supabase.removeChannel(channelRef.current)
+				channelRef.current = null
+			}
 		}
 	}, [queryClient, refetch])
 

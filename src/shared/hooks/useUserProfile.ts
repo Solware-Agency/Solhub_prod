@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@app/providers/AuthContext'
 import { getAndSyncUserProfile } from '@services/supabase/users/getAndSyncUserProfile'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '@services/supabase/config/config'
 import { toast } from '@shared/hooks/use-toast'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
@@ -25,44 +25,53 @@ export const useUserProfile = () => {
 		refetchOnReconnect: true,
 	})
 
-	// Realtime updates for current user's profile
+	// Realtime updates for current user's profile (delay evita "WebSocket closed before connection" en Strict Mode / montaje inicial)
+	const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 	useEffect(() => {
 		if (!user?.id) return
 
-		const channel = supabase
-			.channel(`realtime-profile-${user.id}`)
-			.on(
-				'postgres_changes',
-				{ event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
-				(payload: RealtimePostgresChangesPayload<Tables<'profiles'>>) => {
-					const nextProfile = (payload?.new as Tables<'profiles'>) ?? null
-					const prevProfile = (payload?.old as Tables<'profiles'>) ?? null
-					// Update React Query cache immediately for snappy UI
-					queryClient.setQueryData(['userProfile', user.id], nextProfile)
-					// Invalida queries que dependan del perfil para forzar re-evaluación de rutas/guards
-					queryClient.invalidateQueries({ queryKey: ['userProfile', user.id] })
-					// Optional: ensure consistency by refetching in background
-					query.refetch()
+		const timeoutId = setTimeout(() => {
+			const channel = supabase
+				.channel(`realtime-profile-${user.id}`)
+				.on(
+					'postgres_changes',
+					{ event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+					(payload: RealtimePostgresChangesPayload<Tables<'profiles'>>) => {
+						const nextProfile = (payload?.new as Tables<'profiles'>) ?? null
+						const prevProfile = (payload?.old as Tables<'profiles'>) ?? null
+						// Update React Query cache immediately for snappy UI
+						queryClient.setQueryData(['userProfile', user.id], nextProfile)
+						// Invalida queries que dependan del perfil para forzar re-evaluación de rutas/guards
+						queryClient.invalidateQueries({ queryKey: ['userProfile', user.id] })
+						// Optional: ensure consistency by refetching in background
+						query.refetch()
 
-					// Notify when the account gets approved
-					if (
-						payload?.eventType === 'UPDATE' &&
-						prevProfile?.estado === 'pendiente' &&
-						nextProfile?.estado === 'aprobado'
-					) {
-						toast({
-							title: '¡Cuenta aprobada!',
-							description: 'Ya puedes acceder y serás redirigido automáticamente.',
-						})
-					}
-				},
-			)
-			.subscribe()
+						// Notify when the account gets approved
+						if (
+							payload?.eventType === 'UPDATE' &&
+							prevProfile?.estado === 'pendiente' &&
+							nextProfile?.estado === 'aprobado'
+						) {
+							toast({
+								title: '¡Cuenta aprobada!',
+								description: 'Ya puedes acceder y serás redirigido automáticamente.',
+							})
+						}
+					},
+				)
+				.subscribe()
+
+			channelRef.current = channel
+		}, 300)
 
 		return () => {
-			supabase.removeChannel(channel)
+			clearTimeout(timeoutId)
+			if (channelRef.current) {
+				supabase.removeChannel(channelRef.current)
+				channelRef.current = null
+			}
 		}
-	}, [user?.id, queryClient, query])
+	}, [user?.id, queryClient])
 
 	return {
 		profile: query.data,
