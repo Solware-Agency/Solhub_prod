@@ -21,7 +21,10 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
-import { Loader2, Save, Plus, Trash2, Percent, Search } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Percent, Search, Download, FileText } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const DEFAULT_CONVENIO_PCT = 5
 const DEFAULT_DESCUENTO_PCT = 10
@@ -56,6 +59,7 @@ const SampleCostsPage: React.FC = () => {
 	const [editDescuentoPct, setEditDescuentoPct] = useState(String(descuentoDiscountPercent))
 	const [savingPercent, setSavingPercent] = useState(false)
 	const [searchTerm, setSearchTerm] = useState('')
+	const [openExportModal, setOpenExportModal] = useState(false)
 
 	const filteredCosts = useMemo(() => {
 		if (!searchTerm.trim()) return costs
@@ -259,12 +263,128 @@ const SampleCostsPage: React.FC = () => {
 		}
 	}
 
+	const handleExportToExcel = () => {
+		if (filteredCosts.length === 0) {
+			toast({
+				title: 'Sin datos para exportar',
+				description: searchTerm.trim()
+					? `No hay resultados para "${searchTerm}". Exporta sin filtro o limpia la búsqueda.`
+					: 'No hay datos de costos para este laboratorio.',
+				variant: 'destructive',
+			})
+			return
+		}
+		try {
+			const toNum = (s: string) => {
+				const n = parseFloat(s)
+				return s !== '' && !isNaN(n) ? n : ''
+			}
+			const rows = filteredCosts.map((row) => ({
+				Código: row.code ?? '',
+				'Tipo de muestra': row.name ?? '',
+				'Taquilla ($)': toNum(getDisplayValue(row, 'taquilla')),
+				'Convenios ($)': toNum(getDisplayValue(row, 'convenios')),
+				'Descuento ($)': toNum(getDisplayValue(row, 'descuento')),
+			}))
+			const wb = XLSX.utils.book_new()
+			const ws = XLSX.utils.json_to_sheet(rows)
+			ws['!cols'] = [{ wch: 10 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 14 }]
+			XLSX.utils.book_append_sheet(wb, ws, 'Estructura de costos')
+			const dateStr = new Date().toISOString().split('T')[0]
+			const fileName = `estructura_costos_${dateStr}.xlsx`
+			XLSX.writeFile(wb, fileName)
+			toast({
+				title: 'Exportación exitosa',
+				description: `Se exportaron ${rows.length} filas a ${fileName}`,
+			})
+		} catch (error) {
+			console.error('Error al exportar Excel:', error)
+			toast({
+				title: 'Error en la exportación',
+				description: 'No se pudo generar el archivo Excel. Intenta de nuevo.',
+				variant: 'destructive',
+			})
+		}
+	}
+
+	const handleExportToPdf = () => {
+		if (filteredCosts.length === 0) {
+			toast({
+				title: 'Sin datos para exportar',
+				description: searchTerm.trim()
+					? `No hay resultados para "${searchTerm}". Exporta sin filtro o limpia la búsqueda.`
+					: 'No hay datos de costos para este laboratorio.',
+				variant: 'destructive',
+			})
+			return
+		}
+		try {
+			const toStr = (s: string) => {
+				const n = parseFloat(s)
+				return s !== '' && !isNaN(n) ? String(n) : '—'
+			}
+			const head = [['Código', 'Tipo de muestra', 'Taquilla ($)', 'Convenios ($)', 'Descuento ($)']]
+			const body = filteredCosts.map((row) => [
+				row.code ?? '',
+				row.name ?? '',
+				toStr(getDisplayValue(row, 'taquilla')),
+				toStr(getDisplayValue(row, 'convenios')),
+				toStr(getDisplayValue(row, 'descuento')),
+			])
+			const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+			doc.setFontSize(14)
+			doc.text('Estructura de costos', 14, 12)
+			doc.setFontSize(9)
+			doc.text(`Laboratorio: ${laboratory?.name ?? 'N/A'} · ${filteredCosts.length} fila(s) · ${new Date().toLocaleDateString('es-ES')}`, 14, 18)
+			autoTable(doc, {
+				head,
+				body,
+				startY: 22,
+				theme: 'grid',
+				styles: { fontSize: 9 },
+				headStyles: { fillColor: [71, 85, 105], textColor: 255 },
+				columnStyles: {
+					0: { cellWidth: 22 },
+					1: { cellWidth: 100 },
+					2: { cellWidth: 28, halign: 'right' },
+					3: { cellWidth: 28, halign: 'right' },
+					4: { cellWidth: 28, halign: 'right' },
+				},
+				margin: { left: 14 },
+			})
+			const dateStr = new Date().toISOString().split('T')[0]
+			doc.save(`estructura_costos_${dateStr}.pdf`)
+			toast({
+				title: 'Exportación exitosa',
+				description: `Se exportaron ${body.length} filas a PDF.`,
+			})
+		} catch (error) {
+			console.error('Error al exportar PDF:', error)
+			toast({
+				title: 'Error en la exportación',
+				description: 'No se pudo generar el PDF. Intenta de nuevo.',
+				variant: 'destructive',
+			})
+		}
+	}
+
 	return (
 		<div className="p-4 sm:p-6 space-y-4">
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between gap-2">
 					<CardTitle>Estructura de costos</CardTitle>
 					<div className="flex items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="lg"
+							onClick={() => setOpenExportModal(true)}
+							disabled={filteredCosts.length === 0}
+							aria-label="Exportar"
+						>
+							<Download className="h-4 w-4 mr-1" />
+							Exportar
+						</Button>
 						{canEdit && (
 							<Button
 								type="button"
@@ -373,7 +493,7 @@ const SampleCostsPage: React.FC = () => {
 													variant="outline"
 													onClick={() => handleDeleteRow(row)}
 													disabled={deletingCode === row.code}
-													className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+													className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
 													aria-label="Eliminar"
 												>
 													{deletingCode === row.code ? (
@@ -397,6 +517,43 @@ const SampleCostsPage: React.FC = () => {
 					)}
 				</CardContent>
 			</Card>
+
+			<Dialog open={openExportModal} onOpenChange={setOpenExportModal}>
+				<DialogContent className="sm:max-w-sm bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+					<DialogHeader>
+						<DialogTitle>Exportar estructura de costos</DialogTitle>
+					</DialogHeader>
+					<p className="text-sm text-muted-foreground py-1">
+						Elige el formato de exportación. Se exportarán {filteredCosts.length} fila(s) según el filtro actual.
+					</p>
+					<div className="flex flex-col gap-2 pt-2">
+						<Button
+							type="button"
+							variant="outline"
+							className="justify-start"
+							onClick={() => {
+								handleExportToExcel()
+								setOpenExportModal(false)
+							}}
+						>
+							<Download className="h-4 w-4 mr-2" />
+							Exportar a Excel (.xlsx)
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							className="justify-start"
+							onClick={() => {
+								handleExportToPdf()
+								setOpenExportModal(false)
+							}}
+						>
+							<FileText className="h-4 w-4 mr-2" />
+							Exportar a PDF
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			<Dialog open={openAddModal} onOpenChange={(open) => !open && resetAddModal()}>
 				<DialogContent className="sm:max-w-md bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
