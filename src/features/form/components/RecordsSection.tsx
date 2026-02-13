@@ -99,7 +99,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 		let filtered = [...cases]
 
 		// If user is an employee with assigned branch, filter cases
-		if (profile?.role === 'employee' && profile?.assigned_branch) {
+		if ((profile?.role === 'employee' || profile?.role === 'coordinador') && profile?.assigned_branch) {
 			filtered = filtered.filter((c) => c.branch === profile.assigned_branch)
 		}
 

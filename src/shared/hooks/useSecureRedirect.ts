@@ -126,6 +126,9 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'employee':
 				redirectPath = employeePath
 				break
+			case 'coordinador':  // coordinador tiene mismos permisos que employee
+				redirectPath = employeePath
+				break
 			case 'citotecno':
 				redirectPath = '/cito/home'
 				break
@@ -162,7 +165,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 					.single()
 
 				const hasAseguradoras = (laboratory as any)?.features?.hasAseguradoras === true
-				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'owner' || profile.role === 'prueba'
+				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'coordinador' || profile.role === 'owner' || profile.role === 'prueba'
 				if (hasAseguradoras && canSeeAseguradoras) {
 					redirectPath = '/aseguradoras/home'
 				}

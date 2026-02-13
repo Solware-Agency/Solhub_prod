@@ -2259,6 +2259,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													{isSpt &&
 													(profile?.role === 'laboratorio' ||
 														profile?.role === 'employee' ||
+														profile?.role === 'coordinador' ||
 														profile?.role === 'owner' ||
 														profile?.role === 'prueba' ||
 														profile?.role === 'imagenologia' ||

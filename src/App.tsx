@@ -174,7 +174,7 @@ function App() {
                 <Route
                   path='/employee'
                   element={
-                    <PrivateRoute requiredRole={'employee'}>
+                    <PrivateRoute requiredRole={['employee', 'coordinador']}>
                       <Layout />
                     </PrivateRoute>
                   }
@@ -476,7 +476,7 @@ function App() {
                 <Route
                   path='/aseguradoras'
                   element={
-                    <PrivateRoute requiredRole={['employee', 'owner', 'prueba']}>
+                    <PrivateRoute requiredRole={['employee', 'coordinador', 'owner', 'prueba']}>
                       <FeatureRoute
                         feature="hasAseguradoras"
                         fallbackPath="/dashboard/home"

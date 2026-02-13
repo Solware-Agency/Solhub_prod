@@ -127,6 +127,8 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 					return <Navigate to="/medic/home" replace />
 				case 'employee':
 					return <Navigate to="/employee/home" replace />
+				case 'coordinador':  // coordinador tiene mismos permisos que employee
+					return <Navigate to="/employee/home" replace />
 				case 'citotecno':
 					return <Navigate to="/cito/home" replace />
 				case 'patologo':

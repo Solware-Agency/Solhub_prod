@@ -132,7 +132,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
 
   const isOwner = profile?.role === 'owner';
   const isResidente = profile?.role === 'residente';
-  const isEmployee = profile?.role === 'employee';
+  const isEmployee = profile?.role === 'employee' || profile?.role === 'coordinador';
   const isCitotecno = profile?.role === 'citotecno';
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';

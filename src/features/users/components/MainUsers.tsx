@@ -64,6 +64,7 @@ const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
 	laboratorio: 'El personal de laboratorio puede ver pacientes y casos, enviar informes y adjuntar PDFs de resultados.',
 	prueba: 'Rol de prueba con acceso completo sin restricciones.',
 	call_center: 'El personal de call center puede visualizar y enviar casos, además de editar información básica de pacientes.',
+	coordinador: 'Los coordinadores tienen todos los permisos de recepcionista PLUS capacidad de adjuntar PDFs a casos como laboratorio.',
 }
 
 interface UserProfile {
