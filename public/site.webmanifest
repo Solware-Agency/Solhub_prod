@@ -1,11 +1,13 @@
 {
-  "name": "SolHub",
+  "name": "SolHub - Sistema de Gestión Médica",
   "short_name": "SolHub",
-  "description": "Sistema de Gestión: Menos papeles, más precisión, salud conectada.",
+  "description": "Sistema integral de gestión de laboratorios médicos. Menos papeles, más precisión, salud conectada.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#000000",
-  "theme_color": "#000000",
+  "theme_color": "#1a1a1a",
+  "categories": ["medical", "productivity", "business"],
   "icons": [
     {
       "src": "apple-touch-icon.png",

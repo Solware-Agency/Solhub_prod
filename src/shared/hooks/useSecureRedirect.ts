@@ -22,7 +22,7 @@ interface UseSecureRedirectOptions {
 interface UseSecureRedirectReturn {
 	isRedirecting: boolean
 	redirectUser: () => void
-	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner') => boolean
+	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'coordinador') => boolean
 }
 
 /**
@@ -186,7 +186,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Checks if user can access a specific role-protected route
 	 */
-	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'imagenologia'): boolean => {
+	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'imagenologia' | 'coordinador'): boolean => {
 		if (!user || !profile || !user.email_confirmed_at || profileError) {
 			return false
 		}

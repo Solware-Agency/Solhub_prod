@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | 'coordinador' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | 'coordinador'>
 }
 
 /**

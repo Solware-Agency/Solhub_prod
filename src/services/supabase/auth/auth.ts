@@ -21,7 +21,7 @@ export interface AuthResponse {
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -573,7 +573,7 @@ export const updateUserProfile = async (
 }
 
 // Check if user has specific role
-export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'	): Promise<boolean> => {
+export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'coordinador'	): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
 		// Rol "prueba" (godmode) tiene acceso a todo

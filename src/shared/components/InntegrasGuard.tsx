@@ -12,6 +12,8 @@ const getFallbackPathByRole = (role?: string) => {
 			return '/dashboard/home'
 		case 'employee':
 			return '/employee/home'
+		case 'coordinador': // coordinador = employee permissions 
+			return '/employee/home'
 		case 'prueba':
 			return '/prueba/home'
 		default:

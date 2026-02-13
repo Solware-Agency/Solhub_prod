@@ -82,7 +82,7 @@ export const getAndSyncUserProfile = async (userId: string, userMeta: any): Prom
 	return {
 		id: profile.id,
 		email: profile.email,
-		role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio',
+		role: profile.role as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador',
 		created_at: profile.created_at || new Date().toISOString(),
 		updated_at: profile.updated_at || new Date().toISOString(),
 		assigned_branch: profile.assigned_branch ?? null,
