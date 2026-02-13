@@ -109,7 +109,7 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
   owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD
@@ -252,7 +252,7 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
   owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia?: number | null;
   fecha_entrega?: string | null; // YYYY-MM-DD
@@ -309,7 +309,7 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
   owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD

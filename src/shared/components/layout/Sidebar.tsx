@@ -371,6 +371,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isResidente = profile?.role === 'residente';
   const isOwner = profile?.role === 'owner';
   const isEmployee = profile?.role === 'employee';
+  const isCoordinador = profile?.role === 'coordinador' as any;
   const isCitotecno = profile?.role === 'citotecno';
   const isPatologo = profile?.role === 'patologo';
   const isMedicowner = profile?.role === 'medicowner';
@@ -381,9 +382,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isImagenologia = profile?.role === 'imagenologia';
   const isLaboratorio = profile?.role === 'laboratorio';
   const isInntegras = laboratory?.slug === 'inntegras';
+
+  // Para coordinador: mismos permisos que employee + subir PDFs
+  const isEmployeeOrCoordinador = isEmployee || isCoordinador;
+
   const canSeeAseguradoras =
     (laboratory?.features?.hasAseguradoras === true) &&
-    (isOwner || isEmployee || isPrueba);
+    (isOwner || isEmployeeOrCoordinador || isPrueba);
 
   return (
     <aside className='bg-white/80 dark:bg-background/50 shadow-lg shadow-primary/50 backdrop-blur-[3px] dark:backdrop-blur-[10px] flex flex-col h-screen py-4 sm:py-6 px-2 sm:px-4 gap-0 text-gray-700 dark:text-white ease-in-out overflow-hidden border-r border-input'>
@@ -667,7 +672,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* Employee specific routes */}
-          {isEmployee && !isInntegras && (
+          {isEmployeeOrCoordinador && !isInntegras && (
             <>
               <NavItem
                 to='/employee/home'
@@ -1203,7 +1208,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         )}
 
-        {isEmployee && (
+        {isEmployeeOrCoordinador && (
           <NavItem
             to='/employee/settings'
             icon={<Settings className='stroke-2 size-4 sm:size-5 shrink-0' />}
