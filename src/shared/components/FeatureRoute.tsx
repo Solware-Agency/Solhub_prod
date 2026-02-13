@@ -19,6 +19,11 @@ export function FeatureRoute({
   const location = useLocation();
   const pathname = location.pathname;
 
+  // [DEBUG] Log para debuggear problemas con coordinador
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔍 [FeatureRoute] Ruta: ${pathname}, Feature: ${feature || 'undefined'}, Loading: ${isLoading}`);
+  }
+
   // Spinner de carga (mismo componente para no duplicar)
   const loadingSpinner = (
     <div className="flex items-center justify-center min-h-screen">
@@ -33,6 +38,9 @@ export function FeatureRoute({
 
   // Si no hay feature requerida, mostrar el componente directamente
   if (!feature) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ [FeatureRoute] ${pathname} - Sin feature requerida, renderizando componente`);
+    }
     return <>{children}</>;
   }
 
@@ -52,6 +60,10 @@ export function FeatureRoute({
 
   // La feature no está habilitada en el laboratorio
   if (!laboratory.features[feature]) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`❌ [FeatureRoute] ${pathname} - Feature '${feature}' no habilitada en laboratorio, redirigiendo a ${fallbackPath}`);
+    }
+    
     // Para la feature de informes también evaluamos permisos por rol
     if (feature === 'hasReports') {
       // Denegar explícitamente a imagenologia por ahora
@@ -69,6 +81,10 @@ export function FeatureRoute({
 
     // Por defecto redirigimos al fallbackPath
     return <Navigate to={fallbackPath} replace />;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`✅ [FeatureRoute] ${pathname} - Feature '${feature}' habilitada, renderizando componente`);
   }
 
   return <>{children}</>;

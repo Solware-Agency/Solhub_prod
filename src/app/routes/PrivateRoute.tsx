@@ -107,6 +107,16 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 	if (requiredRole && profile.role !== 'prueba') {
 		const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
 
+		// [DEBUG] Log específico para coordinador
+		if (process.env.NODE_ENV === 'development' && profile.role === 'coordinador') {
+			console.log('🔍 [PrivateRoute] Usuario coordinador accediendo a ruta', {
+				userRole: profile.role,
+				requiredRole,
+				allowedRoles,
+				isAllowed: allowedRoles.includes(profile.role)
+			});
+		}
+
 		if (!allowedRoles.includes(profile.role)) {
 			console.log(`User role "${profile.role}" not in allowed roles: ${allowedRoles.join(', ')}`)
 			console.debug('PrivateRoute debug - allowedRoles:', allowedRoles, 'profile.role:', profile.role)
