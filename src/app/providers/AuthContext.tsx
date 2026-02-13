@@ -219,10 +219,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 							console.log('🔌 Auth subscription desuscrita')
 						}
 
-						// Limpiar estado inmediatamente
-						setUser(null)
-						setSession(null)
-						console.log('🧹 Estado limpiado')
+						// No hacer setUser(null)/setSession(null) aquí: si lo hacemos, PrivateRoute
+						// ve !user y hace <Navigate to="/" />, ves el login por un momento y luego
+						// window.location.replace('/') recarga la página = formulario dos veces.
+						// Limpiamos todo y redirigimos; en la nueva carga getInitialSession pondrá user/session null.
 
 						// Limpiar TODO el storage (sessionStorage + localStorage)
 						clearAllStorage()
@@ -269,10 +269,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						window.location.replace('/')
 					} catch (err) {
 						console.error('💥 Error inesperado durante logout:', err)
-						// Aún así, limpiar y redirigir
-						setUser(null)
-						setSession(null)
-						localStorage.setItem('is_logging_out', 'true') // Establecer flag incluso en error
+						// Aún así, limpiar y redirigir (sin setUser/setSession para no provocar Navigate a /)
+						localStorage.setItem('is_logging_out', 'true')
 						clearAllStorage()
 						window.location.replace('/')
 					} finally {

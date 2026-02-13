@@ -10,8 +10,8 @@ import { Suspense } from 'react';
 import { Toaster } from '@shared/components/ui/toaster';
 import { DateRangeProvider } from '@app/providers/DateRangeContext';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
+import { LoginPage } from '@features/auth/pages/LoginPage';
 import {
-  LoginPage,
   RegisterPage,
   ForgotPasswordPage,
   PasswordResetPage,
