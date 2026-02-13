@@ -382,7 +382,7 @@ const ExportSection: React.FC = () => {
 							<ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
 								<li>• Período: {rangeLabel}</li>
 								<li>• Incluye resumen general de ingresos</li>
-								<li>• Formato Excel (.xlsx) con varias hojas</li>
+								<li>• Formato Excel (.xlsx) o PDF con varias hojas</li>
 								<li>• Datos actualizados al {format(new Date(), 'PPP', { locale: es })}</li>
 								<li>• Selecciona las secciones que deseas incluir</li>
 							</ul>
