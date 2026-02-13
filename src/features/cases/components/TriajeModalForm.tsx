@@ -710,8 +710,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   }, [formData.cigarrillosPorDia, formData.anosFumando]);
 
   // Función para determinar si la historia clínica está completa
-  // Función para determinar si la historia clínica está completa
-  // Campos obligatorios: Motivo de consulta, SpO2, PA, Talla, Peso
+  // Campos obligatorios: SpO2, PA, Talla, Peso
   const isTriageComplete = (triage: TriageRecord | null): boolean => {
     if (!triage) {
       console.log('🔍 isTriageComplete: No hay triage');
@@ -722,9 +721,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return false;
     }
 
-    // Campos obligatorios: Motivo de consulta, SpO2, Presión Arterial, Talla, Peso
+    // Campos obligatorios: SpO2, Presión Arterial, Talla, Peso
     const hasRequired = !!(
-      triage.reason &&
       triage.oxygen_saturation &&
       triage.blood_pressure &&
       triage.height_cm &&
@@ -733,7 +731,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
     console.log('🔍 isTriageComplete:', {
       hasRequired,
-      reason: triage.reason,
       oxygen_saturation: triage.oxygen_saturation,
       blood_pressure: triage.blood_pressure,
       height_cm: triage.height_cm,
@@ -998,11 +995,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return value !== null && value !== undefined && value.trim().length > 0;
     };
     
-    // Verificar Motivo de consulta (obligatorio)
-    if (!hasValue(formData.motivoConsulta)) {
-      missingFields.push('Motivo de consulta');
-    }
-
     // Verificar cada signo vital obligatorio
     // FC (Frecuencia Cardíaca) - No es obligatorio
     // FR (Frecuencia Respiratoria) - No es obligatorio
@@ -1424,11 +1416,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         }
       }
 
-      // Refrescar la historia clínica
-      await refetchTriage();
+      // Refrescar la historia clínica y esperar a que se complete
+      const refetchResult = await refetchTriage();
 
-      // Verificar si la historia clínica quedó completa después de guardar
-      const updatedTriage = await getTriageByCase(case_.id);
+      // Usar los datos del refetch para verificar si está completo
+      const updatedTriage = refetchResult.data;
       const isComplete = isTriageComplete(updatedTriage || null);
 
       // Si la historia clínica está completa, volver al modo vista
@@ -1461,6 +1453,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             planDeAccion: updatedTriage.plan_de_accion || '',
             lugarNacimiento: updatedTriage.lugar_de_nacimiento || '',
             telefonoEmergencia: updatedTriage.telefono_emergencia || '',
+            parentesco: (updatedTriage as any).parentesco || '',
+            personaQuienLlama: (updatedTriage as any).persona_quien_llama || '',
             cafe: updatedTriage.cafe?.toString() || '',
             alcohol: updatedTriage.alcohol || '',
             ...(updatedTriage.tabaco !== null &&
@@ -1492,6 +1486,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             talla: '',
             peso: '',
             presionArterial: '',
+            glicemia: '',
             imc: '',
             antecedentesFamiliares: '',
             antecedentesPersonales: '',
@@ -1512,6 +1507,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             planDeAccion: '',
             lugarNacimiento: '',
             telefonoEmergencia: '',
+            parentesco: '',
+            personaQuienLlama: '',
           });
           setMessage('');
           if (onSave) {
@@ -1617,7 +1614,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   Campos obligatorios para guardar
                 </p>
                 <p className='text-xs text-blue-700 dark:text-blue-300'>
-                  <span className='font-medium'>Motivo de consulta</span>, <span className='font-medium'>SpO₂</span>, <span className='font-medium'>P.A.</span>, <span className='font-medium'>Talla</span> y <span className='font-medium'>Peso</span>
+                  <span className='font-medium'>SpO₂</span>, <span className='font-medium'>P.A.</span>, <span className='font-medium'>Talla</span> y <span className='font-medium'>Peso</span>
                 </p>
               </div>
             </div>
@@ -1637,7 +1634,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
                       <MessageSquare className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
-                      Motivo de consulta <span className='text-red-500'>*</span>
+                      Motivo de consulta
                     </label>
                     <Textarea
                       placeholder='Ingrese el motivo de consulta'
