@@ -2256,14 +2256,25 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjunto:</span>
 												<div className="sm:flex sm:justify-end sm:flex-1">
-													{isSpt &&
-													(profile?.role === 'laboratorio' ||
-														profile?.role === 'employee' ||
-														profile?.role === 'coordinador' ||
-														profile?.role === 'owner' ||
-														profile?.role === 'prueba' ||
-														profile?.role === 'imagenologia' ||
-														profile?.role === 'call_center') ? (
+													{(() => {
+														// Debug temporal
+														const canUploadPdf = isSpt && (
+															profile?.role === 'laboratorio' ||
+															profile?.role === 'employee' ||
+															profile?.role === 'coordinador' ||
+															profile?.role === 'owner' ||
+															profile?.role === 'prueba' ||
+															profile?.role === 'imagenologia' ||
+															profile?.role === 'call_center'
+														);
+														console.log('🔍 [PDF Upload Debug]', {
+															isSpt,
+															role: profile?.role,
+															canUploadPdf,
+															laboratorySlug: laboratory?.slug
+														});
+														return canUploadPdf;
+													})() ? (
 														<CasePDFUpload
 															caseId={caseData.id}
 															currentPdfUrl={(caseData as any).uploaded_pdf_url}
