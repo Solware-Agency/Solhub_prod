@@ -2251,30 +2251,18 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* PDF Subido - Solo para SPT, roles: laboratorio, coordinador, employee, owner, prueba, imagenologia, call_center */}
-											{/* Visible en la sección de Información Médica */}
+											{/* PDF Subido - Solo para SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
+											{/* Nota: coordinador tiene esta capacidad especial (employee NO) */}
 											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjunto:</span>
 												<div className="sm:flex sm:justify-end sm:flex-1">
-													{(() => {
-														// Debug temporal
-														const canUploadPdf = isSpt && (
-															profile?.role === 'laboratorio' ||
-															profile?.role === 'employee' ||
-															profile?.role === 'coordinador' ||
-															profile?.role === 'owner' ||
-															profile?.role === 'prueba' ||
-															profile?.role === 'imagenologia' ||
-															profile?.role === 'call_center'
-														);
-														console.log('🔍 [PDF Upload Debug]', {
-															isSpt,
-															role: profile?.role,
-															canUploadPdf,
-															laboratorySlug: laboratory?.slug
-														});
-														return canUploadPdf;
-													})() ? (
+													{isSpt &&
+													(profile?.role === 'laboratorio' ||
+														profile?.role === 'coordinador' ||
+														profile?.role === 'owner' ||
+														profile?.role === 'prueba' ||
+														profile?.role === 'imagenologia' ||
+														profile?.role === 'call_center') ? (
 														<CasePDFUpload
 															caseId={caseData.id}
 															currentPdfUrl={(caseData as any).uploaded_pdf_url}
