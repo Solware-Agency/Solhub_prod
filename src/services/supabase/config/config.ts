@@ -58,9 +58,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 	},
 })
 
-// TEMPORALMENTE COMENTADO: Verificar conexión con medical_records_clean
-// Esto puede causar errores 500 para rol coordinador hasta aplicar políticas RLS
-/*
+// Verificar conexión con medical_records_clean tras aplicar políticas RLS
 setTimeout(async () => {
 	const { data: { session } } = await supabase.auth.getSession()
 	
@@ -77,15 +75,7 @@ setTimeout(async () => {
 			})
 	}
 }, 1000)
-*/
 
 // Verificar conexión de realtime
 console.log('📡 [Realtime] Inicializando realtime...')
 console.log('📡 [Realtime] Estado de conexión:', supabase.realtime.isConnected())
-
-// Import debug helper para desarrollo (solo coordinador)
-if (process.env.NODE_ENV === 'development') {
-	import('./debug-coordinator').catch(err => {
-		console.warn('⚠️ [Debug] No se pudo cargar debug helper:', err.message)
-	})
-}
