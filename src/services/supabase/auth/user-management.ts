@@ -51,7 +51,8 @@ export const updateUserRole = async (
     | 'enfermero'
     | 'imagenologia'
     | 'call_center'
-    | 'prueba',
+    | 'prueba'
+    | 'coordinador',
 ): Promise<{
   data: UserProfile | null;
   error: PostgrestError | Error | null;
