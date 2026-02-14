@@ -795,6 +795,7 @@ export interface LaboratoryFeatures {
   hasNewPatientSystem: boolean
   hasSampleTypeCosts: boolean
   hasAseguradoras: boolean
+  hasDoctorSignatures: boolean
 }
 
 export interface LaboratoryBranding {

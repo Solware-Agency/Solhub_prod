@@ -9,7 +9,7 @@ import {
 	type SampleTypeCost,
 } from '@services/supabase/laboratories/sample-type-costs-service'
 import { updateLaboratoryConfig } from '@services/supabase/laboratories/laboratories-service'
-import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
+import { Card, CardContent } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import {
@@ -182,11 +182,12 @@ const SampleCostsPage: React.FC = () => {
 	if (!hasSampleTypeCosts || !(profile?.role === 'owner' || profile?.role === 'prueba')) {
 		return (
 			<div className="p-4 sm:p-6">
+				<div className="mb-4 sm:mb-6">
+					<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estructura de costos</h1>
+					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+				</div>
 				<Card>
-					<CardHeader>
-						<CardTitle>Estructura de costos</CardTitle>
-					</CardHeader>
-					<CardContent>
+					<CardContent className="pt-6">
 						<p className="text-muted-foreground">
 							Esta página solo está disponible para laboratorios con la feature habilitada (roles Owner o Prueba).
 						</p>
@@ -370,69 +371,71 @@ const SampleCostsPage: React.FC = () => {
 
 	return (
 		<div className="p-4 sm:p-6 space-y-4">
+			<div className="mb-4 sm:mb-6">
+				<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estructura de costos</h1>
+				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+			</div>
 			<Card>
-				<CardHeader className="flex flex-row items-center justify-between gap-2">
-					<CardTitle>Estructura de costos</CardTitle>
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							variant="outline"
-							size="lg"
-							onClick={() => setOpenExportModal(true)}
-							disabled={filteredCosts.length === 0}
-							aria-label="Exportar"
-						>
-							<Download className="h-4 w-4 mr-1" />
-							Exportar
-						</Button>
-						{canEdit && (
-							<Button
-								type="button"
-								variant="outline"
-								size="icon"
-								onClick={handleSaveAll}
-								disabled={!hasAnyChanges || savingAll}
-								aria-label="Guardar cambios"
-							>
-								{savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-							</Button>
-						)}
-						{isOwner && (
-							<Button
-								type="button"
-								variant="outline"
-								size="icon"
-								onClick={() => {
-									setEditConvenioPct(String(convenioDiscountPercent))
-									setEditDescuentoPct(String(descuentoDiscountPercent))
-									setOpenPercentModal(true)
-								}}
-								aria-label="Editar porcentajes de descuento"
-							>
-								<Percent className="h-4 w-4" />
-							</Button>
-						)}
-						{canEdit && (
-							<Button type="button" variant="outline" size="icon" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
-								<Plus className="h-4 w-4" />
-							</Button>
-						)}
-					</div>
-				</CardHeader>
-				<CardContent>
+				<CardContent className="pt-6">
 					<p className="text-sm text-muted-foreground mb-4 hidden sm:block">
 						Edite el monto de Taquilla; los demás se calculan automáticamente.
 					</p>
-					<div className="relative mb-4 max-w-sm">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-						<Input
-							type="search"
-							placeholder="Buscar por código o tipo de muestra..."
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							className="pl-9"
-							aria-label="Buscar en estructura de costos"
-						/>
+					<div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+						<div className="relative flex-1 max-w-sm">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+							<Input
+								type="search"
+								placeholder="Buscar por código o tipo de muestra..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className="pl-9"
+								aria-label="Buscar en estructura de costos"
+							/>
+						</div>
+						<div className="flex items-center gap-2 flex-shrink-0">
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								onClick={() => setOpenExportModal(true)}
+								disabled={filteredCosts.length === 0}
+								aria-label="Exportar"
+							>
+								<Download className="h-4 w-4" />
+							</Button>
+							{canEdit && (
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									onClick={handleSaveAll}
+									disabled={!hasAnyChanges || savingAll}
+									aria-label="Guardar cambios"
+								>
+									{savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+								</Button>
+							)}
+							{isOwner && (
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									onClick={() => {
+										setEditConvenioPct(String(convenioDiscountPercent))
+										setEditDescuentoPct(String(descuentoDiscountPercent))
+										setOpenPercentModal(true)
+									}}
+									aria-label="Editar porcentajes de descuento"
+								>
+									<Percent className="h-4 w-4" />
+								</Button>
+							)}
+							{canEdit && (
+								<Button type="button" variant="outline" size="icon" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
+									<Plus className="h-4 w-4" />
+								</Button>
+							)}
+						</div>
 					</div>
 					<div className="overflow-x-auto">
 						<table className="w-full border-collapse text-sm">

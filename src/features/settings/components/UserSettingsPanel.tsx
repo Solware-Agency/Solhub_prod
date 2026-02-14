@@ -377,7 +377,7 @@ const UserSettingsPanel: React.FC = () => {
 				<SessionTimeoutSettings />
 			</div>
 
-			{/* Doctor Signature Upload - Solo para médicos en SPT */}
+			{/* Doctor Signature Upload - visible si el lab tiene feature hasDoctorSignatures y usuario es médico */}
 			<div className="mt-6">
 				<DoctorSignatureUpload />
 			</div>

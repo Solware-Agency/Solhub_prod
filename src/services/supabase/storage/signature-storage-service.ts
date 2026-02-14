@@ -2,8 +2,8 @@ import { supabase } from '../config/config'
 import type { PostgrestError } from '@supabase/supabase-js'
 
 /**
- * Servicio para manejar la subida y eliminación de firmas de médicos en Supabase Storage
- * Solo para laboratorio SPT y roles médicos
+ * Servicio para manejar la subida y eliminación de firmas de médicos en Supabase Storage.
+ * Disponible para laboratorios con feature hasDoctorSignatures activa (dashboard) y roles médicos.
  */
 
 const BUCKET_NAME = 'doctor-signatures'
