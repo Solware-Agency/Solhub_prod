@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { X, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Image as ImageIcon, Camera, Loader2 } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
 
 interface MultipleImageUrlsProps {
@@ -10,6 +10,10 @@ interface MultipleImageUrlsProps {
   maxImages?: number;
   isEditing?: boolean;
   className?: string;
+  /** Si se pasa, se muestra botón "Cámara / Galería" para subir o capturar imagen. Debe devolver la URL pública o null. */
+  onUploadFile?: (file: File) => Promise<string | null>;
+  /** Mientras sube un archivo (ej. desde el padre) para deshabilitar el botón de subida */
+  isUploading?: boolean;
 }
 
 /**
@@ -22,9 +26,12 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
   maxImages = 10,
   isEditing = false,
   className,
+  onUploadFile,
+  isUploading = false,
 }) => {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddImage = () => {
     if (!newImageUrl.trim()) return;
@@ -69,6 +76,14 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadFile || images.length >= maxImages) return;
+    const url = await onUploadFile(file);
+    if (url) onChange([...images, url]);
+    e.target.value = '';
+  };
+
   return (
     <div className={cn('space-y-3', className)}>
       {/* Lista de imágenes existentes */}
@@ -83,7 +98,7 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
                   className='group relative bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2 hover:border-primary/50 transition-colors'
                 >
                   <div className='flex items-center gap-2'>
-                    <span className='text-xs font-medium text-gray-500 dark:text-gray-400 flex-shrink-0'>
+                    <span className='text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0'>
                       #{index + 1}
                     </span>
                     <div className='flex-1 flex items-center gap-2'>
@@ -146,24 +161,54 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
 
       {/* Campo para agregar nueva imagen (solo en modo edición) */}
       {isEditing && images.length < maxImages && (
-        <div className='flex gap-2'>
-          <Input
-            type='url'
-            placeholder={`Agregar imagen (${images.length}/${maxImages})`}
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className='flex-1'
-          />
-          <Button
-            type='button'
-            onClick={handleAddImage}
-            disabled={!newImageUrl.trim()}
-            className='flex-shrink-0'
-          >
-            <Plus className='w-4 h-4 mr-1' />
-            Agregar
-          </Button>
+        <div className='space-y-2'>
+          {onUploadFile && (
+            <>
+              <input
+                ref={fileInputRef}
+                type='file'
+                accept='image/*'
+                capture='environment'
+                className='hidden'
+                onChange={handleFileSelect}
+                aria-label='Subir o capturar imagen'
+              />
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className='flex items-center gap-2'
+              >
+                {isUploading ? (
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                ) : (
+                  <Camera className='w-4 h-4' />
+                )}
+                {isUploading ? 'Subiendo...' : 'Cámara / Galería'}
+              </Button>
+            </>
+          )}
+          <div className='flex gap-2'>
+            <Input
+              type='url'
+              placeholder={`O pegar URL (${images.length}/${maxImages})`}
+              value={newImageUrl}
+              onChange={(e) => setNewImageUrl(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className='flex-1'
+            />
+            <Button
+              type='button'
+              onClick={handleAddImage}
+              disabled={!newImageUrl.trim()}
+              className='shrink-0'
+            >
+              <Plus className='w-4 h-4 mr-1' />
+              Agregar
+            </Button>
+          </div>
         </div>
       )}
 
