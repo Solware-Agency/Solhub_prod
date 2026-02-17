@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, FileText } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { format } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -32,6 +32,7 @@ import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetai
 import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import PolizaCard from '@features/aseguradoras/components/PolizaCard'
+import { uploadPolizaPdf, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
 
 const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
 
@@ -52,6 +53,9 @@ const PolizasPage = () => {
 	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = useState(false)
 	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = useState<Aseguradora | null>(null)
 	const [editingPoliza, setEditingPoliza] = useState<Poliza | null>(null)
+	const [uploadingPdf, setUploadingPdf] = useState(false)
+	const [pdfFileName, setPdfFileName] = useState<string | null>(null)
+	const pdfFileInputRef = React.useRef<HTMLInputElement>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
 		aseguradora_id: '',
@@ -151,6 +155,8 @@ const PolizasPage = () => {
 			pdf_url: '',
 			notas: '',
 		})
+		setPdfFileName(null)
+		if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
 		setStep(0)
 		setSelectedAsegurado(null)
 		setEditingPoliza(null)
@@ -159,6 +165,43 @@ const PolizasPage = () => {
 	const openNewModal = () => {
 		resetForm()
 		setOpenModal(true)
+	}
+
+	const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0]
+		if (!file || !form.asegurado_id) {
+			if (!form.asegurado_id) toast({ title: 'Selecciona un asegurado primero', variant: 'destructive' })
+			return
+		}
+
+		const validation = validateReciboFile(file)
+		if (!validation.valid) {
+			toast({ title: 'Archivo inválido', description: validation.error, variant: 'destructive' })
+			return
+		}
+
+		setUploadingPdf(true)
+		try {
+			const { data, error } = await uploadPolizaPdf(file, form.asegurado_id)
+			if (error) throw error
+			if (data) {
+				setForm((prev) => ({ ...prev, pdf_url: data }))
+				setPdfFileName(file.name)
+				toast({ title: 'Archivo adjuntado' })
+			}
+		} catch (err) {
+			console.error(err)
+			toast({ title: 'Error al subir archivo', variant: 'destructive' })
+		} finally {
+			setUploadingPdf(false)
+			if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
+		}
+	}
+
+	const handleRemovePdf = () => {
+		setForm((prev) => ({ ...prev, pdf_url: '' }))
+		setPdfFileName(null)
+		if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
 	}
 
 	const openForEdit = useCallback((poliza: Poliza) => {
@@ -189,6 +232,7 @@ const PolizasPage = () => {
 				? ({ id: poliza.asegurado.id, full_name: poliza.asegurado.full_name, document_id: poliza.asegurado.document_id } as Asegurado)
 				: null,
 		)
+		setPdfFileName(null)
 		setEditingPoliza(poliza)
 		setPanelOpen(false)
 		setOpenModal(true)
@@ -615,8 +659,47 @@ const PolizasPage = () => {
 				return (
 					<div className="space-y-4">
 						<div className="space-y-2">
-							<Label>PDF póliza (URL)</Label>
-							<Input value={form.pdf_url} onChange={(e) => setForm((prev) => ({ ...prev, pdf_url: e.target.value }))} />
+							<Label>PDF póliza</Label>
+							<input
+								ref={pdfFileInputRef}
+								type="file"
+								accept=".pdf,.jpg,.jpeg,.png"
+								onChange={handlePdfFileChange}
+								className="hidden"
+							/>
+							{form.pdf_url ? (
+								<div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+									<FileText className="h-5 w-5 text-primary shrink-0" />
+									<span className="text-sm truncate flex-1">{pdfFileName || 'Documento adjunto'}</span>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={handleRemovePdf}
+										disabled={uploadingPdf}
+										className="shrink-0"
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								</div>
+							) : (
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full"
+									onClick={() => pdfFileInputRef.current?.click()}
+									disabled={uploadingPdf || !form.asegurado_id}
+								>
+									{uploadingPdf ? (
+										'Subiendo...'
+									) : (
+										<>
+											<Upload className="h-4 w-4 mr-2" />
+											PDF, JPG o PNG
+										</>
+									)}
+								</Button>
+							)}
 						</div>
 						<div className="space-y-2">
 							<Label>Notas</Label>
