@@ -43,7 +43,11 @@ export default defineConfig(({ mode }) => ({
 	build: {
 		chunkSizeWarningLimit: 1000,
 		rollupOptions: {
-			output: {},
+			output: {
+				entryFileNames: 'assets/[name]-[hash].js',
+				chunkFileNames: 'assets/[name]-[hash].js',
+				assetFileNames: 'assets/[name]-[hash][extname]',
+			},
 		},
 		// Eliminar console.log en builds (producción)
 		minify: 'terser',

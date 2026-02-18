@@ -8,7 +8,7 @@ const lazyRetry = (
   componentImport: () => Promise<any>,
   name: string,
   retries = 3,
-  interval = 1000
+  interval = 1500
 ) => {
   return new Promise<any>((resolve, reject) => {
     const attemptLoad = (attemptsLeft: number) => {

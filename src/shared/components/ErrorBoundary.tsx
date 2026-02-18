@@ -64,8 +64,11 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  private readonly chunkReloadStorageKey = 'ErrorBoundaryChunkReloadAttempted';
+
   /**
    * Detectar si el error es de carga de chunk (lazy loading)
+   * Incluye patrones de Webpack y Vite/Rollup (dynamic import)
    */
   private isChunkLoadError(error: Error): boolean {
     const chunkLoadErrors = [
@@ -74,15 +77,35 @@ export class ErrorBoundary extends Component<Props, State> {
       'ChunkLoadError',
       'Loading CSS chunk',
       'NetworkError',
+      'dynamically imported module',
+      'Failed to fetch dynamically imported module',
+      'Importing a module script failed',
+      'error loading dynamically imported module',
+      'Loading module failed',
+      'Network request failed',
     ];
 
-    return chunkLoadErrors.some(msg => 
-      error.message?.includes(msg) || error.name?.includes(msg)
-    );
+    const raw = `${error.message ?? ''} ${error.name ?? ''}`.toLowerCase();
+    return chunkLoadErrors.some(msg => raw.includes(msg.toLowerCase()));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- firma requerida por React
+  componentDidUpdate(_prevProps: Props, _prevState: State) {
+    // Un último intento con recarga completa cuando es error de chunk y se agotaron los reintentos
+    if (
+      this.state.hasError &&
+      this.state.retryCount >= this.maxRetries &&
+      this.state.error &&
+      this.isChunkLoadError(this.state.error) &&
+      !sessionStorage.getItem(this.chunkReloadStorageKey)
+    ) {
+      sessionStorage.setItem(this.chunkReloadStorageKey, '1');
+      window.location.reload();
+    }
   }
 
   handleRetry = () => {
-    // Recargar la página completa para obtener los chunks actualizados
+    sessionStorage.removeItem(this.chunkReloadStorageKey);
     window.location.reload();
   };
 
@@ -94,11 +117,24 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       // Si ya se intentó retry automático sin éxito, mostrar UI de error
       if (this.state.retryCount >= this.maxRetries || !this.isChunkLoadError(this.state.error!)) {
+        const isChunkError = this.state.error && this.isChunkLoadError(this.state.error);
+        const willAutoReload =
+          isChunkError &&
+          this.state.retryCount >= this.maxRetries &&
+          !sessionStorage.getItem(this.chunkReloadStorageKey);
+
+        if (willAutoReload) {
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Recargando para obtener la versión más reciente...</p>
+            </div>
+          );
+        }
+
         if (this.props.fallback) {
           return this.props.fallback;
         }
-
-        const isChunkError = this.isChunkLoadError(this.state.error!);
 
         return (
           <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 dark:bg-gray-900">
@@ -112,9 +148,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
               <div className="space-y-2">
                 <p className="text-gray-700 dark:text-gray-300">
-                  {isChunkError
-                    ? 'Hubo un problema al cargar los recursos de esta página. Esto puede ocurrir después de una actualización del sistema.'
-                    : 'Ha ocurrido un error inesperado.'}
+                  Ha ocurrido un error inesperado. Si acabas de actualizar la aplicación o tienes la
+                  pestaña abierta desde hace tiempo, recarga la página (F5 o el botón inferior). Si
+                  sigue fallando, prueba en otra pestaña o borrar la caché del navegador.
                 </p>
                 
                 {this.state.retryCount > 0 && (
@@ -128,7 +164,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     <summary className="cursor-pointer font-semibold mb-2">
                       Detalles del error (solo en desarrollo)
                     </summary>
-                    <pre className="whitespace-pre-wrap break-words">
+                    <pre className="whitespace-pre-wrap wrap-break-words">
                       {this.state.error.toString()}
                       {this.state.errorInfo && (
                         <>
