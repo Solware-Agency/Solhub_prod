@@ -64,12 +64,13 @@ const ROLE_INSTRUCTIONS: Record<UserRole, string> = {
 	laboratorio: 'El personal de laboratorio puede ver pacientes y casos, enviar informes y adjuntar PDFs de resultados.',
 	prueba: 'Rol de prueba con acceso completo sin restricciones.',
 	call_center: 'El personal de call center puede visualizar y enviar casos, además de editar información básica de pacientes.',
+	coordinador: 'Los coordinadores tienen todos los permisos de recepcionista PLUS capacidad de adjuntar PDFs a casos como laboratorio.',
 }
 
 interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador'
 	created_at: string
 	updated_at: string
 	email_confirmed_at?: string
@@ -251,6 +252,8 @@ const MainUsers: React.FC = () => {
 				return <Crown className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'employee':
 				return <Briefcase className={`w-4 h-4 ${colors.icon} shrink-0`} />
+			case 'coordinador':  // mismo ícono que employee + coordinador
+				return <Briefcase className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'residente':
 				return <ShieldCheck className={`w-4 h-4 ${colors.icon} shrink-0`} />
 			case 'citotecno':
@@ -280,6 +283,8 @@ const MainUsers: React.FC = () => {
 				return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
 			case 'employee':
 				return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+			case 'coordinador':  // coordinador = employee + funciones extra 
+				return 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300'
 			case 'residente':
 				return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
 			case 'citotecno':
@@ -323,6 +328,15 @@ const MainUsers: React.FC = () => {
 					hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/30',
 					icon: 'text-blue-600 dark:text-blue-400',
 					text: 'text-blue-700 dark:text-blue-300',
+				}
+			case 'coordinador':  // coordinador = similar a employee con color ligeramente diferente
+				return {
+					bg: 'bg-sky-50 dark:bg-sky-900/20',
+					bgActive: 'bg-sky-200 dark:bg-sky-800',
+					border: 'border-sky-400 dark:border-sky-600',
+					hover: 'hover:bg-sky-100 dark:hover:bg-sky-900/30',
+					icon: 'text-sky-600 dark:text-sky-400',
+					text: 'text-sky-700 dark:text-sky-300',
 				}
 			case 'residente':
 				return {
@@ -477,7 +491,7 @@ const MainUsers: React.FC = () => {
 
 	const handleRoleChange = async (
 		userId: string,
-		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+		newRole: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'coordinador',
 	) => {
 		// Verificar permisos antes de permitir edición
 		if (!canManage) {
@@ -540,6 +554,7 @@ const MainUsers: React.FC = () => {
 					medicowner: 'Medico Owner',
 					medico_tratante: 'Médico Tratante',
 					enfermero: 'Enfermero',
+					coordinador: 'Coordinador',
 				}[newRole]
 					}.`,
 				className: 'bg-green-100 border-green-400 text-green-800',
@@ -1292,7 +1307,7 @@ const MainUsers: React.FC = () => {
 													onChange={(value) =>
 														handleRoleChange(
 															user.id,
-															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero',
+															value as 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'coordinador',
 														)
 													}
 													options={availableRoles}

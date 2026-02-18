@@ -562,8 +562,9 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 }
 
 /**
- * Componente principal para subir y gestionar las firmas digitales del médico
- * Solo visible para roles médicos (medico_tratante, patologo, residente, owner) en laboratorio SPT
+ * Componente principal para subir y gestionar las firmas digitales del médico.
+ * Visible cuando el laboratorio tiene la feature hasDoctorSignatures activa (activada desde el dashboard)
+ * y el usuario tiene rol médico (medico_tratante, patologo, residente, owner).
  */
 export const DoctorSignatureUpload: React.FC = () => {
 	const { user } = useAuth()
@@ -573,10 +574,10 @@ export const DoctorSignatureUpload: React.FC = () => {
 	// Roles médicos permitidos
 	const medicalRoles: string[] = ['medico_tratante', 'patologo', 'residente', 'owner']
 
-	// Verificar si el usuario es médico y está en SPT
-	const isSPT = laboratory?.slug?.toLowerCase() === 'spt'
+	// Feature activada desde el dashboard; si está activa y el usuario es médico, puede subir firmas
+	const hasDoctorSignaturesFeature = laboratory?.features?.hasDoctorSignatures === true
 	const isMedicalRole = profile?.role && medicalRoles.includes(profile.role)
-	const canUploadSignature = isSPT && isMedicalRole
+	const canUploadSignature = hasDoctorSignaturesFeature && isMedicalRole
 
 	// Si no cumple las condiciones, no mostrar el componente
 	if (!canUploadSignature || !user || !profile?.laboratory_id) {

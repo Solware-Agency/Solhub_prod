@@ -55,6 +55,7 @@ import { getResponsableByDependiente } from '@services/supabase/patients/respons
 import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
 import { PDFButton } from '@shared/components/ui/PDFButton'
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload'
+import { uploadCaseImage, validateCaseImage } from '@/services/supabase/storage/case-images-storage-service'
 import PatientHistoryModal from '@features/patients/components/PatientHistoryModal'
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
@@ -277,8 +278,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const [isUploadingImages] = useState(false)
+		const [isUploadingImages, setIsUploadingImages] = useState(false)
 
 		// Image URLs state for imagenologia role (hasta 10 imágenes)
 		const [imageUrls, setImageUrls] = useState<string[]>([])
@@ -703,6 +703,49 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				[field]: value,
 			}))
 		}, [])
+
+		const handleUploadImage = useCallback(
+			async (file: File): Promise<string | null> => {
+				if (!currentCase?.id || !profile?.laboratory_id) return null
+				const validation = validateCaseImage(file)
+				if (!validation.valid) {
+					toast({
+						title: '❌ Imagen no válida',
+						description: validation.error,
+						variant: 'destructive',
+					})
+					return null
+				}
+				setIsUploadingImages(true)
+				try {
+					const { data, error } = await uploadCaseImage(
+						currentCase.id,
+						file,
+						profile.laboratory_id,
+					)
+					if (error) {
+						toast({
+							title: '❌ Error al subir',
+							description: error.message,
+							variant: 'destructive',
+						})
+						return null
+					}
+					if (data) {
+						setImageUrls((prev) => (prev.length >= 10 ? prev : [...prev, data]))
+						toast({
+							title: '✅ Imagen subida',
+							description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
+							className: 'bg-green-100 border-green-400 text-green-800',
+						})
+					}
+					return data
+				} finally {
+					setIsUploadingImages(false)
+				}
+			},
+			[currentCase?.id, profile?.laboratory_id, toast],
+		)
 
 		// Payment method handlers
 		const handlePaymentMethodChange = (index: number, field: keyof PaymentMethod, value: string | number) => {
@@ -2251,14 +2294,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* PDF Subido - Solo para SPT, roles: laboratorio, employee, owner, prueba (godmode), call_center */}
-											{/* Visible en la sección de Información Médica */}
+											{/* PDF Subido - Solo para SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
+											{/* Nota: coordinador tiene esta capacidad especial (employee NO) */}
 											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjunto:</span>
 												<div className="sm:flex sm:justify-end sm:flex-1">
 													{isSpt &&
 													(profile?.role === 'laboratorio' ||
-														profile?.role === 'employee' ||
+														profile?.role === 'coordinador' ||
 														profile?.role === 'owner' ||
 														profile?.role === 'prueba' ||
 														profile?.role === 'imagenologia' ||
@@ -2342,6 +2385,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																	profile?.role === 'call_center') &&
 																isEditing
 															}
+															onUploadFile={
+																isSpt && currentCase?.id && profile?.laboratory_id
+																	? handleUploadImage
+																	: undefined
+															}
+															isUploading={isUploadingImages}
 														/>
 													</div>
 												</div>

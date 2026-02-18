@@ -19,6 +19,15 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		changelog: '/employee/changelog',
 		users: '/employee/users',
 	},
+	coordinador: {
+		home: '/employee/home',
+		cases: '/employee/records',
+		patients: '/employee/patients',
+		settings: '/employee/settings',
+		form: '/employee/form',
+		changelog: '/employee/changelog',
+		users: '/employee/users',
+	},
 	residente: {
 		home: '/medic/home',
 		cases: '/medic/cases',
@@ -87,7 +96,7 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 	}> = []
 
 	// Formulario: Solo employee
-	if (role === 'employee' && routes.form) {
+	if ((role === 'employee' || role === 'coordinador') && routes.form) {
 		buttons.push({
 			title: 'Formulario',
 			icon: FileText,
@@ -117,7 +126,7 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 	}
 
 	// Historial: Solo employee
-	if (role === 'employee' && routes.changelog) {
+	if ((role === 'employee' || role === 'coordinador') && routes.changelog) {
 		buttons.push({
 			title: 'Historial',
 			icon: History,

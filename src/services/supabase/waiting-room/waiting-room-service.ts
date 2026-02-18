@@ -57,7 +57,7 @@ const getBranchRestrictionForCurrentUser = async (): Promise<string | null> => {
     const p = profile as { role?: string; assigned_branch?: string | null };
     // Rol prueba (godmode) y owner pueden ver todas las sedes
     if (p.role === 'prueba' || p.role === 'owner') return null;
-    if (p.role === 'employee' && p.assigned_branch) return p.assigned_branch;
+    if ((p.role === 'employee' || p.role === 'coordinador') && p.assigned_branch) return p.assigned_branch;
     // Otros roles con sede asignada (ej. residente) también restringidos
     if (p.assigned_branch) return p.assigned_branch;
     return null;

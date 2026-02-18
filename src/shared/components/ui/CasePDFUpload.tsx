@@ -30,7 +30,8 @@ interface CasePDFUploadProps {
 
 /**
  * Componente para subir y eliminar PDFs de casos
- * Solo para roles: laboratorio, owner, prueba (godmode), call_center en SPT
+ * Solo para roles: laboratorio, coordinador, owner, prueba (godmode), imagenologia, call_center en SPT
+ * Nota: coordinador tiene esta capacidad especial (employee NO)
  */
 export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
@@ -53,7 +54,12 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	const canUpload = isSpt && 
 		user && 
 		profile?.laboratory_id &&
-		(profile?.role === 'laboratorio' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'imagenologia' || profile?.role === 'call_center')
+		(profile?.role === 'laboratorio' || 
+		 profile?.role === 'coordinador' || 
+		 profile?.role === 'owner' || 
+		 profile?.role === 'prueba' || 
+		 profile?.role === 'imagenologia' || 
+		 profile?.role === 'call_center')
 
 	if (!canUpload) {
 		return null

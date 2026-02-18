@@ -1097,7 +1097,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className='flex-1 overflow-hidden flex flex-col'>
+                <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
                   {/* Patient Info */}
                   <div className='p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] flex-shrink-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
@@ -1308,7 +1308,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                     <Tabs
                       value={activeTab}
                       onValueChange={setActiveTab}
-                      className='w-full h-full flex flex-col overflow-hidden'
+                      className='w-full h-full min-h-0 flex flex-col overflow-hidden'
                     >
                       <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
                         <TabsList className={`grid w-full gap-5 ${laboratory?.features?.hasTriaje ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -1518,7 +1518,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                               )}
                             </div>
                           ) : (
-                            <div className='space-y-4'>
+                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                               {filteredCases.map(
                                 (caseItem: MedicalCaseWithPatient, index: number) => (
                                   <div

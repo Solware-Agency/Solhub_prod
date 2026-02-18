@@ -21,7 +21,7 @@ export interface AuthResponse {
 export interface UserProfile {
 	id: string
 	email: string
-	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio'
+	role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador'
 	created_at: string
 	updated_at: string
 	assigned_branch?: string | null
@@ -180,6 +180,46 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 					name: 'EmailNotConfirmed',
 				} as AuthError,
 			}
+		}
+
+		// Evitar que useSecureRedirect redirija mientras comprobamos el laboratorio (evita parpadeo/recarga)
+		const CHECKING_LAB_KEY = 'auth_checking_lab_status'
+		try {
+			localStorage.setItem(CHECKING_LAB_KEY, '1')
+
+			// CRITICAL: Check if user's laboratory is active (block login if inactive)
+			if (data.user) {
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('laboratory_id')
+					.eq('id', data.user.id)
+					.single()
+
+				const labId = (profile as { laboratory_id?: string | null } | null)?.laboratory_id
+				if (labId) {
+					const { data: lab, error: labError } = await supabase
+						.from('laboratories' as never)
+						.select('id, status')
+						.eq('id', labId)
+						.maybeSingle()
+
+					// RLS solo permite ver laboratorios activos; si no hay fila o status es 'inactive', bloqueamos
+					const status = (lab as { status?: string })?.status
+					const isInactive = labError || !lab || status === 'inactive'
+					if (isInactive) {
+						await supabase.auth.signOut()
+						return {
+							user: null,
+							error: {
+								message: 'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.',
+								name: 'LaboratoryInactive',
+							} as AuthError,
+						}
+					}
+				}
+			}
+		} finally {
+			localStorage.removeItem(CHECKING_LAB_KEY)
 		}
 
 		console.log('Signin successful for verified user:', email)
@@ -573,7 +613,7 @@ export const updateUserProfile = async (
 }
 
 // Check if user has specific role
-export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner'	): Promise<boolean> => {
+export const hasRole = async (userId: string, role: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'coordinador'	): Promise<boolean> => {
 	try {
 		const profile = await getUserProfile(userId)
 		// Rol "prueba" (godmode) tiene acceso a todo

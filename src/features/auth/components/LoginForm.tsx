@@ -11,6 +11,10 @@ import { toast } from '@shared/hooks/use-toast';
 import SolHubIcon from '@shared/components/icons/SolHubIcon';
 import { useDynamicBranding } from '@shared/hooks/useDynamicBranding';
 
+const LABORATORY_INACTIVE_MESSAGE =
+  'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.';
+const STORAGE_KEY_LAB_INACTIVE = 'login_error_laboratory_inactive';
+
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +26,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Hook para branding dinámico
-  const { branding, isLoading: isBrandingLoading, hasBranding, saveBranding, clearBranding } = useDynamicBranding();
+  const { branding, isLoading: isBrandingLoading, hasBranding, saveBranding } = useDynamicBranding();
 
   // Use secure redirect hook for role-based navigation
   const { isRedirecting } = useSecureRedirect({
@@ -30,6 +34,15 @@ function LoginForm() {
       console.log(`User with role "${role}" being redirected to: ${path}`);
     },
   });
+
+  // Restaurar mensaje de cuenta inactiva si hubo redirección/recarga (evita que se pierda el mensaje)
+  useEffect(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEY_LAB_INACTIVE);
+    if (stored) {
+      sessionStorage.removeItem(STORAGE_KEY_LAB_INACTIVE);
+      setError(stored);
+    }
+  }, []);
 
   // Efecto para detectar parámetros de URL y pre-llenar campos
   useEffect(() => {
@@ -146,6 +159,12 @@ function LoginForm() {
               return;
             }
           }, 5000);
+        } else if (
+          signInError.name === 'LaboratoryInactive' ||
+          signInError.message.includes('Cuenta inactiva')
+        ) {
+          setError(LABORATORY_INACTIVE_MESSAGE);
+          sessionStorage.setItem(STORAGE_KEY_LAB_INACTIVE, LABORATORY_INACTIVE_MESSAGE);
         } else if (
           signInError.name === 'EmailNotConfirmed' ||
           signInError.message.includes('Email not confirmed')
@@ -275,7 +294,7 @@ function LoginForm() {
   };
 
   return (
-    <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+    <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
       {/* Aurora Background with Default Color Palette */}
       <Aurora
         colorStops={['#3d84f5', '#06337b', '#3d84f5']}
@@ -285,7 +304,7 @@ function LoginForm() {
       />
 
       {/* Login Form Container with FadeContent Animation */}
-      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+      <div className='relative z-10 w-screen h-screen bg-linear-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
         <FadeContent
           blur={true}
           duration={1000}
@@ -294,7 +313,7 @@ function LoginForm() {
           delay={200}
           className='w-full h-full flex items-center justify-center'
         >
-          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none md:rounded-2xl p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20'>
+          <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-md bg-transparent md:bg-white/10 backdrop-blur-none md:backdrop-blur-xl rounded-none p-8 shadow-none md:shadow-2xl border-0 md:border md:border-white/20'>
             <div className='text-center mb-4 flex flex-col items-center justify-center relative'>
               {/* Logo Dinámico o Genérico */}
               {!isBrandingLoading && (

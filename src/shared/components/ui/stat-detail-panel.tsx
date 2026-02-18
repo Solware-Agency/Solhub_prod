@@ -1296,7 +1296,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total de bloques de biopsia en el período seleccionado.</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total de bloques de casos en el período seleccionado.</p>
 							<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatNumber(total)}</p>
 						</div>
 					</div>

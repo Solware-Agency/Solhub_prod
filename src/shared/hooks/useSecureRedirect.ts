@@ -22,7 +22,7 @@ interface UseSecureRedirectOptions {
 interface UseSecureRedirectReturn {
 	isRedirecting: boolean
 	redirectUser: () => void
-	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner') => boolean
+	canAccess: (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'coordinador') => boolean
 }
 
 /**
@@ -56,6 +56,12 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		const isLoggingOut = localStorage.getItem('is_logging_out') === 'true'
 		if (isLoggingOut) {
 			console.log('🚫 Redirect bloqueado - en proceso de logout')
+			return
+		}
+
+		// No redirigir mientras se comprueba si el laboratorio está activo (evita parpadeo al rechazar por inactivo)
+		if (localStorage.getItem('auth_checking_lab_status') === '1') {
+			console.log('🚫 Redirect bloqueado - comprobando estado del laboratorio')
 			return
 		}
 
@@ -126,6 +132,9 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			case 'employee':
 				redirectPath = employeePath
 				break
+			case 'coordinador':  // coordinador tiene mismos permisos que employee
+				redirectPath = employeePath
+				break
 			case 'citotecno':
 				redirectPath = '/cito/home'
 				break
@@ -162,7 +171,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 					.single()
 
 				const hasAseguradoras = (laboratory as any)?.features?.hasAseguradoras === true
-				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'owner' || profile.role === 'prueba'
+				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'coordinador' || profile.role === 'owner' || profile.role === 'prueba'
 				if (hasAseguradoras && canSeeAseguradoras) {
 					redirectPath = '/aseguradoras/home'
 				}
@@ -186,7 +195,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	/**
 	 * Checks if user can access a specific role-protected route
 	 */
-	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'imagenologia'): boolean => {
+	const canAccess = (requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'imagenologia' | 'coordinador'): boolean => {
 		if (!user || !profile || !user.email_confirmed_at || profileError) {
 			return false
 		}
@@ -231,7 +240,8 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			isLoggingOut,
 		})
 
-		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut) {
+		const checkingLab = localStorage.getItem('auth_checking_lab_status') === '1'
+		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut && !checkingLab) {
 			const currentPath = location.pathname
 			const authPaths = [
 				'/',

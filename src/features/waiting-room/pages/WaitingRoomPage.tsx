@@ -44,7 +44,7 @@ const WaitingRoomPage: React.FC = () => {
 
   // Employee (y roles con sede asignada) solo ven su sede: sin "Todas" y con sede por defecto
   const isRestrictedToBranch = Boolean(
-    profile?.role === 'employee' && profile?.assigned_branch
+    (profile?.role === 'employee' || profile?.role === 'coordinador') && profile?.assigned_branch
   );
   const defaultBranch = isRestrictedToBranch ? profile!.assigned_branch! : null;
   const [selectedBranch, setSelectedBranch] = useState<string | null>(defaultBranch);

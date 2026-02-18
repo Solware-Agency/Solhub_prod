@@ -58,7 +58,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 	},
 })
 
-// Verificar conexión con medical_records_clean (después de que la sesión esté disponible)
+// Verificar conexión con medical_records_clean tras aplicar políticas RLS
 setTimeout(async () => {
 	const { data: { session } } = await supabase.auth.getSession()
 	

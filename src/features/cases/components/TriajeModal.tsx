@@ -219,39 +219,19 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                 isFullscreen ? 'h-[90vh]' : ''
               }`}
             >
-              {/* Header */}
+              {/* Header: en responsive solo nombre + cédula; X siempre visible en primera fila */}
               <div className='p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'>
-                <div className='flex items-center justify-between gap-4'>
-                  <div className='flex items-center gap-6'>
-                    <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap'>
-                      Historia Clínica
-                    </h2>
-                    <div className='flex items-center gap-2 text-sm sm:text-base'>
-                      <div className='flex items-center gap-1.5'>
-                        <span className='font-semibold text-gray-900 dark:text-gray-100'>
-                          {case_.nombre || 'Sin nombre'}
-                        </span>
-                        <span className='text-gray-400 dark:text-gray-600'>•</span>
-                        <span className='text-gray-600 dark:text-gray-400'>
-                          {case_.cedula || 'Sin cédula'}
-                        </span>
-                        {case_.edad && (
-                          <>
-                            <span className='text-gray-400 dark:text-gray-600'>•</span>
-                            <span className='text-gray-600 dark:text-gray-400'>
-                              {case_.edad}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
+                {/* Fila 1: título + X (y en desktop también Editar) para que la X se vea siempre */}
+                <div className='flex items-center justify-between gap-3 mb-2 sm:mb-0'>
+                  <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 shrink-0'>
+                    Historia Clínica
+                  </h2>
+                  <div className='flex items-center gap-2 shrink-0'>
                     {existingTriage && !existingTriage.is_draft && canEditTriaje && !forceEditMode && (
                       <Button
                         onClick={() => setForceEditMode(true)}
                         variant='outline'
-                        className='flex items-center gap-2 flex-shrink-0'
+                        className='hidden sm:flex items-center gap-2'
                       >
                         <Edit className='w-4 h-4' />
                         Editar Historia Clínica
@@ -259,11 +239,32 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                     )}
                     <button
                       onClick={onClose}
-                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0'
+                      className='p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border border-gray-200 dark:border-gray-600'
                       aria-label='Cerrar modal'
                     >
-                      <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
+                      <X className='w-5 h-5 text-gray-600 dark:text-gray-300' />
                     </button>
+                  </div>
+                </div>
+                {/* Fila 2: en responsive solo nombre; debajo la cédula. En desktop todo en línea con edad */}
+                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-6'>
+                  <div className='text-sm sm:text-base min-w-0'>
+                    <div className='flex flex-col sm:flex-row sm:items-center sm:gap-1.5'>
+                      <span className='font-semibold text-gray-900 dark:text-gray-100'>
+                        {case_.nombre || 'Sin nombre'}
+                      </span>
+                      <span className='text-gray-600 dark:text-gray-400'>
+                        {case_.cedula || 'Sin cédula'}
+                      </span>
+                      {case_.edad && (
+                        <span className='hidden sm:inline text-gray-400 dark:text-gray-600'> • </span>
+                      )}
+                      {case_.edad && (
+                        <span className='hidden sm:inline text-gray-600 dark:text-gray-400'>
+                          {case_.edad}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

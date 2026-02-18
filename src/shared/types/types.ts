@@ -427,7 +427,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado: string;
           id: string;
           phone: string | null;
-          role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
+          role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador';
           signature_url: string | null;
           signature_url_2: string | null;
           signature_url_3: string | null;
@@ -442,7 +442,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado?: string;
           id: string;
           phone?: string | null;
-          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
+          role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -457,7 +457,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           estado?: string;
           id?: string;
           phone?: string | null;
-          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
+          role?: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador';
           signature_url?: string | null;
           signature_url_2?: string | null;
           signature_url_3?: string | null;
@@ -770,7 +770,7 @@ export interface MedicalRecord {
   archivo_adjunto_url?: string | null;
   image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
   images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center)
+  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
 }
 
 // =====================================================================
@@ -795,6 +795,7 @@ export interface LaboratoryFeatures {
   hasNewPatientSystem: boolean
   hasSampleTypeCosts: boolean
   hasAseguradoras: boolean
+  hasDoctorSignatures: boolean
 }
 
 export interface LaboratoryBranding {
@@ -969,6 +970,6 @@ export interface ProfileWithLaboratory {
   email_lower: string | null;
   estado: string;
   phone: string | null;
-  role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio';
+  role: 'owner' | 'employee' | 'admin' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'imagenologia' | 'call_center' | 'prueba' | 'laboratorio' | 'coordinador';
   updated_at: string | null;
 }

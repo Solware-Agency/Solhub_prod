@@ -307,7 +307,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         </div>
       )}
 
-      {/* Examen físico, observaciones, diagnóstico y plan de acción */}
+      {/* Examen físico, examen funcional, diagnóstico y plan de acción */}
       {(record.examen_fisico || record.comment || record.diagnostico || record.plan_de_accion) && (
         <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2 grid grid-cols-2 gap-4'>
           {record.examen_fisico && (
@@ -321,7 +321,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           )}
           {record.comment && (
             <div>
-              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Observaciones</p>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Examen Funcional</p>
               <p className='text-sm'>{record.comment}</p>
             </div>
           )}

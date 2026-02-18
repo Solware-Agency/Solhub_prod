@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 interface PrivateRouteProps {
 	children: JSX.Element
-	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio'>
+	requiredRole?: 'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | 'coordinador' | Array<'owner' | 'employee' | 'residente' | 'citotecno' | 'patologo' | 'medicowner' | 'medico_tratante' | 'enfermero' | 'call_center' | 'prueba' | 'admin' | 'imagenologia' | 'laboratorio' | 'coordinador'>
 }
 
 /**
@@ -107,6 +107,16 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 	if (requiredRole && profile.role !== 'prueba') {
 		const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
 
+		// [DEBUG] Log específico para coordinador
+		if (process.env.NODE_ENV === 'development' && profile.role === 'coordinador') {
+			console.log('🔍 [PrivateRoute] Usuario coordinador accediendo a ruta', {
+				userRole: profile.role,
+				requiredRole,
+				allowedRoles,
+				isAllowed: allowedRoles.includes(profile.role)
+			});
+		}
+
 		if (!allowedRoles.includes(profile.role)) {
 			console.log(`User role "${profile.role}" not in allowed roles: ${allowedRoles.join(', ')}`)
 			console.debug('PrivateRoute debug - allowedRoles:', allowedRoles, 'profile.role:', profile.role)
@@ -126,6 +136,8 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 				case 'residente':
 					return <Navigate to="/medic/home" replace />
 				case 'employee':
+					return <Navigate to="/employee/home" replace />
+				case 'coordinador':  // coordinador tiene mismos permisos que employee
 					return <Navigate to="/employee/home" replace />
 				case 'citotecno':
 					return <Navigate to="/cito/home" replace />
