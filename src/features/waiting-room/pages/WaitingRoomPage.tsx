@@ -134,9 +134,6 @@ const WaitingRoomPage: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Sala de Espera</h1>
-        <p className="hidden sm:block text-sm sm:text-base text-muted-foreground mt-1">
-          Monitoreo en tiempo real de casos activos
-        </p>
       </div>
 
       {/* Cards de estadísticas (owner / prueba) - hover + click abre modal */}

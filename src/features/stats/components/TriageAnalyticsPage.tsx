@@ -85,8 +85,8 @@ export const TriageAnalyticsPage: React.FC = () => {
 			{/* Header */}
 			<div className='flex items-center justify-between'>
 				<div>
-					<h1 className='text-3xl font-bold'>Estadísticas de Historia Clínica</h1>
-					<p className='text-muted-foreground'>Análisis anónimo de signos vitales</p>
+					<h1 className='text-2xl sm:text-3xl font-bold'>Estadísticas de Historia Clínica</h1>
+					<div className='w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full' />
 				</div>
 				<Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v, 10))}>
 					<SelectTrigger className='w-[180px]'>

@@ -696,7 +696,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         categoria = 'Riesgo alto';
       }
 
-      const textoIndice = `Índice: ${indiceRedondeado} paq/año (${categoria})`;
+      const textoIndice = `${indiceRedondeado} ${categoria}`;
       setFormData((prev) => ({
         ...prev,
         indiceTabaquico: textoIndice,
@@ -803,11 +803,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 tabaco: existingTriage.tabaco > 0 ? 'Si' : 'No',
                 indiceTabaquico:
                   existingTriage.tabaco > 0
-                    ? `Índice: ${
-                        existingTriage.tabaco
-                      } paq/año (${getSmokingRiskCategory(
+                    ? `${existingTriage.tabaco} ${getSmokingRiskCategory(
                         existingTriage.tabaco,
-                      )})`
+                      )}`
                     : '',
               }
             : {}),
@@ -900,7 +898,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       alcohol: existingTriage.alcohol || '',
       tabaco: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0 ? 'Si' : 'No',
       indiceTabaquico: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0
-        ? `Índice: ${existingTriage.tabaco} paq/año (${getSmokingRiskCategory(existingTriage.tabaco)})`
+        ? `${existingTriage.tabaco} ${getSmokingRiskCategory(existingTriage.tabaco)}`
         : '',
       cigarrillosPorDia: '',
       anosFumando: '',
@@ -1463,11 +1461,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   tabaco: updatedTriage.tabaco > 0 ? 'Si' : 'No',
                   indiceTabaquico:
                     updatedTriage.tabaco > 0
-                      ? `Índice: ${
-                          updatedTriage.tabaco
-                        } paq/año (${getSmokingRiskCategory(
+                      ? `${updatedTriage.tabaco} ${getSmokingRiskCategory(
                           updatedTriage.tabaco,
-                        )})`
+                        )}`
                       : '',
                 }
               : {}),

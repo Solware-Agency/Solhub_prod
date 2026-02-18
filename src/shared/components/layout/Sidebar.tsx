@@ -857,6 +857,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </div>
+              {isSpt && (
+                <FeatureGuard feature='hasForm'>
+                  <NavItem
+                    to='/imagenologia/form'
+                    icon={<FileText className='stroke-2 size-5 shrink-0' />}
+                    label='Formulario'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              )}
               <FeatureGuard feature='hasCases'>
                 <NavItem
                   to='/imagenologia/cases'
@@ -884,6 +895,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {isSpt && (
+                <FeatureGuard feature='hasChangeHistory'>
+                  <NavItem
+                    to='/imagenologia/changelog'
+                    icon={<History className='stroke-2 size-5 shrink-0' />}
+                    label='Historial'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              )}
             </>
           )}
 

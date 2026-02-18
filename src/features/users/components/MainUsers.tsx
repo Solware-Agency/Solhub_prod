@@ -922,13 +922,6 @@ const MainUsers: React.FC = () => {
 					</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 				</div>
-				{canManage && (
-					<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-						{profile?.role === 'residente'
-							? 'Administra los médicos del sistema y sus permisos'
-							: 'Administra los usuarios del sistema y sus permisos'}
-					</p>
-				)}
 			</div>
 
 			{/* Instrucciones: solo para owner y prueba (canManage) */}

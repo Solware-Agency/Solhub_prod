@@ -51,6 +51,8 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		cases: '/imagenologia/cases',
 		patients: '/imagenologia/patients',
 		users: '/imagenologia/users',
+		form: '/imagenologia/form',
+		changelog: '/imagenologia/changelog',
 	},
 	laboratorio: {
 		home: '/laboratorio/home',
@@ -83,7 +85,8 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 }
 
 // Función para determinar qué botones mostrar según el rol
-const getAvailableButtonsForRole = (role: UserRole | undefined) => {
+// isSpt: cuando true, imagenologia puede ver el botón Formulario (crear casos) en SPT
+const getAvailableButtonsForRole = (role: UserRole | undefined, isSpt?: boolean) => {
 	if (!role) return []
 
 	const routes = ROLE_ROUTES[role] || {}
@@ -95,8 +98,11 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 		onClick?: () => void
 	}> = []
 
-	// Formulario: Solo employee
-	if ((role === 'employee' || role === 'coordinador') && routes.form) {
+	// Formulario: employee, coordinador, y imagenologia (solo en SPT)
+	const canShowForm =
+		((role === 'employee' || role === 'coordinador') || (role === 'imagenologia' && isSpt)) &&
+		routes.form
+	if (canShowForm) {
 		buttons.push({
 			title: 'Formulario',
 			icon: FileText,
@@ -125,8 +131,11 @@ const getAvailableButtonsForRole = (role: UserRole | undefined) => {
 		})
 	}
 
-	// Historial: Solo employee
-	if ((role === 'employee' || role === 'coordinador') && routes.changelog) {
+	// Historial: employee, coordinador, y imagenologia (solo en SPT)
+	const canShowChangelog =
+		((role === 'employee' || role === 'coordinador') || (role === 'imagenologia' && isSpt)) &&
+		routes.changelog
+	if (canShowChangelog) {
 		buttons.push({
 			title: 'Historial',
 			icon: History,
@@ -182,7 +191,8 @@ const ReceptionistHomePage: React.FC = () => {
 
 	// Obtener botones disponibles según el rol
 	const navigationButtons = useMemo(() => {
-		const buttons = getAvailableButtonsForRole(profile?.role as UserRole)
+		const isSpt = laboratory?.slug === 'spt'
+		const buttons = getAvailableButtonsForRole(profile?.role as UserRole, isSpt)
 		
 		// Agregar botón de cerrar sesión al final
 		buttons.push({
@@ -194,7 +204,7 @@ const ReceptionistHomePage: React.FC = () => {
 		})
 
 		return buttons
-	}, [profile?.role])
+	}, [profile?.role, laboratory?.slug])
 
 	return (
 		<div className="max-w-6xl mx-auto h-full flex flex-col">
