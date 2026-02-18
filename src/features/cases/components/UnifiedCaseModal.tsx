@@ -1187,6 +1187,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				const isDevelopment = import.meta.env.DEV
 				const apiUrl = isDevelopment ? 'http://localhost:3001/api/send-email' : '/api/send-email'
 
+				const uploadedPdfUrlsForEmail: string[] = Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
+					? (currentCase as any).uploaded_pdf_urls
+					: (currentCase as any)?.uploaded_pdf_url
+						? [(currentCase as any).uploaded_pdf_url]
+						: []
+
 				const response = await fetch(apiUrl, {
 					method: 'POST',
 					headers: {
@@ -1198,6 +1204,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						caseCode: case_?.code || case_?.id,
 						pdfUrl: pdfUrl,
 						uploadedPdfUrl: (currentCase as any)?.uploaded_pdf_url || null,
+						uploadedPdfUrls: uploadedPdfUrlsForEmail,
 						imageUrls: caseImages,
 						laboratory_id: case_?.laboratory_id || laboratory?.id,
 						subject: emailSubject,
@@ -3008,6 +3015,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						isSending={isSaving}
 						pdfUrl={(case_ as any)?.informe_qr || case_?.attachment_url}
 						uploadedPdfUrl={(caseData as any)?.uploaded_pdf_url}
+						uploadedPdfUrls={
+							Array.isArray((caseData as any)?.uploaded_pdf_urls) && (caseData as any).uploaded_pdf_urls.length > 0
+								? (caseData as any).uploaded_pdf_urls
+								: (caseData as any)?.uploaded_pdf_url
+									? [(caseData as any).uploaded_pdf_url]
+									: []
+						}
 						imageUrls={
 							(caseData as any)?.images_urls ||
 							((caseData as any)?.image_url ? [(caseData as any).image_url] : [])

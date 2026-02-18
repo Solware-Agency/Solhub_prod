@@ -27,6 +27,7 @@ interface SendEmailModalProps {
   // Props para preview
   pdfUrl?: string | null;
   uploadedPdfUrl?: string | null;
+  uploadedPdfUrls?: string[];
   imageUrls?: string[];
   laboratoryName?: string;
   laboratoryLogo?: string;
@@ -44,6 +45,7 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
   isSending,
   pdfUrl,
   uploadedPdfUrl,
+  uploadedPdfUrls,
   imageUrls = [],
   laboratoryName = 'SolHub',
   laboratoryLogo,
@@ -138,9 +140,9 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
               </a>
             ` : ''}
             
-            ${uploadedPdfUrl ? `
+            ${(uploadedPdfUrls && uploadedPdfUrls.length > 0 ? uploadedPdfUrls : uploadedPdfUrl ? [uploadedPdfUrl] : []).map((url, index) => `
               <br><br>
-              <a href="${uploadedPdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              <a href="${url}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                     color: white; 
                     padding: 15px 30px; 
                     text-decoration: none; 
@@ -149,9 +151,9 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
                     font-weight: bold;
                     font-size: 16px;
                     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                📎 Adjunto
+                📎 ${uploadedPdfUrls && uploadedPdfUrls.length > 1 ? `Adjunto ${index + 1}` : 'Adjunto'}
               </a>
-            ` : ''}
+            `).join('')}
           </div>
 
           ${imageUrls.length > 0 ? `

@@ -51,14 +51,22 @@ export default async function handler(req, res) {
     // Importación dinámica dentro de la función
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, subject, message, cc, bcc } = req.body;
+    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, uploadedPdfUrls, imageUrls, subject, message, cc, bcc } = req.body;
+
+    const uploadedPdfList = Array.isArray(uploadedPdfUrls) && uploadedPdfUrls.length > 0 ? uploadedPdfUrls : (uploadedPdfUrl ? [uploadedPdfUrl] : []);
+    const escapeHtml = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const uploadedPdfsHtml = uploadedPdfList.map((url, i) => {
+      const safe = escapeHtml(url);
+      const label = uploadedPdfList.length > 1 ? 'Adjunto ' + (i + 1) : 'Adjunto';
+      return '<br><br><a href="' + safe + '" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">📎 ' + label + '</a>';
+    }).join('');
 
     console.log("📧 Datos recibidos:", {
       patientEmail,
       patientName,
       caseCode,
       pdfUrl: pdfUrl ? "URL presente" : "URL faltante",
-      uploadedPdfUrl: uploadedPdfUrl ? "PDF adjunto presente" : "Sin PDF adjunto",
+      uploadedPdfUrls: uploadedPdfList.length > 0 ? uploadedPdfList.length + " PDF(s)" : "Sin PDF adjunto",
       imageUrls: imageUrls && imageUrls.length > 0 ? `${imageUrls.length} imágenes` : "Sin imágenes",
       laboratory_id: laboratory_id || null,
       cc: cc || [],
@@ -77,12 +85,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Validar que haya al menos uno de: pdfUrl, uploadedPdfUrl o imageUrls
-    const hasContent = pdfUrl || uploadedPdfUrl || (imageUrls && imageUrls.length > 0);
+    // Validar que haya al menos uno de: pdfUrl, PDFs adjuntos o imageUrls
+    const hasContent = pdfUrl || uploadedPdfList.length > 0 || (imageUrls && imageUrls.length > 0);
     if (!hasContent) {
       console.log("❌ Sin contenido para enviar:", {
         pdfUrl: !!pdfUrl,
-        uploadedPdfUrl: !!uploadedPdfUrl,
+        uploadedPdfList: uploadedPdfList.length,
         imageUrls: imageUrls ? imageUrls.length : 0
       });
       return res.status(400).json({
@@ -289,20 +297,7 @@ export default async function handler(req, res) {
         </a>
         ` : ''}
         
-        ${uploadedPdfUrl ? `
-          <br><br>
-          <a href="${uploadedPdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                color: white; 
-                padding: 15px 30px; 
-                text-decoration: none; 
-                border-radius: 25px; 
-                display: inline-block;
-                font-weight: bold;
-                font-size: 16px;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-            📎 Adjunto
-          </a>
-        ` : ''}
+        ${uploadedPdfsHtml}
       </div>
 
       <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
