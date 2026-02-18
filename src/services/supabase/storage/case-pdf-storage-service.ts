@@ -53,12 +53,14 @@ export function validateCasePDF(file: File): { valid: boolean; error?: string } 
  * @param caseId - ID del caso médico
  * @param file - Archivo PDF
  * @param laboratoryId - ID del laboratorio (para organización multi-tenant)
+ * @param index - Índice opcional para múltiples PDFs (0-4). Si no se pasa, se usa timestamp para path único.
  * @returns URL pública del PDF subido
  */
 export async function uploadCasePDF(
 	caseId: string,
 	file: File,
 	laboratoryId: string,
+	index?: number,
 ): Promise<{ data: string | null; error: PostgrestError | Error | null }> {
 	try {
 		// Verificar que el archivo sea válido
@@ -90,13 +92,18 @@ export async function uploadCasePDF(
 			.trim()
 		
 		// Asegurar que termine en .pdf
-		const finalFileName = sanitizedFileName.endsWith('.pdf') 
-			? sanitizedFileName 
-			: sanitizedFileName 
+		const baseFileName = sanitizedFileName.endsWith('.pdf')
+			? sanitizedFileName
+			: sanitizedFileName
 				? `${sanitizedFileName}.pdf`
 				: 'documento.pdf'
+		// Para múltiples PDFs: nombre único (doc_0.pdf, doc_1.pdf, ...) para no sobrescribir
+		const finalFileName =
+			typeof index === 'number' && index >= 0
+				? `doc_${index}.pdf`
+				: baseFileName
 
-		// Construir path: {laboratory_id}/{case_id}/{nombre_original_sanitizado}
+		// Construir path: {laboratory_id}/{case_id}/{nombre}
 		const filePath = `${laboratoryId}/${caseId}/${finalFileName}`
 
 		// Leer el archivo como ArrayBuffer para validar que sea un PDF válido

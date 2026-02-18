@@ -1139,7 +1139,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 			// Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
 			const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url
-			const uploadedPdf = (case_ as any)?.uploaded_pdf_url
+			const uploadedPdfUrlsCheck = Array.isArray((case_ as any)?.uploaded_pdf_urls) && (case_ as any).uploaded_pdf_urls.length > 0 ? (case_ as any).uploaded_pdf_urls : (case_ as any)?.uploaded_pdf_url ? [(case_ as any).uploaded_pdf_url] : []
+			const uploadedPdf = (case_ as any)?.uploaded_pdf_url || uploadedPdfUrlsCheck.length > 0
 			const images =
 				(case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls)
 					? (case_ as any).images_urls
@@ -1273,12 +1274,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			} catch (error) {
 				console.error('Error enviando correo:', error)
 
-				// Extraer mensaje detallado del error - versión mejorada
 				let errorMessage = 'No se pudo enviar el correo. Inténtalo de nuevo.'
-
 				if (error instanceof Error) {
 					errorMessage = error.message
-					console.log('Error message completo:', errorMessage)
 				}
 
 				// Registrar el error en email_send_logs
@@ -1296,7 +1294,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 				toast({
 					title: '❌ Error',
-					description: error instanceof Error ? error.message : 'No se pudo enviar el correo. Inténtalo de nuevo.',
+					description: errorMessage,
 					variant: 'destructive',
 				})
 			} finally {
@@ -1317,7 +1315,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			// Create WhatsApp message with case information
 			// Para SPT, usar formato específico y adjuntar enlaces por orden si existen
 			const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url
-			const uploadedPdfUrl = (currentCase as any)?.uploaded_pdf_url || null
+			const uploadedPdfUrlsList: string[] = Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
+				? (currentCase as any).uploaded_pdf_urls
+				: (currentCase as any)?.uploaded_pdf_url
+					? [(currentCase as any).uploaded_pdf_url]
+					: []
 			const caseImages =
 				(currentCase as any)?.images_urls &&
 				Array.isArray((currentCase as any).images_urls) &&
@@ -1354,14 +1356,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				}
 			}
 
-			const [signedPdfUrl, signedUploadedPdfUrl, signedImageUrls] = isSpt
+			const [signedPdfUrl, signedUploadedPdfUrls, signedImageUrls] = isSpt
 				? await Promise.all([
 						createSignedUrlIfSupabase(pdfUrl),
-						createSignedUrlIfSupabase(uploadedPdfUrl),
+						Promise.all(uploadedPdfUrlsList.map((url: string) => createSignedUrlIfSupabase(url))),
 						Promise.all(caseImages.map((url: string) => createSignedUrlIfSupabase(url))),
 					])
-				: [pdfUrl, uploadedPdfUrl, caseImages]
+				: [pdfUrl, uploadedPdfUrlsList, caseImages]
 
+			const safeUploadedPdfUrls = (signedUploadedPdfUrls || []).filter(Boolean) as string[]
 			const safeImageUrls = (signedImageUrls || []).filter(Boolean) as string[]
 
 			const sptMessageLines = [`Hola ${case_.nombre}, te escribimos desde Salud Para Todos.`]
@@ -1370,8 +1373,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				sptMessageLines.push('', 'Reporte (PDF):', signedPdfUrl)
 			}
 
-			if (signedUploadedPdfUrl) {
-				sptMessageLines.push('', 'PDF adjunto:', signedUploadedPdfUrl)
+			if (safeUploadedPdfUrls.length > 0) {
+				sptMessageLines.push('', safeUploadedPdfUrls.length === 1 ? 'PDF adjunto:' : 'PDFs adjuntos:')
+				safeUploadedPdfUrls.forEach((url, i) => {
+					sptMessageLines.push(safeUploadedPdfUrls.length > 1 ? `PDF ${i + 1}: ${url}` : url)
+				})
 			}
 
 			if (safeImageUrls.length > 0) {
@@ -2294,43 +2300,48 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* PDF Subido - Solo para SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
-											{/* Nota: coordinador tiene esta capacidad especial (employee NO) */}
+											{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
 											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjunto:</span>
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjuntos:</span>
 												<div className="sm:flex sm:justify-end sm:flex-1">
-													{isSpt &&
-													(profile?.role === 'laboratorio' ||
-														profile?.role === 'coordinador' ||
-														profile?.role === 'owner' ||
-														profile?.role === 'prueba' ||
-														profile?.role === 'imagenologia' ||
-														profile?.role === 'call_center') ? (
-														<CasePDFUpload
-															caseId={caseData.id}
-															currentPdfUrl={(caseData as any).uploaded_pdf_url}
-															onUploadingChange={setIsUploadingPdf}
-															onPdfUpdated={async () => {
-																// Refrescar el caso después de subir/eliminar PDF
-																if (refetchCaseData) {
-																	await refetchCaseData()
-																}
-																if (onSave) {
-																	onSave()
-																}
-															}}
-														/>
-													) : (caseData as any).uploaded_pdf_url ? (
-														<PDFButton
-															pdfUrl={(caseData as any).uploaded_pdf_url}
-															size="sm"
-															variant="outline"
-															isAttached={true}
-															downloadFileName={case_?.code ? `${case_.code}.pdf` : undefined}
-														/>
-													) : (
-														<span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
-													)}
+													{(() => {
+														const pdfUrls: string[] = Array.isArray((caseData as any).uploaded_pdf_urls) && (caseData as any).uploaded_pdf_urls.length > 0
+															? (caseData as any).uploaded_pdf_urls
+															: (caseData as any).uploaded_pdf_url
+																? [(caseData as any).uploaded_pdf_url]
+																: []
+														const canEditPdf = isSpt && (profile?.role === 'laboratorio' || profile?.role === 'coordinador' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'imagenologia' || profile?.role === 'call_center')
+														if (canEditPdf) {
+															return (
+																<CasePDFUpload
+																	caseId={caseData.id}
+																	currentPdfUrls={pdfUrls}
+																	onUploadingChange={setIsUploadingPdf}
+																	onPdfUpdated={async () => {
+																		if (refetchCaseData) await refetchCaseData()
+																		if (onSave) onSave()
+																	}}
+																/>
+															)
+														}
+														if (pdfUrls.length > 0) {
+															return (
+																<div className="flex flex-wrap gap-1">
+																	{pdfUrls.map((url, i) => (
+																		<PDFButton
+																			key={url}
+																			pdfUrl={url}
+																			size="sm"
+																			variant="outline"
+																			isAttached={true}
+																			downloadFileName={case_?.code ? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf` : undefined}
+																		/>
+																	))}
+																</div>
+															)
+														}
+														return <span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
+													})()}
 												</div>
 											</div>
 

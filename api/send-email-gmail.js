@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     // Importaciones dinámicas
     const { google } = await import('googleapis');
-    
+
     const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
 
     // Log inicial de datos (sin mostrar datos sensibles completos si prefieres)

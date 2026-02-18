@@ -109,7 +109,8 @@ export interface MedicalCase {
   ki67: string | null;
   conclusion_diagnostica: string | null;
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
+  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (compatibilidad: primer elemento de uploaded_pdf_urls)
+  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
   owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD
@@ -252,7 +253,8 @@ export interface MedicalCaseUpdate {
     | undefined;
   cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
-  uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
+  uploaded_pdf_url?: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
+  uploaded_pdf_urls?: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
   owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia?: number | null;
   fecha_entrega?: string | null; // YYYY-MM-DD
@@ -309,7 +311,8 @@ export interface MedicalCaseWithPatient {
   cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
   email_sent: boolean; // Nueva columna para indicar si el email fue enviado
   image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (solo SPT, roles: laboratorio, owner, prueba, call_center, coordinador)
+  uploaded_pdf_url: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
+  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
   owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD
@@ -2040,7 +2043,7 @@ export const deleteMedicalCase = async (
     // Primero verificar que el caso existe y obtener más información
     const { data: existingCase, error: fetchError } = await supabase
       .from('medical_records_clean')
-      .select('id, code, patient_id, exam_type, uploaded_pdf_url')
+      .select('id, code, patient_id, exam_type, uploaded_pdf_url, uploaded_pdf_urls')
       .eq('id', caseId)
       .single();
 
@@ -2101,29 +2104,25 @@ export const deleteMedicalCase = async (
       console.log('✅ Changelog de eliminación registrado');
     }
 
-    // Eliminar el PDF adjunto si existe
-    if (existingCase.uploaded_pdf_url) {
+    // Eliminar todos los PDFs adjuntos si existen (uploaded_pdf_urls o uploaded_pdf_url)
+    const pdfUrlsToDelete: string[] = Array.isArray(existingCase.uploaded_pdf_urls) && existingCase.uploaded_pdf_urls.length > 0
+      ? existingCase.uploaded_pdf_urls
+      : existingCase.uploaded_pdf_url
+        ? [existingCase.uploaded_pdf_url]
+        : [];
+    if (pdfUrlsToDelete.length > 0) {
       try {
         const { deleteCasePDF } = await import('../storage/case-pdf-storage-service');
-        
-        // Obtener laboratory_id del usuario
         const laboratoryId = await getUserLaboratoryId();
-        
-        const { error: pdfDeleteError } = await deleteCasePDF(
-          caseId,
-          existingCase.uploaded_pdf_url,
-          laboratoryId
-        );
-        
-        if (pdfDeleteError) {
-          console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', pdfDeleteError);
-          // Continuar con la eliminación del caso aunque falle la eliminación del PDF
-        } else {
-          console.log('✅ PDF adjunto eliminado exitosamente');
+        for (const pdfUrl of pdfUrlsToDelete) {
+          const { error: pdfDeleteError } = await deleteCasePDF(caseId, pdfUrl, laboratoryId);
+          if (pdfDeleteError) {
+            console.warn('⚠️ Error al eliminar PDF adjunto (continuando):', pdfDeleteError);
+          }
         }
+        console.log('✅ PDFs adjuntos procesados');
       } catch (error) {
-        console.warn('⚠️ Error al eliminar PDF adjunto (continuando con eliminación del caso):', error);
-        // Continuar con la eliminación del caso aunque falle la eliminación del PDF
+        console.warn('⚠️ Error al eliminar PDFs adjuntos (continuando con eliminación del caso):', error);
       }
     }
 
