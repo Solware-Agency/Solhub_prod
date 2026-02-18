@@ -100,9 +100,6 @@ const StatsPage: React.FC = () => {
 						<div>
 							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estadísticas</h1>
 							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-							<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
-								Analiza el rendimiento y las métricas del sistema médico
-							</p>
 						</div>
 						<DateRangeSelector value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
 					</div>

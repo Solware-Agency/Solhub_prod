@@ -246,23 +246,29 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                     </button>
                   </div>
                 </div>
-                {/* Fila 2: en responsive solo nombre; debajo la cédula. En desktop todo en línea con edad */}
+                {/* Fila 2: responsive = nombre; debajo cédula · edad. Desktop = todo en línea */}
                 <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-6'>
                   <div className='text-sm sm:text-base min-w-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center sm:gap-1.5'>
                       <span className='font-semibold text-gray-900 dark:text-gray-100'>
                         {case_.nombre || 'Sin nombre'}
                       </span>
-                      <span className='text-gray-600 dark:text-gray-400'>
+                      {/* Responsive: cédula y edad en la misma línea con punto medio (·) */}
+                      <span className='text-gray-600 dark:text-gray-400 sm:hidden'>
+                        {case_.cedula || 'Sin cédula'}
+                        {case_.edad && <> · {case_.edad}</>}
+                      </span>
+                      {/* Desktop: cédula y edad en línea */}
+                      <span className='hidden sm:inline text-gray-600 dark:text-gray-400'>
                         {case_.cedula || 'Sin cédula'}
                       </span>
                       {case_.edad && (
-                        <span className='hidden sm:inline text-gray-400 dark:text-gray-600'> • </span>
-                      )}
-                      {case_.edad && (
-                        <span className='hidden sm:inline text-gray-600 dark:text-gray-400'>
-                          {case_.edad}
-                        </span>
+                        <>
+                          <span className='hidden sm:inline text-gray-400 dark:text-gray-600'> · </span>
+                          <span className='hidden sm:inline text-gray-600 dark:text-gray-400'>
+                            {case_.edad}
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>

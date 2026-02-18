@@ -17,6 +17,8 @@ interface PDFButtonProps {
   label?: string; // Opcional: texto personalizado
   isAttached?: boolean; // Si es true, es PDF adjunto; si es false o undefined, es PDF generado
   downloadFileName?: string; // Nombre del archivo al descargar (ej: código del caso)
+  /** Si true, solo muestra el botón de previsualizar (no el de descargar). Útil cuando ya hay otro botón de descarga en la misma fila. */
+  previewOnly?: boolean;
 }
 
 export function PDFButton({ 
@@ -26,7 +28,8 @@ export function PDFButton({
   className = '',
   label,
   isAttached = false,
-  downloadFileName
+  downloadFileName,
+  previewOnly = false,
 }: PDFButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -73,16 +76,18 @@ export function PDFButton({
       >
         <Eye className='w-4 h-4' />
       </Button>
-      <Button
-        size={size}
-        variant={variant}
-        onClick={handleDownload}
-        disabled={isDownloading}
-        className={`p-2 ${className}`}
-        title={isAttached ? "Descargar PDF adjunto" : "Descargar PDF"}
-      >
-        <Download className="w-4 h-4" />
-      </Button>
+      {!previewOnly && (
+        <Button
+          size={size}
+          variant={variant}
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className={`p-2 ${className}`}
+          title={isAttached ? "Descargar PDF adjunto" : "Descargar PDF"}
+        >
+          <Download className="w-4 h-4" />
+        </Button>
+      )}
 
       <Dialog
         open={isModalOpen}

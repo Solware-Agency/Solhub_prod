@@ -170,6 +170,11 @@ export const imagenologiaRoutes: RouteConfig[] = [
     component: ReceptionistHomePage,
   },
   {
+    path: 'form',
+    feature: 'hasForm',
+    component: MedicalForm,
+  },
+  {
     path: 'cases',
     feature: 'hasCases',
     component: CasesPage,
@@ -183,6 +188,11 @@ export const imagenologiaRoutes: RouteConfig[] = [
     path: 'users',
     feature: 'hasUsers',
     component: UsersPage,
+  },
+  {
+    path: 'changelog',
+    feature: 'hasChangeHistory',
+    component: ChangelogPage,
   },
   {
     path: 'settings',

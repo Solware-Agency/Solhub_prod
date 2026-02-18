@@ -217,54 +217,95 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const hrRanges = stats.ranges?.heartRate || { low: 0, normal: 0, high: 0 }
 				const hrTotal = hrRanges.low + hrRanges.normal + hrRanges.high
 				const hrNormalPct = hrTotal > 0 ? ((hrRanges.normal / hrTotal) * 100).toFixed(1) : '0'
-				const hrAbnormalPct = hrTotal > 0 ? (((hrRanges.low + hrRanges.high) / hrTotal) * 100).toFixed(1) : '0'
+				const hrAbnormal = hrRanges.low + hrRanges.high
+				const hrStatus = hrTotal === 0 ? 'Sin datos' : Number(hrNormalPct) >= 80 ? 'Normal' : hrAbnormal > 0 ? 'Atención' : 'Normal'
 
 				return (
 					<div className="space-y-6">
-						{/* Resumen */}
+						{/* Status strip + KPI mini (igual que frecuencia respiratoria) */}
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Frecuencia Cardíaca
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{hrAvg ? `${hrAvg.toFixed(0)} lpm` : 'N/A'}
-									</p>
-									<div className="mt-2">
-										{getTrend(hrAvg, 'avgHeartRate')}
-									</div>
+							{/* Status strip */}
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									hrStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: hrStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										hrStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: hrStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{hrStatus}
+								</span>
+								{hrTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{hrTotal} mediciones
+									</span>
+								)}
+							</div>
+							{/* KPI mini */}
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{hrAvg ? `${hrAvg.toFixed(0)} lpm` : '—'}
+									</span>
+									{getTrend(hrAvg, 'avgHeartRate')}
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{hrRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{hrNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{hrRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({hrNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Anormales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{hrRanges.low + hrRanges.high}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{hrAbnormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Anormales</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{hrAbnormal}</span>
 								</div>
 							</div>
+						</div>
 
-							{/* Distribución detallada */}
+						{/* Chart arriba (antes de distribución) */}
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Frecuencia Cardíaca
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgHeartRate" stroke="#ec4899" strokeWidth={2} name="Promedio (lpm)" />
+										<Line type="monotone" dataKey={() => 60} stroke="#22c55e" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
+										<Line type="monotone" dataKey={() => 100} stroke="#eab308" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+
+						{/* Distribución por Rangos (card separada) */}
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución por Rangos
-								</h4>
 								{[
-								{ label: `Baja (< 60 lpm)`, value: hrRanges.low, color: '#ef4444' },
-								{ label: 'Normal (60-100 lpm)', value: hrRanges.normal, color: '#22c55e' },
-								{ label: `Alta (> 100 lpm)`, value: hrRanges.high, color: '#eab308' },
+									{ label: 'Baja (< 60 lpm)', value: hrRanges.low, color: '#ef4444' },
+									{ label: 'Normal (60-100 lpm)', value: hrRanges.normal, color: '#22c55e' },
+									{ label: 'Alta (> 100 lpm)', value: hrRanges.high, color: '#eab308' },
 								].map((item) => {
 									const percentage = hrTotal > 0 ? (item.value / hrTotal) * 100 : 0
 									return (
@@ -284,26 +325,6 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 								})}
 							</div>
 						</div>
-
-						{/* Gráfica de tendencia */}
-						{trends && trends.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Frecuencia Cardíaca
-								</h3>
-								<ResponsiveContainer width="100%" height={300}>
-									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="date" />
-										<YAxis />
-										<Tooltip />
-										<Line type="monotone" dataKey="avgHeartRate" stroke="#ec4899" strokeWidth={2} name="Promedio (lpm)" />
-										<Line type="monotone" dataKey={() => 60} stroke="#22c55e" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
-										<Line type="monotone" dataKey={() => 100} stroke="#eab308" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
-									</LineChart>
-								</ResponsiveContainer>
-							</div>
-						)}
 					</div>
 				)
 

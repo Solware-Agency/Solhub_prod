@@ -16,26 +16,27 @@ import {
 	FileText,
 	Loader2,
 	Trash2,
-	Eye,
 } from 'lucide-react'
 import { PDFButton } from '@shared/components/ui/PDFButton'
 
+const MAX_PDFS = 5
+
 interface CasePDFUploadProps {
 	caseId: string
-	currentPdfUrl: string | null | undefined
+	/** Lista de URLs de PDFs actuales (máximo 5). Si se pasa un array vacío o undefined, se trata como sin PDFs. */
+	currentPdfUrls: string[]
 	onPdfUpdated: () => void | Promise<void>
 	onUploadingChange?: (isUploading: boolean) => void
 	className?: string
 }
 
 /**
- * Componente para subir y eliminar PDFs de casos
- * Solo para roles: laboratorio, coordinador, owner, prueba (godmode), imagenologia, call_center en SPT
- * Nota: coordinador tiene esta capacidad especial (employee NO)
+ * Componente para subir y eliminar hasta 5 PDFs por caso
+ * Solo para roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center en SPT
  */
 export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
-	currentPdfUrl,
+	currentPdfUrls,
 	onPdfUpdated,
 	onUploadingChange,
 	className = '',
@@ -47,19 +48,23 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 	const [isUploading, setIsUploading] = useState(false)
-	const [isDeleting, setIsDeleting] = useState(false)
+	const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null)
 	const [error, setError] = useState<string | null>(null)
 
+	const urls = Array.isArray(currentPdfUrls) ? currentPdfUrls.filter(Boolean) : []
+	const canAddMore = urls.length < MAX_PDFS
+
 	const isSpt = laboratory?.slug === 'spt'
-	const canUpload = isSpt && 
-		user && 
+	const canUpload =
+		isSpt &&
+		user &&
 		profile?.laboratory_id &&
-		(profile?.role === 'laboratorio' || 
-		 profile?.role === 'coordinador' || 
-		 profile?.role === 'owner' || 
-		 profile?.role === 'prueba' || 
-		 profile?.role === 'imagenologia' || 
-		 profile?.role === 'call_center')
+		(profile?.role === 'laboratorio' ||
+			profile?.role === 'coordinador' ||
+			profile?.role === 'owner' ||
+			profile?.role === 'prueba' ||
+			profile?.role === 'imagenologia' ||
+			profile?.role === 'call_center')
 
 	if (!canUpload) {
 		return null
@@ -69,7 +74,6 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		const file = event.target.files?.[0]
 		if (!file) return
 
-		// Validar archivo
 		const validation = validateCasePDF(file)
 		if (!validation.valid) {
 			setError(validation.error || 'Archivo inválido')
@@ -85,9 +89,31 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		setSelectedFile(file)
 	}
 
+	const persistPdfUrls = async (newUrls: string[]) => {
+		const { error: updateError } = await supabase
+			.from('medical_records_clean')
+			.update({
+				uploaded_pdf_urls: newUrls.length ? newUrls : null,
+				uploaded_pdf_url: newUrls[0] ?? null,
+			})
+			.eq('id', caseId)
+
+		if (updateError) throw updateError
+		await onPdfUpdated()
+	}
+
 	const handleUpload = async () => {
 		if (!selectedFile || !user || !profile?.laboratory_id) {
 			setError('Faltan datos necesarios para subir el PDF')
+			return
+		}
+
+		if (urls.length >= MAX_PDFS) {
+			toast({
+				title: 'Límite alcanzado',
+				description: `Solo puedes subir hasta ${MAX_PDFS} PDFs por caso.`,
+				variant: 'destructive',
+			})
 			return
 		}
 
@@ -98,117 +124,46 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		let pdfUrl: string | null = null
 
 		try {
-			// Subir archivo a Supabase Storage
+			const nextIndex = urls.length
 			const { data, error: uploadError } = await uploadCasePDF(
 				caseId,
 				selectedFile,
 				profile.laboratory_id,
+				nextIndex,
 			)
 
 			pdfUrl = data
 
 			if (uploadError || !pdfUrl) {
-				// Convertir error a Error si no lo es
-				if (uploadError instanceof Error) {
-					throw uploadError
-				} else if (uploadError && typeof uploadError === 'object') {
-					// Extraer mensaje de objeto de error
-					const message = 
+				if (uploadError instanceof Error) throw uploadError
+				if (uploadError && typeof uploadError === 'object') {
+					const message =
 						('message' in uploadError && typeof uploadError.message === 'string' ? uploadError.message : null) ||
 						('error' in uploadError && typeof uploadError.error === 'string' ? uploadError.error : null) ||
 						('details' in uploadError && typeof uploadError.details === 'string' ? uploadError.details : null) ||
 						JSON.stringify(uploadError)
 					throw new Error(message || 'No se pudo obtener la URL del PDF')
-				} else {
-					throw new Error('No se pudo obtener la URL del PDF')
 				}
+				throw new Error('No se pudo obtener la URL del PDF')
 			}
 
-			// Actualizar el campo uploaded_pdf_url en la base de datos
-			console.log('Updating medical_records_clean with:', { caseId, pdfUrl })
-			const { data: updateData, error: updateError } = await supabase
-				.from('medical_records_clean')
-				.update({ uploaded_pdf_url: pdfUrl })
-				.eq('id', caseId)
-				.select()
+			const newUrls = [...urls, pdfUrl]
+			await persistPdfUrls(newUrls)
 
-			if (updateError) {
-				console.error('Error updating medical_records_clean:', {
-					error: updateError,
-					caseId,
-					pdfUrl,
-					errorCode: updateError.code,
-					errorMessage: updateError.message,
-					errorDetails: updateError.details,
-					errorHint: updateError.hint,
-				})
-				throw updateError
-			}
-
-			if (!updateData || updateData.length === 0) {
-				console.warn('No rows updated for caseId:', caseId)
-				throw new Error('No se pudo actualizar el registro. El caso no existe o no tienes permisos.')
-			}
-
-			console.log('Successfully updated medical_records_clean:', updateData)
-
-			// Notificar al componente padre para refreschar
-			await onPdfUpdated()
-
-			// Limpiar estado
 			setSelectedFile(null)
-			if (fileInputRef.current) {
-				fileInputRef.current.value = ''
-			}
+			if (fileInputRef.current) fileInputRef.current.value = ''
 
 			toast({
 				title: '✅ PDF subido',
 				description: 'El PDF se ha subido correctamente.',
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
-		} catch (error) {
-			console.error('Error uploading case PDF:', error)
-			console.error('Error details:', {
-				error,
-				type: typeof error,
-				isError: error instanceof Error,
-				keys: error && typeof error === 'object' ? Object.keys(error) : [],
-				caseId,
-				hasPdfUrl: !!pdfUrl,
-			})
-
-			// Extraer mensaje de error de diferentes formatos
+		} catch (err) {
+			console.error('Error uploading case PDF:', err)
 			let errorMessage = 'Error al subir el PDF. Inténtalo de nuevo.'
-			
-			if (error instanceof Error) {
-				errorMessage = error.message
-			} else if (error && typeof error === 'object') {
-				// Manejar PostgrestError u otros objetos de error
-				if ('message' in error && typeof error.message === 'string') {
-					errorMessage = error.message
-				} else if ('error' in error && typeof error.error === 'string') {
-					errorMessage = error.error
-				} else if ('details' in error && typeof error.details === 'string') {
-					errorMessage = error.details
-				} else if ('hint' in error && typeof error.hint === 'string') {
-					errorMessage = error.hint
-				} else if ('code' in error) {
-					// Error de Supabase con código
-					const code = (error as any).code
-					const message = (error as any).message || 'Error desconocido'
-					errorMessage = `Error ${code}: ${message}`
-				} else {
-					// Intentar convertir a string
-					try {
-						errorMessage = JSON.stringify(error, null, 2)
-					} catch {
-						errorMessage = String(error)
-					}
-				}
-			} else if (typeof error === 'string') {
-				errorMessage = error
-			}
-
+			if (err instanceof Error) errorMessage = err.message
+			else if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string')
+				errorMessage = (err as any).message
 			setError(errorMessage)
 			toast({
 				title: '❌ Error al subir PDF',
@@ -221,78 +176,34 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		}
 	}
 
-	const handleDelete = async () => {
-		if (!user || !currentPdfUrl || !profile?.laboratory_id) {
-			return
-		}
+	const handleDelete = async (index: number) => {
+		const url = urls[index]
+		if (!url || !user || !profile?.laboratory_id) return
+		if (!confirm('¿Estás seguro de que deseas eliminar este PDF?')) return
 
-		if (!confirm('¿Estás seguro de que deseas eliminar el PDF subido?')) {
-			return
-		}
-
-		setIsDeleting(true)
+		setIsDeletingIndex(index)
 		setError(null)
 
 		try {
-			// Eliminar archivo de Supabase Storage
 			const { error: deleteError } = await deleteCasePDF(
 				caseId,
-				currentPdfUrl,
+				url,
 				profile.laboratory_id,
 			)
+			if (deleteError) throw deleteError
 
-			if (deleteError) {
-				throw deleteError
-			}
-
-			// Actualizar el campo uploaded_pdf_url en la base de datos
-			const { error: updateError } = await supabase
-				.from('medical_records_clean')
-				.update({ uploaded_pdf_url: null })
-				.eq('id', caseId)
-
-			if (updateError) {
-				throw updateError
-			}
-
-			// Notificar al componente padre para refrescar
-			await onPdfUpdated()
+			const newUrls = urls.filter((_, i) => i !== index)
+			await persistPdfUrls(newUrls)
 
 			toast({
 				title: '✅ PDF eliminado',
 				description: 'El PDF ha sido eliminado correctamente.',
 				className: 'bg-green-100 border-green-400 text-green-800',
 			})
-		} catch (error) {
-			console.error('Error deleting case PDF:', error)
-
-			// Extraer mensaje de error de diferentes formatos
+		} catch (err) {
+			console.error('Error deleting case PDF:', err)
 			let errorMessage = 'Error al eliminar el PDF. Inténtalo de nuevo.'
-			
-			if (error instanceof Error) {
-				errorMessage = error.message
-			} else if (error && typeof error === 'object') {
-				// Manejar PostgrestError u otros objetos de error
-				if ('message' in error && typeof error.message === 'string') {
-					errorMessage = error.message
-				} else if ('error' in error && typeof error.error === 'string') {
-					errorMessage = error.error
-				} else if ('details' in error && typeof error.details === 'string') {
-					errorMessage = error.details
-				} else if ('hint' in error && typeof error.hint === 'string') {
-					errorMessage = error.hint
-				} else {
-					// Intentar convertir a string
-					try {
-						errorMessage = JSON.stringify(error)
-					} catch {
-						errorMessage = String(error)
-					}
-				}
-			} else if (typeof error === 'string') {
-				errorMessage = error
-			}
-
+			if (err instanceof Error) errorMessage = err.message
 			setError(errorMessage)
 			toast({
 				title: '❌ Error al eliminar PDF',
@@ -300,16 +211,14 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 				variant: 'destructive',
 			})
 		} finally {
-			setIsDeleting(false)
+			setIsDeletingIndex(null)
 		}
 	}
 
 	const handleCancel = () => {
 		setSelectedFile(null)
 		setError(null)
-		if (fileInputRef.current) {
-			fileInputRef.current.value = ''
-		}
+		if (fileInputRef.current) fileInputRef.current.value = ''
 	}
 
 	return (
@@ -320,35 +229,42 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 				</div>
 			)}
 
-			{currentPdfUrl && !selectedFile && (
-				<div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-					<FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-					<span className="text-sm text-green-800 dark:text-green-200 flex-1">
-						PDF subido
-					</span>
-					<div className="flex items-center gap-1">
-						<PDFButton
-							pdfUrl={currentPdfUrl}
-							size="sm"
-							variant="ghost"
-							className="h-6 px-2"
-							isAttached={true}
-						/>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={handleDelete}
-							disabled={isDeleting}
-							className="h-6 px-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-							title="Eliminar PDF"
+			{urls.length > 0 && (
+				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+					{urls.map((url, index) => (
+						<div
+							key={url}
+							className="flex flex-col items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg min-w-0"
 						>
-							{isDeleting ? (
-								<Loader2 className="h-3 w-3 animate-spin" />
-							) : (
-								<Trash2 className="h-3 w-3" />
-							)}
-						</Button>
-					</div>
+							<FileText className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+							<span className="text-xs text-green-800 dark:text-green-200 truncate w-full text-center">
+								PDF {index + 1}
+							</span>
+							<div className="flex items-center gap-1">
+								<PDFButton
+									pdfUrl={url}
+									size="sm"
+									variant="ghost"
+									className="h-6 px-2"
+									isAttached={true}
+								/>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => handleDelete(index)}
+									disabled={isDeletingIndex !== null}
+									className="h-6 px-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+									title="Eliminar PDF"
+								>
+									{isDeletingIndex === index ? (
+										<Loader2 className="h-3 w-3 animate-spin" />
+									) : (
+										<Trash2 className="h-3 w-3" />
+									)}
+								</Button>
+							</div>
+						</div>
+					))}
 				</div>
 			)}
 
@@ -370,33 +286,29 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 				</div>
 			)}
 
-			{/* Solo mostrar botón de subir si NO hay PDF subido o si hay un archivo seleccionado */}
-			{(!currentPdfUrl || selectedFile) && (
+			{canAddMore && (
 				<div className="flex items-center gap-2">
 					<input
 						ref={fileInputRef}
 						type="file"
 						accept=".pdf"
 						onChange={handleFileSelect}
-						disabled={isUploading || isDeleting}
+						disabled={isUploading || isDeletingIndex !== null}
 						className="hidden"
 						id={`case-pdf-upload-${caseId}`}
 					/>
-					<label
-						htmlFor={`case-pdf-upload-${caseId}`}
-						className="flex-1"
-					>
+					<label htmlFor={`case-pdf-upload-${caseId}`} className="flex-1">
 						<Button
 							type="button"
 							variant="outline"
 							size="sm"
-							disabled={isUploading || isDeleting}
+							disabled={isUploading || isDeletingIndex !== null}
 							className="w-full cursor-pointer"
 							asChild
 						>
 							<span>
 								<Upload className="h-4 w-4 mr-2" />
-								{selectedFile ? 'Cambiar PDF' : 'Subir PDF'}
+								{selectedFile ? 'Cambiar archivo' : `Subir PDF${urls.length > 0 ? ` (${urls.length}/${MAX_PDFS})` : ''}`}
 							</span>
 						</Button>
 					</label>
@@ -407,7 +319,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							variant="default"
 							size="sm"
 							onClick={handleUpload}
-							disabled={isUploading || isDeleting}
+							disabled={isUploading || isDeletingIndex !== null}
 							className="flex-shrink-0"
 						>
 							{isUploading ? (

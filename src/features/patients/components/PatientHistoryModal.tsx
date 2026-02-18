@@ -1640,6 +1640,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                               pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                               size='sm'
                                               variant='default'
+                                              previewOnly
                                             />
                                           </div>
                                         </div>
@@ -1977,6 +1978,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                                 pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
                                                 size='sm'
                                                 variant='default'
+                                                previewOnly
                                               />
                                             </div>
                                           </div>

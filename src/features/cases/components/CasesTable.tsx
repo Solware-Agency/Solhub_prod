@@ -1465,11 +1465,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     <span className='hidden sm:inline'>Exportar</span>
                   </Button>
 
-                  {/* Paginación (arriba, junto a filtros y exportar) */}
+                  {/* Paginación (misma línea que filtros y exportar en responsive) */}
                   {totalPages > 1 && (
-                    <div className='w-full md:w-auto md:ml-auto'>
+                    <div className='shrink-0 md:ml-auto'>
                       <Pagination
                         variant='compact'
+                        maxVisiblePages={4}
                         currentPage={currentPage}
                         totalPages={totalPages}
                         itemsPerPage={itemsPerPage}
@@ -1795,11 +1796,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   <span className='hidden sm:inline'>Exportar</span>
                 </Button>
 
-                {/* Paginación (arriba, junto a filtros y exportar) */}
+                {/* Paginación (misma línea que filtros y exportar en responsive) */}
                 {totalPages > 1 && (
-                  <div className='w-full md:w-auto md:ml-auto'>
+                  <div className='shrink-0 md:ml-auto'>
                     <Pagination
                       variant='compact'
+                      maxVisiblePages={4}
                       currentPage={currentPage}
                       totalPages={totalPages}
                       itemsPerPage={itemsPerPage}

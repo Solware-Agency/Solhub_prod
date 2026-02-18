@@ -13,8 +13,16 @@ export default async function handler(req, res) {
   try {
     // Importaciones dinámicas
     const { google } = await import('googleapis');
-    
-    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
+
+    const { patientEmail, patientName, caseCode, pdfUrl, uploadedPdfUrl, uploadedPdfUrls, imageUrls, laboratory_id, subject, message, cc, bcc } = req.body;
+
+    const uploadedPdfList = Array.isArray(uploadedPdfUrls) && uploadedPdfUrls.length > 0 ? uploadedPdfUrls : (uploadedPdfUrl ? [uploadedPdfUrl] : []);
+    const escapeHtml = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const uploadedPdfsHtml = uploadedPdfList.map((url, i) => {
+      const safe = escapeHtml(url);
+      const label = uploadedPdfList.length > 1 ? 'Adjunto ' + (i + 1) : 'Adjunto';
+      return '<br><br><a href="' + safe + '" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">📎 ' + label + '</a>';
+    }).join('');
 
     // Log inicial de datos (sin mostrar datos sensibles completos si prefieres)
     console.log("📧 Gmail API - Datos recibidos:", {
@@ -22,7 +30,7 @@ export default async function handler(req, res) {
       patientName,
       caseCode,
       pdfUrl: pdfUrl ? "URL presente" : "URL faltante",
-      uploadedPdfUrl: uploadedPdfUrl ? "PDF adjunto presente" : "Sin PDF adjunto",
+      uploadedPdfUrls: uploadedPdfList.length > 0 ? uploadedPdfList.length + " PDF(s)" : "Sin PDF adjunto",
       imageUrls: imageUrls && imageUrls.length > 0 ? `${imageUrls.length} imágenes` : "Sin imágenes",
       laboratory_id: laboratory_id || null,
       cc: cc || [],
@@ -38,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     // Validar que haya contenido para enviar
-    const hasContent = pdfUrl || uploadedPdfUrl || (imageUrls && imageUrls.length > 0);
+    const hasContent = pdfUrl || uploadedPdfList.length > 0 || (imageUrls && imageUrls.length > 0);
     if (!hasContent) {
       return res.status(400).json({
         success: false,
@@ -46,40 +54,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Verificar variables de entorno de Gmail
-    const requiredEnvVars = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN', 'GMAIL_USER_EMAIL'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    
-    if (missingVars.length > 0) {
-      console.error("❌ Variables de entorno faltantes:", missingVars);
-      console.log("🔍 Variables disponibles (keys):", Object.keys(process.env)); 
-      
-      return res.status(500).json({
-        success: false,
-        error: `Configuración Gmail incompleta. Faltan: ${missingVars.join(', ')}`
-      });
-    }
-
-    // Configurar OAuth2
-    // Configurar OAuth2 - Determinar la URL de callback correcta según el entorno
-    const isDevelopment = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
-    const redirectUri = isDevelopment 
-      ? 'https://dev.app.solhub.agency/oauth2callback'
-      : 'https://app.solhub.agency/oauth2callback';
-    
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GMAIL_CLIENT_ID,
-      process.env.GMAIL_CLIENT_SECRET,
-      redirectUri
-    );
-    
-    oauth2Client.setCredentials({
-      refresh_token: process.env.GMAIL_REFRESH_TOKEN,
-    });
-
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-    // --- LÓGICA DE LABORATORIO (Supabase) ---
+    // --- LÓGICA DE LABORATORIO (Supabase) - Obtener configuración ---
     let labName = 'SPT - Salud para Todos';
     let labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
     let labPhone = '+58 212-4179598';
@@ -111,6 +86,65 @@ export default async function handler(req, res) {
         console.warn('⚠️ No se pudo obtener laboratorio desde Supabase:', e.message || e);
       }
     }
+
+    // --- CONFIGURAR CREDENCIALES DE GMAIL DESDE VARIABLES DE ENTORNO ---
+    // Mapeo de slugs a prefijos de variables de entorno
+    const labSlugNormalized = String(labSlug || 'spt').toLowerCase();
+    let envPrefix = '';
+    
+    // Determinar prefijo según el laboratorio
+    if (labSlugNormalized === 'marihorgen' || labSlugNormalized === 'lm') {
+      envPrefix = 'MARIHORGEN_';
+    } else if (labSlugNormalized === 'spt') {
+      envPrefix = ''; // SPT usa las variables sin prefijo (GMAIL_*)
+    } else {
+      // Otros laboratorios: intentar con prefijo basado en slug en mayúsculas
+      envPrefix = `${labSlug.toUpperCase()}_`;
+    }
+
+    // Obtener credenciales con prefijo específico o fallback a las genéricas
+    const clientId = process.env[`${envPrefix}GMAIL_CLIENT_ID`] || process.env.GMAIL_CLIENT_ID;
+    const clientSecret = process.env[`${envPrefix}GMAIL_CLIENT_SECRET`] || process.env.GMAIL_CLIENT_SECRET;
+    const refreshToken = process.env[`${envPrefix}GMAIL_REFRESH_TOKEN`] || process.env.GMAIL_REFRESH_TOKEN;
+    const userEmail = process.env[`${envPrefix}GMAIL_USER_EMAIL`] || process.env.GMAIL_USER_EMAIL;
+
+    // Validar que existan las credenciales
+    if (!clientId || !clientSecret || !refreshToken || !userEmail) {
+      const missingFields = [];
+      if (!clientId) missingFields.push('clientId');
+      if (!clientSecret) missingFields.push('clientSecret');
+      if (!refreshToken) missingFields.push('refreshToken');
+      if (!userEmail) missingFields.push('userEmail');
+      
+      console.error(`❌ Configuración Gmail incompleta para ${labName} (slug: ${labSlug}). Faltan:`, missingFields);
+      console.log(`🔍 Buscando variables con prefijo: ${envPrefix || '(sin prefijo)'}GMAIL_*`);
+      
+      return res.status(500).json({
+        success: false,
+        error: `Configuración Gmail incompleta para ${labName}. Faltan: ${missingFields.join(', ')}. Verifica las variables de entorno ${envPrefix}GMAIL_* en Vercel.`
+      });
+    }
+
+    console.log(`✅ Credenciales Gmail válidas para ${labName} (${userEmail}) usando prefijo: ${envPrefix || '(sin prefijo)'}`);
+
+
+    // Configurar OAuth2 Client
+    const isDevelopment = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
+    const redirectUri = isDevelopment 
+      ? 'https://dev.app.solhub.agency/oauth2callback'
+      : 'https://app.solhub.agency/oauth2callback';
+    
+    const oauth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      redirectUri
+    );
+    
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken,
+    });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
     // Preparar enlace de contacto
     let phoneDigits = String(labPhone || '').replace(/\D/g, '');
@@ -162,20 +196,7 @@ export default async function handler(req, res) {
             </a>
             ` : ''}
             
-            ${uploadedPdfUrl ? `
-              <br><br>
-              <a href="${uploadedPdfUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    color: white; 
-                    padding: 15px 30px; 
-                    text-decoration: none; 
-                    border-radius: 25px; 
-                    display: inline-block;
-                    font-weight: bold;
-                    font-size: 16px;
-                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                📎 Adjunto
-              </a>
-            ` : ''}
+            ${uploadedPdfsHtml}
           </div>
 
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">

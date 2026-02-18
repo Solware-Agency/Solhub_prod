@@ -14,6 +14,8 @@ interface PaginationProps {
 	totalItems?: number
 	variant?: 'default' | 'compact'
 	className?: string
+	/** Número máximo de botones de página visibles (p. ej. 4 en responsive para caber en una línea con filtros/exportar) */
+	maxVisiblePages?: number
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -24,11 +26,12 @@ const Pagination: React.FC<PaginationProps> = ({
 	onPrev,
 	variant = 'default',
 	className,
+	maxVisiblePages: maxVisiblePagesProp = 5,
 }) => {
 	const pageNumbers = useMemo(() => {
 		if (totalPages <= 1) return []
 		const pages: number[] = []
-		const maxVisiblePages = 5
+		const maxVisiblePages = maxVisiblePagesProp
 		let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
 		const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
 		if (endPage - startPage + 1 < maxVisiblePages) {
@@ -36,7 +39,7 @@ const Pagination: React.FC<PaginationProps> = ({
 		}
 		for (let i = startPage; i <= endPage; i++) pages.push(i)
 		return pages
-	}, [currentPage, totalPages])
+	}, [currentPage, totalPages, maxVisiblePagesProp])
 
 	// if (totalPages <= 1) return null
 
