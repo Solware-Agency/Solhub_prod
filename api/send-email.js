@@ -25,9 +25,12 @@ export default async function handler(req, res) {
 
         console.log("🔍 Debug laboratorio:", { laboratory_id, lab, labError });
 
-        // Si es SPT, usar Gmail API
-        if (!labError && lab && lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
-          console.log("🔄 Redirigiendo a Gmail API para SPT...");
+        // Si es SPT o Marihorgen, usar Gmail API
+        const labSlug = String(lab?.slug || '').toLowerCase();
+        const usesGmail = labSlug.includes('spt') || labSlug === 'marihorgen' || labSlug === 'lm';
+        
+        if (!labError && lab && lab.slug && usesGmail) {
+          console.log(`🔄 Redirigiendo a Gmail API para ${lab.slug}...`);
           
           // Import dinámico del handler de Gmail
           try {
