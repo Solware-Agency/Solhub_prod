@@ -10,7 +10,7 @@ import { SessionTimeoutWarning } from '@shared/components/ui/session-timeout-war
 import { ThemeProvider } from '@app/providers/ThemeProvider.tsx';
 import { SptThemeEnforcer } from '@app/providers/SptThemeEnforcer.tsx';
 
-// Crear contenedor para tooltips que se renderice después de los modales
+// Contenedores para portales que deben quedar por encima de modales (z-index máximo)
 if (typeof document !== 'undefined') {
   let tooltipContainer = document.getElementById('tooltip-portal-container');
   if (!tooltipContainer) {
@@ -24,6 +24,17 @@ if (typeof document !== 'undefined') {
     tooltipContainer.style.pointerEvents = 'none';
     tooltipContainer.style.zIndex = '2147483647';
     document.body.appendChild(tooltipContainer);
+  }
+  let selectContainer = document.getElementById('select-portal-container');
+  if (!selectContainer) {
+    selectContainer = document.createElement('div');
+    selectContainer.id = 'select-portal-container';
+    selectContainer.style.position = 'fixed';
+    selectContainer.style.inset = '0';
+    selectContainer.style.pointerEvents = 'none';
+    selectContainer.style.zIndex = '2147483647';
+    selectContainer.style.overflow = 'visible';
+    document.body.appendChild(selectContainer);
   }
 }
 

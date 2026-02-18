@@ -831,24 +831,22 @@ const PolizasPage = () => {
 						))}
 					</div>
 					{stepContent()}
-					<DialogFooter className="mt-6">
+					<DialogFooter className="mt-6 flex flex-row flex-nowrap justify-end gap-2">
+						{step > 0 && (
+							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)}>
+								Anterior
+							</Button>
+						)}
 						<Button variant="outline" onClick={() => setOpenModal(false)}>
 							Cancelar
 						</Button>
-						<div className="flex gap-2">
-							{step > 0 && (
-								<Button variant="outline" onClick={() => setStep((prev) => prev - 1)}>
-									Anterior
-								</Button>
-							)}
-							{step < STEPS.length - 1 ? (
-								<Button onClick={() => setStep((prev) => prev + 1)}>Siguiente</Button>
-							) : (
-								<Button onClick={handleSave} disabled={saving}>
-									{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
-								</Button>
-							)}
-						</div>
+						{step < STEPS.length - 1 ? (
+							<Button onClick={() => setStep((prev) => prev + 1)}>Siguiente</Button>
+						) : (
+							<Button onClick={handleSave} disabled={saving}>
+								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
+							</Button>
+						)}
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

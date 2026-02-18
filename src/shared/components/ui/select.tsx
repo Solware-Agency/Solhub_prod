@@ -65,15 +65,18 @@ const SelectScrollDownButton = React.forwardRef<
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
+const getSelectPortalContainer = () =>
+	typeof document !== 'undefined' ? document.getElementById('select-portal-container') ?? document.body : undefined;
+
 const SelectContent = React.forwardRef<
 	React.ElementRef<typeof SelectPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = 'popper', ...props }, ref) => (
-	<SelectPrimitive.Portal>
+	<SelectPrimitive.Portal container={getSelectPortalContainer()}>
 		<SelectPrimitive.Content
 			ref={ref}
 			className={cn(
-				'relative z-[9999] max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-200 data-[state=open]:duration-200',
+				'relative z-[9999999] max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-white/20 dark:border-white/10 bg-white/85 dark:bg-background/90 backdrop-blur-md text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-200 data-[state=open]:duration-200',
 				className,
 			)}
 			position={position}

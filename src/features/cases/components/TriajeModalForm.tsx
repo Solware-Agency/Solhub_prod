@@ -37,6 +37,13 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
+import {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
@@ -1858,20 +1865,19 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         <Cigarette className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                         ¿Fuma?
                       </label>
-                      <select
-                        value={formData.tabaco}
-                        onChange={(e) =>
-                          handleInputChange('tabaco', e.target.value)
-                        }
+                      <Select
+                        value={formData.tabaco || undefined}
+                        onValueChange={(value) => handleInputChange('tabaco', value)}
                         disabled={loading}
-                        className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
                       >
-                        <option value='' disabled hidden>
-                          Seleccione...
-                        </option>
-                        <option value='No'>No</option>
-                        <option value='Si'>Sí</option>
-                      </select>
+                        <SelectTrigger className={inputStyles}>
+                          <SelectValue placeholder='Seleccione...' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='No'>No</SelectItem>
+                          <SelectItem value='Si'>Sí</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                       <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -1906,27 +1912,25 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                         <Wine className='h-4 w-4 text-gray-600 dark:text-gray-400' />
                         Alcohol
                       </label>
-                      <select
-                        value={formData.alcohol}
-                        onChange={(e) =>
-                          handleInputChange(
-                            'alcohol',
-                            e.target.value as HabitLevel,
-                          )
+                      <Select
+                        value={formData.alcohol || undefined}
+                        onValueChange={(value) =>
+                          handleInputChange('alcohol', value as HabitLevel)
                         }
                         disabled={loading}
-                        className={`w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${inputStyles}`}
                       >
-                        <option value='' disabled hidden>
-                          Seleccione...
-                        </option>
-                        <option value='No'>No</option>
-                        <option value='muy alta'>Muy alta</option>
-                        <option value='alta'>Alta</option>
-                        <option value='media'>Media</option>
-                        <option value='baja'>Baja</option>
-                        <option value='muy baja'>Muy baja</option>
-                      </select>
+                        <SelectTrigger className={inputStyles}>
+                          <SelectValue placeholder='Seleccione...' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='No'>No</SelectItem>
+                          <SelectItem value='muy alta'>Muy alta</SelectItem>
+                          <SelectItem value='alta'>Alta</SelectItem>
+                          <SelectItem value='media'>Media</SelectItem>
+                          <SelectItem value='baja'>Baja</SelectItem>
+                          <SelectItem value='muy baja'>Muy baja</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

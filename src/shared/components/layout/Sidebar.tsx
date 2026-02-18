@@ -431,7 +431,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/aseguradoras/home'
                   icon={<Home className='stroke-2 size-5 shrink-0' />}
-                  label='Aseguradoras'
+                  label='Inicio'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
