@@ -10,11 +10,9 @@ import {
   UserPen,
   Download,
   CheckSquare,
-  Square,
-  Eye,
-  Activity,
+  Square, Activity,
   Users,
-  Trash2,
+  Trash2
 } from 'lucide-react';
 import {
   Tabs,
@@ -36,7 +34,6 @@ import { Checkbox } from '@shared/components/ui/checkbox';
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
 import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
-import { formatCurrency } from '@shared/utils/number-utils';
 import { usePDFDownload } from '@shared/hooks/usePDFDownload';
 import { useToast } from '@shared/hooks/use-toast';
 import JSZip from 'jszip';
@@ -44,7 +41,6 @@ import TriageHistoryTab from '@features/triaje/components/TriageHistoryTab';
 import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service';
 
 import type { Patient } from '@/services/supabase/patients/patients-service';
-import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import SendEmailModal from '@features/cases/components/SendEmailModal';
@@ -168,10 +164,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const { isGeneratingPDF, isSaving, handleCheckAndDownloadPDF, getPDFBlob } =
     usePDFDownload();
   const { toast } = useToast();
-  const { profile } = useUserProfile();
+  useUserProfile();
   const { laboratory } = useLaboratory();
-  const isImagenologia = profile?.role === 'imagenologia';
-  const isSpt = laboratory?.slug === 'spt';
   const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
   const getDisplayCode = (caseItem: MedicalCaseWithPatient) =>
     isMarihorgen && caseItem.exam_type === 'Inmunohistoquímica'
@@ -296,9 +290,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             errorCount++;
             errors.push(`No se pudo obtener PDF para caso ${caseItem.code || caseItem.id}`);
           }
-        } catch (err) {
+        } catch (error) {
           errorCount++;
-          errors.push(`Error: ${caseItem.code || caseItem.id}`);
+          errors.push(`Error: ${caseItem.code || caseItem.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
       }
       if (successCount === 0) {
@@ -1023,18 +1017,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   }, [isOpen]);
 
   // Get status color
-  const getStatusColor = (status: string) => {
-    const normalized = (status || '').toString().trim().toLowerCase();
-    switch (normalized) {
-      case 'pagado':
-      case 'completado':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'incompleto':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      default:
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-    }
-  };
 
   if (!patient) return null;
 
@@ -1049,13 +1031,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
-              className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-[100000000000000000]' : 'z-[99999998]'}`}
+              className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-100000000000000000' : 'z-99999998'}`}
             />
           )}
 
           {/* Modal */}
           {!isEditing && (
-            <div className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-[100000000000000001]' : 'z-[99999999]'}`}>
+            <div className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-100000000000000001' : 'z-99999999'}`}>
               {/* Overlay de fondo con opacidad desde el inicio */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -1099,7 +1081,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 {/* Content */}
                 <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
                   {/* Patient Info */}
-                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] flex-shrink-0'>
+                  <div className='p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] shrink-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
                       <div className='flex items-center gap-3'>
                         <div className='p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full'>
@@ -1144,6 +1126,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       }
                                     } catch (error) {
                                       // Si hay error formateando, mostrar solo la edad
+                                      console.error('Error formateando fecha de nacimiento:', error);
                                       return (
                                         <span className='ml-3'>
                                           • {calculatedAge}
@@ -1175,6 +1158,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       }
                                     } catch (error) {
                                       // Ignorar error
+                                      console.error('Error formateando fecha de nacimiento:', error);
                                     }
                                   }
                                   
@@ -1209,6 +1193,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       }
                                     } catch (error) {
                                       // Si hay error formateando, mostrar solo la edad
+                                      console.error('Error formateando fecha de nacimiento:', error);
                                       return (
                                         <span className='ml-3'>
                                           • {calculatedAge}
@@ -1240,6 +1225,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                       }
                                     } catch (error) {
                                       // Ignorar error
+                                      console.error('Error formateando fecha de nacimiento:', error);
                                     }
                                   }
                                   
@@ -1310,7 +1296,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       onValueChange={setActiveTab}
                       className='w-full h-full min-h-0 flex flex-col overflow-hidden'
                     >
-                      <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                      <div className='p-4 border-b border-gray-200 dark:border-gray-700 shrink-0'>
                         <TabsList className={`grid w-full gap-5 ${laboratory?.features?.hasTriaje ? 'grid-cols-3' : 'grid-cols-2'}`}>
                           <TabsTrigger
                             value='cases'
@@ -1346,7 +1332,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         className='mt-0 flex-1 overflow-hidden flex flex-col min-h-0'
                       >
                         {/* Search and Filters */}
-                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                        <div className='p-4 border-b border-gray-200 dark:border-gray-700 shrink-0'>
                           <div className='flex flex-col sm:flex-row gap-3'>
                             <div className='relative flex-1'>
                               <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
@@ -1662,7 +1648,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                         <div className='flex-1 flex overflow-hidden min-h-0'>
                           {/* Left Panel: Lista de Representados */}
                           <div className='w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden'>
-                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+                            <div className='p-4 border-b border-gray-200 dark:border-gray-700 shrink-0'>
                               <h3 className='text-sm font-semibold text-gray-700 dark:text-gray-300'>
                                 Representados
                               </h3>
@@ -1748,7 +1734,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                             {selectedRepresentadoId &&
                               filteredDependentsCases &&
                               filteredDependentsCases.length > 0 && (
-                                <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex flex-wrap gap-2'>
+                                <div className='p-4 border-b border-gray-200 dark:border-gray-700 shrink-0 flex flex-wrap gap-2'>
                                   <Button
                                     variant='outline'
                                     onClick={toggleSelectAllRepresentado}
@@ -1940,7 +1926,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
                                         {/* Segunda línea: Sede y Botones */}
                                         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-gray-200 dark:border-gray-700'>
-                                          <div className='flex-shrink-0'>
+                                          <div className='shrink-0'>
                                             <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                                               Sede
                                             </p>
@@ -1973,14 +1959,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                                                 </>
                                               )}
                                             </Button>
-                                            <div onClick={(e) => e.stopPropagation()}>
-                                              <PDFButton
-                                                pdfUrl={getGeneratedPdfPreviewUrl(caseItem)}
-                                                size='sm'
-                                                variant='default'
-                                                previewOnly
-                                              />
-                                            </div>
                                           </div>
                                         </div>
                                       </div>
