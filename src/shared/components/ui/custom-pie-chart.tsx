@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 interface PieChartData {
   branch: string | null;
@@ -12,6 +12,8 @@ interface CustomPieChartProps {
   data: PieChartData[];
   total: number;
   isLoading?: boolean;
+  /** 'revenue' = mostrar montos; 'cases' = mostrar casos (SPT) */
+  valueMode?: 'revenue' | 'cases';
 }
 
 // Colores de las sedes según branch-badge.tsx
@@ -28,7 +30,10 @@ export const CustomPieChart: React.FC<CustomPieChartProps> = ({
   data,
   total,
   isLoading,
+  valueMode = 'revenue',
 }) => {
+  const formatValue = valueMode === 'cases' ? formatNumber : formatCurrency
+  const totalLabel = valueMode === 'cases' ? 'Casos del Mes' : 'Total del Mes'
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // formatCurrency is now imported from number-utils
@@ -115,10 +120,10 @@ export const CustomPieChart: React.FC<CustomPieChartProps> = ({
         <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
           <div className='bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-full size-32 flex flex-col items-center justify-center'>
             <p className='text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300'>
-              {formatCurrency(total)}
+              {formatValue(total)}
             </p>
             <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400'>
-              Total del Mes
+              {totalLabel}
             </p>
           </div>
         </div>
@@ -159,7 +164,7 @@ export const CustomPieChart: React.FC<CustomPieChartProps> = ({
                   : 'text-gray-700 dark:text-gray-300 font-medium'
               }`}
             >
-              {Math.round(entry.percentage)}% ({formatCurrency(entry.revenue)})
+              {Math.round(entry.percentage)}% ({formatValue(entry.revenue)})
             </span>
           </div>
         ))}

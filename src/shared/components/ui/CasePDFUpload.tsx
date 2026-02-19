@@ -236,8 +236,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							key={url}
 							className="flex flex-col items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg min-w-0"
 						>
-							<FileText className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-							<span className="text-xs text-green-800 dark:text-green-200 truncate w-full text-center">
+							<span className="text-sm font-medium text-green-800 dark:text-green-200">
 								PDF {index + 1}
 							</span>
 							<div className="flex items-center gap-1">

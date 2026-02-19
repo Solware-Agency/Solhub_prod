@@ -4,17 +4,23 @@ import { Stethoscope, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 interface DoctorRevenueReportProps {
 	startDate?: Date
 	endDate?: Date
 	onClick?: () => void
+	isSpt?: boolean
 }
 
-const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, endDate, onClick }) => {
+const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, endDate, onClick, isSpt = false }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
+	const totalVal = isSpt ? (stats?.totalCases || 0) : (stats?.totalRevenue || 0)
+	const maxVal = (key: 'revenue' | 'cases') =>
+		stats?.topTreatingDoctors?.length
+			? Math.max(...stats.topTreatingDoctors.map((d) => (key === 'cases' ? d.cases : d.revenue)))
+			: 0
 
 	// formatCurrency is now imported from number-utils
 
@@ -30,7 +36,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 							<Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
 						</div>
 						<h3 className="flex items-center justify-between text-lg font-bold text-gray-700 dark:text-gray-300">
-							Ingreso por Médico Tratante
+							{isSpt ? 'Casos por Médico Tratante' : 'Ingreso por Médico Tratante'}
 						</h3>
 					</div>
 					<Tooltip>
@@ -39,7 +45,9 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 						</TooltipTrigger>
 						<TooltipContent>
 							<p>
-								Esta estadistica refleja una lista de los 5 medicos tratantes con mas frecuencia de casos en Conspat.
+								{isSpt
+									? 'Esta estadística refleja los 5 médicos tratantes con más casos en el período.'
+									: 'Esta estadistica refleja una lista de los 5 medicos tratantes con mas frecuencia de casos en Conspat.'}
 							</p>
 						</TooltipContent>
 					</Tooltip>
@@ -65,9 +73,11 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 											<th className="text-center py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
 												% del Total
 											</th>
-											<th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
-												Monto Total
-											</th>
+											{!isSpt && (
+												<th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
+													Monto Total
+												</th>
+											)}
 										</tr>
 									</thead>
 									<tbody>
@@ -88,9 +98,10 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 												</td>
 												<td className="py-2 px-1 text-center">
 													<span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-														{Math.round((doctor.revenue / stats.totalRevenue) * 100)}%
+														{Math.round(totalVal > 0 ? ((isSpt ? doctor.cases : doctor.revenue) / totalVal) * 100 : 0)}%
 													</span>
 												</td>
+												{!isSpt && (
 												<td className="py-2 px-1 text-right">
 													<div className="flex flex-col items-end gap-1">
 														<p className="text-xs font-bold text-gray-700 dark:text-gray-300">
@@ -100,17 +111,13 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 															<div
 																className="bg-blue-500 h-1 rounded-full transition-all duration-300"
 																style={{
-																	width: `${
-																		stats.topTreatingDoctors.length > 0
-																			? (doctor.revenue / Math.max(...stats.topTreatingDoctors.map((d) => d.revenue))) *
-																			  100
-																			: 0
-																	}%`,
+																	width: `${maxVal('revenue') > 0 ? (doctor.revenue / maxVal('revenue')) * 100 : 0}%`,
 																}}
 															></div>
 														</div>
 													</div>
 												</td>
+												)}
 											</tr>
 										))}
 									</tbody>
@@ -130,9 +137,11 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 													{doctor.doctor}
 												</p>
 											</div>
-											<p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-												{formatCurrency(doctor.revenue)}
-											</p>
+											{!isSpt && (
+												<p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+													{formatCurrency(doctor.revenue)}
+												</p>
+											)}
 										</div>
 
 										<div className="flex items-center justify-between mb-2">
@@ -140,7 +149,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 												{doctor.cases} caso{doctor.cases !== 1 ? 's' : ''}
 											</span>
 											<span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-												{Math.round((doctor.revenue / stats.totalRevenue) * 100)}%
+												{Math.round(totalVal > 0 ? ((isSpt ? doctor.cases : doctor.revenue) / totalVal) * 100 : 0)}%
 											</span>
 										</div>
 
@@ -148,11 +157,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 											<div
 												className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
 												style={{
-													width: `${
-														stats.topTreatingDoctors.length > 0
-															? (doctor.revenue / Math.max(...stats.topTreatingDoctors.map((d) => d.revenue))) * 100
-															: 0
-													}%`,
+													width: `${maxVal(isSpt ? 'cases' : 'revenue') > 0 ? ((isSpt ? doctor.cases : doctor.revenue) / maxVal(isSpt ? 'cases' : 'revenue')) * 100 : 0}%`,
 												}}
 											></div>
 										</div>

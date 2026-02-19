@@ -142,13 +142,14 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
 
-				// Roles del laboratorio para estadísticas por tipo de médico
+				// Roles del laboratorio y slug para estadísticas por tipo de médico y SPT
 				const { data: labRow } = await supabase
 					.from('laboratories')
-					.select('available_roles')
+					.select('available_roles, slug')
 					.eq('id', laboratoryId)
 					.single()
 				const availableRoles: string[] = Array.isArray(labRow?.available_roles) ? (labRow.available_roles as string[]) : []
+				const isSpt = (labRow as any)?.slug === 'spt'
 				const hasPatologo = availableRoles.includes('patologo')
 				const hasCitotecno = availableRoles.includes('citotecno')
 
@@ -466,18 +467,19 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : 0
 				const casesGrowthPercentage = previousCases > 0 ? ((totalCases - previousCases) / previousCases) * 100 : 0
 
-				// Calculate revenue by branch - Use transformedFilteredRecords for the selected period
+				// Calculate revenue by branch (o casos por sede para SPT) - Use transformedFilteredRecords for the selected period
 				const branchRevenue = new Map<string, number>()
 				transformedFilteredRecords?.forEach((record) => {
 					const current = branchRevenue.get(record.branch) || 0
-					branchRevenue.set(record.branch, current + (record.total_amount || 0))
+					branchRevenue.set(record.branch, current + (isSpt ? 1 : (record.total_amount || 0)))
 				})
 
+				const branchTotal = isSpt ? totalCases : monthlyRevenue
 				const revenueByBranch = Array.from(branchRevenue.entries())
 					.map(([branch, revenue]) => ({
 						branch,
 						revenue,
-						percentage: monthlyRevenue > 0 ? (revenue / monthlyRevenue) * 100 : 0,
+						percentage: branchTotal > 0 ? (revenue / branchTotal) * 100 : 0,
 					}))
 					.sort((a, b) => b.revenue - a.revenue)
 
@@ -541,44 +543,37 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					const monthDate = new Date(currentYear, month, 1)
 					const monthKey = format(monthDate, 'yyyy-MM')
 
-					// Calcular el monto REAL pagado (suma de métodos de pago en USD)
 					const filteredMonthRecords = yearRecords.filter(
 						(record) => record.created_at && format(new Date(record.created_at), 'yyyy-MM') === monthKey,
 					)
 
-					const monthRevenue = filteredMonthRecords.reduce((sum, record) => {
-						let totalPaidUSD = 0
-
-						// Sumar todos los métodos de pago
-						for (let i = 1; i <= 4; i++) {
-							const method = (record as any)[`payment_method_${i}`]
-							const amount = (record as any)[`payment_amount_${i}`]
-
-							if (method && amount && amount > 0) {
-								if (isVESPaymentMethod(method)) {
-									// Convertir Bs a USD usando exchange_rate
-									const rate = record.exchange_rate || 0
-									if (rate > 0) {
-										totalPaidUSD += amount / rate
+					// Para SPT: contar casos; si no: monto REAL pagado (suma de métodos de pago en USD)
+					const monthValue = isSpt
+						? filteredMonthRecords.length
+						: filteredMonthRecords.reduce((sum, record) => {
+								let totalPaidUSD = 0
+								for (let i = 1; i <= 4; i++) {
+									const method = (record as any)[`payment_method_${i}`]
+									const amount = (record as any)[`payment_amount_${i}`]
+									if (method && amount && amount > 0) {
+										if (isVESPaymentMethod(method)) {
+											const rate = record.exchange_rate || 0
+											if (rate > 0) totalPaidUSD += amount / rate
+										} else {
+											totalPaidUSD += amount
+										}
 									}
-								} else {
-									// Ya está en USD
-									totalPaidUSD += amount
 								}
-							}
-						}
+								return sum + totalPaidUSD
+							}, 0)
 
-					return sum + totalPaidUSD
-				}, 0)
-
-				// Check if this month is within the selected date range
 					const isSelected =
 						startDate && endDate ? monthDate >= startOfMonth(startDate) && monthDate <= endOfMonth(endDate) : false
 
 					salesTrendByMonth.push({
 						month: monthKey,
-						revenue: monthRevenue,
-						monthIndex: month, // Add month index for proper ordering
+						revenue: monthValue,
+						monthIndex: month,
 						isSelected,
 					})
 				}

@@ -9,9 +9,10 @@ interface RemainingAmountProps {
 	startDate?: Date
 	endDate?: Date
 	onClick?: () => void
+	isSpt?: boolean
 }
 
-const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, onClick }) => {
+const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, onClick, isSpt = false }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const cardRef = useRef<HTMLDivElement>(null)
 	const [isVisible, setIsVisible] = useState(false)
@@ -58,7 +59,7 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3">
 					<h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0 flex items-center gap-2">
 						<AlertCircle className="w-5 h-5 text-red-500" />
-						Casos por Cobrar
+						{isSpt ? 'Casos Pendientes' : 'Casos por Cobrar'}
 					</h3>
 					<Tooltip>
 						<TooltipTrigger>
@@ -66,7 +67,9 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 						</TooltipTrigger>
 						<TooltipContent>
 							<p>
-								Esta estadistica refleja el porcentaje de ingresos pendientes de pago y el numero de casos incompletos.
+								{isSpt
+									? 'Esta estadística refleja el número de casos incompletos en el período.'
+									: 'Esta estadistica refleja el porcentaje de ingresos pendientes de pago y el numero de casos incompletos.'}
 							</p>
 						</TooltipContent>
 					</Tooltip>
@@ -81,7 +84,8 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 						<div className="flex-1 flex flex-col">
 							{/* Summary Cards */}
 							<div className="grid grid-cols-1 gap-3 flex-1">
-								{/* Amount Card */}
+								{/* Amount Card - oculto para SPT */}
+								{!isSpt && (
 								<div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-3 border border-red-200 dark:border-red-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
 									<div className="flex flex-col items-center text-center mb-2">
 										<div className="p-2 bg-red-500 rounded-lg mb-2">
@@ -113,6 +117,7 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 										</div>
 									)}
 								</div>
+								)}
 
 								{/* Cases Card */}
 								<div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-3 border border-orange-200 dark:border-orange-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">

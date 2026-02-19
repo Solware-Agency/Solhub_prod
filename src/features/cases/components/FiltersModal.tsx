@@ -417,50 +417,40 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               )}
             </div>
 
-            {/* New Filters Row 3: Email Status for SPT */}
+            {/* SPT: Columna izq (Email + Sede) y columna der (Médico) independientes - no se empujan */}
             {isSpt && (
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
-                <div className='space-y-3'>
-                  <CustomDropdown
-                    options={[
-                      { value: 'true', label: 'Enviado' },
-                      { value: 'false', label: 'No Enviado' },
-                    ]}
-                    value={emailSentStatusFilter}
-                    placeholder='Estatus de Email'
-                    onChange={onEmailSentStatusFilterChange}
-                    data-testid='email-sent-status-filter'
-                  />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full md:items-start'>
+                <div className='flex flex-col gap-4'>
+                  <div className='space-y-3'>
+                    <CustomDropdown
+                      options={[
+                        { value: 'true', label: 'Enviado' },
+                        { value: 'false', label: 'No Enviado' },
+                      ]}
+                      value={emailSentStatusFilter}
+                      placeholder='Estatus de Email'
+                      onChange={onEmailSentStatusFilterChange}
+                      data-testid='email-sent-status-filter'
+                    />
+                  </div>
+                  <div className='space-y-3'>
+                    <Button
+                      onClick={() => setShowBranchFilter(!showBranchFilter)}
+                      variant={showBranchFilter ? 'default' : 'outline'}
+                      className='w-full justify-start font-bold'
+                    >
+                      <MapPin className='w-4 h-4 mr-2' />
+                      Filtrar por Sede
+                    </Button>
+                    {showBranchFilter && (
+                      <BranchFilterPanel
+                        branches={branchOptions}
+                        selectedBranches={branchFilter}
+                        onFilterChange={onBranchFilterChange}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className='space-y-3'>
-                  {/* Espacio vacío para mantener el grid */}
-                </div>
-              </div>
-            )}
-
-            {/* Branch Filter Row - For SPT, includes Doctor Filter */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 w-full`}>
-              <div className='space-y-3'>
-                <Button
-                  onClick={() => setShowBranchFilter(!showBranchFilter)}
-                  variant={showBranchFilter ? 'default' : 'outline'}
-                  className='w-full justify-start font-bold'
-                >
-                  <MapPin className='w-4 h-4 mr-2' />
-                  Filtrar por Sede
-                </Button>
-
-                {showBranchFilter && (
-                  <BranchFilterPanel
-                    branches={branchOptions}
-                    selectedBranches={branchFilter}
-                    onFilterChange={onBranchFilterChange}
-                  />
-                )}
-              </div>
-
-              {/* Doctor Filter - Only for SPT, in same row as Branch */}
-              {isSpt && (
                 <div className='space-y-3'>
                   <Button
                     onClick={() => setShowDoctorFilter(!showDoctorFilter)}
@@ -470,7 +460,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     <Stethoscope className='w-4 h-4 mr-2' />
                     Filtrar por Médico
                   </Button>
-
                   {showDoctorFilter && (
                     <DoctorFilterPanel
                       cases={cases}
@@ -478,8 +467,32 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     />
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Branch Filter Row - Solo para labs que NO son SPT */}
+            {!isSpt && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => setShowBranchFilter(!showBranchFilter)}
+                    variant={showBranchFilter ? 'default' : 'outline'}
+                    className='w-full justify-start font-bold'
+                  >
+                    <MapPin className='w-4 h-4 mr-2' />
+                    Filtrar por Sede
+                  </Button>
+                  {showBranchFilter && (
+                    <BranchFilterPanel
+                      branches={branchOptions}
+                      selectedBranches={branchFilter}
+                      onFilterChange={onBranchFilterChange}
+                    />
+                  )}
+                </div>
+                <div />
+              </div>
+            )}
 
             {/* Doctor and Origin Filters - Same line - Only for non-SPT */}
             {!isSpt && (
