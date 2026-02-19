@@ -114,6 +114,7 @@ export interface MedicalCase {
   owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD
+  fecha_muestra: string | null; // YYYY-MM-DD
   patologo_id: string | null;
 }
 
@@ -184,6 +185,7 @@ export interface MedicalCaseInsert {
   email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
   bloques_biopsia?: number | null;
   fecha_entrega?: string | null; // YYYY-MM-DD
+  fecha_muestra?: string | null; // YYYY-MM-DD
   patologo_id?: string | null;
 }
 
@@ -258,6 +260,7 @@ export interface MedicalCaseUpdate {
   owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia?: number | null;
   fecha_entrega?: string | null; // YYYY-MM-DD
+  fecha_muestra?: string | null; // YYYY-MM-DD
   patologo_id?: string | null;
 }
 
@@ -316,6 +319,7 @@ export interface MedicalCaseWithPatient {
   owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
   bloques_biopsia: number | null;
   fecha_entrega: string | null; // YYYY-MM-DD
+  fecha_muestra: string | null; // YYYY-MM-DD
   patologo_id: string | null;
   // Campos de patients
   informepdf_url: string | null;

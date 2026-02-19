@@ -254,9 +254,14 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                         {case_.nombre || 'Sin nombre'}
                       </span>
                       {/* Responsive: cédula y edad en la misma línea con punto medio (·) */}
-                      <span className='text-gray-600 dark:text-gray-400 sm:hidden'>
+                      <span className='text-gray-600 dark:text-gray-400 sm:hidden flex items-center gap-1.5 flex-wrap'>
                         {case_.cedula || 'Sin cédula'}
                         {case_.edad && <> · {case_.edad}</>}
+                        {(case_.code ?? (case_ as any).owner_display_code) && (
+                          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                            {case_.code ?? (case_ as any).owner_display_code}
+                          </span>
+                        )}
                       </span>
                       {/* Desktop: cédula y edad en línea */}
                       <span className='hidden sm:inline text-gray-600 dark:text-gray-400'>
@@ -269,6 +274,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                             {case_.edad}
                           </span>
                         </>
+                      )}
+                      {(case_.code ?? (case_ as any).owner_display_code) && (
+                        <span className='hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'>
+                          {case_.code ?? (case_ as any).owner_display_code}
+                        </span>
                       )}
                     </div>
                   </div>

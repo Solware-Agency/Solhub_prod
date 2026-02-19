@@ -39,6 +39,8 @@ interface StatDetailPanelProps {
 	isLoading: boolean
 	selectedMonth?: Date
 	selectedYear?: number
+	/** SPT no usa facturación: ocultar/adaptar datos de dinero */
+	isSpt?: boolean
 }
 
 const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
@@ -48,6 +50,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 	stats,
 	isLoading,
 	selectedMonth,
+	isSpt = false,
 }) => {
 	useBodyScrollLock(isOpen)
 	useGlobalOverlayOpen(isOpen)
@@ -70,11 +73,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 			case 'uniquePatients':
 				return 'Pacientes Únicos'
 			case 'branchRevenue':
-				return 'Ingresos por Sede'
+				return isSpt ? 'Casos por Sede' : 'Ingresos por Sede'
 			case 'examTypes':
 				return 'Tipos de Exámenes'
 			case 'revenueTrend':
-				return 'Tendencia de Ingresos'
+				return isSpt ? 'Tendencia de Casos' : 'Tendencia de Ingresos'
 			case 'branchDistribution':
 				return 'Distribución por Sede'
 			case 'currencyDistribution':
@@ -326,9 +329,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 														{formatNumber(exam.count)}
 													</span>
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{formatCurrency(exam.revenue)}
-													</span>
+													{!isSpt && (
+														<span className="text-xs text-gray-500 dark:text-gray-400">
+															{formatCurrency(exam.revenue)}
+														</span>
+													)}
 												</div>
 											</div>
 										)
@@ -354,9 +359,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 														{formatNumber(doctor.cases)} casos
 													</span>
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{formatCurrency(doctor.revenue)}
-													</span>
+													{!isSpt && (
+														<span className="text-xs text-gray-500 dark:text-gray-400">
+															{formatCurrency(doctor.revenue)}
+														</span>
+													)}
 												</div>
 											</div>
 										)
@@ -434,22 +441,24 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</div>
 						</div>
 
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos por Casos Pagados</h3>
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-										<DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
-									</div>
-									<div>
-										<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos Totales</p>
-										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-											{formatCurrency(stats.monthlyRevenue)}
-										</p>
+						{!isSpt && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos por Casos Pagados</h3>
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-3">
+										<div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+											<DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+										</div>
+										<div>
+											<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos Totales</p>
+											<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+												{formatCurrency(stats.monthlyRevenue)}
+											</p>
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
+						)}
 					</div>
 				)
 
@@ -460,17 +469,19 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							<div>
 								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Casos Incompletos</h3>
 							</div>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className={`grid gap-4 ${isSpt ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
 								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total Incompletos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.incompleteCases}</p>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Pagos Pendientes</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatCurrency(stats.pendingPayments)}
-									</p>
-								</div>
+								{!isSpt && (
+									<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+										<p className="text-sm text-gray-500 dark:text-gray-400">Pagos Pendientes</p>
+										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+											{formatCurrency(stats.pendingPayments)}
+										</p>
+									</div>
+								)}
 							</div>
 						</div>
 
@@ -672,7 +683,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos por Sede</h3>
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									{isSpt ? 'Casos por Sede' : 'Ingresos por Sede'}
+								</h3>
 							</div>
 							{stats.revenueByBranch && (
 								<CustomPieChart
@@ -681,8 +694,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										revenue: branch.revenue,
 										percentage: branch.percentage,
 									}))}
-									total={stats.monthlyRevenue || 0}
+									total={isSpt ? (stats.totalCases || 0) : (stats.monthlyRevenue || 0)}
 									isLoading={isLoading}
+									valueMode={isSpt ? 'cases' : 'revenue'}
 								/>
 							)}
 						</div>
@@ -694,15 +708,16 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							<div className="space-y-4">
 								{stats.revenueByBranch &&
 									stats.revenueByBranch.map((branch: any) => {
-										const maxRevenue = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
-										const percentage = maxRevenue > 0 ? (branch.revenue / maxRevenue) * 100 : 0
+										const maxVal = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
+										const percentage = maxVal > 0 ? (branch.revenue / maxVal) * 100 : 0
+										const formatVal = isSpt ? formatNumber : formatCurrency
 
 										return (
 											<div key={branch.branch}>
 												<div className="flex items-center justify-between mb-1">
 													<span className="text-sm text-gray-600 dark:text-gray-400">{branch.branch}</span>
 													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatCurrency(branch.revenue)}
+														{formatVal(branch.revenue)}
 													</span>
 												</div>
 												<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -717,74 +732,79 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				)
 
 			case 'revenueTrend':
-				return (
-					<div className="space-y-6">
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tendencia de Ingresos Mensuales</h3>
-							<div className="h-64 flex items-end justify-between gap-1">
-								{stats.salesTrendByMonth &&
-									stats.salesTrendByMonth.map((month: any) => {
-										const maxRevenue = Math.max(...stats.salesTrendByMonth.map((m: any) => m.revenue))
-										const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0
-										const isSelected = month.isSelected
+				{
+					const formatTrendVal = isSpt ? formatNumber : formatCurrency
+					const trendLabel = isSpt ? 'Tendencia de Casos Mensuales' : 'Tendencia de Ingresos Mensuales'
+					const tableLabel = isSpt ? 'Tabla de Casos por Mes' : 'Tabla de Ingresos por Mes'
+					const colLabel = isSpt ? 'Casos' : 'Ingresos'
+					return (
+						<div className="space-y-6">
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{trendLabel}</h3>
+								<div className="h-64 flex items-end justify-between gap-1">
+									{stats.salesTrendByMonth &&
+										stats.salesTrendByMonth.map((month: any) => {
+											const maxVal = Math.max(...stats.salesTrendByMonth.map((m: any) => m.revenue))
+											const height = maxVal > 0 ? (month.revenue / maxVal) * 100 : 0
+											const isSelected = month.isSelected
 
-										return (
-											<div
-												key={month.month}
-												className={`flex-1 rounded-t-sm transition-transform duration-200 ${
-													isSelected
-														? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
-														: 'bg-gradient-to-t from-blue-500 to-blue-300'
-												}`}
-												style={{ height: `${Math.max(height, 10)}%` }}
-												title={`${month.month}: ${formatCurrency(month.revenue)}`}
-											></div>
-										)
-									})}
+											return (
+												<div
+													key={month.month}
+													className={`flex-1 rounded-t-sm transition-transform duration-200 ${
+														isSelected
+															? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
+															: 'bg-gradient-to-t from-blue-500 to-blue-300'
+													}`}
+													style={{ height: `${Math.max(height, 10)}%` }}
+													title={`${month.month}: ${formatTrendVal(month.revenue)}`}
+												></div>
+											)
+										})}
+								</div>
+								<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+									{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((m) => (
+										<span key={m}>{m}</span>
+									))}
+								</div>
 							</div>
-							<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
-								{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((m) => (
-									<span key={m}>{m}</span>
-								))}
-							</div>
-						</div>
 
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Tabla de Ingresos por Mes</h3>
-							<div className="overflow-x-auto">
-								<table className="w-full">
-									<thead>
-										<tr className="border-b border-gray-200 dark:border-gray-700">
-											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Mes</th>
-											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
-											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
-										</tr>
-									</thead>
-									<tbody>
-										{stats.salesTrendByMonth &&
-											stats.salesTrendByMonth.map((month: any, index: number) => {
-												const totalRevenue = stats.salesTrendByMonth.reduce((sum: number, m: any) => sum + m.revenue, 0)
-												const percentage = totalRevenue > 0 ? (month.revenue / totalRevenue) * 100 : 0
-												const prevMonth = index > 0 ? stats.salesTrendByMonth[index - 1] : null
-												const growth = prevMonth && prevMonth.revenue > 0 
-													? ((month.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 
-													: null
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{tableLabel}</h3>
+								<div className="overflow-x-auto">
+									<table className="w-full">
+										<thead>
+											<tr className="border-b border-gray-200 dark:border-gray-700">
+												<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Mes</th>
+												<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">{colLabel}</th>
+												<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
+											</tr>
+										</thead>
+										<tbody>
+											{stats.salesTrendByMonth &&
+												stats.salesTrendByMonth.map((month: any, index: number) => {
+													const totalVal = stats.salesTrendByMonth.reduce((sum: number, m: any) => sum + m.revenue, 0)
+													const percentage = totalVal > 0 ? (month.revenue / totalVal) * 100 : 0
+													const prevMonth = index > 0 ? stats.salesTrendByMonth[index - 1] : null
+													const growth = prevMonth && prevMonth.revenue > 0 
+														? ((month.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 
+														: null
 
-												return (
-													<tr
-														key={month.month}
-														className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-															month.isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''
-														}`}
-													>
-														<td className="py-2 px-2">
-															<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{month.month}</span>
-														</td>
-														<td className="py-2 px-2 text-right">
-															<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-																{formatCurrency(month.revenue)}
-															</span>
-														</td>
+													return (
+														<tr
+															key={month.month}
+															className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+																month.isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''
+															}`}
+														>
+															<td className="py-2 px-2">
+																<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{month.month}</span>
+															</td>
+															<td className="py-2 px-2 text-right">
+																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																	{formatTrendVal(month.revenue)}
+																</span>
+															</td>
 														<td className="py-2 px-2 text-right">
 															<div className="flex items-center justify-end gap-2">
 																<span className="text-sm text-gray-600 dark:text-gray-400">{percentage.toFixed(1)}%</span>
@@ -813,7 +833,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
+				}
 			case 'branchDistribution':
 				return (
 					<div className="space-y-6">
@@ -826,8 +846,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										revenue: branch.revenue,
 										percentage: branch.percentage,
 									}))}
-									total={stats.monthlyRevenue || 0}
+									total={isSpt ? (stats.totalCases || 0) : (stats.monthlyRevenue || 0)}
 									isLoading={isLoading}
+									valueMode={isSpt ? 'cases' : 'revenue'}
 								/>
 							)}
 						</div>
@@ -839,7 +860,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									<thead>
 										<tr className="border-b border-gray-200 dark:border-gray-700">
 											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Sede</th>
-											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">{isSpt ? 'Casos' : 'Ingresos'}</th>
 											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
 										</tr>
 									</thead>
@@ -848,8 +869,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 											stats.revenueByBranch
 												.sort((a: any, b: any) => b.revenue - a.revenue)
 												.map((branch: any) => {
-													const maxRevenue = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
-													const percentage = maxRevenue > 0 ? (branch.revenue / maxRevenue) * 100 : 0
+													const maxVal = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
+													const percentage = maxVal > 0 ? (branch.revenue / maxVal) * 100 : 0
+													const formatBranchVal = isSpt ? formatNumber : formatCurrency
 
 													return (
 														<tr
@@ -863,7 +885,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 															</td>
 															<td className="py-2 px-2 text-right">
 																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-																	{formatCurrency(branch.revenue)}
+																	{formatBranchVal(branch.revenue)}
 																</span>
 															</td>
 															<td className="py-2 px-2 text-right">
@@ -1466,8 +1488,12 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								{stats.revenueByExamType &&
 									stats.revenueByExamType.map((exam: any, index: number) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
-										const totalRevenue = stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
-										const percentage = totalRevenue > 0 ? (exam.revenue / totalRevenue) * 100 : 0
+										const totalVal = isSpt
+											? stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.count, 0)
+											: stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+										const percentage = totalVal > 0
+											? (isSpt ? exam.count / totalVal : exam.revenue / totalVal) * 100
+											: 0
 
 										return (
 											<div key={exam.examType} className="flex items-center justify-between">
@@ -1476,9 +1502,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<span className="text-sm text-gray-600 dark:text-gray-400">{exam.examType}</span>
 												</div>
 												<div className="flex flex-col items-end">
-													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatCurrency(exam.revenue)}
-													</span>
+													{!isSpt && (
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															{formatCurrency(exam.revenue)}
+														</span>
+													)}
 													<span className="text-xs text-gray-500 dark:text-gray-400">
 														{formatNumber(exam.count)} casos • {percentage.toFixed(1)}%
 													</span>
@@ -1497,7 +1525,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										<tr className="border-b border-gray-200 dark:border-gray-700">
 											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Tipo de Examen</th>
 											<th className="text-center py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Casos</th>
-											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											{!isSpt && (
+												<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											)}
 											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
 										</tr>
 									</thead>
@@ -1505,12 +1535,20 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										{stats.revenueByExamType &&
 											stats.revenueByExamType
 												.slice()
-												.sort((a: any, b: any) => b.count - a.count) // Sort by count descending (most requested first)
+												.sort((a: any, b: any) => b.count - a.count)
 												.map((exam: any, index: number) => {
-													const totalRevenue = stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
-													const percentage = totalRevenue > 0 ? (exam.revenue / totalRevenue) * 100 : 0
-													const maxRevenue = Math.max(...stats.revenueByExamType.map((e: any) => e.revenue))
-													const barPercentage = maxRevenue > 0 ? (exam.revenue / maxRevenue) * 100 : 0
+													const totalVal = isSpt
+														? stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.count, 0)
+														: stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+													const percentage = totalVal > 0
+														? (isSpt ? exam.count / totalVal : exam.revenue / totalVal) * 100
+														: 0
+													const maxVal = isSpt
+														? Math.max(...stats.revenueByExamType.map((e: any) => e.count))
+														: Math.max(...stats.revenueByExamType.map((e: any) => e.revenue))
+													const barPercentage = maxVal > 0
+														? (isSpt ? exam.count / maxVal : exam.revenue / maxVal) * 100
+														: 0
 
 													return (
 														<tr
@@ -1527,11 +1565,13 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 																	{exam.count}
 																</span>
 															</td>
+															{!isSpt && (
 															<td className="py-2 px-2 text-right">
 																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
 																	{formatCurrency(exam.revenue)}
 																</span>
 															</td>
+															)}
 															<td className="py-2 px-2 text-right">
 																<div className="flex items-center justify-end gap-2">
 																	<span className="text-sm text-gray-600 dark:text-gray-400">
@@ -1555,7 +1595,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div className={`grid gap-4 ${isSpt ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Tipos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -1568,14 +1608,16 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										{stats.revenueByExamType?.reduce((sum: number, e: any) => sum + e.count, 0) || 0}
 									</p>
 								</div>
-								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatCurrency(
-											stats.revenueByExamType?.reduce((sum: number, e: any) => sum + e.revenue, 0) || 0
-										)}
-									</p>
-								</div>
+								{!isSpt && (
+									<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+										<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
+										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+											{formatCurrency(
+												stats.revenueByExamType?.reduce((sum: number, e: any) => sum + e.revenue, 0) || 0
+											)}
+										</p>
+									</div>
+								)}
 							</div>
 						</div>
 					</div>

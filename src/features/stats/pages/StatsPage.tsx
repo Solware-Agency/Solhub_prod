@@ -9,6 +9,7 @@ import StatCard from '@shared/components/ui/stat-card'
 import { Card } from '@shared/components/ui/card'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
+import { CasesStatusDonutChart } from '@features/stats/components/CasesStatusDonutChart'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import type { StatType } from '@shared/components/ui/stat-detail-panel'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
@@ -33,7 +34,8 @@ const ComponentFallback = () => (
 const StatsPage: React.FC = () => {
 	const { dateRange, setDateRange, selectedYear, setSelectedYear } = useDateRange()
 	const { laboratory } = useLaboratory()
-	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end)
+	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end, selectedYear)
+	const isSpt = laboratory?.slug === 'spt'
 	const hasMedicalTypeRoles =
 		laboratory?.available_roles?.includes('patologo') || laboratory?.available_roles?.includes('citotecno')
 	const totalCasesByMedicalType =
@@ -110,20 +112,20 @@ const StatsPage: React.FC = () => {
 						</div> */}
 				{/* KPI Cards Grid */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6">
-					{/* Total Revenue Card */}
+					{/* Total Revenue / Casos del Período Card */}
 					<StatCard
-						title="Ingresos del Período"
-						value={`${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
-						description={`Total histórico: ${isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}`}
+						title={isSpt ? 'Casos del Período' : 'Ingresos del Período'}
+						value={isSpt ? `${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}` : `${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
+						description={isSpt ? `Total histórico: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)} pacientes` : `Total histórico: ${isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}`}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						trend={{
-							value: isLoading ? '...' : '+13%',
+							value: isLoading ? '...' : (isSpt ? `${stats?.casesGrowthPercentage != null && stats.casesGrowthPercentage >= 0 ? '+' : ''}${(stats?.casesGrowthPercentage ?? 0).toFixed(1)}%` : '+13%'),
 							icon: <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
 							positive: true,
 						}}
-						onClick={() => handleStatCardClick('totalRevenue')}
-						statType="totalRevenue"
-						isSelected={selectedStat === 'totalRevenue' && isDetailPanelOpen}
+						onClick={() => handleStatCardClick(isSpt ? 'totalCases' : 'totalRevenue')}
+						statType={isSpt ? 'totalCases' : 'totalRevenue'}
+						isSelected={(isSpt ? selectedStat === 'totalCases' : selectedStat === 'totalRevenue') && isDetailPanelOpen}
 					/>
 
 					{/* Active Users Card */}
@@ -162,7 +164,7 @@ const StatsPage: React.FC = () => {
 					<StatCard
 						title="Casos Incompletos del Período"
 						value={isLoading ? '...' : formatNumber(stats?.incompleteCases || 0)}
-						description={`Pagos pendientes: ${isLoading ? '...' : formatCurrency(stats?.pendingPayments || 0)}`}
+						description={isSpt ? `Casos pendientes de completar` : `Pagos pendientes: ${isLoading ? '...' : formatCurrency(stats?.pendingPayments || 0)}`}
 						icon={<AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />}
 						trend={{
 							value: 'Pendientes',
@@ -217,7 +219,7 @@ const StatsPage: React.FC = () => {
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 md:mb-6">
 								<h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0">
-									Tendencia de Ingresos
+									{isSpt ? 'Tendencia de Casos' : 'Tendencia de Ingresos'}
 								</h3>
 								<div className="flex items-center gap-2 sm:gap-4">
 									<YearSelector
@@ -232,8 +234,9 @@ const StatsPage: React.FC = () => {
 										</TooltipTrigger>
 										<TooltipContent>
 											<p>
-												En esta estadística puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
-												adaptará y te mostrará los ingresos de ese mes.
+												{isSpt
+													? 'En esta estadística puedes dar click sobre la barra del mes al que quieres filtrar y el panel se adaptará y te mostrará los casos de ese mes.'
+													: 'En esta estadística puedes dar click sobre la barra del mes al que quieres filtrar y el panel se adaptará y te mostrará los ingresos de ese mes.'}
 											</p>
 										</TooltipContent>
 									</Tooltip>
@@ -258,7 +261,7 @@ const StatsPage: React.FC = () => {
 														: 'bg-gradient-to-t from-blue-500 to-blue-300 hover:from-blue-600 hover:to-blue-400'
 												}`}
 												style={{ height: `${Math.max(height, 20)}%` }} // FIXED: Increased minimum height for better UX
-												title={`${month.month}: ${formatCurrency(month.revenue)}`}
+												title={`${month.month}: ${isSpt ? formatNumber(month.revenue) : formatCurrency(month.revenue)}`}
 												onClick={() => handleMonthBarClick(month)}
 											></div>
 										)
@@ -289,15 +292,16 @@ const StatsPage: React.FC = () => {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>Esta estadística refleja el porcentaje de ingresos por sede en el período seleccionado.</p>
+										<p>{isSpt ? 'Esta estadística refleja el porcentaje de casos por sede en el período seleccionado.' : 'Esta estadística refleja el porcentaje de ingresos por sede en el período seleccionado.'}</p>
 									</TooltipContent>
 								</Tooltip>
 							</h3>
 							{/* Donut Chart con Recharts */}
 							<CustomPieChart
 								data={stats?.revenueByBranch || []}
-								total={stats?.monthlyRevenue || 0}
+								total={isSpt ? (stats?.totalCases || 0) : (stats?.monthlyRevenue || 0)}
 								isLoading={isLoading}
+								valueMode={isSpt ? 'cases' : 'revenue'}
 							/>
 						</div>
 					</Card>
@@ -311,43 +315,53 @@ const StatsPage: React.FC = () => {
 							startDate={dateRange.start} 
 							endDate={dateRange.end}
 							onClick={() => handleChartClick('examTypes')}
+							isSpt={isSpt}
 						/>
 					</Suspense>
 
-					{/* Currency Distribution Chart - Same style as Branch Distribution */}
+					{/* Currency Distribution / Completados vs Pendientes (SPT) */}
 					<Card 
 						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
-						onClick={() => handleChartClick('currencyDistribution')}
+						onClick={() => handleChartClick(isSpt ? 'incompleteCases' : 'currencyDistribution')}
 					>
 						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
 							<h3 className="flex items-center justify-between text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 md:mb-6">
-								Distribución por Moneda{' '}
+								{isSpt ? 'Completados vs Pendientes' : 'Distribución por Moneda'}{' '}
 								<Tooltip>
 									<TooltipTrigger>
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>
-											Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el período
-											seleccionado.
+											{isSpt
+												? 'Esta estadística refleja la distribución de casos completados y pendientes en el período seleccionado.'
+												: 'Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el período seleccionado.'}
 										</p>
 									</TooltipContent>
 								</Tooltip>
 							</h3>
-							{/* Currency Donut Chart */}
-							<CurrencyDonutChart
-								bolivaresTotal={stats?.monthlyRevenueBolivares || 0}
-								dollarsTotal={stats?.monthlyRevenueDollars || 0}
-								isLoading={isLoading}
-							/>
+							{isSpt ? (
+								<CasesStatusDonutChart
+									completedCases={stats?.completedCases || 0}
+									incompleteCases={stats?.incompleteCases || 0}
+									isLoading={isLoading}
+								/>
+							) : (
+								<CurrencyDonutChart
+									bolivaresTotal={stats?.monthlyRevenueBolivares || 0}
+									dollarsTotal={stats?.monthlyRevenueDollars || 0}
+									isLoading={isLoading}
+								/>
+							)}
 						</div>
 					</Card>
-					{/* Remaining Amount */}
+					{/* Remaining Amount / Casos Pendientes */}
 					<Suspense fallback={<ComponentFallback />}>
 						<RemainingAmount 
 							startDate={dateRange.start} 
 							endDate={dateRange.end}
 							onClick={() => handleChartClick('remainingAmount')}
+							isSpt={isSpt}
 						/>
 					</Suspense>
 				</div>
@@ -360,6 +374,7 @@ const StatsPage: React.FC = () => {
 							startDate={dateRange.start} 
 							endDate={dateRange.end}
 							onClick={() => handleChartClick('originRevenue')}
+							isSpt={isSpt}
 						/>
 					</Suspense>
 
@@ -369,6 +384,7 @@ const StatsPage: React.FC = () => {
 							startDate={dateRange.start} 
 							endDate={dateRange.end}
 							onClick={() => handleChartClick('doctorRevenue')}
+							isSpt={isSpt}
 						/>
 					</Suspense>
 				</div>
@@ -382,6 +398,7 @@ const StatsPage: React.FC = () => {
 					statType={selectedStat || 'totalRevenue'}
 					stats={stats}
 					isLoading={isLoading}
+					isSpt={laboratory?.slug === 'spt'}
 				/>
 			</Suspense>
 
@@ -393,6 +410,7 @@ const StatsPage: React.FC = () => {
 					statType={selectedChart || 'revenueTrend'}
 					stats={stats}
 					isLoading={isLoading}
+					isSpt={laboratory?.slug === 'spt'}
 				/>
 			</Suspense>
 		</>
