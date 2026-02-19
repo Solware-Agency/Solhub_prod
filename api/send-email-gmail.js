@@ -77,6 +77,8 @@ export default async function handler(req, res) {
           // Logo específico para SPT si aplica
           if (lab.slug && String(lab.slug).toLowerCase().includes('spt')) {
             labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/Logo%20Salud%20para%20Todos.png';
+          } else if (lab.slug && (String(lab.slug).toLowerCase() === 'marihorgen' || String(lab.slug).toLowerCase() === 'lm')) {
+            labLogo = 'https://sbqepjsxnqtldyvlntqk.supabase.co/storage/v1/object/public/Logos/logo_marihorgen.png';
           } else if (lab.branding && lab.branding.logo_url) {
              // Si el laboratorio tiene otro logo en branding, podrías usarlo aquí
              // labLogo = lab.branding.logo_url; 
