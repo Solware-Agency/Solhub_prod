@@ -113,7 +113,28 @@ const CompaniasPage = () => {
 		queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
 	}, [queryClient])
 
+	const getValidationErrors = (): string[] => {
+		const err: string[] = []
+		if (!form.nombre?.trim()) err.push('Nombre')
+		if (!form.codigo_interno?.trim()) err.push('Código interno')
+		if (!form.rif?.trim()) err.push('RIF')
+		if (!form.telefono?.trim()) err.push('Teléfono')
+		if (!form.email?.trim()) err.push('Email')
+		if (!form.web?.trim()) err.push('Web')
+		if (!form.direccion?.trim()) err.push('Dirección')
+		return err
+	}
+
 	const handleSave = async () => {
+		const errors = getValidationErrors()
+		if (errors.length > 0) {
+			toast({
+				title: 'Campos obligatorios',
+				description: `Complete: ${errors.join(', ')}`,
+				variant: 'destructive',
+			})
+			return
+		}
 		setSaving(true)
 		try {
 			await createAseguradora(form)
@@ -232,52 +253,52 @@ const CompaniasPage = () => {
 
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
-					className="max-w-xl bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					className="w-[calc(100vw-2rem)] max-w-xl max-h-[90dvh] flex flex-col p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 					overlayClassName="bg-black/60"
 				>
-					<DialogHeader>
-						<DialogTitle>Nueva aseguradora</DialogTitle>
+					<DialogHeader className="shrink-0">
+						<DialogTitle className="text-base sm:text-lg">Nueva aseguradora</DialogTitle>
 					</DialogHeader>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto min-h-0 py-1">
 						<div className="space-y-2">
-							<Label>Nombre</Label>
+							<Label>Nombre <span className="text-destructive">*</span></Label>
 							<Input value={form.nombre} onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Código interno</Label>
+							<Label>Código interno <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.codigo_interno}
 								onChange={(e) => setForm((prev) => ({ ...prev, codigo_interno: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>RIF</Label>
+							<Label>RIF <span className="text-destructive">*</span></Label>
 							<Input value={form.rif} onChange={(e) => setForm((prev) => ({ ...prev, rif: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Teléfono</Label>
+							<Label>Teléfono <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.telefono}
 								onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Email</Label>
+							<Label>Email <span className="text-destructive">*</span></Label>
 							<Input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Web</Label>
+							<Label>Web <span className="text-destructive">*</span></Label>
 							<Input value={form.web} onChange={(e) => setForm((prev) => ({ ...prev, web: e.target.value }))} />
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Dirección</Label>
+							<Label>Dirección <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.direccion}
 								onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Activo</Label>
+							<Label>Activo <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.activo ? 'true' : 'false'}
 								onValueChange={(value) =>
@@ -294,11 +315,11 @@ const CompaniasPage = () => {
 							</Select>
 						</div>
 					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setOpenModal(false)}>
+					<DialogFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+						<Button variant="outline" onClick={() => setOpenModal(false)} className="w-full sm:w-auto">
 							Cancelar
 						</Button>
-						<Button onClick={handleSave} disabled={saving}>
+						<Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
 							{saving ? 'Guardando...' : 'Guardar'}
 						</Button>
 					</DialogFooter>

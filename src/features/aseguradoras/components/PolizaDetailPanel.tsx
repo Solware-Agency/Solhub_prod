@@ -127,6 +127,39 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 					</button>
 				</div>
 
+				<InfoSection title="Asegurado y compañía" icon={User}>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<p className="text-xs text-gray-500">Asegurado</p>
+							{onAseguradoClick && poliza.asegurado_id ? (
+								<button
+									type="button"
+									onClick={() => onAseguradoClick(poliza.asegurado_id)}
+									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
+								>
+									{poliza.asegurado?.full_name || 'Asegurado'}
+								</button>
+							) : (
+								<p className="text-sm font-medium">{poliza.asegurado?.full_name || 'Asegurado'}</p>
+							)}
+						</div>
+						<div>
+							<p className="text-xs text-gray-500">Compañía</p>
+							{onAseguradoraClick && poliza.aseguradora_id ? (
+								<button
+									type="button"
+									onClick={() => onAseguradoraClick(poliza.aseguradora_id)}
+									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
+								>
+									{poliza.aseguradora?.nombre || 'Aseguradora'}
+								</button>
+							) : (
+								<p className="text-sm font-medium">{poliza.aseguradora?.nombre || 'Aseguradora'}</p>
+							)}
+						</div>
+					</div>
+				</InfoSection>
+
 				<InfoSection title="Información de póliza" icon={ShieldCheck}>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
@@ -161,39 +194,6 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 						<div>
 							<p className="text-xs text-gray-500">Próximo vencimiento</p>
 							<p className="text-sm font-medium">{formatDate(poliza.fecha_prox_vencimiento)}</p>
-						</div>
-					</div>
-				</InfoSection>
-
-				<InfoSection title="Asegurado y compañía" icon={User}>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div>
-							<p className="text-xs text-gray-500">Asegurado</p>
-							{onAseguradoClick && poliza.asegurado_id ? (
-								<button
-									type="button"
-									onClick={() => onAseguradoClick(poliza.asegurado_id)}
-									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
-								>
-									{poliza.asegurado?.full_name || 'Asegurado'}
-								</button>
-							) : (
-								<p className="text-sm font-medium">{poliza.asegurado?.full_name || 'Asegurado'}</p>
-							)}
-						</div>
-						<div>
-							<p className="text-xs text-gray-500">Compañía</p>
-							{onAseguradoraClick && poliza.aseguradora_id ? (
-								<button
-									type="button"
-									onClick={() => onAseguradoraClick(poliza.aseguradora_id)}
-									className="text-sm font-medium text-primary hover:underline cursor-pointer text-left"
-								>
-									{poliza.aseguradora?.nombre || 'Aseguradora'}
-								</button>
-							) : (
-								<p className="text-sm font-medium">{poliza.aseguradora?.nombre || 'Aseguradora'}</p>
-							)}
 						</div>
 					</div>
 				</InfoSection>

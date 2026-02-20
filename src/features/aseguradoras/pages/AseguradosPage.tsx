@@ -91,7 +91,27 @@ const AseguradosPage = () => {
 		setHistoryModalOpen(true)
 	}
 
+	const getValidationErrors = (): string[] => {
+		const err: string[] = []
+		if (!form.full_name?.trim()) err.push('Nombre / Razón social')
+		if (!form.document_id?.trim()) err.push('Documento')
+		if (!form.phone?.trim()) err.push('Teléfono')
+		if (!form.email?.trim()) err.push('Email')
+		if (!form.address?.trim()) err.push('Dirección')
+		if (!form.notes?.trim()) err.push('Notas internas')
+		return err
+	}
+
 	const handleSave = async () => {
+		const errors = getValidationErrors()
+		if (errors.length > 0) {
+			toast({
+				title: 'Campos obligatorios',
+				description: `Complete: ${errors.join(', ')}`,
+				variant: 'destructive',
+			})
+			return
+		}
 		setSaving(true)
 		try {
 			await createAsegurado(form)
@@ -208,15 +228,15 @@ const AseguradosPage = () => {
 
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
-					className="max-w-xl bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					className="w-[calc(100vw-2rem)] max-w-xl max-h-[90dvh] flex flex-col p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 					overlayClassName="bg-black/60"
 				>
-					<DialogHeader>
-						<DialogTitle>Nuevo asegurado</DialogTitle>
+					<DialogHeader className="shrink-0">
+						<DialogTitle className="text-base sm:text-lg">Nuevo asegurado</DialogTitle>
 					</DialogHeader>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto min-h-0 py-1">
 						<div className="space-y-2">
-							<Label>Tipo de asegurado</Label>
+							<Label>Tipo de asegurado <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.tipo_asegurado}
 								onValueChange={(value) =>
@@ -233,44 +253,44 @@ const AseguradosPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Nombre / Razón social</Label>
+							<Label>Nombre / Razón social <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.full_name}
 								onChange={(e) => setForm((prev) => ({ ...prev, full_name: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Documento</Label>
+							<Label>Documento <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.document_id}
 								onChange={(e) => setForm((prev) => ({ ...prev, document_id: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Teléfono</Label>
+							<Label>Teléfono <span className="text-destructive">*</span></Label>
 							<Input value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Email</Label>
+							<Label>Email <span className="text-destructive">*</span></Label>
 							<Input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Dirección</Label>
+							<Label>Dirección <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.address}
 								onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Notas internas</Label>
+							<Label>Notas internas <span className="text-destructive">*</span></Label>
 							<Input value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
 						</div>
 					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setOpenModal(false)}>
+					<DialogFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+						<Button variant="outline" onClick={() => setOpenModal(false)} className="w-full sm:w-auto">
 							Cancelar
 						</Button>
-						<Button onClick={handleSave} disabled={saving}>
+						<Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
 							{saving ? 'Guardando...' : 'Guardar'}
 						</Button>
 					</DialogFooter>
