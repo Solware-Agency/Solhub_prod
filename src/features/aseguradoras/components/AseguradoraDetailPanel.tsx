@@ -5,6 +5,7 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { SideDetailPanel } from './SideDetailPanel'
 import type { Aseguradora, AseguradoraUpdate } from '@services/supabase/aseguradoras/aseguradoras-service'
+import { useToast } from '@shared/hooks/use-toast'
 import { Building2, Globe, Mail, MapPin, Phone } from 'lucide-react'
 
 interface AseguradoraDetailPanelProps {
@@ -22,6 +23,7 @@ export const AseguradoraDetailPanel = ({
 	onSave,
 	saving = false,
 }: AseguradoraDetailPanelProps) => {
+	const { toast } = useToast()
 	const [isEditing, setIsEditing] = useState(false)
 	const [form, setForm] = useState<AseguradoraUpdate>({
 		nombre: '',
@@ -80,6 +82,15 @@ export const AseguradoraDetailPanel = ({
 			</Button>
 			<Button
 				onClick={async () => {
+					const email = (form.email ?? '').trim()
+					if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+						toast({
+							title: 'Email inválido',
+							description: 'Use un formato válido (ej: nombre@dominio.com)',
+							variant: 'destructive',
+						})
+						return
+					}
 					const ok = await onSave(form)
 					if (ok) setIsEditing(false)
 				}}

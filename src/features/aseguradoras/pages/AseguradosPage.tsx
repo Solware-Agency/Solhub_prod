@@ -91,12 +91,19 @@ const AseguradosPage = () => {
 		setHistoryModalOpen(true)
 	}
 
+	const isValidEmail = (value: string): boolean =>
+		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
 	const getValidationErrors = (): string[] => {
 		const err: string[] = []
 		if (!form.full_name?.trim()) err.push('Nombre / Razón social')
 		if (!form.document_id?.trim()) err.push('Documento')
 		if (!form.phone?.trim()) err.push('Teléfono')
-		if (!form.email?.trim()) err.push('Email')
+		if (!form.email?.trim()) {
+			err.push('Email')
+		} else if (!isValidEmail(form.email)) {
+			err.push('Email (formato inválido; use ej: nombre@dominio.com)')
+		}
 		if (!form.address?.trim()) err.push('Dirección')
 		if (!form.notes?.trim()) err.push('Notas internas')
 		return err
@@ -255,6 +262,7 @@ const AseguradosPage = () => {
 						<div className="space-y-2">
 							<Label>Nombre / Razón social <span className="text-destructive">*</span></Label>
 							<Input
+								placeholder="Ej: Juan Pérez o Empresa S.A."
 								value={form.full_name}
 								onChange={(e) => setForm((prev) => ({ ...prev, full_name: e.target.value }))}
 							/>
@@ -262,28 +270,44 @@ const AseguradosPage = () => {
 						<div className="space-y-2">
 							<Label>Documento <span className="text-destructive">*</span></Label>
 							<Input
+								placeholder="Ej: V-12345678 o J-12345678-9"
 								value={form.document_id}
 								onChange={(e) => setForm((prev) => ({ ...prev, document_id: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Teléfono <span className="text-destructive">*</span></Label>
-							<Input value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
+							<Input
+								placeholder="Ej: 0414-1234567"
+								value={form.phone}
+								onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Email <span className="text-destructive">*</span></Label>
-							<Input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+							<Input
+								type="email"
+								autoComplete="email"
+								placeholder="ej: nombre@dominio.com"
+								value={form.email}
+								onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Dirección <span className="text-destructive">*</span></Label>
 							<Input
+								placeholder="Ej: Av. Principal, edificio X, piso 2"
 								value={form.address}
 								onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Notas internas <span className="text-destructive">*</span></Label>
-							<Input value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
+							<Input
+								placeholder="Ej: Contacto preferente, horario de atención"
+								value={form.notes}
+								onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+							/>
 						</div>
 					</div>
 					<DialogFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
