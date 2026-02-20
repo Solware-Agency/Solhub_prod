@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import {
   getCallCenterRegistros,
@@ -7,17 +6,11 @@ import {
 } from '@services/supabase/call-center/call-center-registros-service'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
+import DateRangeSelector, { type DateRange } from '@shared/components/ui/date-range-selector'
 import { Download, Loader2 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import * as XLSX from 'xlsx'
-
-function getBasePath(pathname: string): string {
-  if (pathname.startsWith('/prueba/')) return '/prueba'
-  if (pathname.startsWith('/call-center/')) return '/call-center'
-  if (pathname.startsWith('/dashboard/')) return '/dashboard'
-  return '/prueba'
-}
 
 function downloadExcel(registros: CallCenterRegistro[]) {
   const rows = registros.map((r) => ({
@@ -49,12 +42,14 @@ function downloadExcel(registros: CallCenterRegistro[]) {
 
 const CallCenterRegistrosPage: React.FC = () => {
   const { laboratory } = useLaboratory()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const basePath = getBasePath(location.pathname)
 
   const [registros, setRegistros] = useState<CallCenterRegistro[]>([])
   const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<DateRange>(() => ({
+    start: startOfMonth(new Date()),
+    end: endOfMonth(new Date()),
+    mode: 'month',
+  }))
 
   const loadRegistros = useCallback(() => {
     if (!laboratory?.id) return
@@ -69,6 +64,11 @@ const CallCenterRegistrosPage: React.FC = () => {
   useEffect(() => {
     loadRegistros()
   }, [loadRegistros])
+
+  const registrosToExport = registros.filter((r) => {
+    const d = new Date(r.created_at)
+    return d >= dateRange.start && d <= dateRange.end
+  })
 
   if (!laboratory?.id) {
     return (
@@ -85,24 +85,23 @@ const CallCenterRegistrosPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Registros Call Center</h1>
           <div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
         </div>
-        <div className="flex gap-2">
+        <DateRangeSelector
+          value={dateRange}
+          onChange={setDateRange}
+          className="w-full sm:w-auto"
+          compact
+        >
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => navigate(`${basePath}/call-center`)}
-          >
-            Nuevo registro
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadExcel(registros)}
-            disabled={registros.length === 0}
+            onClick={() => downloadExcel(registrosToExport)}
+            disabled={registrosToExport.length === 0}
+            title="Descargar Excel"
+            className="px-3 py-2"
           >
             <Download className="h-4 w-4" />
-            Descargar Excel
           </Button>
-        </div>
+        </DateRangeSelector>
       </div>
 
       <Card>

@@ -338,7 +338,10 @@ function MainHome() {
 										))}
 									</div>
 								) : stats?.topTreatingDoctors && stats.topTreatingDoctors.length > 0 ? (
-									stats.topTreatingDoctors.slice(0, 3).map((doctor, index) => {
+									[...(stats.topTreatingDoctors || [])]
+										.sort((a, b) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
+										.slice(0, 3)
+										.map((doctor, index) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500']
 										return (
 											<div
@@ -471,25 +474,27 @@ function MainHome() {
 									<TooltipContent>
 										<p>
 											{isSpt
-												? 'En esta estadística puedes ver el estado de los casos pendientes de completar.'
+												? 'En esta estadística puedes ver los casos enviados y los pendientes de envío.'
 												: 'En esta estadistica puedes ver el estado de los casos pendientes de completar y los pagos pendientes de cobrar.'}
 										</p>
 									</TooltipContent>
 								</Tooltip>
 							</div>
 							<div className="space-y-2 sm:space-y-3 flex-1">
-								{/* Incomplete Cases Alert */}
+								{/* Incomplete Cases / Pendientes de envío (SPT) */}
 								<div className="p-1.5 sm:p-2 md:p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
 									<div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
 										<AlertTriangle className="w-4 h-4 text-orange-500 dark:text-orange-400" />
 										<span className="text-xs sm:text-sm font-medium text-orange-800 dark:text-orange-400">
-											Casos Incompletos
+											{isSpt ? 'Pendientes de envío' : 'Casos Incompletos'}
 										</span>
 									</div>
 									<p className="text-[10px] sm:text-xs text-orange-700 dark:text-orange-300">
 										{isLoading
 											? 'Cargando...'
-											: `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de completar`}
+											: isSpt
+												? `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de enviar`
+												: `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de completar`}
 									</p>
 								</div>
 

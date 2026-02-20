@@ -103,7 +103,7 @@ const CallCenterFormPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">
-                Registro de llamada - Call Center
+                Registro de llamadas
               </h2>
               <div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
             </div>

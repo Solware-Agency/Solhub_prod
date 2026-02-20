@@ -1249,11 +1249,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					throw new Error(errorMessage)
 				}
 
-				// Actualizar el campo email_sent en la base de datos
+				// Actualizar el campo email_sent y fecha_entrega en la base de datos
 				if (case_?.id) {
+					const deliveryDate = new Date().toISOString().split('T')[0]
 					const { error: updateError } = await supabase
 						.from('medical_records_clean')
-						.update({ email_sent: true })
+						.update({ email_sent: true, fecha_entrega: deliveryDate })
 						.eq('id', case_.id)
 
 					if (updateError) {

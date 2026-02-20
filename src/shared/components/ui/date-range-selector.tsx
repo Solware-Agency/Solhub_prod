@@ -4,6 +4,7 @@ import { Button } from '@shared/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
 import { cn } from '@shared/lib/utils'
+import type { ReactNode } from 'react'
 import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -19,9 +20,12 @@ interface DateRangeSelectorProps {
 	value: DateRange
 	onChange: (range: DateRange) => void
 	className?: string
+	/** Si true, no muestra el texto "Mostrando: ..." y permite children en la misma barra (ej. botón descargar) */
+	compact?: boolean
+	children?: ReactNode
 }
 
-const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, className }) => {
+const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, className, compact, children }) => {
 	const [isDayOpen, setIsDayOpen] = useState(false)
 	const [isRangeOpen, setIsRangeOpen] = useState(false)
 	
@@ -216,24 +220,26 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 						/>
 					</PopoverContent>
 				</Popover>
+				{compact && children}
 			</div>
 
-			{/* Display Current Selection */}
-			<div className="text-sm text-muted-foreground text-center">
-				{value.mode === 'range' ? (
-					<span>
-						Rango: <span className="font-medium">{getDisplayText()}</span>
-					</span>
-				) : value.mode === 'day' ? (
-					<span>
-						Día: <span className="font-medium">{getDisplayText()}</span>
-					</span>
-				) : (
-					<span>
-						Mostrando: <span className="font-medium">{getDisplayText()}</span>
-					</span>
-				)}
-			</div>
+			{!compact && (
+				<div className="text-sm text-muted-foreground text-center">
+					{value.mode === 'range' ? (
+						<span>
+							Rango: <span className="font-medium">{getDisplayText()}</span>
+						</span>
+					) : value.mode === 'day' ? (
+						<span>
+							Día: <span className="font-medium">{getDisplayText()}</span>
+						</span>
+					) : (
+						<span>
+							Mostrando: <span className="font-medium">{getDisplayText()}</span>
+						</span>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }

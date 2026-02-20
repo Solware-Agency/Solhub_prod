@@ -182,6 +182,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						payment_amount_3,
 						payment_method_4,
 						payment_amount_4,
+						email_sent,
 						patients!inner(
 							id,
 							cedula,
@@ -336,9 +337,16 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const finalUniquePatients = actualPatientsCount || uniquePatients
 
 				// Calcular casos pagados e incompletos (filtered by date range)
-				const completedCases =
-					transformedFilteredRecords?.filter((record) => record.payment_status === 'Pagado').length || 0
+				// SPT: completos = enviados (email_sent), incompletos = pendientes de envío
 				const totalCases = transformedFilteredRecords?.length || 0
+				const completedCases = isSpt
+					? (transformedFilteredRecords?.filter(
+							(record: any) =>
+								record.email_sent === true ||
+								record.email_sent === 'true' ||
+								record.email_sent === 'TRUE',
+						).length ?? 0)
+					: (transformedFilteredRecords?.filter((record) => record.payment_status === 'Pagado').length || 0)
 				const incompleteCases = totalCases - completedCases
 
 				// Calcular pagos pendientes (montos restantes) - filtered by date range
