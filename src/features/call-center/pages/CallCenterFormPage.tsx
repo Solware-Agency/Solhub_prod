@@ -33,7 +33,6 @@ const SEDE_OPCIONES = [
   'Las Minas',
   'NA',
 ]
-const ATENDIDO_POR_OPCIONES = ['Franglee', 'Carolina', 'Melanie', 'Jose', 'Edgar']
 
 const inputStyles =
   'h-10 rounded-md border border-input bg-background px-3 py-2 text-sm transition-transform duration-300 focus:border-primary focus:ring-primary hover:border-primary/50'
@@ -48,7 +47,6 @@ const CallCenterFormPage: React.FC = () => {
   const [motivoLlamada, setMotivoLlamada] = useState('')
   const [respuestaObservaciones, setRespuestaObservaciones] = useState('')
   const [referidoSede, setReferidoSede] = useState('')
-  const [atendidoPor, setAtendidoPor] = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +60,10 @@ const CallCenterFormPage: React.FC = () => {
       toast({ title: 'Motivo de la llamada es requerido', variant: 'destructive' })
       return
     }
+    if (!referidoSede?.trim()) {
+      toast({ title: 'Referido a sede es requerido', variant: 'destructive' })
+      return
+    }
     setSaving(true)
     const result = await createCallCenterRegistro(laboratory.id, {
       nombre_apellido: nombreApellido.trim(),
@@ -70,7 +72,7 @@ const CallCenterFormPage: React.FC = () => {
       motivo_llamada: motivoLlamada,
       respuesta_observaciones: respuestaObservaciones.trim() || undefined,
       referido_sede: referidoSede || undefined,
-      atendido_por: atendidoPor || undefined,
+      atendido_por: profile?.display_name ?? undefined,
     })
     setSaving(false)
     if (result.success) {
@@ -81,7 +83,6 @@ const CallCenterFormPage: React.FC = () => {
       setMotivoLlamada('')
       setRespuestaObservaciones('')
       setReferidoSede('')
-      setAtendidoPor('')
     } else {
       toast({ title: result.error ?? 'Error al guardar', variant: 'destructive' })
     }
@@ -165,6 +166,16 @@ const CallCenterFormPage: React.FC = () => {
                 className={inputStyles}
               />
             </div>
+            <div className="min-w-[180px] flex-1 space-y-1.5">
+              <Label>Referido a sede *</Label>
+              <FormDropdown
+                options={createDropdownOptions(SEDE_OPCIONES.map((s) => ({ value: s, label: s })))}
+                value={referidoSede}
+                onChange={setReferidoSede}
+                placeholder="Seleccione una sede"
+                className={inputStyles}
+              />
+            </div>
             <div className="w-full space-y-1.5">
               <Label htmlFor="observaciones">Respuesta / Observaciones</Label>
               <textarea
@@ -174,28 +185,6 @@ const CallCenterFormPage: React.FC = () => {
                 placeholder="Añadir comentarios adicionales"
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-transform duration-300 hover:border-primary/50"
-              />
-            </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
-              <Label>Referido a sede</Label>
-              <FormDropdown
-                options={createDropdownOptions(SEDE_OPCIONES.map((s) => ({ value: s, label: s })))}
-                value={referidoSede}
-                onChange={setReferidoSede}
-                placeholder="Seleccione una sede"
-                className={inputStyles}
-              />
-            </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
-              <Label>Atendido por</Label>
-              <FormDropdown
-                options={createDropdownOptions(
-                  ATENDIDO_POR_OPCIONES.map((a) => ({ value: a, label: a }))
-                )}
-                value={atendidoPor}
-                onChange={setAtendidoPor}
-                placeholder="Seleccionar"
-                className={inputStyles}
               />
             </div>
           </CardContent>

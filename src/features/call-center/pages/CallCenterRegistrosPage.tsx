@@ -21,7 +21,7 @@ function getBasePath(pathname: string): string {
 
 function downloadExcel(registros: CallCenterRegistro[]) {
   const rows = registros.map((r) => ({
-    Fecha: format(new Date(r.created_at), 'dd/MM/yyyy HH:mm', { locale: es }),
+    Fecha: format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es }),
     'Nombre y apellido': r.nombre_apellido ?? '',
     'Teléfono 1': r.telefono_1 ?? '',
     'Teléfono 2': r.telefono_2 ?? '',
@@ -135,7 +135,7 @@ const CallCenterRegistrosPage: React.FC = () => {
                   {registros.map((r) => (
                     <tr key={r.id} className="border-b hover:bg-muted/50">
                       <td className="py-2 px-2 whitespace-nowrap">
-                        {format(new Date(r.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        {format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es })}
                       </td>
                       <td className="py-2 px-2">{r.nombre_apellido}</td>
                       <td className="py-2 px-2">{r.telefono_1 ?? '—'}</td>
