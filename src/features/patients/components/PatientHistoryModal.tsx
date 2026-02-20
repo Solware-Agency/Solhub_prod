@@ -850,8 +850,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 						throw new Error('Error al enviar email')
 					}
 
-					// Marcar como enviado en la base de datos
-					await supabase.from('medical_records_clean').update({ email_sent: true }).eq('id', caseItem.id)
+					// Marcar como enviado y guardar fecha de envío en la base de datos
+					const deliveryDate = new Date().toISOString().split('T')[0]
+					await supabase.from('medical_records_clean').update({ email_sent: true, fecha_entrega: deliveryDate }).eq('id', caseItem.id)
 
 					// Registrar el envío en email_send_logs
 					await logEmailSend({

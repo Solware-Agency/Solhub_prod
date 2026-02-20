@@ -67,11 +67,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 			case 'completedCases':
 				return 'Casos Pagados'
 			case 'incompleteCases':
-				return 'Casos Incompletos'
+				return isSpt ? 'Estado del Sistema' : 'Casos Incompletos'
 			case 'pendingPayments':
 				return 'Pagos Pendientes'
 			case 'uniquePatients':
-				return 'Pacientes Únicos'
+				return isSpt ? 'Pacientes' : 'Pacientes Únicos'
 			case 'branchRevenue':
 				return isSpt ? 'Casos por Sede' : 'Ingresos por Sede'
 			case 'examTypes':
@@ -87,7 +87,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 			case 'originRevenue':
 				return 'Ingreso por Procedencia'
 			case 'doctorRevenue':
-				return 'Ingreso por Médico Tratante'
+				return isSpt ? 'Casos por Médico Tratante' : 'Ingreso por Médico Tratante'
 			case 'casesByReceptionist':
 				return 'Casos por Recepcionista'
 			case 'casesByPathologist':
@@ -289,25 +289,29 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							<div>
 								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen de Casos</h3>
 							</div>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div className={`grid grid-cols-1 gap-4 ${isSpt ? 'md:grid-cols-1' : 'md:grid-cols-3'}`}>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 										{formatNumber(stats.totalCases)}
 									</p>
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Casos Pagados</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatNumber(stats.completedCases)}
-									</p>
-								</div>
-								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Casos Incompletos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatNumber(stats.incompleteCases)}
-									</p>
-								</div>
+								{!isSpt && (
+									<>
+										<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+											<p className="text-sm text-gray-500 dark:text-gray-400">Casos Pagados</p>
+											<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+												{formatNumber(stats.completedCases)}
+											</p>
+										</div>
+										<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+											<p className="text-sm text-gray-500 dark:text-gray-400">Casos Incompletos</p>
+											<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+												{formatNumber(stats.incompleteCases)}
+											</p>
+										</div>
+									</>
+								)}
 							</div>
 						</div>
 
@@ -317,27 +321,29 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</h3>
 							<div className="space-y-4">
 								{stats.topExamTypes &&
-									stats.topExamTypes.map((exam: any, index: number) => {
-										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
-										return (
-											<div key={exam.examType} className="flex items-center justify-between">
-												<div className="flex items-center gap-2">
-													<div className={`w-3 h-3 ${colors[index % colors.length]} rounded-full`}></div>
-													<span className="text-sm text-gray-600 dark:text-gray-400">{exam.examType}</span>
-												</div>
-												<div className="flex flex-col items-end">
-													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatNumber(exam.count)}
-													</span>
-													{!isSpt && (
-														<span className="text-xs text-gray-500 dark:text-gray-400">
-															{formatCurrency(exam.revenue)}
+									[...(stats.topExamTypes || [])]
+										.sort((a: any, b: any) => (isSpt ? b.count - a.count : b.revenue - a.revenue))
+										.map((exam: any, index: number) => {
+											const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
+											return (
+												<div key={exam.examType} className="flex items-center justify-between">
+													<div className="flex items-center gap-2">
+														<div className={`w-3 h-3 ${colors[index % colors.length]} rounded-full`}></div>
+														<span className="text-sm text-gray-600 dark:text-gray-400">{exam.examType}</span>
+													</div>
+													<div className="flex flex-col items-end">
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															{formatNumber(exam.count)}
 														</span>
-													)}
+														{!isSpt && (
+															<span className="text-xs text-gray-500 dark:text-gray-400">
+																{formatCurrency(exam.revenue)}
+															</span>
+														)}
+													</div>
 												</div>
-											</div>
-										)
-									})}
+											)
+										})}
 							</div>
 						</div>
 
@@ -347,27 +353,30 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</div>
 							<div className="space-y-4">
 								{stats.topTreatingDoctors &&
-									stats.topTreatingDoctors.slice(0, 5).map((doctor: any, index: number) => {
-										return (
-											<div key={doctor.doctor} className="flex items-center justify-between">
-												<div className="flex items-center gap-2">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														{index + 1}. {doctor.doctor}
-													</span>
-												</div>
-												<div className="flex flex-col items-end">
-													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatNumber(doctor.cases)} casos
-													</span>
-													{!isSpt && (
-														<span className="text-xs text-gray-500 dark:text-gray-400">
-															{formatCurrency(doctor.revenue)}
+									[...(stats.topTreatingDoctors || [])]
+										.sort((a: any, b: any) => b.cases - a.cases)
+										.slice(0, 5)
+										.map((doctor: any, index: number) => {
+											return (
+												<div key={doctor.doctor} className="flex items-center justify-between">
+													<div className="flex items-center gap-2">
+														<span className="text-sm text-gray-600 dark:text-gray-400">
+															{index + 1}. {doctor.doctor}
 														</span>
-													)}
+													</div>
+													<div className="flex flex-col items-end">
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															{formatNumber(doctor.cases)} casos
+														</span>
+														{!isSpt && (
+															<span className="text-xs text-gray-500 dark:text-gray-400">
+																{formatCurrency(doctor.revenue)}
+															</span>
+														)}
+													</div>
 												</div>
-											</div>
-										)
-									})}
+											)
+										})}
 							</div>
 						</div>
 					</div>
@@ -466,15 +475,24 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Casos Incompletos</h3>
-							</div>
-							<div className={`grid gap-4 ${isSpt ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+							{!isSpt && (
+								<div>
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Casos Incompletos</h3>
+								</div>
+							)}
+							<div className={`grid gap-4 ${isSpt ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
 								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total Incompletos</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">
+										{isSpt ? 'Pendientes de envío' : 'Total Incompletos'}
+									</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.incompleteCases}</p>
 								</div>
-								{!isSpt && (
+								{isSpt ? (
+									<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+										<p className="text-sm text-gray-500 dark:text-gray-400">Enviados</p>
+										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.completedCases}</p>
+									</div>
+								) : (
 									<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
 										<p className="text-sm text-gray-500 dark:text-gray-400">Pagos Pendientes</p>
 										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -486,13 +504,17 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Progreso de Completitud</h3>
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								{isSpt ? 'Progreso de envío' : 'Progreso de Completitud'}
+							</h3>
 							<div className="space-y-4">
 								<div>
 									<div className="flex items-center justify-between mb-2">
 										<div className="flex items-center gap-2">
 											<XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Casos Incompletos</span>
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+												{isSpt ? 'Pendientes de envío' : 'Casos Incompletos'}
+											</span>
 										</div>
 										<span className="text-sm font-bold text-red-700 dark:text-red-300">
 											{stats.totalCases > 0 ? ((stats.incompleteCases / stats.totalCases) * 100).toFixed(1) : 0}%
@@ -512,7 +534,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									<div className="flex items-center justify-between mb-2">
 										<div className="flex items-center gap-2">
 											<CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Casos Pagados</span>
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+												{isSpt ? 'Enviados' : 'Casos Pagados'}
+											</span>
 										</div>
 										<span className="text-sm font-bold text-green-700 dark:text-green-300">
 											{stats.totalCases > 0 ? ((stats.completedCases / stats.totalCases) * 100).toFixed(1) : 0}%
@@ -533,7 +557,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<Button className="w-full bg-primary hover:bg-primary/80">
 								<BarChart3 className="w-4 h-4 mr-2" />
-								Ver Todos los Casos Incompletos
+								{isSpt ? 'Ver casos pendientes de envío' : 'Ver Todos los Casos Incompletos'}
 							</Button>
 						</div>
 					</div>
@@ -605,9 +629,6 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Pacientes Únicos</h3>
-							</div>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Pacientes</p>
@@ -626,21 +647,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</div>
 							<div className="space-y-4">
 								<div className="flex items-center justify-between">
-									<span className="text-sm text-gray-600 dark:text-gray-400">Casos por Paciente (Promedio)</span>
-									<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-										{stats.uniquePatients > 0 ? (stats.totalCases / stats.uniquePatients).toFixed(1) : 0}
-									</span>
-								</div>
-								<div className="flex items-center justify-between">
-									<span className="text-sm text-gray-600 dark:text-gray-400">Ingresos por Paciente (Promedio)</span>
-									<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-										{stats.uniquePatients > 0
-											? formatCurrency(stats.monthlyRevenue / stats.uniquePatients)
-											: formatCurrency(0)}
-									</span>
-								</div>
-								<div className="flex items-center justify-between">
-									<span className="text-sm text-gray-600 dark:text-gray-400">Tasa de Crecimiento Mensual</span>
+									<span className="text-sm text-gray-600 dark:text-gray-400">Tasa de Crecimiento</span>
 									<span className="text-sm font-medium text-green-600 dark:text-green-400">
 										+{stats.newPatientsThisMonth} pacientes
 									</span>
@@ -682,11 +689,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									{isSpt ? 'Casos por Sede' : 'Ingresos por Sede'}
-								</h3>
-							</div>
+							{!isSpt && (
+								<div>
+									<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos por Sede</h3>
+								</div>
+							)}
 							{stats.revenueByBranch && (
 								<CustomPieChart
 									data={stats.revenueByBranch.map((branch: any) => ({
@@ -838,7 +845,6 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Distribución por Sede</h3>
 							{stats.revenueByBranch && (
 								<CustomPieChart
 									data={stats.revenueByBranch.map((branch: any) => ({
@@ -866,10 +872,10 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									</thead>
 									<tbody>
 										{stats.revenueByBranch &&
-											stats.revenueByBranch
+											[...(stats.revenueByBranch || [])]
 												.sort((a: any, b: any) => b.revenue - a.revenue)
 												.map((branch: any) => {
-													const maxVal = Math.max(...stats.revenueByBranch.map((b: any) => b.revenue))
+													const maxVal = Math.max(...(stats.revenueByBranch || []).map((b: any) => b.revenue))
 													const percentage = maxVal > 0 ? (branch.revenue / maxVal) * 100 : 0
 													const formatBranchVal = isSpt ? formatNumber : formatCurrency
 
@@ -1166,26 +1172,30 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingreso por Médico Tratante</h3>
 							<div className="overflow-x-auto">
 								<table className="w-full">
 									<thead>
 										<tr className="border-b border-gray-200 dark:border-gray-700">
 											<th className="text-left py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Médico</th>
 											<th className="text-center py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Casos</th>
-											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											{!isSpt && (
+												<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">Ingresos</th>
+											)}
 											<th className="text-right py-2 px-2 text-sm font-semibold text-gray-600 dark:text-gray-400">% del Total</th>
 										</tr>
 									</thead>
 									<tbody>
 										{stats.topTreatingDoctors &&
-											stats.topTreatingDoctors
-												.sort((a: any, b: any) => b.revenue - a.revenue)
+											[...(stats.topTreatingDoctors || [])]
+												.sort((a: any, b: any) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
 												.map((doctor: any, index: number) => {
-													const maxRevenue = Math.max(...stats.topTreatingDoctors.map((d: any) => d.revenue))
-													const percentage = maxRevenue > 0 ? (doctor.revenue / maxRevenue) * 100 : 0
-													const totalRevenue = stats.totalRevenue || stats.monthlyRevenue || 0
-													const revenuePercentage = totalRevenue > 0 ? (doctor.revenue / totalRevenue) * 100 : 0
+													const totalVal = isSpt ? (stats.totalCases || 0) : (stats.totalRevenue || stats.monthlyRevenue || 0)
+													const doctorVal = isSpt ? doctor.cases : doctor.revenue
+													const percentageOfTotal = totalVal > 0 ? (doctorVal / totalVal) * 100 : 0
+													const maxVal = Math.max(
+														...stats.topTreatingDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))
+													)
+													const barPercentage = maxVal > 0 ? (doctorVal / maxVal) * 100 : 0
 
 													return (
 														<tr
@@ -1207,20 +1217,22 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 																	{doctor.cases}
 																</span>
 															</td>
-															<td className="py-2 px-2 text-right">
-																<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-																	{formatCurrency(doctor.revenue)}
-																</span>
-															</td>
+															{!isSpt && (
+																<td className="py-2 px-2 text-right">
+																	<span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+																		{formatCurrency(doctor.revenue)}
+																	</span>
+																</td>
+															)}
 															<td className="py-2 px-2 text-right">
 																<div className="flex items-center justify-end gap-2">
 																	<span className="text-sm text-gray-600 dark:text-gray-400">
-																		{revenuePercentage.toFixed(1)}%
+																		{percentageOfTotal.toFixed(1)}%
 																	</span>
 																	<div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 																		<div
 																			className="bg-blue-500 h-2 rounded-full"
-																			style={{ width: `${percentage}%` }}
+																			style={{ width: `${barPercentage}%` }}
 																		></div>
 																	</div>
 																</div>
@@ -1235,7 +1247,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div className={`grid grid-cols-1 gap-4 ${isSpt ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Médicos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -1248,14 +1260,16 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										{stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.cases, 0) || 0}
 									</p>
 								</div>
-								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatCurrency(
-											stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.revenue, 0) || 0
-										)}
-									</p>
-								</div>
+								{!isSpt && (
+									<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+										<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
+										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+											{formatCurrency(
+												stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.revenue, 0) || 0
+											)}
+										</p>
+									</div>
+								)}
 							</div>
 						</div>
 					</div>
@@ -1481,12 +1495,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-								Distribución por Tipo de Examen
-							</h3>
 							<div className="space-y-4">
 								{stats.revenueByExamType &&
-									stats.revenueByExamType.map((exam: any, index: number) => {
+									[...(stats.revenueByExamType || [])]
+										.sort((a: any, b: any) => (a.examType || '').localeCompare(b.examType || '', 'es'))
+										.map((exam: any, index: number) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
 										const totalVal = isSpt
 											? stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.count, 0)
