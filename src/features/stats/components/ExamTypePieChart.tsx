@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Card } from '@shared/components/ui/card'
-import { Stethoscope, Activity, FlaskRound, Info } from 'lucide-react'
+import { Stethoscope, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
@@ -15,24 +15,6 @@ interface ExamTypePieChartProps {
 const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate, onClick, isSpt = false }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-
-	// Get exam type icon based on type (tolerant to accents/variants)
-	const getExamTypeIcon = (examType: string) => {
-		const normalized = examType
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-		if (normalized.includes('citologia')) {
-			return <Stethoscope className="w-4 h-4 text-white" />
-		}
-		if (normalized.includes('biopsia')) {
-			return <Activity className="w-4 h-4 text-white" />
-		}
-		if (normalized.includes('inmunohistoquimica') || normalized.includes('inmuno')) {
-			return <FlaskRound className="w-4 h-4 text-white" />
-		}
-		return <Stethoscope className="w-4 h-4 text-white" />
-	}
 
 	// Get color for exam type - using the same colors as other charts
 	const getExamTypeColor = (index: number) => {
@@ -77,7 +59,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 							</TooltipContent>
 						</Tooltip>
 					</h3>
-					<div className="flex items-center justify-center h-64">
+					<div className="flex items-center justify-center h-48 sm:h-56">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 					</div>
 				</div>
@@ -104,9 +86,9 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 				</h3>
 
 				{pieData.length > 0 ? (
-					<div className="w-full lg:grid grid-cols-1 gap-4 justify-center items-center">
+					<div className="w-full lg:grid grid-cols-2 gap-4 justify-center items-center">
 						{/* Pie Chart */}
-						<div className="h-64 relative">
+						<div className="h-48 sm:h-56 relative">
 							<ResponsiveContainer width="100%" height="100%">
 								<PieChart>
 									<Pie
@@ -115,8 +97,8 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 										cy="50%"
 										labelLine={false}
 										label={false} // Sin porcentajes dentro del donut
-										outerRadius={90}
-										innerRadius={55} // Esto crea el efecto donut
+										outerRadius={70}
+										innerRadius={40} // Esto crea el efecto donut
 										fill="#8884d8"
 										dataKey="percentage"
 										strokeWidth={0} // Sin borde blanco
@@ -150,7 +132,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 
 							{/* Total en el centro del donut */}
 							<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-full size-32 flex flex-col items-center justify-center">
+								<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] border border-input rounded-full size-24 sm:size-28 flex flex-col items-center justify-center">
 									<p className="text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">
 										{isSpt ? formatNumber(totalVal) : formatCurrency(totalVal)}
 									</p>
@@ -159,10 +141,9 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 							</div>
 						</div>
 
-						{/* Leyenda personalizada - Estilo original del SVG */}
+						{/* Leyenda - compacta como Distribución por Sede */}
 						<div className="flex flex-col">
 							{displayedData.map((entry, index) => {
-								// Find the original index in pieData for hover state
 								const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
 								return (
 									<div
@@ -175,25 +156,20 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 									>
 										<div className="flex items-center gap-2">
 											<div
-												className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+												className={`w-3 h-3 rounded-full transition-all duration-300 shrink-0 ${
 													hoveredIndex === originalIndex ? 'scale-125' : ''
 												}`}
 												style={{ backgroundColor: entry.color }}
+											/>
+											<span
+												className={`text-sm transition-all duration-300 ${
+													hoveredIndex === originalIndex
+														? 'text-gray-900 dark:text-gray-100 font-medium'
+														: 'text-gray-600 dark:text-gray-400'
+												}`}
 											>
-												{getExamTypeIcon(entry.examType)}
-											</div>
-											<div>
-												<span
-													className={` flex items-center gap-2 text-sm transition-all duration-300 ${
-														hoveredIndex === originalIndex
-															? 'text-gray-900 dark:text-gray-100 font-medium'
-															: 'text-gray-600 dark:text-gray-400'
-													}`}
-												>
-													{entry.examType}
-													<div className="text-xs text-gray-500 dark:text-gray-400">({entry.count})</div>
-												</span>
-											</div>
+												{entry.examType}
+											</span>
 										</div>
 										<span
 											className={`text-sm transition-all duration-300 ${
@@ -210,7 +186,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 						</div>
 					</div>
 				) : (
-					<div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+					<div className="flex items-center justify-center h-48 sm:h-56 text-gray-500 dark:text-gray-400">
 						<div className="text-center">
 							<Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
 							<p className="text-lg font-medium">Sin datos disponibles</p>
