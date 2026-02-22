@@ -51,6 +51,7 @@ export interface FormValues {
 		reference?: string
 	}>
 	comments?: string
+	fechaMuestra?: string | null
 }
 
 // Tipo para insertar pacientes (local para evitar problemas de importación)
@@ -99,6 +100,7 @@ export interface MedicalCaseInsert {
 	exchange_rate?: number | null
 	comments?: string | null
 	price_type?: string | null // taquilla | convenios | descuento (Marihorgen)
+	fecha_muestra?: string | null // YYYY-MM-DD (Marihorgen)
 	generated_by?: string | null
 	created_at?: string | null
 	updated_at?: string | null
@@ -413,6 +415,7 @@ const prepareRegistrationData = (
 		// Información adicional
 		comments: formData.comments || null,
 		price_type: (formData as any).priceType && String((formData as any).priceType).trim() ? (formData as any).priceType : null,
+		fecha_muestra: (formData as any).fechaMuestra && String((formData as any).fechaMuestra).trim() ? (formData as any).fechaMuestra : null,
 
 		// Metadatos
 		generated_by: user.id || null,

@@ -816,13 +816,26 @@ const PolizasPage = () => {
 
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
-					className="max-w-3xl bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90dvh] flex flex-col p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 					overlayClassName="bg-black/60"
 				>
-					<DialogHeader>
-						<DialogTitle>{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
+					<DialogHeader className="shrink-0">
+						<DialogTitle className="text-base sm:text-lg">{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
 					</DialogHeader>
-					<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-4">
+					<div className="flex md:hidden items-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 overflow-x-auto pb-1">
+						{STEPS.map((label, idx) => (
+							<span
+								key={label}
+								className={cn(
+									'shrink-0 px-2 py-1 rounded-md',
+									idx === step ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground',
+								)}
+							>
+								{idx + 1}. {label}
+							</span>
+						))}
+					</div>
+					<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-2 shrink-0">
 						{STEPS.map((label, idx) => (
 							<span key={label} className={idx === step ? 'text-primary font-medium' : ''}>
 								{label}
@@ -830,20 +843,22 @@ const PolizasPage = () => {
 							</span>
 						))}
 					</div>
-					{stepContent()}
-					<DialogFooter className="mt-6 flex flex-row flex-nowrap justify-end gap-2">
+					<div className="overflow-y-auto min-h-0 py-1 flex-1">
+						{stepContent()}
+					</div>
+					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex-col-reverse sm:flex-row flex-wrap justify-end gap-2">
 						{step > 0 && (
-							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)}>
+							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} className="w-full sm:w-auto order-3 sm:order-none">
 								Anterior
 							</Button>
 						)}
-						<Button variant="outline" onClick={() => setOpenModal(false)}>
+						<Button variant="outline" onClick={() => setOpenModal(false)} className="w-full sm:w-auto">
 							Cancelar
 						</Button>
 						{step < STEPS.length - 1 ? (
-							<Button onClick={() => setStep((prev) => prev + 1)}>Siguiente</Button>
+							<Button onClick={() => setStep((prev) => prev + 1)} className="w-full sm:w-auto">Siguiente</Button>
 						) : (
-							<Button onClick={handleSave} disabled={saving}>
+							<Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
 								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
 							</Button>
 						)}

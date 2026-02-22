@@ -43,6 +43,7 @@ function MainHome() {
 	const { laboratory } = useLaboratory()
 	const [selectedStat, setSelectedStat] = useState<any>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
+	const isSpt = laboratory?.slug === 'spt'
 
 	// Mostrar error si falla la carga de estadísticas
 	if (error) {
@@ -130,7 +131,7 @@ function MainHome() {
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 sm:gap-3 md:gap-4">
 					<Card
 						className="col-span-1 sm:col-span-2 lg:col-span-6 row-span-1 lg:row-span-1 dark:bg-background bg-white rounded-xl py-2 sm:py-4 md:py-6 px-2 sm:px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between shadow-lg cursor-pointer hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300"
-						onClick={() => handleStatCardClick('totalRevenue')}
+						onClick={() => handleStatCardClick(isSpt ? 'totalCases' : 'totalRevenue')}
 					>
 						<div className="flex-1 text-center sm:text-left mb-2 sm:mb-0">
 							<div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 mb-1 sm:mb-2">
@@ -151,7 +152,7 @@ function MainHome() {
 								</div>
 							</div>
 							<p className="text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 md:mb-4 text-xs sm:text-sm md:text-base">
-								Gestiona tus ingresos y estadisticas de empresa.
+								{isSpt ? 'Gestiona tus estadísticas de atención.' : 'Gestiona tus ingresos y estadisticas de empresa.'}
 							</p>
 						</div>
 						<div className="relative">
@@ -173,39 +174,42 @@ function MainHome() {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>Esta estadistica refleja el porcentaje de ingresos por sede en el mes seleccionado.</p>
+										<p>{isSpt ? 'Esta estadística refleja el porcentaje de casos por sede en el mes seleccionado.' : 'Esta estadistica refleja el porcentaje de ingresos por sede en el mes seleccionado.'}</p>
 									</TooltipContent>
 								</Tooltip>
 							</h3>
 							{/* Donut Chart con Recharts */}
 							<CustomPieChart
 								data={stats?.revenueByBranch || []}
-								total={stats?.monthlyRevenue || 0}
+								total={isSpt ? (stats?.totalCases || 0) : (stats?.monthlyRevenue || 0)}
 								isLoading={isLoading}
+								valueMode={isSpt ? 'cases' : 'revenue'}
 							/>
 						</div>
 					</Card>
 
-					{/* Grid 3 - KPI Card: Monthly Revenue */}
-					<StatCard
-						title="Ingresos del Período"
-						value={isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}
-						description={`Total histórico: ${formatCurrency(stats?.totalRevenue || 0)}`}
-						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
-						trend={{
-							value: isLoading
-								? '...'
-								: `${stats?.revenueGrowthPercentage && stats.revenueGrowthPercentage >= 0 ? '+' : ''}${
-										stats?.revenueGrowthPercentage?.toFixed(1) || '0'
-								  }%`,
-							icon: <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-							positive: (stats?.revenueGrowthPercentage || 0) >= 0,
-						}}
-						onClick={() => handleStatCardClick('monthlyRevenue')}
-						className="col-span-1 sm:col-span-1 lg:col-span-3 row-span-1 lg:row-span-1 transition-none`"
-						statType="monthlyRevenue"
-						isSelected={selectedStat === 'monthlyRevenue' && isDetailPanelOpen}
-					/>
+					{/* Grid 3 - KPI Card: Monthly Revenue (oculto para SPT) */}
+					{!isSpt && (
+						<StatCard
+							title="Ingresos del Período"
+							value={isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}
+							description={`Total histórico: ${formatCurrency(stats?.totalRevenue || 0)}`}
+							icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
+							trend={{
+								value: isLoading
+									? '...'
+									: `${stats?.revenueGrowthPercentage && stats.revenueGrowthPercentage >= 0 ? '+' : ''}${
+											stats?.revenueGrowthPercentage?.toFixed(1) || '0'
+									  }%`,
+								icon: <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
+								positive: (stats?.revenueGrowthPercentage || 0) >= 0,
+							}}
+							onClick={() => handleStatCardClick('monthlyRevenue')}
+							className="col-span-1 sm:col-span-1 lg:col-span-3 row-span-1 lg:row-span-1 transition-none`"
+							statType="monthlyRevenue"
+							isSelected={selectedStat === 'monthlyRevenue' && isDetailPanelOpen}
+						/>
+					)}
 
 					{/* Grid 4 - KPI Card: Total de Casos */}
 					<StatCard
@@ -232,7 +236,7 @@ function MainHome() {
 						<div className="h-full flex flex-col">
 							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3">
 								<h3 className="text-xs sm:text-sm md:text-base font-bold text-gray-700 dark:text-gray-300 mb-1 sm:mb-0">
-									Tendencia de Ventas
+									{isSpt ? 'Tendencia de Casos' : 'Tendencia de Ventas'}
 								</h3>
 								{/* Year Selector with Arrows */}
 								<div className="flex items-center gap-1 sm:gap-2">
@@ -248,8 +252,9 @@ function MainHome() {
 										</TooltipTrigger>
 										<TooltipContent>
 											<p>
-												En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel se
-												adaptara y te mostrara los ingresos de ese mes.
+												{isSpt
+													? 'En esta estadística puedes dar click sobre la barra del mes al que quieres filtrar y el panel se adaptará y te mostrará los casos de ese mes.'
+													: 'En esta estadistica puedes dar click sobre la barra del mes al que quieres filtrar y el panel se adaptara y te mostrara los ingresos de ese mes.'}
 											</p>
 										</TooltipContent>
 									</Tooltip>
@@ -286,7 +291,7 @@ function MainHome() {
 												title={
 													isFutureMonth
 														? `${month.month}: Mes futuro - No disponible`
-														: `${month.month}: ${formatCurrency(month.revenue)}`
+														: `${month.month}: ${isSpt ? formatNumber(month.revenue) : formatCurrency(month.revenue)}`
 												}
 												onClick={() => !isFutureMonth && handleMonthBarClick(month)}
 											></div>
@@ -320,7 +325,7 @@ function MainHome() {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>En esta estadistica puedes ver los médicos tratantes con mas ingresos.</p>
+										<p>{isSpt ? 'En esta estadística puedes ver los médicos tratantes con más casos.' : 'En esta estadistica puedes ver los médicos tratantes con mas ingresos.'}</p>
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -333,7 +338,10 @@ function MainHome() {
 										))}
 									</div>
 								) : stats?.topTreatingDoctors && stats.topTreatingDoctors.length > 0 ? (
-									stats.topTreatingDoctors.slice(0, 3).map((doctor, index) => {
+									[...(stats.topTreatingDoctors || [])]
+										.sort((a, b) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
+										.slice(0, 3)
+										.map((doctor, index) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500']
 										return (
 											<div
@@ -346,8 +354,13 @@ function MainHome() {
 														{doctor.doctor}
 													</p>
 													<p className="text-xs text-gray-500 dark:text-gray-400">
-														{formatNumber(doctor.cases)} caso{doctor.cases !== 1 ? 's' : ''} •{' '}
-														{formatCurrency(doctor.revenue)}
+														{formatNumber(doctor.cases)} caso{doctor.cases !== 1 ? 's' : ''}
+														{!isSpt && (
+															<>
+																{' • '}
+																{formatCurrency(doctor.revenue)}
+															</>
+														)}
 													</p>
 												</div>
 											</div>
@@ -380,7 +393,7 @@ function MainHome() {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>En esta estadistica puedes ver los estudios mas frecuentes y los que generan mas ingresos.</p>
+										<p>{isSpt ? 'En esta estadística puedes ver los estudios más frecuentes.' : 'En esta estadistica puedes ver los estudios mas frecuentes y los que generan mas ingresos.'}</p>
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -426,9 +439,11 @@ function MainHome() {
 														<p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
 															{exam.examType}
 														</p>
-														<p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-															{formatCurrency(exam.revenue)}
-														</p>
+														{!isSpt && (
+															<p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+																{formatCurrency(exam.revenue)}
+															</p>
+														)}
 													</div>
 												</div>
 												<span className={`text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
@@ -458,40 +473,45 @@ function MainHome() {
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>
-											En esta estadistica puedes ver el estado de los casos pendientes de completar y los pagos
-											pendientes de cobrar.
+											{isSpt
+												? 'En esta estadística puedes ver los casos enviados y los pendientes de envío.'
+												: 'En esta estadistica puedes ver el estado de los casos pendientes de completar y los pagos pendientes de cobrar.'}
 										</p>
 									</TooltipContent>
 								</Tooltip>
 							</div>
 							<div className="space-y-2 sm:space-y-3 flex-1">
-								{/* Incomplete Cases Alert */}
+								{/* Incomplete Cases / Pendientes de envío (SPT) */}
 								<div className="p-1.5 sm:p-2 md:p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
 									<div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
 										<AlertTriangle className="w-4 h-4 text-orange-500 dark:text-orange-400" />
 										<span className="text-xs sm:text-sm font-medium text-orange-800 dark:text-orange-400">
-											Casos Incompletos
+											{isSpt ? 'Pendientes de envío' : 'Casos Incompletos'}
 										</span>
 									</div>
 									<p className="text-[10px] sm:text-xs text-orange-700 dark:text-orange-300">
 										{isLoading
 											? 'Cargando...'
-											: `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de completar`}
+											: isSpt
+												? `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de enviar`
+												: `${formatNumber(stats?.incompleteCases || 0)} casos pendientes de completar`}
 									</p>
 								</div>
 
 								{/* Pending Payments Alert */}
-								<div className="p-1.5 sm:p-2 md:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
-									<div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-										<Clock className="w-4 h-4 text-red-500 dark:text-red-400" />
-										<span className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-400">
-											Pagos Pendientes
-										</span>
+								{!isSpt && (
+									<div className="p-1.5 sm:p-2 md:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300">
+										<div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+											<Clock className="w-4 h-4 text-red-500 dark:text-red-400" />
+											<span className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-400">
+												Pagos Pendientes
+											</span>
+										</div>
+										<p className="text-[10px] sm:text-xs text-red-700 dark:text-red-300">
+											{isLoading ? 'Cargando...' : `${formatCurrency(stats?.pendingPayments || 0)} por cobrar`}
+										</p>
 									</div>
-									<p className="text-[10px] sm:text-xs text-red-700 dark:text-red-300">
-										{isLoading ? 'Cargando...' : `${formatCurrency(stats?.pendingPayments || 0)} por cobrar`}
-									</p>
-								</div>
+								)}
 
 								{/* Quick Actions */}
 								<button
@@ -518,6 +538,7 @@ function MainHome() {
 						statType={selectedStat}
 						stats={stats}
 						isLoading={isLoading}
+						isSpt={isSpt}
 					/>
 				</Suspense>
 			</main>

@@ -71,6 +71,14 @@ export function FeatureRoute({
     return <Navigate to={fallbackPath} replace />;
   }
 
+  // Call Center: solo owner, prueba y call_center pueden acceder
+  if (feature === 'hasCallCenter') {
+    const allowedRoles = ['owner', 'prueba', 'call_center'];
+    if (!profile?.role || !allowedRoles.includes(profile.role)) {
+      return <Navigate to={fallbackPath} replace />;
+    }
+  }
+
   return <>{children}</>;
 }
 

@@ -5,11 +5,11 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useAuth } from '@app/providers/AuthContext'
 import EyeTrackingComponent from './RobotTraking'
-import { FileText, Users, History, Settings, LogOut, FolderInput, UserCircle } from 'lucide-react'
+import { FileText, Users, History, Settings, LogOut, FolderInput, UserCircle, Phone, List } from 'lucide-react'
 import type { UserRole } from '@services/supabase/laboratories/laboratory-roles-service'
 
 // Mapeo de rutas por rol
-const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?: string; form?: string; changelog?: string; home?: string; users?: string }> = {
+const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?: string; form?: string; changelog?: string; home?: string; users?: string; callCenter?: string; callCenterRegistros?: string }> = {
 	employee: {
 		home: '/employee/home',
 		cases: '/employee/records',
@@ -81,12 +81,15 @@ const ROLE_ROUTES: Record<string, { cases?: string; patients?: string; settings?
 		patients: '/call-center/patients',
 		settings: '/call-center/settings',
 		users: '/call-center/users',
+		callCenter: '/call-center/call-center',
+		callCenterRegistros: '/call-center/call-center-registros',
 	},
 }
 
 // Función para determinar qué botones mostrar según el rol
 // isSpt: cuando true, imagenologia puede ver el botón Formulario (crear casos) en SPT
-const getAvailableButtonsForRole = (role: UserRole | undefined, isSpt?: boolean) => {
+// hasCallCenter: cuando true, call_center ve los botones de Call Center y Registros
+const getAvailableButtonsForRole = (role: UserRole | undefined, isSpt?: boolean, hasCallCenter?: boolean) => {
 	if (!role) return []
 
 	const routes = ROLE_ROUTES[role] || {}
@@ -97,6 +100,24 @@ const getAvailableButtonsForRole = (role: UserRole | undefined, isSpt?: boolean)
 		description: string
 		onClick?: () => void
 	}> = []
+
+	// Call Center (formulario y registros) de primeras para rol call_center
+	if (role === 'call_center' && hasCallCenter && routes.callCenter) {
+		buttons.push({
+			title: 'Call Center',
+			icon: Phone,
+			path: routes.callCenter,
+			description: 'Registro de llamada',
+		})
+	}
+	if (role === 'call_center' && hasCallCenter && routes.callCenterRegistros) {
+		buttons.push({
+			title: 'Registros Call Center',
+			icon: List,
+			path: routes.callCenterRegistros,
+			description: 'Ver listado de llamadas',
+		})
+	}
 
 	// Formulario: employee, coordinador, y imagenologia (solo en SPT)
 	const canShowForm =
@@ -192,7 +213,8 @@ const ReceptionistHomePage: React.FC = () => {
 	// Obtener botones disponibles según el rol
 	const navigationButtons = useMemo(() => {
 		const isSpt = laboratory?.slug === 'spt'
-		const buttons = getAvailableButtonsForRole(profile?.role as UserRole, isSpt)
+		const hasCallCenter = laboratory?.features?.hasCallCenter === true
+		const buttons = getAvailableButtonsForRole(profile?.role as UserRole, isSpt, hasCallCenter)
 		
 		// Agregar botón de cerrar sesión al final
 		buttons.push({
@@ -204,7 +226,7 @@ const ReceptionistHomePage: React.FC = () => {
 		})
 
 		return buttons
-	}, [profile?.role, laboratory?.slug])
+	}, [profile?.role, laboratory?.slug, laboratory?.features?.hasCallCenter])
 
 	return (
 		<div className="max-w-6xl mx-auto h-full flex flex-col">

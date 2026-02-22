@@ -22,6 +22,14 @@ export function FeatureGuard({
     return <>{fallback}</>;
   }
 
+  // Call Center: solo owner, prueba y call_center ven el menú
+  if (feature === 'hasCallCenter') {
+    const allowedRoles = ['owner', 'prueba', 'call_center'];
+    if (!profile?.role || !allowedRoles.includes(profile.role)) {
+      return <>{fallback}</>;
+    }
+  }
+
   return <>{children}</>;
 }
 

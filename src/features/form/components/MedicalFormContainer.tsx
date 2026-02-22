@@ -43,6 +43,7 @@ const getInitialFormValues = (): FormValues => ({
   numberOfSamples: 1,
   relationship: '',
   consulta: '', // Especialidad médica (solo para lab SPT)
+  fechaMuestra: '', // Fecha de muestra (solo Marihorgen/LM)
   registrationDate: new Date(),
   totalAmount: 0, // Puede ser 0 si el módulo de pagos está deshabilitado
   payments: [{ method: '', amount: 0, reference: '' }],

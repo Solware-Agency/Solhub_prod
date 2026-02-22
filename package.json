@@ -115,6 +115,7 @@
     "globals": "^16.0.0",
     "postcss": "^8.4.49",
     "rollup-plugin-visualizer": "^6.0.3",
+    "supabase": "^2.76.12",
     "tailwindcss": "^4.1.12",
     "terser": "^5.44.0",
     "ts-unused-exports": "^11.0.1",

@@ -63,9 +63,21 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 		}
 	}, [aseguradora, isOpen])
 
+	const isValidEmail = (value: string): boolean =>
+		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value ?? '').trim())
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!aseguradora) return
+		const email = (form.email ?? '').trim()
+		if (email && !isValidEmail(form.email ?? '')) {
+			toast({
+				title: 'Email inválido',
+				description: 'Use un formato válido (ej: nombre@dominio.com)',
+				variant: 'destructive',
+			})
+			return
+		}
 		setIsLoading(true)
 		try {
 			const updated = await updateAseguradora(aseguradora.id, form)

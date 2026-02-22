@@ -175,6 +175,9 @@ export const createFormSchema = (
 		patientType: z.string().default(''),
 		originType: z.string().default(''),
 		patientBranch: z.string().default(''),
+		fechaMuestra: isMarihorgen
+			? z.string().min(1, 'La fecha de muestra es requerida')
+			: z.string().optional().or(z.literal('')),
 	})
 
 	// Validación condicional: al menos examType o consulta debe estar presente

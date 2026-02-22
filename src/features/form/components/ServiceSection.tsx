@@ -22,8 +22,13 @@ import {
 import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { useModuleField } from '@shared/hooks/useModuleField';
-import { useEffect, memo, useMemo } from 'react';
-import { Stethoscope, MapPin, Microscope } from 'lucide-react';
+import { useEffect, memo, useMemo, useState } from 'react';
+import { Stethoscope, MapPin, Microscope, Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar } from '@shared/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
+import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/cn';
 import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service';
 
@@ -159,6 +164,7 @@ export const ServiceSection = memo(
     // Verificar si es el laboratorio LM/Marihorgen para mostrar campos específicos
     const isLM = laboratory?.slug?.toLowerCase() === 'lm' || laboratory?.slug?.toLowerCase() === 'marihorgen';
     const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts;
+    const [isFechaMuestraCalendarOpen, setIsFechaMuestraCalendarOpen] = useState(false);
 
     const formatTitleCase = (value: string): string =>
       value
@@ -355,6 +361,74 @@ export const ServiceSection = memo(
                 />
               )}
 
+              {/* Fecha de Muestra - Solo Marihorgen/LM */}
+              {isLM && (
+                <FormField
+                  control={control}
+                  name='fechaMuestra'
+                  render={({ field, fieldState }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Fecha de Muestra *</FormLabel>
+                      <FormControl>
+                        <Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant='outline'
+                              className={cn(
+                                'w-full justify-start text-left font-normal h-10',
+                                !field.value && 'text-muted-foreground',
+                                inputStyles,
+                                fieldState.error && 'border-red-500 focus:border-red-500',
+                              )}
+                            >
+                              <CalendarIcon className='mr-2 h-4 w-4 text-muted-foreground' />
+                              {field.value
+                                ? format(new Date(field.value + 'T12:00:00'), 'dd/MM/yyyy', { locale: es })
+                                : 'Seleccionar fecha'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className='w-auto p-0 z-[9999]' align='end'>
+                            <Calendar
+                              mode='single'
+                              selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                              onSelect={(date) => {
+                                field.onChange(date ? format(date, 'yyyy-MM-dd') : '');
+                                setIsFechaMuestraCalendarOpen(false);
+                              }}
+                              locale={es}
+                              defaultMonth={field.value ? new Date(field.value + 'T12:00:00') : new Date()}
+                            />
+                            <div className='flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700'>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => {
+                                  field.onChange('');
+                                  setIsFechaMuestraCalendarOpen(false);
+                                }}
+                              >
+                                Borrar
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => {
+                                  field.onChange(format(new Date(), 'yyyy-MM-dd'));
+                                  setIsFechaMuestraCalendarOpen(false);
+                                }}
+                              >
+                                Hoy
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* Relación - CON AUTOCOMPLETADO - Al final a la derecha */}
               {relationshipConfig?.enabled && (
                 <FormField
@@ -434,6 +508,74 @@ export const ServiceSection = memo(
                           }}
                           className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Fecha de Muestra - Solo Marihorgen/LM */}
+              {isLM && (
+                <FormField
+                  control={control}
+                  name='fechaMuestra'
+                  render={({ field, fieldState }) => (
+                    <FormItem className='min-w-[180px] flex-1'>
+                      <FormLabel>Fecha de Muestra *</FormLabel>
+                      <FormControl>
+                        <Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant='outline'
+                              className={cn(
+                                'w-full justify-start text-left font-normal h-10',
+                                !field.value && 'text-muted-foreground',
+                                inputStyles,
+                                fieldState.error && 'border-red-500 focus:border-red-500',
+                              )}
+                            >
+                              <CalendarIcon className='mr-2 h-4 w-4 text-muted-foreground' />
+                              {field.value
+                                ? format(new Date(field.value + 'T12:00:00'), 'dd/MM/yyyy', { locale: es })
+                                : 'Seleccionar fecha'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className='w-auto p-0 z-[9999]' align='end'>
+                            <Calendar
+                              mode='single'
+                              selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                              onSelect={(date) => {
+                                field.onChange(date ? format(date, 'yyyy-MM-dd') : '');
+                                setIsFechaMuestraCalendarOpen(false);
+                              }}
+                              locale={es}
+                              defaultMonth={field.value ? new Date(field.value + 'T12:00:00') : new Date()}
+                            />
+                            <div className='flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700'>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => {
+                                  field.onChange('');
+                                  setIsFechaMuestraCalendarOpen(false);
+                                }}
+                              >
+                                Borrar
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => {
+                                  field.onChange(format(new Date(), 'yyyy-MM-dd'));
+                                  setIsFechaMuestraCalendarOpen(false);
+                                }}
+                              >
+                                Hoy
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

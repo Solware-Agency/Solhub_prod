@@ -237,21 +237,19 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
       </DialogTrigger>
       <DialogContent
         className='max-w-[95vw] sm:max-w-4xl max-h-[95vh] h-[95vh] overflow-hidden flex flex-col w-full bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]'
+        hideCloseButton
       >
         <DialogTitle className="sr-only">Filtros de Casos</DialogTitle>
         <DialogDescription className="sr-only">
           Configure los filtros para buscar casos específicos
         </DialogDescription>
-        {/* Botón X para cerrar */}
-        <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
         <Tabs defaultValue='general' className='w-full overflow-x-hidden flex flex-col flex-1 min-h-0'>
-          <TabsList className={`grid w-full ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 mt-4`}>
+          <div className='flex items-center mt-2 pb-3 pr-3 border-b border-input'>
+            <div className='flex-1 shrink-0 min-w-0' />
+            <TabsList className={`flex shrink-0 gap-2 sm:gap-4 bg-transparent p-0 rounded-none`}>
             <TabsTrigger
               value='general'
-              className='flex items-center gap-2 cursor-pointer'
+              className='flex items-center gap-2 cursor-pointer w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent'
             >
               <Filter className='w-4 h-4' />
               Filtros Generales
@@ -259,13 +257,20 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             {!isSpt && (
               <TabsTrigger
                 value='role-specific'
-                className='flex items-center gap-2 cursor-pointer'
+                className='flex items-center gap-2 cursor-pointer w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent'
               >
                 <Settings className='w-4 h-4' />
                 Filtros por Rol
               </TabsTrigger>
             )}
           </TabsList>
+            <div className='flex-1 flex justify-end shrink-0 min-w-0'>
+              <DialogPrimitive.Close className='rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer p-1.5'>
+                <X className='h-4 w-4' />
+                <span className='sr-only'>Close</span>
+              </DialogPrimitive.Close>
+            </div>
+          </div>
 
           <TabsContent value='general' className='space-y-6 mt-6 overflow-x-hidden overflow-y-auto flex-1 pb-4'>
             {/* Status and Document Status Filters */}
@@ -417,50 +422,40 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               )}
             </div>
 
-            {/* New Filters Row 3: Email Status for SPT */}
+            {/* SPT: Columna izq (Email + Sede) y columna der (Médico) independientes - no se empujan */}
             {isSpt && (
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
-                <div className='space-y-3'>
-                  <CustomDropdown
-                    options={[
-                      { value: 'true', label: 'Enviado' },
-                      { value: 'false', label: 'No Enviado' },
-                    ]}
-                    value={emailSentStatusFilter}
-                    placeholder='Estatus de Email'
-                    onChange={onEmailSentStatusFilterChange}
-                    data-testid='email-sent-status-filter'
-                  />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full md:items-start'>
+                <div className='flex flex-col gap-4'>
+                  <div className='space-y-3'>
+                    <CustomDropdown
+                      options={[
+                        { value: 'true', label: 'Enviado' },
+                        { value: 'false', label: 'No Enviado' },
+                      ]}
+                      value={emailSentStatusFilter}
+                      placeholder='Estatus de Email'
+                      onChange={onEmailSentStatusFilterChange}
+                      data-testid='email-sent-status-filter'
+                    />
+                  </div>
+                  <div className='space-y-3'>
+                    <Button
+                      onClick={() => setShowBranchFilter(!showBranchFilter)}
+                      variant={showBranchFilter ? 'default' : 'outline'}
+                      className='w-full justify-start font-bold'
+                    >
+                      <MapPin className='w-4 h-4 mr-2' />
+                      Filtrar por Sede
+                    </Button>
+                    {showBranchFilter && (
+                      <BranchFilterPanel
+                        branches={branchOptions}
+                        selectedBranches={branchFilter}
+                        onFilterChange={onBranchFilterChange}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className='space-y-3'>
-                  {/* Espacio vacío para mantener el grid */}
-                </div>
-              </div>
-            )}
-
-            {/* Branch Filter Row - For SPT, includes Doctor Filter */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 w-full`}>
-              <div className='space-y-3'>
-                <Button
-                  onClick={() => setShowBranchFilter(!showBranchFilter)}
-                  variant={showBranchFilter ? 'default' : 'outline'}
-                  className='w-full justify-start font-bold'
-                >
-                  <MapPin className='w-4 h-4 mr-2' />
-                  Filtrar por Sede
-                </Button>
-
-                {showBranchFilter && (
-                  <BranchFilterPanel
-                    branches={branchOptions}
-                    selectedBranches={branchFilter}
-                    onFilterChange={onBranchFilterChange}
-                  />
-                )}
-              </div>
-
-              {/* Doctor Filter - Only for SPT, in same row as Branch */}
-              {isSpt && (
                 <div className='space-y-3'>
                   <Button
                     onClick={() => setShowDoctorFilter(!showDoctorFilter)}
@@ -470,7 +465,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     <Stethoscope className='w-4 h-4 mr-2' />
                     Filtrar por Médico
                   </Button>
-
                   {showDoctorFilter && (
                     <DoctorFilterPanel
                       cases={cases}
@@ -478,8 +472,32 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     />
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Branch Filter Row - Solo para labs que NO son SPT */}
+            {!isSpt && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => setShowBranchFilter(!showBranchFilter)}
+                    variant={showBranchFilter ? 'default' : 'outline'}
+                    className='w-full justify-start font-bold'
+                  >
+                    <MapPin className='w-4 h-4 mr-2' />
+                    Filtrar por Sede
+                  </Button>
+                  {showBranchFilter && (
+                    <BranchFilterPanel
+                      branches={branchOptions}
+                      selectedBranches={branchFilter}
+                      onFilterChange={onBranchFilterChange}
+                    />
+                  )}
+                </div>
+                <div />
+              </div>
+            )}
 
             {/* Doctor and Origin Filters - Same line - Only for non-SPT */}
             {!isSpt && (
@@ -802,7 +820,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
         </Tabs>
 
         {/* Action Buttons - Fixed at bottom */}
-        <div className='flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 pt-4 border-t mt-auto w-full bg-background shrink-0'>
+        <div className='flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 pt-4 border-t mt-auto w-full shrink-0'>
           <Button
             onClick={onClearAllFilters}
             variant='outline'

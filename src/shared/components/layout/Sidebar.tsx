@@ -20,6 +20,8 @@ import {
   FolderSearch,
   Activity,
   DollarSign,
+  Phone,
+  List,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -36,6 +38,8 @@ interface NavItemProps {
   showFullContent: boolean;
   onClick?: () => void;
   title?: string;
+  /** Si true, el link solo se marca activo cuando la ruta coincide exactamente (no subrutas) */
+  end?: boolean;
 }
 
 interface NavGroupProps {
@@ -56,10 +60,12 @@ const NavItem: React.FC<NavItemProps> = ({
   showFullContent,
   onClick,
   title,
+  end,
 }) => {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         `flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none ${
           isActive ? 'text-labPrimary border-primary' : 'hover:text-labPrimary'
@@ -605,6 +611,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               )}
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/dashboard/call-center'
+                  end
+                  icon={<Phone className='stroke-2 size-5 shrink-0' />}
+                  label='Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/dashboard/call-center-registros'
+                  icon={<List className='stroke-2 size-5 shrink-0' />}
+                  label='Registros Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -1070,6 +1095,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/call-center/call-center'
+                  end
+                  icon={<Phone className='stroke-2 size-5 shrink-0' />}
+                  label='Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/call-center/call-center-registros'
+                  icon={<List className='stroke-2 size-5 shrink-0' />}
+                  label='Registros Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
 
@@ -1191,6 +1235,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               )}
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/prueba/call-center'
+                  end
+                  icon={<Phone className='stroke-2 size-5 shrink-0' />}
+                  label='Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasCallCenter'>
+                <NavItem
+                  to='/prueba/call-center-registros'
+                  icon={<List className='stroke-2 size-5 shrink-0' />}
+                  label='Registros Call Center'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
               {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
               {isSpt && (
                 <NavItem

@@ -243,6 +243,23 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		const checkingLab = localStorage.getItem('auth_checking_lab_status') === '1'
 		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut && !checkingLab) {
 			const currentPath = location.pathname
+
+			// No redirigir en flujo de restablecimiento de contraseña: el usuario debe poder ver /new-password
+			if (currentPath === '/new-password') {
+				console.log('Redirect skipped - user on new-password page (password reset flow)')
+				return
+			}
+			// No redirigir en callback cuando es recovery: AuthCallback enviará a /new-password
+			if (currentPath === '/auth/callback') {
+				const searchParams = new URLSearchParams(location.search)
+				const rawHash = location.hash?.startsWith('#') ? location.hash.slice(1) : location.hash || ''
+				const hashParams = new URLSearchParams(rawHash)
+				if (searchParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery') {
+					console.log('Redirect skipped - auth callback is password recovery flow')
+					return
+				}
+			}
+
 			const authPaths = [
 				'/',
 				'/register',

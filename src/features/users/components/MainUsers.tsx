@@ -1008,7 +1008,6 @@ const MainUsers: React.FC = () => {
 								onChange={setbranchFilter}
 								options={[
 									{ value: 'all', label: 'Todas' },
-									{ value: 'assigned', label: 'Asignada' },
 									{ value: 'unassigned', label: 'Sin sede' },
 									...branchOptions,
 								]}

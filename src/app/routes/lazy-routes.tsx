@@ -184,6 +184,19 @@ export const SampleCostsPage = lazy(() =>
   )
 )
 
+export const CallCenterFormPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/call-center/pages/CallCenterFormPage').then((module) => ({ default: module.default })),
+    'CallCenterFormPage'
+  )
+)
+export const CallCenterRegistrosPage = lazy(() =>
+  lazyRetry(
+    () => import('@features/call-center/pages/CallCenterRegistrosPage').then((module) => ({ default: module.default })),
+    'CallCenterRegistrosPage'
+  )
+)
+
 // Aseguradoras (Inntegras) pages - lazy loaded
 export const AseguradorasHomePage = lazy(() =>
   lazyRetry(

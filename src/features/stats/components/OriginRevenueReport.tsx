@@ -4,17 +4,19 @@ import { Info, MapPin } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency } from '@shared/utils/number-utils'
+import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
 
 interface OriginRevenueReportProps {
 	startDate?: Date
 	endDate?: Date
 	onClick?: () => void
+	isSpt?: boolean
 }
 
-const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, endDate, onClick }) => {
+const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, endDate, onClick, isSpt = false }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
+	const totalCases = stats?.revenueByOrigin?.reduce((sum, o) => sum + o.cases, 0) || 0
 
 	// formatCurrency is now imported from number-utils
 
@@ -29,14 +31,14 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 						<div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
 							<MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
 						</div>
-						<h3 className="text-lg font-bold text-gray-700 dark:text-gray-300">Ingreso por Procedencia</h3>
+						<h3 className="text-lg font-bold text-gray-700 dark:text-gray-300">{isSpt ? 'Casos por Procedencia' : 'Ingreso por Procedencia'}</h3>
 					</div>
 					<Tooltip>
 						<TooltipTrigger>
 							<Info className="size-4" />
 						</TooltipTrigger>
 						<TooltipContent>
-							<p>Esta estadistica refleja el porcentaje de ingresos por procedencia de los pacientes en Conspat.</p>
+							<p>{isSpt ? 'Esta estadística refleja el porcentaje de casos por procedencia de los pacientes.' : 'Esta estadistica refleja el porcentaje de ingresos por procedencia de los pacientes en Conspat.'}</p>
 						</TooltipContent>
 					</Tooltip>
 				</div>
@@ -61,9 +63,11 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 											<th className="text-center py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
 												% del Total
 											</th>
-											<th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
-												Monto Total
-											</th>
+											{!isSpt && (
+												<th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400 font-semibold text-xs">
+													Monto Total
+												</th>
+											)}
 										</tr>
 									</thead>
 									<tbody>
@@ -84,9 +88,10 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 												</td>
 												<td className="py-2 px-1 text-center">
 													<span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-														{Math.round(origin.percentage)}%
+														{Math.round(isSpt && totalCases > 0 ? (origin.cases / totalCases) * 100 : origin.percentage)}%
 													</span>
 												</td>
+												{!isSpt && (
 												<td className="py-2 px-1 text-right">
 													<div className="flex flex-col items-end gap-1">
 														<p className="text-xs font-bold text-gray-700 dark:text-gray-300">
@@ -107,6 +112,7 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 														</div>
 													</div>
 												</td>
+												)}
 											</tr>
 										))}
 									</tbody>
@@ -126,9 +132,11 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 													{origin.origin}
 												</p>
 											</div>
-											<p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-												{formatCurrency(origin.revenue)}
-											</p>
+											{!isSpt && (
+												<p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+													{formatCurrency(origin.revenue)}
+												</p>
+											)}
 										</div>
 
 										<div className="flex items-center justify-between mb-2">
@@ -136,7 +144,7 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 												{origin.cases} caso{origin.cases !== 1 ? 's' : ''}
 											</span>
 											<span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-												{Math.round(origin.percentage)}%
+												{Math.round(isSpt && totalCases > 0 ? (origin.cases / totalCases) * 100 : origin.percentage)}%
 											</span>
 										</div>
 
@@ -146,7 +154,9 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 												style={{
 													width: `${
 														stats.revenueByOrigin.length > 0
-															? (origin.revenue / Math.max(...stats.revenueByOrigin.map((o) => o.revenue))) * 100
+															? (isSpt
+																? (origin.cases / Math.max(...stats.revenueByOrigin.map((o) => o.cases))) * 100
+																: (origin.revenue / Math.max(...stats.revenueByOrigin.map((o) => o.revenue))) * 100)
 															: 0
 													}%`,
 												}}

@@ -65,7 +65,7 @@ setTimeout(async () => {
 	if (session) {
 		supabase
 			.from('medical_records_clean')
-			.select('count', { count: 'exact', head: true })
+			.select('*', { count: 'exact', head: true })
 			.then(({ error }) => {
 				if (error) {
 					console.warn('⚠️ No se pudo verificar conexión con medical_records_clean:', error.message || error)

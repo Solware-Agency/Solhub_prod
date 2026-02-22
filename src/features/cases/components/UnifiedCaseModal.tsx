@@ -20,6 +20,7 @@ import {
 	Copy,
 	ChevronDown,
 	ChevronUp,
+	CalendarIcon,
 	// Download,
 	Phone,
 } from 'lucide-react'
@@ -32,6 +33,8 @@ import { supabase } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { Calendar } from '@shared/components/ui/calendar'
 import { Textarea } from '@shared/components/ui/textarea'
 import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service'
 import { createDropdownOptions, FormDropdown } from '@shared/components/ui/form-dropdown'
@@ -275,6 +278,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const [showFullPatientInfo, setShowFullPatientInfo] = useState(false)
 		const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false)
 		const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
+		const [isFechaMuestraCalendarOpen, setIsFechaMuestraCalendarOpen] = useState(false)
 
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
@@ -587,6 +591,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						image_url: (currentCase as any).image_url ?? null,
 						owner_display_code: (currentCase as any).owner_display_code ?? '',
 						bloques_biopsia: (currentCase as any).bloques_biopsia ?? null,
+						fecha_muestra: (currentCase as any).fecha_muestra ?? null,
 					// Financial data
 						total_amount: currentCase.total_amount,
 						exchange_rate: currentCase.exchange_rate,
@@ -826,7 +831,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner
 						? ['owner_display_code' as const]
 						: []),
-					...(isMarihorgen ? ['bloques_biopsia' as const] : []),
+					...(isMarihorgen ? ['bloques_biopsia', 'fecha_muestra'] as const : []),
 				]
 				const financialFields = ['total_amount', 'exchange_rate']
 
@@ -875,6 +880,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							const raw = newValue as number | string | null | undefined
 							const parsed = raw === '' || raw === null || raw === undefined ? null : Number(raw)
 							caseChanges.bloques_biopsia = Number.isNaN(parsed) ? null : parsed
+						} else if (field === 'fecha_muestra') {
+							const raw = newValue as string | null | undefined
+							caseChanges.fecha_muestra = raw === '' || raw == null ? null : raw
 						}
 						caseChangeLogs.push({
 							field,
@@ -1241,11 +1249,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					throw new Error(errorMessage)
 				}
 
-				// Actualizar el campo email_sent en la base de datos
+				// Actualizar el campo email_sent y fecha_entrega en la base de datos
 				if (case_?.id) {
+					const deliveryDate = new Date().toISOString().split('T')[0]
 					const { error: updateError } = await supabase
 						.from('medical_records_clean')
-						.update({ email_sent: true })
+						.update({ email_sent: true, fecha_entrega: deliveryDate })
 						.eq('id', case_.id)
 
 					if (updateError) {
@@ -1524,6 +1533,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				consulta: 'Tipo de Consulta',
 				owner_display_code: 'Código (visible)',
 				bloques_biopsia: 'Bloques de biopsia',
+				fecha_muestra: 'Fecha de Muestra',
 				// Legacy fields (for backward compatibility)
 				full_name: 'Nombre Completo',
 				id_number: 'Cédula',
@@ -2384,6 +2394,94 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
+											{isMarihorgen && (
+												<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de Muestra:</span>
+													{isEditing ? (
+														<div className="sm:w-1/2">
+															<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
+																<PopoverTrigger asChild>
+																	<Button
+																		variant="outline"
+																		className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
+																	>
+																		<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
+																		{(editedCase.fecha_muestra !== undefined
+																			? editedCase.fecha_muestra
+																			: (caseData as any).fecha_muestra)
+																			? format(
+																					new Date(
+																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																					),
+																					'PPP',
+																					{ locale: es },
+																				)
+																			: 'Seleccionar fecha'}
+																	</Button>
+																</PopoverTrigger>
+																<PopoverContent className="w-auto p-0 z-[9999]" align="end">
+																	<Calendar
+																		mode="single"
+																		selected={
+																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
+																				? new Date(
+																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																					)
+																				: undefined
+																		}
+																		onSelect={(date) => {
+																			handleInputChange('fecha_muestra', date ? format(date, 'yyyy-MM-dd') : null)
+																			setIsFechaMuestraCalendarOpen(false)
+																		}}
+																		initialFocus
+																		locale={es}
+																		defaultMonth={
+																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
+																				? new Date(
+																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																					)
+																				: new Date()
+																		}
+																	/>
+																	<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+																		<Button
+																			variant="ghost"
+																			size="sm"
+																			onClick={() => {
+																				handleInputChange('fecha_muestra', null)
+																				setIsFechaMuestraCalendarOpen(false)
+																			}}
+																		>
+																			Borrar
+																		</Button>
+																		<Button
+																			variant="ghost"
+																			size="sm"
+																			onClick={() => {
+																				handleInputChange('fecha_muestra', format(new Date(), 'yyyy-MM-dd'))
+																				setIsFechaMuestraCalendarOpen(false)
+																			}}
+																		>
+																			Hoy
+																		</Button>
+																	</div>
+																</PopoverContent>
+															</Popover>
+														</div>
+													) : (
+														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+															{(caseData as any).fecha_muestra
+																? format(
+																		new Date((caseData as any).fecha_muestra + 'T12:00:00'),
+																		'PPP',
+																		{ locale: es },
+																	)
+																: '-'}
+														</span>
+													)}
+												</div>
+											)}
+
 											{/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
 											{/* Oculto para marihorgen */}
 											{!isMarihorgen && (
@@ -2415,7 +2513,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											)}
 
 											{/* Comentarios */}
-											<div className="py-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+											<div className="py-2 pt-3">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Comentarios:</span>
 												{isEditing ? (
 													<Textarea

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { X, Plus, Image as ImageIcon, Camera, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
+import { X, Plus, Image as ImageIcon, Camera, Loader2, Images } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
 
 interface MultipleImageUrlsProps {
@@ -31,7 +32,9 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
 }) => {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadPopoverOpen, setUploadPopoverOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddImage = () => {
     if (!newImageUrl.trim()) return;
@@ -165,29 +168,66 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
           {onUploadFile && (
             <>
               <input
-                ref={fileInputRef}
+                ref={cameraInputRef}
                 type='file'
                 accept='image/*'
                 capture='environment'
                 className='hidden'
                 onChange={handleFileSelect}
-                aria-label='Subir o capturar imagen'
+                aria-label='Capturar foto con cámara'
               />
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                className='flex items-center gap-2'
-              >
-                {isUploading ? (
-                  <Loader2 className='w-4 h-4 animate-spin' />
-                ) : (
-                  <Camera className='w-4 h-4' />
-                )}
-                {isUploading ? 'Subiendo...' : 'Cámara / Galería'}
-              </Button>
+              <input
+                ref={galleryInputRef}
+                type='file'
+                accept='image/*'
+                className='hidden'
+                onChange={handleFileSelect}
+                aria-label='Elegir imagen de galería'
+              />
+              <Popover open={uploadPopoverOpen} onOpenChange={setUploadPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    disabled={isUploading}
+                    className='flex items-center gap-2'
+                  >
+                    {isUploading ? (
+                      <Loader2 className='w-4 h-4 animate-spin' />
+                    ) : (
+                      <Camera className='w-4 h-4' />
+                    )}
+                    {isUploading ? 'Subiendo...' : 'Cámara / Galería'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className='w-56 p-2' align='start'>
+                  <div className='flex flex-col gap-1'>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        cameraInputRef.current?.click();
+                        setUploadPopoverOpen(false);
+                      }}
+                      className='flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors text-left'
+                    >
+                      <Camera className='w-4 h-4 shrink-0' />
+                      Tomar foto
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        galleryInputRef.current?.click();
+                        setUploadPopoverOpen(false);
+                      }}
+                      className='flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors text-left'
+                    >
+                      <Images className='w-4 h-4 shrink-0' />
+                      Elegir de galería
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </>
           )}
           <div className='flex gap-2'>

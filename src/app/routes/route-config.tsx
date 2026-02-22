@@ -15,6 +15,8 @@ import {
   TriageAnalyticsPage,
   WaitingRoomPage,
   SampleCostsPage,
+  CallCenterFormPage,
+  CallCenterRegistrosPage,
   ErrorBoundaryTest,
   AseguradorasHomePage,
   AseguradosPage,
@@ -92,6 +94,16 @@ export const dashboardRoutes: RouteConfig[] = [
   {
     path: 'sample-costs',
     component: SampleCostsPage,
+  },
+  {
+    path: 'call-center',
+    feature: 'hasCallCenter',
+    component: CallCenterFormPage,
+  },
+  {
+    path: 'call-center-registros',
+    feature: 'hasCallCenter',
+    component: CallCenterRegistrosPage,
   },
 ];
 
@@ -335,6 +347,16 @@ export const callCenterRoutes: RouteConfig[] = [
     path: 'settings',
     component: SettingsPage,
   },
+  {
+    path: 'call-center',
+    feature: 'hasCallCenter',
+    component: CallCenterFormPage,
+  },
+  {
+    path: 'call-center-registros',
+    feature: 'hasCallCenter',
+    component: CallCenterRegistrosPage,
+  },
 ];
 
 // Configuración de rutas para prueba (GodMode - todas las features incluyendo users)
@@ -398,6 +420,16 @@ export const pruebaRoutes: RouteConfig[] = [
   {
     path: 'sample-costs',
     component: SampleCostsPage,
+  },
+  {
+    path: 'call-center',
+    feature: 'hasCallCenter',
+    component: CallCenterFormPage,
+  },
+  {
+    path: 'call-center-registros',
+    feature: 'hasCallCenter',
+    component: CallCenterRegistrosPage,
   },
 ];
 
