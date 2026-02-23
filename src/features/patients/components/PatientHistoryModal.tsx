@@ -852,7 +852,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
 					// Marcar como enviado y guardar fecha de envío en la base de datos
 					const deliveryDate = new Date().toISOString().split('T')[0]
-					await supabase.from('medical_records_clean').update({ email_sent: true, fecha_entrega: deliveryDate }).eq('id', caseItem.id)
+					await supabase
+						.from('medical_records_clean')
+						.update({ email_sent: true, fecha_entrega: deliveryDate })
+						.eq('id', caseItem.id)
 
 					// Registrar el envío en email_send_logs
 					await logEmailSend({
@@ -1462,20 +1465,16 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																			<div className="min-w-0">
 																				<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tipo de examen</p>
 																				<p className="text-sm font-medium flex items-center gap-1">
-																					{caseItem.exam_type}
+																					{caseItem.exam_type ? caseItem.exam_type : 'No especificado'}
 																				</p>
 																			</div>
 																			<div className="min-w-0">
-																				{caseItem.consulta ? (
-																					<>
-																						<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-																							Tipo de consulta
-																						</p>
-																						<p className="text-sm font-medium flex items-center gap-1">
-																							{caseItem.consulta}
-																						</p>
-																					</>
-																				) : null}
+																				<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+																					Tipo de consulta
+																				</p>
+																				<p className="text-sm font-medium flex items-center gap-1">
+																					{caseItem.consulta ? caseItem.consulta : 'No especificado'}
+																				</p>
 																			</div>
 																			<div className="min-w-0 flex flex-col justify-end">
 																				<Button

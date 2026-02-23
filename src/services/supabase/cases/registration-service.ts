@@ -398,14 +398,14 @@ const prepareRegistrationData = (
 		date: defaultValues.date || new Date().toISOString(),
 		// payment_status se define en paymentValues, no duplicar aquí
 
-		// Información del examen
-		// Si no hay exam_type pero sí consulta, usar consulta como exam_type
-		// Esto permite generar códigos para casos solo con consulta (ya mapeadas en codeMappings)
-		exam_type: formData.examType || (formData as any).consulta || null,
+		// Información del examen: exam_type y consulta son independientes.
+		// Si el usuario no selecciona tipo de examen, debe quedar null (no rellenar con consulta).
+		// El trigger en BD usa COALESCE(exam_type, consulta) solo para generar el código.
+		exam_type: (formData.examType && String(formData.examType).trim()) ? formData.examType : null,
 
 		// Campos opcionales
 		relationship: formData.relationship || null,
-		consulta: (formData as any).consulta || null, // Especialidad médica (solo para lab SPT) - usar as any temporalmente
+		consulta: (formData as any).consulta && String((formData as any).consulta).trim() ? (formData as any).consulta : null, // Especialidad médica (solo para lab SPT)
 		code: '', // Se generará automáticamente
 
 		// Información financiera (usar valores preparados - maneja labs sin módulo de pagos)
