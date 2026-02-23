@@ -54,7 +54,7 @@ propias bajo `/aseguradoras`, aislado por `laboratory_id` y visible solo para In
 - ramo (text, requerido)
 - suma_asegurada (numeric, opcional)
 - modalidad_pago (text: Mensual | Trimestral | Semestral | Anual)
-- estatus_poliza (text: Activa | En emisión | Renovación pendiente | Vencida)
+- estatus_poliza (text: Activa | Anulada | En emisión | Renovación pendiente | Vencida)
 - estatus_pago (text: Pagado | Parcial | Pendiente | En mora)
 - estatus (text: activa | por_vencer | vencida)
 - fecha_inicio (date, requerido)
