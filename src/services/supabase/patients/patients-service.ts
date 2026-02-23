@@ -623,6 +623,9 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 	}
 }
 
+/** Máximo de IDs a enviar en un solo .in() para evitar URL demasiado larga (400 Bad Request) */
+const MAX_IDS_IN_QUERY = 80
+
 /**
  * Obtener todos los pacientes con paginación - MULTI-TENANT
  * SOLO muestra pacientes del laboratorio del usuario autenticado
@@ -754,10 +757,7 @@ export const getPatients = async (
 					...new Set(casesData.map((c) => c.patient_id).filter((id): id is string => id !== null)),
 				]
 
-				if (uniquePatientIds.length > 0) {
-					query = query.in('id', uniquePatientIds)
-				} else {
-					// No hay pacientes en esa branch, retornar vacío
+				if (uniquePatientIds.length === 0) {
 					return {
 						data: [],
 						count: 0,
@@ -766,6 +766,83 @@ export const getPatients = async (
 						totalPages: 0,
 					}
 				}
+
+				// Si hay demasiados IDs, la URL del .in() puede superar el límite (400). Fetch por lotes.
+				if (uniquePatientIds.length > MAX_IDS_IN_QUERY) {
+					const chunks: string[][] = []
+					for (let i = 0; i < uniquePatientIds.length; i += MAX_IDS_IN_QUERY) {
+						chunks.push(uniquePatientIds.slice(i, i + MAX_IDS_IN_QUERY))
+					}
+					const batchResults = await Promise.all(
+						chunks.map((chunk) =>
+							supabase
+								.from('patients')
+								.select('*')
+								.eq('laboratory_id', laboratoryId)
+								.in('id', chunk),
+						),
+					)
+					const byId = new Map<string, any>()
+					for (const res of batchResults) {
+						if (res.data) for (const row of res.data) byId.set(row.id, row)
+					}
+					const allPatients = uniquePatientIds.map((id) => byId.get(id)).filter(Boolean)
+
+					const extractAgeValue = (edad: string | null | undefined): number => {
+						if (!edad || String(edad).trim() === '') return -1
+						const edadStr = String(edad).trim().toUpperCase()
+						const match = edadStr.match(/(\d+)/)
+						if (!match) return -1
+						const number = parseInt(match[1], 10)
+						if (isNaN(number)) return -1
+						if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) return number * 365
+						if (edadStr.includes('MES') || edadStr.includes('MESES')) return number * 30
+						if (
+							edadStr.includes('DÍA') ||
+							edadStr.includes('DÍAS') ||
+							edadStr.includes('DIA') ||
+							edadStr.includes('DIAS')
+						)
+							return number
+						return number * 365
+					}
+
+					const cmp = (a: any, b: any): number => {
+						if (sortField === 'edad') {
+							const aV = extractAgeValue(a.edad)
+							const bV = extractAgeValue(b.edad)
+							if (aV === -1 && bV === -1) return 0
+							if (aV === -1) return 1
+							if (bV === -1) return -1
+							return sortDirection === 'asc' ? aV - bV : bV - aV
+						}
+						const aVal = a[sortField]
+						const bVal = b[sortField]
+						if (aVal == null && bVal == null) return 0
+						if (aVal == null) return 1
+						if (bVal == null) return -1
+						if (typeof aVal === 'string' && typeof bVal === 'string') {
+							return sortDirection === 'asc'
+								? aVal.localeCompare(bVal)
+								: bVal.localeCompare(aVal)
+						}
+						const order = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+						return sortDirection === 'asc' ? order : -order
+					}
+					allPatients.sort(cmp)
+					const from = (page - 1) * limit
+					const to = from + limit
+					const pageData = allPatients.slice(from, to).map((p: any) => normalizePatientCedula(p))
+					return {
+						data: pageData,
+						count: allPatients.length,
+						page,
+						limit,
+						totalPages: Math.ceil(allPatients.length / limit),
+					}
+				}
+
+				query = query.in('id', uniquePatientIds)
 			}
 		}
 
