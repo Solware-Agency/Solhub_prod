@@ -64,7 +64,7 @@ const PolizasPage = () => {
 		ramo: '',
 		suma_asegurada: '',
 		modalidad_pago: 'Mensual' as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
-		estatus_poliza: 'Activa' as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+		estatus_poliza: 'Activa' as 'Activa' | 'Anulada',
 		estatus_pago: 'Pendiente' as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
 		fecha_inicio: '',
 		fecha_vencimiento: '',
@@ -213,7 +213,7 @@ const PolizasPage = () => {
 			ramo: poliza.ramo ?? '',
 			suma_asegurada: poliza.suma_asegurada != null ? String(poliza.suma_asegurada) : '',
 			modalidad_pago: poliza.modalidad_pago,
-			estatus_poliza: poliza.estatus_poliza,
+			estatus_poliza: (poliza.estatus_poliza === 'Anulada' ? 'Anulada' : 'Activa') as 'Activa' | 'Anulada',
 			estatus_pago: (poliza.estatus_pago ?? 'Pendiente') as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
 			fecha_inicio: poliza.fecha_inicio?.slice(0, 10) ?? '',
 			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
@@ -444,7 +444,7 @@ const PolizasPage = () => {
 								onValueChange={(value) =>
 									setForm((prev) => ({
 										...prev,
-										estatus_poliza: value as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+										estatus_poliza: value as 'Activa' | 'Anulada',
 									}))
 								}
 							>
@@ -453,9 +453,7 @@ const PolizasPage = () => {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="Activa">Activa</SelectItem>
-									<SelectItem value="En emisión">En emisión</SelectItem>
-									<SelectItem value="Renovación pendiente">Renovación pendiente</SelectItem>
-									<SelectItem value="Vencida">Vencida</SelectItem>
+									<SelectItem value="Anulada">Anulada</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -474,10 +472,8 @@ const PolizasPage = () => {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="Pagado">Pagado</SelectItem>
-									<SelectItem value="Parcial">Parcial</SelectItem>
 									<SelectItem value="Pendiente">Pendiente</SelectItem>
-									<SelectItem value="En mora">En mora</SelectItem>
+									<SelectItem value="Pagado">Pagado</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -822,16 +818,17 @@ const PolizasPage = () => {
 					<DialogHeader className="shrink-0">
 						<DialogTitle className="text-base sm:text-lg">{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
 					</DialogHeader>
-					<div className="flex md:hidden items-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 overflow-x-auto pb-1">
+					<div className="flex md:hidden items-center justify-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 pb-1">
 						{STEPS.map((label, idx) => (
 							<span
 								key={label}
 								className={cn(
-									'shrink-0 px-2 py-1 rounded-md',
+									'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
 									idx === step ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground',
 								)}
+								title={label}
 							>
-								{idx + 1}. {label}
+								{idx + 1}
 							</span>
 						))}
 					</div>
@@ -846,19 +843,19 @@ const PolizasPage = () => {
 					<div className="overflow-y-auto min-h-0 py-1 flex-1">
 						{stepContent()}
 					</div>
-					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex-col-reverse sm:flex-row flex-wrap justify-end gap-2">
+					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-wrap justify-end gap-2">
 						{step > 0 && (
-							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} className="w-full sm:w-auto order-3 sm:order-none">
+							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} size="sm" className="shrink-0">
 								Anterior
 							</Button>
 						)}
-						<Button variant="outline" onClick={() => setOpenModal(false)} className="w-full sm:w-auto">
+						<Button variant="outline" onClick={() => setOpenModal(false)} size="sm" className="shrink-0">
 							Cancelar
 						</Button>
 						{step < STEPS.length - 1 ? (
-							<Button onClick={() => setStep((prev) => prev + 1)} className="w-full sm:w-auto">Siguiente</Button>
+							<Button onClick={() => setStep((prev) => prev + 1)} size="sm" className="shrink-0">Siguiente</Button>
 						) : (
-							<Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+							<Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
 								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
 							</Button>
 						)}

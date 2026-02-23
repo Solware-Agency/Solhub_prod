@@ -88,7 +88,6 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 			isOpen={isOpen}
 			onClose={onClose}
 			title={poliza.numero_poliza}
-			subtitle={`${poliza.asegurado?.full_name || 'Asegurado'} · ${poliza.aseguradora?.nombre || 'Aseguradora'}`}
 		>
 			<div className="space-y-4">
 				<div className="flex flex-wrap items-center gap-2">
