@@ -959,7 +959,7 @@ const MainUsers: React.FC = () => {
 
 											return (
 												<li key={roleValue}>
-													<strong>{role.label}{roleValue !== 'call_center' ? 's' : ''}:</strong> {instruction}
+													<strong>{roleValue === 'coordinador' ? 'Coordinadores' : role.label + (roleValue !== 'call_center' ? 's' : '')}:</strong> {instruction}
 												</li>
 											)
 										})}

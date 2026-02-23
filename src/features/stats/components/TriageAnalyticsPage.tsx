@@ -114,7 +114,6 @@ export const TriageAnalyticsPage: React.FC = () => {
 				</CardHeader>
 				<CardContent>
 					<div className='text-3xl font-bold'>{stats.totalTriages}</div>
-					<p className='text-xs text-muted-foreground mt-1'>en los últimos {days} días</p>
 				</CardContent>
 			</Card>
 
