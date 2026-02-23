@@ -641,18 +641,12 @@ export const getPatients = async (
 		// Si hay término de búsqueda, usar función optimizada primero
 		if (searchTerm && searchTerm.trim().length >= 2) {
 			try {
-				// Usar búsqueda optimizada con pg_trgm
-				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 1000) // Límite alto para obtener todos los relevantes
+				// Usar búsqueda optimizada con pg_trgm (límite razonable para no sobrecargar)
+				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 500)
 
 				if (optimizedResults && optimizedResults.length > 0) {
-					// IDs en orden de relevancia (exactos, luego primer nombre = término, ts_rank, nombre)
+					// IDs en orden de relevancia
 					let orderedIds = optimizedResults.map((p) => p.id)
-
-					let query = supabase
-						.from('patients')
-						.select('*', { count: 'exact' })
-						.eq('laboratory_id', laboratoryId)
-						.in('id', orderedIds)
 
 					// Aplicar filtro de branch si existe
 					if (branchFilter && branchFilter !== 'all') {
@@ -668,19 +662,7 @@ export const getPatients = async (
 							const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
 
 							if (uniquePatientIds.length > 0) {
-								const filteredIds = orderedIds.filter((id) => uniquePatientIds.includes(id))
-								if (filteredIds.length > 0) {
-									query = query.in('id', filteredIds)
-									orderedIds = filteredIds
-								} else {
-									return {
-										data: [],
-										count: 0,
-										page,
-										limit,
-										totalPages: 0,
-									}
-								}
+								orderedIds = orderedIds.filter((id) => uniquePatientIds.includes(id))
 							} else {
 								return {
 									data: [],
@@ -693,26 +675,51 @@ export const getPatients = async (
 						}
 					}
 
-					// Con búsqueda: respetar orden por relevancia (no reordenar por sortField)
-					const { data: allData, error, count } = await query.range(0, orderedIds.length - 1)
+					if (orderedIds.length === 0) {
+						return {
+							data: [],
+							count: 0,
+							page,
+							limit,
+							totalPages: 0,
+						}
+					}
+
+					// Solo pedir los IDs de la página actual para evitar URL demasiado larga (400 Bad Request)
+					const from = (page - 1) * limit
+					const pageIds = orderedIds.slice(from, from + limit)
+
+					if (pageIds.length === 0) {
+						return {
+							data: [],
+							count: orderedIds.length,
+							page,
+							limit,
+							totalPages: Math.ceil(orderedIds.length / limit),
+						}
+					}
+
+					const { data: pageData, error } = await supabase
+						.from('patients')
+						.select('*')
+						.eq('laboratory_id', laboratoryId)
+						.in('id', pageIds)
 
 					if (error) {
 						throw error
 					}
 
-					const byRelevanceOrder = (allData || []).sort(
-						(a: any, b: any) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id),
+					// Ordenar por relevancia (orden en pageIds)
+					const byRelevanceOrder = (pageData || []).sort(
+						(a: any, b: any) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id),
 					)
-					const from = (page - 1) * limit
-					const to = from + limit
-					const paginatedData = byRelevanceOrder.slice(from, to)
 
 					return {
-						data: paginatedData.map((p: any) => normalizePatientCedula(p)),
-						count: count ?? byRelevanceOrder.length,
+						data: byRelevanceOrder.map((p: any) => normalizePatientCedula(p)),
+						count: orderedIds.length,
 						page,
 						limit,
-						totalPages: Math.ceil((count ?? byRelevanceOrder.length) / limit),
+						totalPages: Math.ceil(orderedIds.length / limit),
 					}
 				}
 			} catch (optimizedError) {

@@ -987,7 +987,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<>
+				<React.Fragment key="patient-history-modal">
 					{/* Backdrop */}
 					{!isEditing && (
 						<motion.div
@@ -1858,12 +1858,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 						}}
 						onCaseSelect={() => {}} // No necesario en este contexto
 					/>
-				</>
+				</React.Fragment>
 			)}
 
 			{/* Send Email Modal */}
 			{patient && (
 				<SendEmailModal
+					key="send-email-modal"
 					isOpen={isSendEmailModalOpen}
 					onClose={() => {
 						setIsSendEmailModalOpen(false)
@@ -1880,7 +1881,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 			)}
 
 			{/* Diálogo confirmar eliminar representado */}
-			<AlertDialog open={!!representadoToDelete} onOpenChange={(open) => !open && setRepresentadoToDelete(null)}>
+			<AlertDialog
+				key="alert-delete-representado"
+				open={!!representadoToDelete}
+				onOpenChange={(open) => !open && setRepresentadoToDelete(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>¿Eliminar representado?</AlertDialogTitle>
