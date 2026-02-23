@@ -540,9 +540,11 @@ const ChangelogTable: React.FC = () => {
 								<Button variant="outline" className="flex items-center gap-2">
 									<Calendar className="w-4 h-4 text-gray-400" />
 									{dateRange?.from && dateRange?.to
-										? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', {
-												locale: es,
-										  })}`
+										? dateRange.from.toDateString() === dateRange.to.toDateString()
+											? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+											: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', {
+													locale: es,
+											  })}`
 										: dateRange?.from
 										? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
 										: 'Filtrar por rango de fechas'}
