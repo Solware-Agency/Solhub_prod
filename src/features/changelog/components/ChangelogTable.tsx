@@ -205,10 +205,10 @@ const ChangelogTable: React.FC = () => {
 	const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
-	// Resetear página cuando cambian los filtros de fecha
+	// Resetear página cuando cambian los filtros de fecha o la búsqueda
 	React.useEffect(() => {
 		setPage(0)
-	}, [dateRange])
+	}, [dateRange, searchTerm])
 
 	// Check if user is owner (only owners can delete logs)
 
@@ -219,9 +219,9 @@ const ChangelogTable: React.FC = () => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ['change-logs', page, rowsPerPage, dateRange],
+		queryKey: ['change-logs', page, rowsPerPage, dateRange, searchTerm.trim()],
 		queryFn: () => {
-			const filters: { dateFrom?: string; dateTo?: string } = {};
+			const filters: { dateFrom?: string; dateTo?: string; search?: string } = {};
 			
 			// Convertir dateRange a formato YYYY-MM-DD para el filtro del servidor
 			if (dateRange?.from) {
@@ -237,31 +237,22 @@ const ChangelogTable: React.FC = () => {
 				const day = String(dateRange.to.getDate()).padStart(2, '0');
 				filters.dateTo = `${year}-${month}-${day}`;
 			}
+
+			// Búsqueda en servidor para que filtre en todos los resultados, no solo en la página actual
+			if (searchTerm.trim()) {
+				filters.search = searchTerm.trim();
+			}
 			
 			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters);
 		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
 
-	// Filter logs based on search term and action type
-	// NOTA: El filtro de fecha ahora se aplica en el servidor antes de la paginación
+	// Filtro por tipo de acción (búsqueda y fecha ya se aplican en el servidor)
 	const filteredLogs = React.useMemo(() => {
 		if (!logsData?.data) return []
 
 		return logsData.data.filter((log: ChangeLogData) => {
-			// Search filter - updated for new structure
-			const matchesSearch =
-				(log.user_display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				log.field_label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.medical_records_clean?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.patients?.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.patients?.cedula || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.deleted_record_info || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.old_value || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.new_value || '').toLowerCase().includes(searchTerm.toLowerCase())
-
-			// Action type filter
 			let matchesAction = true
 			if (actionFilter === 'created') {
 				matchesAction = log.field_name === 'created_record'
@@ -270,11 +261,9 @@ const ChangelogTable: React.FC = () => {
 			} else if (actionFilter === 'edited') {
 				matchesAction = log.field_name !== 'created_record' && log.field_name !== 'deleted_record'
 			}
-
-			// El filtro de fecha ya se aplicó en el servidor, no es necesario filtrar aquí
-			return matchesSearch && matchesAction
+			return matchesAction
 		})
-	}, [logsData?.data, searchTerm, actionFilter])
+	}, [logsData?.data, actionFilter])
 
 	// Agrupar logs por change_session_id (fallback inteligente para data vieja)
 	const groupedLogs = React.useMemo(() => {

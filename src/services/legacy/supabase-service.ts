@@ -560,6 +560,28 @@ export const getChangeLogsForRecord = async (medicalRecordId: string) => {
   }
 };
 
+// Helper: filtrar logs por término de búsqueda (misma lógica que la UI)
+function filterChangeLogsBySearch(logs: ChangeLogJoined[], search: string): ChangeLogJoined[] {
+  const term = search.trim().toLowerCase();
+  if (!term) return logs;
+  return logs.filter((log) => {
+    const code = (log.medical_records_clean as { code?: string } | null)?.code ?? '';
+    const nombre = (log.patients as { nombre?: string } | null)?.nombre ?? '';
+    const cedula = (log.patients as { cedula?: string } | null)?.cedula ?? '';
+    return (
+      (log.user_display_name ?? '').toLowerCase().includes(term) ||
+      (log.user_email ?? '').toLowerCase().includes(term) ||
+      (log.field_label ?? '').toLowerCase().includes(term) ||
+      code.toLowerCase().includes(term) ||
+      nombre.toLowerCase().includes(term) ||
+      cedula.toLowerCase().includes(term) ||
+      (log.deleted_record_info ?? '').toLowerCase().includes(term) ||
+      (log.old_value ?? '').toLowerCase().includes(term) ||
+      (log.new_value ?? '').toLowerCase().includes(term)
+    );
+  });
+}
+
 // Function to get all change logs with pagination
 export const getAllChangeLogs = async (
   limit = 50,
@@ -567,6 +589,7 @@ export const getAllChangeLogs = async (
   filters?: {
     dateFrom?: string; // Formato YYYY-MM-DD
     dateTo?: string; // Formato YYYY-MM-DD
+    search?: string; // Búsqueda por nombre, email, caso, etc. (filtra antes de paginar)
   },
 ) => {
   try {
@@ -650,8 +673,14 @@ export const getAllChangeLogs = async (
       console.error('Error counting change logs:', changeLogsCountError);
     }
 
-    // Si hay filtros de fecha, necesitamos obtener más datos para poder paginar correctamente
-    const fetchLimit = filters?.dateFrom || filters?.dateTo ? limit * 20 : limit * 2;
+    // Si hay búsqueda por texto, traer muchos más registros para filtrar; si hay fecha, también ampliar
+    const hasSearch = Boolean(filters?.search?.trim());
+    const fetchLimit =
+      hasSearch
+        ? 5000
+        : filters?.dateFrom || filters?.dateTo
+          ? limit * 20
+          : limit * 2;
 
     // 🔐 MULTI-TENANT: Filtrar change logs por laboratory_id
     const { data: changeLogs, error: changeLogsError } = await changeLogsQuery
@@ -821,11 +850,16 @@ export const getAllChangeLogs = async (
       (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
     );
 
-    // Calcular el total real sumando los conteos de ambas tablas
-    const totalCount = (changeLogsCount || 0) + (emailLogsCount || 0);
+    // Si hay búsqueda por texto, filtrar sobre todos los logs y usar ese total para paginación
+    const logsToPaginate = hasSearch
+      ? filterChangeLogsBySearch(allLogs, filters!.search!)
+      : allLogs;
+    const totalCount = hasSearch
+      ? logsToPaginate.length
+      : (changeLogsCount || 0) + (emailLogsCount || 0);
 
-    // Aplicar paginación después de combinar
-    const paginatedData = allLogs.slice(offset, offset + limit);
+    // Aplicar paginación después de combinar (o después de filtrar por búsqueda)
+    const paginatedData = logsToPaginate.slice(offset, offset + limit);
 
     return { 
       data: paginatedData, 
