@@ -149,7 +149,7 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 		<div>
 			{/* Title Section */}
 			<div className="mb-4 sm:mb-6">
-				<h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Casos de Laboratorio</h2>
+				<h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Casos Médicos</h2>
 				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 			</div>
 

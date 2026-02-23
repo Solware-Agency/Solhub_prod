@@ -65,10 +65,11 @@ const CallCenterRegistrosPage: React.FC = () => {
     loadRegistros()
   }, [loadRegistros])
 
-  const registrosToExport = registros.filter((r) => {
+  const registrosFiltrados = registros.filter((r) => {
     const d = new Date(r.created_at)
     return d >= dateRange.start && d <= dateRange.end
   })
+  const registrosToExport = registrosFiltrados
 
   if (!laboratory?.id) {
     return (
@@ -85,23 +86,23 @@ const CallCenterRegistrosPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Registros Call Center</h1>
           <div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
         </div>
-        <DateRangeSelector
-          value={dateRange}
-          onChange={setDateRange}
-          className="w-full sm:w-auto"
-          compact
-        >
+        <div className="flex flex-wrap items-start gap-2">
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            className="w-full sm:w-auto"
+          />
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => downloadExcel(registrosToExport)}
             disabled={registrosToExport.length === 0}
             title="Descargar Excel"
-            className="px-3 py-2"
+            className="shrink-0 rounded-lg border border-input px-3 py-2 min-h-[2.5rem] min-w-[2.5rem] h-[2.5rem] w-[2.5rem] p-0 flex items-center justify-center"
           >
             <Download className="h-4 w-4" />
           </Button>
-        </DateRangeSelector>
+        </div>
       </div>
 
       <Card>
@@ -113,8 +114,10 @@ const CallCenterRegistrosPage: React.FC = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : registros.length === 0 ? (
-            <p className="text-center text-muted-foreground py-12">No hay registros</p>
+          ) : registrosFiltrados.length === 0 ? (
+            <p className="text-center text-muted-foreground py-12">
+              {registros.length === 0 ? 'No hay registros' : 'No hay registros en el período seleccionado'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -131,7 +134,7 @@ const CallCenterRegistrosPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {registros.map((r) => (
+                  {registrosFiltrados.map((r) => (
                     <tr key={r.id} className="border-b hover:bg-muted/50">
                       <td className="py-2 px-2 whitespace-nowrap">
                         {format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es })}

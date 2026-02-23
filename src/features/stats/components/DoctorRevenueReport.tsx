@@ -17,9 +17,13 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
 	const totalVal = isSpt ? (stats?.totalCases || 0) : (stats?.totalRevenue || 0)
+	// SPT: top 5 por casos; no-SPT: top 5 por ingresos (topTreatingDoctors)
+	const cardDoctors = isSpt && stats?.allTreatingDoctors?.length
+		? [...(stats.allTreatingDoctors)].sort((a, b) => b.cases - a.cases).slice(0, 5)
+		: (stats?.topTreatingDoctors ?? [])
 	const maxVal = (key: 'revenue' | 'cases') =>
-		stats?.topTreatingDoctors?.length
-			? Math.max(...stats.topTreatingDoctors.map((d) => (key === 'cases' ? d.cases : d.revenue)))
+		cardDoctors?.length
+			? Math.max(...cardDoctors.map((d) => (key === 'cases' ? d.cases : d.revenue)))
 			: 0
 
 	// formatCurrency is now imported from number-utils
@@ -58,7 +62,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 						<div className="flex items-center justify-center h-full">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
 						</div>
-					) : stats?.topTreatingDoctors && stats.topTreatingDoctors.length > 0 ? (
+					) : cardDoctors && cardDoctors.length > 0 ? (
 						isDesktop ? (
 							<div className="flex-1">
 								<table className="w-full">
@@ -81,7 +85,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 										</tr>
 									</thead>
 									<tbody>
-										{stats.topTreatingDoctors.map((doctor, index) => (
+										{cardDoctors.map((doctor, index) => (
 											<tr
 												key={index}
 												className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -126,7 +130,7 @@ const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, en
 						) : (
 							// Mobile card view
 							<div className="space-y-3">
-								{stats.topTreatingDoctors.map((doctor, index) => (
+								{cardDoctors.map((doctor, index) => (
 									<div
 										key={index}
 										className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow"

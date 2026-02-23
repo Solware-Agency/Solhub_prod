@@ -529,7 +529,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <NavItem
                     to='/dashboard/cases'
                     icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                    label='Casos'
+                    label='Casos Médicos'
                     showFullContent={showFullContent}
                     onClick={onClose}
                   />
@@ -651,7 +651,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/dashboard/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -719,7 +719,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/employee/records'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -776,7 +776,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/medic/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -822,7 +822,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/cito/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -854,7 +854,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/patolo/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -897,7 +897,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/imagenologia/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -949,7 +949,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/laboratorio/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -990,7 +990,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/medico-tratante/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -1031,7 +1031,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/enfermero/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -1072,7 +1072,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/call-center/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                  label='Casos'
+                  label='Casos Médicos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -1152,7 +1152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <NavItem
                     to='/prueba/cases'
                     icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
-                    label='Casos'
+                    label='Casos Médicos'
                     showFullContent={showFullContent}
                     onClick={onClose}
                   />

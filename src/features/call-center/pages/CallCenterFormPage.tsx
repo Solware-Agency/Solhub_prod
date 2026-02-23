@@ -30,12 +30,14 @@ const SEDE_OPCIONES = [
   'Cafetal',
   'Paseo El Hatillo',
   'Santa Fe',
-  'Las Minas',
   'NA',
 ]
 
 const inputStyles =
   'h-10 rounded-md border border-input bg-background px-3 py-2 text-sm transition-transform duration-300 focus:border-primary focus:ring-primary hover:border-primary/50'
+
+/** Deja solo dígitos (0-9) en campos de número/teléfono */
+const onlyNumbers = (value: string) => value.replace(/\D/g, '')
 
 const CallCenterFormPage: React.FC = () => {
   const { laboratory } = useLaboratory()
@@ -139,9 +141,11 @@ const CallCenterFormPage: React.FC = () => {
               <Input
                 id="tel1"
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={telefono1}
-                onChange={(e) => setTelefono1(e.target.value)}
-                placeholder="0412-1234567"
+                onChange={(e) => setTelefono1(onlyNumbers(e.target.value))}
+                placeholder="04121234567"
                 className={inputStyles}
               />
             </div>
@@ -150,9 +154,11 @@ const CallCenterFormPage: React.FC = () => {
               <Input
                 id="tel2"
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={telefono2}
-                onChange={(e) => setTelefono2(e.target.value)}
-                placeholder="0412-1234567"
+                onChange={(e) => setTelefono2(onlyNumbers(e.target.value))}
+                placeholder="04121234567"
                 className={inputStyles}
               />
             </div>

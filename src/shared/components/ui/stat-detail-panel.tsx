@@ -1185,16 +1185,15 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{stats.topTreatingDoctors &&
-											[...(stats.topTreatingDoctors || [])]
+										{(stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []) &&
+											[...(stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? [])]
 												.sort((a: any, b: any) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
 												.map((doctor: any, index: number) => {
 													const totalVal = isSpt ? (stats.totalCases || 0) : (stats.totalRevenue || stats.monthlyRevenue || 0)
 													const doctorVal = isSpt ? doctor.cases : doctor.revenue
 													const percentageOfTotal = totalVal > 0 ? (doctorVal / totalVal) * 100 : 0
-													const maxVal = Math.max(
-														...stats.topTreatingDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))
-													)
+													const allDoctors = stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []
+													const maxVal = allDoctors.length ? Math.max(...allDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))) : 0
 													const barPercentage = maxVal > 0 ? (doctorVal / maxVal) * 100 : 0
 
 													return (
@@ -1204,11 +1203,11 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 														>
 															<td className="py-2 px-2">
 																<div className="flex items-center gap-2">
-																	<div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-																		<Stethoscope className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-																	</div>
+																	<span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 text-xs font-semibold rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+																		{index + 1}
+																	</span>
 																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-																		{index + 1}. {doctor.doctor}
+																		{doctor.doctor}
 																	</span>
 																</div>
 															</td>
@@ -1251,13 +1250,13 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Médicos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{stats.topTreatingDoctors?.length || 0}
+										{(stats.allTreatingDoctors ?? stats.topTreatingDoctors)?.length || 0}
 									</p>
 								</div>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
 									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.cases, 0) || 0}
+										{(stats.allTreatingDoctors ?? stats.topTreatingDoctors)?.reduce((sum: number, d: any) => sum + d.cases, 0) || 0}
 									</p>
 								</div>
 								{!isSpt && (
@@ -1265,7 +1264,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
 										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 											{formatCurrency(
-												stats.topTreatingDoctors?.reduce((sum: number, d: any) => sum + d.revenue, 0) || 0
+												(stats.allTreatingDoctors ?? stats.topTreatingDoctors)?.reduce((sum: number, d: any) => sum + d.revenue, 0) || 0
 											)}
 										</p>
 									</div>

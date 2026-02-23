@@ -76,6 +76,8 @@ export interface DashboardStats {
 	salesTrendByMonth: Array<{ month: string; revenue: number; isSelected?: boolean; monthIndex: number }>
 	topExamTypes: Array<{ examType: string; count: number; revenue: number }>
 	topTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
+	/** Lista completa de médicos (para modal); ordenada por revenue en el hook. En UI SPT se ordena por cases. */
+	allTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
 	totalCases: number
 	totalCasesWithPathologist?: number
@@ -620,14 +622,14 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					}
 				})
 
-				const topTreatingDoctors = Array.from(doctorStats.entries())
+				const allTreatingDoctors = Array.from(doctorStats.entries())
 					.map(([doctor, stats]) => ({
 						doctor,
 						cases: stats.cases,
 						revenue: stats.revenue,
 					}))
-					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
-					.slice(0, 5) // Top 5 doctors
+					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue (UI puede reordenar por cases para SPT)
+				const topTreatingDoctors = allTreatingDoctors.slice(0, 5) // Top 5 para card (no-SPT por revenue; SPT usa allTreatingDoctors ordenado por cases en UI)
 
 				// Calculate revenue by origin (procedencia) - Use transformedFilteredRecords
 				const originStats = new Map<string, { cases: number; revenue: number }>()
@@ -665,6 +667,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					salesTrendByMonth,
 					topExamTypes,
 					topTreatingDoctors,
+					allTreatingDoctors,
 					revenueByOrigin,
 					totalCases,
 					totalBlocks,

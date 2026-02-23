@@ -115,13 +115,8 @@ const StatsPage: React.FC = () => {
 					<StatCard
 						title={isSpt ? 'Casos del Período' : 'Ingresos del Período'}
 						value={isSpt ? `${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}` : `${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
-						description={isSpt ? `Total histórico: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)} pacientes` : `Total histórico: ${isLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}`}
+						description={undefined}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
-						trend={{
-							value: isLoading ? '...' : (isSpt ? `${stats?.casesGrowthPercentage != null && stats.casesGrowthPercentage >= 0 ? '+' : ''}${(stats?.casesGrowthPercentage ?? 0).toFixed(1)}%` : '+13%'),
-							icon: <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-							positive: true,
-						}}
 						onClick={() => handleStatCardClick(isSpt ? 'totalCases' : 'totalRevenue')}
 						statType={isSpt ? 'totalCases' : 'totalRevenue'}
 						isSelected={(isSpt ? selectedStat === 'totalCases' : selectedStat === 'totalRevenue') && isDetailPanelOpen}
@@ -131,13 +126,8 @@ const StatsPage: React.FC = () => {
 					<StatCard
 						title="Pacientes Nuevos del Período"
 						value={`${isLoading ? '...' : formatNumber(stats?.newPatientsThisMonth || 0)}`}
-						description={`Total histórico: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)}`}
+						description={`Total histórico: ${isLoading ? '...' : formatNumber(stats?.uniquePatients || 0)} pacientes`}
 						icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
-						trend={{
-							value: isLoading ? '...' : '+8%',
-							icon: <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-							positive: true,
-						}}
 						onClick={() => handleStatCardClick('uniquePatients')}
 						statType="uniquePatients"
 						isSelected={selectedStat === 'uniquePatients' && isDetailPanelOpen}
@@ -237,9 +227,9 @@ const StatsPage: React.FC = () => {
 						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
 						onClick={() => handleChartClick('revenueTrend')}
 					>
-						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4 md:p-6">
-							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 md:mb-6">
-								<h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0">
+						<div className="bg-white dark:bg-background rounded-xl p-3 sm:p-4">
+							<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3">
+								<h3 className="text-base sm:text-lg font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-0">
 									{isSpt ? 'Tendencia de Casos' : 'Tendencia de Ingresos'}
 								</h3>
 								<div className="flex items-center gap-2 sm:gap-4">
@@ -263,7 +253,7 @@ const StatsPage: React.FC = () => {
 									</Tooltip>
 								</div>
 							</div>
-							<div className="relative h-36 sm:h-48 md:h-64 flex items-end justify-between gap-0.5 sm:gap-1 md:gap-2">
+							<div className="relative h-24 sm:h-32 md:h-40 flex items-end justify-between gap-0.5 sm:gap-1 md:gap-2">
 								{isLoading ? (
 									<div className="flex items-center justify-center w-full h-full">
 										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -289,7 +279,7 @@ const StatsPage: React.FC = () => {
 									})
 								)}
 							</div>
-							<div className="flex justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-2 sm:mt-4">
+							<div className="flex justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1.5 sm:mt-2">
 								{/* FIXED: Force Spanish month labels regardless of system language */}
 								{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((month) => (
 									<span key={month} className="flex-shrink-0">

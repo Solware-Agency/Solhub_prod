@@ -12,7 +12,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AlertCircle, ArrowUpDown, Calendar, Edit, Eye, FileText, Filter, History, Mail, MailX, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Edit, Eye, FileText, Filter, History, Mail, MailX, RefreshCw, Trash2 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
@@ -922,38 +922,22 @@ const ChangelogTable: React.FC = () => {
 
 				{/* Pagination */}
 				{!isLoading && groupedLogs.length > 0 && (
-					<div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-						<div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
-							<div className="w-32">
-								<CustomDropdown
-									value={rowsPerPage.toString()}
-									onChange={(value) => {
-										setRowsPerPage(parseInt(value))
-										setPage(0)
-									}}
-									placeholder="Filas por página"
-									options={[
-										{ value: '10', label: '10 por página' },
-										{ value: '20', label: '20 por página' },
-										{ value: '50', label: '50 por página' },
-										{ value: '100', label: '100 por página' },
-									]}
-								/>
-							</div>
-							<Button variant="outline" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
-								Anterior
-							</Button>
-							<span className="text-sm">
-								Página {page + 1} de {logsData?.totalCount ? Math.ceil(logsData.totalCount / rowsPerPage) : 1}
-							</span>
-							<Button 
-								variant="outline" 
-								onClick={() => setPage(page + 1)} 
-								disabled={!logsData?.data || logsData.data.length < rowsPerPage || (logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)}
-							>
-								Siguiente
-							</Button>
-						</div>
+					<div className="flex items-center justify-start gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+						<Button variant="outline" size="icon" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} aria-label="Página anterior">
+							<ChevronLeft className="h-4 w-4" />
+						</Button>
+						<span className="text-sm font-medium min-w-[4rem] text-center">
+							{page + 1}/{logsData?.totalCount ? Math.ceil(logsData.totalCount / rowsPerPage) : 1}
+						</span>
+						<Button 
+							variant="outline" 
+							size="icon" 
+							onClick={() => setPage(page + 1)} 
+							disabled={!logsData?.data || logsData.data.length < rowsPerPage || (logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)}
+							aria-label="Página siguiente"
+						>
+							<ChevronRight className="h-4 w-4" />
+						</Button>
 					</div>
 				)}
 			</Card>
