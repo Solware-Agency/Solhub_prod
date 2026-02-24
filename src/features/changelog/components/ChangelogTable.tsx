@@ -12,7 +12,22 @@ import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AlertCircle, ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Edit, Eye, FileText, Filter, History, Mail, MailX, RefreshCw, Trash2 } from 'lucide-react'
+import {
+	AlertCircle,
+	ArrowUpDown,
+	Calendar,
+	ChevronLeft,
+	ChevronRight,
+	Edit,
+	Eye,
+	FileText,
+	Filter,
+	History,
+	Mail,
+	MailX,
+	RefreshCw,
+	Trash2,
+} from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
@@ -72,7 +87,7 @@ const ChangelogTable: React.FC = () => {
 			return { text, isDeletedCase: false }
 		}
 
-		let raw = log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'
+		const raw = log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'
 		// Evitar truncamiento: si deleted_record_info es "CODE - Nombre tipo", mostrar solo el código
 		const displayText = raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw
 		const isDeletedCase = raw === 'Caso eliminado'
@@ -98,18 +113,18 @@ const ChangelogTable: React.FC = () => {
 					return
 				}
 
-				const { data: profile } = await supabase
+				const { data: profile } = (await supabase
 					.from('profiles')
 					.select('laboratory_id')
 					.eq('id', user.id)
-				.single() as { data: { laboratory_id?: string } | null; error: any | null }
+					.single()) as { data: { laboratory_id?: string } | null; error: any | null }
 
-			if (!profile?.laboratory_id) {
-				console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
-				return
-			}
+				if (!profile?.laboratory_id) {
+					console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
+					return
+				}
 
-			console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
+				console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
 
 				channel = supabase
 					.channel('realtime-changelog', {
@@ -198,7 +213,7 @@ const ChangelogTable: React.FC = () => {
 	const [tempRange, setTempRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
-	const [rowsPerPage, setRowsPerPage] = useState(20)
+	const [rowsPerPage] = useState(20)
 	const [isDeleting, setIsDeleting] = useState<string | null>(null)
 	const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
 	const [logToDelete, setLogToDelete] = useState<string | null>(null)
@@ -221,29 +236,29 @@ const ChangelogTable: React.FC = () => {
 	} = useQuery({
 		queryKey: ['change-logs', page, rowsPerPage, dateRange, searchTerm.trim()],
 		queryFn: () => {
-			const filters: { dateFrom?: string; dateTo?: string; search?: string } = {};
-			
+			const filters: { dateFrom?: string; dateTo?: string; search?: string } = {}
+
 			// Convertir dateRange a formato YYYY-MM-DD para el filtro del servidor
 			if (dateRange?.from) {
-				const year = dateRange.from.getFullYear();
-				const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
-				const day = String(dateRange.from.getDate()).padStart(2, '0');
-				filters.dateFrom = `${year}-${month}-${day}`;
+				const year = dateRange.from.getFullYear()
+				const month = String(dateRange.from.getMonth() + 1).padStart(2, '0')
+				const day = String(dateRange.from.getDate()).padStart(2, '0')
+				filters.dateFrom = `${year}-${month}-${day}`
 			}
-			
+
 			if (dateRange?.to) {
-				const year = dateRange.to.getFullYear();
-				const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
-				const day = String(dateRange.to.getDate()).padStart(2, '0');
-				filters.dateTo = `${year}-${month}-${day}`;
+				const year = dateRange.to.getFullYear()
+				const month = String(dateRange.to.getMonth() + 1).padStart(2, '0')
+				const day = String(dateRange.to.getDate()).padStart(2, '0')
+				filters.dateTo = `${year}-${month}-${day}`
 			}
 
 			// Búsqueda en servidor para que filtre en todos los resultados, no solo en la página actual
 			if (searchTerm.trim()) {
-				filters.search = searchTerm.trim();
+				filters.search = searchTerm.trim()
 			}
-			
-			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters);
+
+			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters)
 		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
@@ -284,10 +299,8 @@ const ChangelogTable: React.FC = () => {
 				const entityId = log.patient_id || log.medical_record_id || 'unknown'
 				const changedAtDate = new Date(log.changed_at)
 				// Redondear a segundo para agrupar cambios en la misma ventana de tiempo (±1 segundo)
-				const roundedTime = new Date(
-					Math.floor(changedAtDate.getTime() / 1000) * 1000
-				).toISOString()
-				
+				const roundedTime = new Date(Math.floor(changedAtDate.getTime() / 1000) * 1000).toISOString()
+
 				sessionId = `${log.user_id}-${log.entity_type}-${entityId}-${roundedTime}`
 			}
 
@@ -307,7 +320,7 @@ const ChangelogTable: React.FC = () => {
 					.map(([sessionId, changes]) => ({
 						sessionId,
 						count: changes.length,
-						fields: changes.map(c => c.field_name),
+						fields: changes.map((c) => c.field_name),
 					})),
 			})
 		}
@@ -327,11 +340,7 @@ const ChangelogTable: React.FC = () => {
 					changeCount: sortedChanges.length,
 				} as GroupedChangeLog
 			})
-			.sort(
-				(a, b) =>
-					new Date(b.firstChange.changed_at).getTime() -
-					new Date(a.firstChange.changed_at).getTime(),
-			)
+			.sort((a, b) => new Date(b.firstChange.changed_at).getTime() - new Date(a.firstChange.changed_at).getTime())
 	}, [filteredLogs])
 
 	// Función para abrir modal de detalles
@@ -355,45 +364,44 @@ const ChangelogTable: React.FC = () => {
 
 		setIsDeleting(logToDelete)
 		try {
-      // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Usuario no autenticado');
-      }
+			// 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+			const {
+				data: { user },
+			} = await supabase.auth.getUser()
+			if (!user) {
+				throw new Error('Usuario no autenticado')
+			}
 
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('laboratory_id')
-        .eq('id', user.id)
-			.single() as { data: { laboratory_id?: string } | null; error: any | null };
+			const { data: userProfile, error: profileError } = (await supabase
+				.from('profiles')
+				.select('laboratory_id')
+				.eq('id', user.id)
+				.single()) as { data: { laboratory_id?: string } | null; error: any | null }
 
-      if (profileError || !userProfile?.laboratory_id) {
-        throw new Error('Usuario no tiene laboratorio asignado');
-      }
+			if (profileError || !userProfile?.laboratory_id) {
+				throw new Error('Usuario no tiene laboratorio asignado')
+			}
 
-      // 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
-      const { error } = await supabase
-        .from('change_logs')
-        .delete()
-        .eq('id', logToDelete)
-        .eq('laboratory_id', userProfile.laboratory_id!); // 🔐 VALIDACIÓN MULTI-TENANT
+			// 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
+			const { error } = await supabase
+				.from('change_logs')
+				.delete()
+				.eq('id', logToDelete)
+				.eq('laboratory_id', userProfile.laboratory_id!) // 🔐 VALIDACIÓN MULTI-TENANT
 
-      if (error) {
-        throw error;
-      }
+			if (error) {
+				throw error
+			}
 
-      toast({
-        title: '✅ Registro eliminado',
-        description:
-          'El registro del historial ha sido eliminado exitosamente.',
-        className: 'bg-green-100 border-green-400 text-green-800',
-      });
+			toast({
+				title: '✅ Registro eliminado',
+				description: 'El registro del historial ha sido eliminado exitosamente.',
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
 
-      // Refresh data
-      refetch();
-    } catch (error) {
+			// Refresh data
+			refetch()
+		} catch (error) {
 			console.error('Error deleting change log:', error)
 			toast({
 				title: '❌ Error al eliminar',
@@ -437,15 +445,13 @@ const ChangelogTable: React.FC = () => {
 			const isError = log.deleted_record_info && log.deleted_record_info.trim() !== ''
 			return {
 				text: isError ? 'Email (Error)' : 'Email Enviado',
-				icon: isError 
-					? <MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-					: <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
-				bgColor: isError 
-					? 'bg-orange-100 dark:bg-orange-900/30'
-					: 'bg-purple-100 dark:bg-purple-900/30',
-				textColor: isError
-					? 'text-orange-800 dark:text-orange-300'
-					: 'text-purple-800 dark:text-purple-300',
+				icon: isError ? (
+					<MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+				) : (
+					<Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+				),
+				bgColor: isError ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-purple-100 dark:bg-purple-900/30',
+				textColor: isError ? 'text-orange-800 dark:text-orange-300' : 'text-purple-800 dark:text-purple-300',
 			}
 		} else {
 			return {
@@ -519,36 +525,43 @@ const ChangelogTable: React.FC = () => {
 
 					{/* Date Range Filter */}
 					<div className="flex items-center gap-2">
-						<Popover open={isDatePickerOpen} onOpenChange={(open) => {
-					setIsDatePickerOpen(open)
-					if (open) {
-						setTempRange(undefined)
-					}
-				}}>
+						<Popover
+							open={isDatePickerOpen}
+							onOpenChange={(open) => {
+								setIsDatePickerOpen(open)
+								if (open) {
+									setTempRange(undefined)
+								}
+							}}
+						>
 							<PopoverTrigger asChild>
 								<Button variant="outline" className="flex items-center gap-2">
 									<Calendar className="w-4 h-4 text-gray-400" />
 									{dateRange?.from && dateRange?.to
 										? dateRange.from.toDateString() === dateRange.to.toDateString()
 											? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
-											: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', {
-													locale: es,
-											  })}`
+											: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
+													dateRange.to,
+													'dd/MM/yyyy',
+													{
+														locale: es,
+													},
+												)}`
 										: dateRange?.from
-										? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
-										: 'Filtrar por rango de fechas'}
+											? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
+											: 'Filtrar por rango de fechas'}
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0">
 								<CalendarComponent
 									mode="range"
-								selected={tempRange}
-								onSelect={(range) => {
-									setTempRange(range)
-									if (range?.from && range?.to) {
-										setDateRange(range)
-										setIsDatePickerOpen(false)
-										setTempRange(undefined)
+									selected={tempRange}
+									onSelect={(range) => {
+										setTempRange(range)
+										if (range?.from && range?.to) {
+											setDateRange(range)
+											setIsDatePickerOpen(false)
+											setTempRange(undefined)
 										}
 									}}
 									initialFocus
@@ -626,9 +639,8 @@ const ChangelogTable: React.FC = () => {
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-												{groupedLogs.map((group: GroupedChangeLog) => {
-													const log = group.firstChange
-
+										{groupedLogs.map((group: GroupedChangeLog) => {
+											const log = group.firstChange
 
 											return (
 												<tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">
@@ -644,12 +656,12 @@ const ChangelogTable: React.FC = () => {
 
 													{/* User */}
 													<td className="px-4 py-4">
-														<span 
+														<span
 															className="text-sm"
-															style={{ 
-																color: log.user_display_name 
-																	? (laboratory?.branding?.primaryColor || undefined)
-																	: undefined 
+															style={{
+																color: log.user_display_name
+																	? laboratory?.branding?.primaryColor || undefined
+																	: undefined,
 															}}
 														>
 															{log.user_display_name || log.user_email}
@@ -670,7 +682,8 @@ const ChangelogTable: React.FC = () => {
 																		</span>
 																	)}
 																</>
-															) : (() => {
+															) : (
+																(() => {
 																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
 																	return (
 																		<span
@@ -683,7 +696,8 @@ const ChangelogTable: React.FC = () => {
 																			{text}
 																		</span>
 																	)
-																})()}
+																})()
+															)}
 														</div>
 													</td>
 
@@ -696,55 +710,71 @@ const ChangelogTable: React.FC = () => {
 																</span>
 															) : log.field_name === 'deleted_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																	Eliminación del registro: {(() => {
-																			const value = log.old_value || '';
+																	Eliminación del registro:{' '}
+																	{(() => {
+																		const value = log.old_value || ''
 																		if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																			return value.substring(0, 50) + '...';
+																			return value.substring(0, 50) + '...'
 																		}
-																		return value;
+																		return value
 																	})()}
 																</span>
-																) : group.changeCount === 1 ? (
-																	// Si solo hay un cambio, mostrar resumen simple
+															) : group.changeCount === 1 ? (
+																// Si solo hay un cambio, mostrar resumen simple
 																<div className="text-sm wrap-break-word">
 																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
 																	</p>
 																	<div className="flex flex-col gap-1">
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
-																			<span className="line-through">Antes: {(() => {
-																						const value = log.old_value || '(vacío)';
-																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																					return value.substring(0, 50) + '...';
-																				}
-																				return value;
-																			})()}</span>
+																			<span className="line-through">
+																				Antes:{' '}
+																				{(() => {
+																					const value = log.old_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
-																			<span>Ahora: {(() => {
-																						const value = log.new_value || '(vacío)';
-																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																					return value.substring(0, 50) + '...';
-																				}
-																				return value;
-																			})()}</span>
+																			<span>
+																				Ahora:{' '}
+																				{(() => {
+																					const value = log.new_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
 																		</div>
 																	</div>
 																</div>
-																	) : (
-																		// Si hay múltiples cambios, mostrar resumen agrupado
-																		<div className="text-sm">
-																			<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-																				{group.changeCount} {group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
-																			</p>
-																			<p className="text-xs text-gray-500 dark:text-gray-400">
-																				{group.changes
-																					.slice(0, 3)
-																					.map((c) => translateFieldLabel(c.field_name, c.field_label))
-																					.join(', ')}
-																				{group.changeCount > 3 && '...'}
-																			</p>
-																		</div>
+															) : (
+																// Si hay múltiples cambios, mostrar resumen agrupado
+																<div className="text-sm">
+																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+																		{group.changeCount}{' '}
+																		{group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400">
+																		{group.changes
+																			.slice(0, 3)
+																			.map((c) => translateFieldLabel(c.field_name, c.field_label))
+																			.join(', ')}
+																		{group.changeCount > 3 && '...'}
+																	</p>
+																</div>
 															)}
 														</div>
 													</td>
@@ -773,8 +803,8 @@ const ChangelogTable: React.FC = () => {
 							{/* Mobile view - Card layout */}
 							<div className="lg:hidden">
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3">
-											{groupedLogs.map((group: GroupedChangeLog) => {
-												const log = group.firstChange
+									{groupedLogs.map((group: GroupedChangeLog) => {
+										const log = group.firstChange
 										const actionInfo = getActionTypeInfo(log)
 										const logDate = format(new Date(log.changed_at), 'dd/MM/yyyy', { locale: es })
 										const logTime = format(new Date(log.changed_at), 'HH:mm:ss', { locale: es })
@@ -790,6 +820,30 @@ const ChangelogTable: React.FC = () => {
 														<span className="text-xs font-medium">{logDate}</span>
 														<span className="text-xs text-gray-500">{logTime}</span>
 													</div>
+													<div className="flex flex-col gap-1">
+														{log.entity_type === 'patient' ? (
+															<>
+																<span className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold">
+																	{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
+																</span>
+															</>
+														) : (
+															(() => {
+																const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																return (
+																	<span
+																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																			isDeletedCase
+																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																		}`}
+																	>
+																		{text}
+																	</span>
+																)
+															})()
+														)}
+													</div>
 													<div
 														className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
 													>
@@ -803,99 +857,82 @@ const ChangelogTable: React.FC = () => {
 													<span className="text-xs text-gray-900 dark:text-gray-100 truncate">{log.user_email}</span>
 												</div>
 
-												{/* Entity (Case/Patient) */}
-												<div className="mb-2">
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{log.entity_type === 'patient' ? 'Paciente:' : 'Caso:'}
-													</span>
-													<div className="flex flex-col gap-1">
-														{log.entity_type === 'patient' ? (
-															<>
-																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																	{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
-																</span>
-																{log.patients?.cedula && (
-																	<span className="text-xs text-gray-500 dark:text-gray-400">
-																		Cédula: {log.patients.cedula}
-																	</span>
-																)}
-															</>
-														) : (() => {
-																const { text, isDeletedCase } = getCaseEntityDisplay(log)
-																return (
-																	<span
-																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
-																			isDeletedCase
-																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-																		}`}
-																	>
-																		{text}
-																	</span>
-																)
-															})()}
-													</div>
-												</div>
-
 												{/* Resumen */}
-												<div className="border-t border-gray-100 dark:border-gray-700 pt-2">
-													<span className="text-xs text-gray-500 dark:text-gray-400">Resumen:</span>
-													<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
-														{log.field_name === 'created_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																Creación de nuevo registro médico
-															</span>
-														) : log.field_name === 'deleted_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																Eliminación del registro: {log.old_value}
-															</span>
+												<div className="border-t border-gray-100 dark:border-gray-700 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+													<div>
+														<span className="text-xs text-gray-500 dark:text-gray-400">Resumen:</span>
+														<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
+															{log.field_name === 'created_record' ? (
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
+																	Creación de nuevo registro médico
+																</span>
+															) : log.field_name === 'deleted_record' ? (
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
+																	Eliminación del registro: {log.old_value}
+																</span>
 															) : group.changeCount === 1 ? (
-															<div className="text-sm flex flex-col gap-1">
-																<p className="font-medium text-gray-900 dark:text-gray-100">
-																	{translateFieldLabel(log.field_name, log.field_label)}
-																</p>
-																<div className="flex flex-col gap-1 wrap-break-word">
-																	<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
-																		<span className="line-through">Antes: {(() => {
-																					const value = log.old_value || '(vacío)';
-																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																				return value.substring(0, 50) + '...';
-																			}
-																			return value;
-																		})()}</span>
-																	</div>
-																	<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
-																		<span>Ahora: {(() => {
-																					const value = log.new_value || '(vacío)';
-																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																				return value.substring(0, 50) + '...';
-																			}
-																			return value;
-																		})()}</span>
+																<div className="text-sm flex flex-col gap-1">
+																	<p className="font-medium text-gray-900 dark:text-gray-100">
+																		{translateFieldLabel(log.field_name, log.field_label)}
+																	</p>
+																	<div className="flex flex-col gap-1 wrap-break-word">
+																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
+																			<span className="line-through">
+																				Antes:{' '}
+																				{(() => {
+																					const value = log.old_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
+																		</div>
+																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
+																			<span>
+																				Ahora:{' '}
+																				{(() => {
+																					const value = log.new_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
+																		</div>
 																	</div>
 																</div>
-															</div>
-																) : (
-																	<div className="text-sm">
-																		<p className="font-medium text-gray-900 dark:text-gray-100">
-																			{group.changeCount} {group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
-																		</p>
-																		<p className="text-xs text-gray-500 dark:text-gray-400">
-																			{group.changes
-																				.slice(0, 3)
-																				.map((c) => translateFieldLabel(c.field_name, c.field_label))
-																				.join(', ')}
-																			{group.changeCount > 3 && '...'}
-																		</p>
-																	</div>
-														)}
+															) : (
+																<div className="text-sm">
+																	<p className="font-medium text-gray-900 dark:text-gray-100">
+																		{group.changeCount}{' '}
+																		{group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400">
+																		{group.changes
+																			.slice(0, 3)
+																			.map((c) => translateFieldLabel(c.field_name, c.field_label))
+																			.join(', ')}
+																		{group.changeCount > 3 && '...'}
+																	</p>
+																</div>
+															)}
+														</div>
 													</div>
 													{log.field_name !== 'created_record' && log.field_name !== 'deleted_record' && (
 														<Button
 															variant="outline"
 															size="sm"
 															onClick={() => handleViewDetails(group.sessionId)}
-															className="mt-2 w-full flex items-center justify-center gap-2"
+															className="mt-2 w-full flex items-center justify-center gap-2 text-xs"
 														>
 															<Eye className="w-4 h-4" />
 															Ver Detalles
@@ -914,17 +951,27 @@ const ChangelogTable: React.FC = () => {
 				{/* Pagination */}
 				{!isLoading && groupedLogs.length > 0 && (
 					<div className="flex items-center justify-start gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-						<Button variant="outline" size="icon" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} aria-label="Página anterior">
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => setPage(Math.max(0, page - 1))}
+							disabled={page === 0}
+							aria-label="Página anterior"
+						>
 							<ChevronLeft className="h-4 w-4" />
 						</Button>
-						<span className="text-sm font-medium min-w-[4rem] text-center">
+						<span className="text-sm font-medium min-w-16 text-center">
 							{page + 1}/{logsData?.totalCount ? Math.ceil(logsData.totalCount / rowsPerPage) : 1}
 						</span>
-						<Button 
-							variant="outline" 
-							size="icon" 
-							onClick={() => setPage(page + 1)} 
-							disabled={!logsData?.data || logsData.data.length < rowsPerPage || (logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)}
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => setPage(page + 1)}
+							disabled={
+								!logsData?.data ||
+								logsData.data.length < rowsPerPage ||
+								(logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)
+							}
 							aria-label="Página siguiente"
 						>
 							<ChevronRight className="h-4 w-4" />
