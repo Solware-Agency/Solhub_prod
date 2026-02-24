@@ -1,4 +1,10 @@
-<!-- ef227574-99fe-44c3-9db9-b9aa31bc1440 53e70af8-5c7d-478f-9b37-bcfb1c1d52cb -->
+---
+name: "Plan: Configuración de Módulos y Campos Personalizados"
+overview: ""
+todos: []
+isProject: false
+---
+
 # Plan: Configuración de Módulos y Campos Personalizados
 
 ## 📊 ESTADO ACTUAL DEL PROYECTO
