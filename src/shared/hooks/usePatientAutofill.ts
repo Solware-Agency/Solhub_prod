@@ -62,6 +62,7 @@ export const usePatientAutofill = (setValue: any) => {
 					.from('patients')
 					.select('nombre, telefono, edad, email, cedula, gender')
 					.eq('cedula', cedulaToSearch)
+					.eq('is_active', true)
 					.single()
 
 				if (error) {

@@ -206,6 +206,7 @@ export const registerMedicalCase = async (
 					.from('patients')
 					.select('*')
 					.eq('laboratory_id', laboratoryId)
+					.eq('is_active', true)
 					.eq('nombre', patientData.nombre)
 					.is('cedula', null)
 					.limit(1)

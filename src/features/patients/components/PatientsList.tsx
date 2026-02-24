@@ -1,7 +1,17 @@
 import React, { useState, useCallback } from 'react'
-import { Phone, Mail, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Phone, Mail, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@shared/components/ui/alert-dialog'
 import PatientHistoryModal from './PatientHistoryModal'
 import type { Patient } from '@/services/supabase/patients/patients-service'
 
@@ -20,6 +30,8 @@ interface PatientsListProps {
 	sortField: SortField
 	sortDirection: SortDirection
 	onSortChange: (field: SortField, direction: SortDirection) => void
+	onDeletePatient?: (patient: Patient) => void
+	isDeleting?: boolean
 }
 
 // Use React.memo to prevent unnecessary re-renders
@@ -34,6 +46,8 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 		sortField,
 		sortDirection,
 		onSortChange,
+		onDeletePatient,
+		isDeleting = false,
 	}) => {
 		const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 		const [isModalOpen, setIsModalOpen] = useState(false)
@@ -150,7 +164,13 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 						{patientsData.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4">
 								{patientsData.map((patient: Patient) => (
-									<PatientCard key={patient.id} patient={patient} onClick={() => handlePatientClick(patient)} />
+									<PatientCard
+										key={patient.id}
+										patient={patient}
+										onClick={() => handlePatientClick(patient)}
+										onDelete={onDeletePatient}
+										isDeleting={isDeleting}
+									/>
 								))}
 							</div>
 						) : (
@@ -202,37 +222,88 @@ PatientsList.displayName = 'PatientsList'
 interface PatientCardProps {
 	patient: Patient
 	onClick: () => void
+	onDelete?: (patient: Patient) => void
+	isDeleting?: boolean
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
+const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick, onDelete, isDeleting = false }) => {
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+	const handleDeleteClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setDeleteDialogOpen(true)
+	}
+
+	const handleConfirmDelete = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		onDelete?.(patient)
+		setDeleteDialogOpen(false)
+	}
+
 	return (
-		<div
-			className="bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
-			onClick={onClick}
-		>
-			<div className="mb-3">
-				<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
-					{patient.nombre}
-				</p>
-				<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">CI: {patient.cedula || 'No disponible'}</p>
+		<>
+			<div
+				className="bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer relative group"
+				onClick={onClick}
+			>
+				{onDelete && (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="absolute top-2 right-2 h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 invisible group-hover:visible"
+						onClick={handleDeleteClick}
+						disabled={isDeleting}
+						title="Eliminar paciente (se ocultará de la lista)"
+					>
+						<Trash2 className="h-4 w-4" />
+					</Button>
+				)}
+				<div className="mb-3 pr-8">
+					<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
+						{patient.nombre}
+					</p>
+					<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">CI: {patient.cedula || 'No disponible'}</p>
+				</div>
+
+				<div className="space-y-2">
+					{patient.telefono && (
+						<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 text-xs sm:text-sm font-medium w-full">
+							<Phone className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+							<span className="truncate">{patient.telefono}</span>
+						</div>
+					)}
+
+					{patient.email && (
+						<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 text-xs sm:text-sm font-medium w-full">
+							<Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+							<span className="truncate">{patient.email}</span>
+						</div>
+					)}
+				</div>
 			</div>
 
-			<div className="space-y-2">
-				{patient.telefono && (
-					<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 text-xs sm:text-sm font-medium w-full">
-						<Phone className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-						<span className="truncate">{patient.telefono}</span>
-					</div>
-				)}
-
-				{patient.email && (
-					<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 text-xs sm:text-sm font-medium w-full">
-						<Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-						<span className="truncate">{patient.email}</span>
-					</div>
-				)}
-			</div>
-		</div>
+			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<AlertDialogContent onClick={(e) => e.stopPropagation()}>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El paciente &quot;{patient.nombre}&quot; se ocultará de la lista. Los datos se conservan en el sistema y
+							los casos asociados no se modifican.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleConfirmDelete}
+							disabled={isDeleting}
+							className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+						>
+							{isDeleting ? 'Eliminando...' : 'Eliminar'}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	)
 }
 

@@ -54,6 +54,8 @@ export interface Patient {
 	created_at: string | null
 	updated_at: string | null
 	version: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 export interface PatientInsert {
@@ -68,6 +70,8 @@ export interface PatientInsert {
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 export interface PatientUpdate {
@@ -82,6 +86,8 @@ export interface PatientUpdate {
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 // =====================================================================
@@ -706,6 +712,7 @@ export const getPatients = async (
 						.from('patients')
 						.select('*')
 						.eq('laboratory_id', laboratoryId)
+						.eq('is_active', true)
 						.in('id', pageIds)
 
 					if (error) {
@@ -732,7 +739,11 @@ export const getPatients = async (
 		}
 
 		// MÉTODO TRADICIONAL (fallback o cuando no hay searchTerm)
-		let query = supabase.from('patients').select('*', { count: 'exact' }).eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+		let query = supabase
+			.from('patients')
+			.select('*', { count: 'exact' })
+			.eq('laboratory_id', laboratoryId)
+			.eq('is_active', true) // Solo pacientes activos (soft delete)
 
 		// Filtro de búsqueda tradicional (solo si no se usó la optimizada)
 		if (searchTerm) {
@@ -779,6 +790,7 @@ export const getPatients = async (
 								.from('patients')
 								.select('*')
 								.eq('laboratory_id', laboratoryId)
+								.eq('is_active', true)
 								.in('id', chunk),
 						),
 					)
@@ -941,7 +953,7 @@ export const getPatients = async (
 
 /**
  * Obtener conteo de pacientes por branch (sede/sucursal)
- * Cuenta pacientes únicos que tienen casos en cada branch
+ * Cuenta solo pacientes activos que tienen casos en cada branch
  */
 export const getPatientsCountByBranch = async (): Promise<Record<string, number>> => {
 	try {
@@ -960,19 +972,33 @@ export const getPatientsCountByBranch = async (): Promise<Record<string, number>
 
 		// Agrupar pacientes únicos por branch
 		const countMap: Record<string, Set<string>> = {}
+		const allPatientIds = new Set<string>()
 		data?.forEach((record) => {
 			if (record.branch && record.patient_id) {
 				if (!countMap[record.branch]) {
 					countMap[record.branch] = new Set()
 				}
 				countMap[record.branch].add(record.patient_id)
+				allPatientIds.add(record.patient_id)
 			}
 		})
 
-		// Convertir Sets a conteos
+		// Filtrar solo IDs de pacientes activos
+		let activePatientIds = new Set<string>()
+		if (allPatientIds.size > 0) {
+			const { data: activePatients } = await supabase
+				.from('patients')
+				.select('id')
+				.eq('laboratory_id', laboratoryId)
+				.eq('is_active', true)
+				.in('id', [...allPatientIds])
+			activePatientIds = new Set((activePatients || []).map((p) => p.id))
+		}
+
+		// Conteo por branch solo de pacientes activos
 		const result: Record<string, number> = {}
 		Object.entries(countMap).forEach(([branch, patientIds]) => {
-			result[branch] = patientIds.size
+			result[branch] = [...patientIds].filter((id) => activePatientIds.has(id)).length
 		})
 
 		return result
@@ -1046,7 +1072,8 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 		const { data, error } = await supabase
 			.from('patients')
 			.select('id, cedula, nombre, telefono, gender')
-			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.eq('laboratory_id', laboratoryId)
+			.eq('is_active', true)
 			.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
 			.limit(limit)
 			.order('nombre')
@@ -1270,6 +1297,78 @@ export const consolidateDuplicatePatients = async (
 	} catch (error) {
 		console.error('Error consolidando pacientes duplicados:', error)
 		throw error
+	}
+}
+
+/**
+ * Activar o desactivar paciente (soft delete) - MULTI-TENANT
+ * No elimina datos; solo oculta el paciente de listados cuando active = false
+ * Registra en change_logs la desactivación/activación (quién y cuándo)
+ */
+export const setPatientActive = async (patientId: string, active: boolean): Promise<void> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const updateData: { is_active: boolean; updated_at: string; deactivated_at?: string | null } = {
+		is_active: active,
+		updated_at: new Date().toISOString(),
+	}
+	if (!active) {
+		updateData.deactivated_at = new Date().toISOString()
+	} else {
+		updateData.deactivated_at = null
+	}
+	const { data, error } = await supabase
+		.from('patients')
+		.update(updateData as any)
+		.eq('id', patientId)
+		.eq('laboratory_id', laboratoryId)
+		.select('id')
+		.single()
+
+	if (error) {
+		throw error
+	}
+	if (!data) {
+		throw new PatientError('Paciente no encontrado o no pertenece al laboratorio', 'PATIENT_NOT_FOUND')
+	}
+
+	// Auditoría: registrar en change_logs (quién y cuándo activó/desactivó)
+	try {
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) return
+
+		const { data: profile } = await supabase
+			.from('profiles')
+			.select('display_name, email')
+			.eq('id', user.id)
+			.single()
+
+		const userEmail = profile?.email ?? user.email ?? 'unknown'
+		const userDisplayName = profile?.display_name ?? 'Usuario'
+		const changedAt = new Date().toISOString()
+
+		const { error: logError } = await supabase.from('change_logs').insert({
+			patient_id: patientId,
+			laboratory_id: laboratoryId,
+			entity_type: 'patient',
+			field_name: 'is_active',
+			field_label: 'Estado (activo/inactivo)',
+			old_value: active ? 'Eliminado' : 'Activo',
+			new_value: active ? 'Activo' : 'Eliminado',
+			user_id: user.id,
+			user_email: userEmail,
+			user_display_name: userDisplayName,
+			changed_at: changedAt,
+			change_session_id: generateChangeSessionId(),
+		})
+
+		if (logError) {
+			console.error('Error registrando en change_logs la activación/desactivación del paciente:', logError)
+		}
+	} catch (err) {
+		console.error('Error en auditoría setPatientActive:', err)
+		// No lanzar para no romper el flujo
 	}
 }
 

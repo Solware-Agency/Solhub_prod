@@ -624,6 +624,7 @@ export const getCasesWithPatientInfo = async (
             { count: 'exact' },
           )
           .eq('laboratory_id', profile.laboratory_id)
+          .eq('patients.is_active', true)
           .ilike('code', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -644,6 +645,7 @@ export const getCasesWithPatientInfo = async (
             { count: 'exact' },
           )
           .eq('laboratory_id', profile.laboratory_id)
+          .eq('patients.is_active', true)
           .ilike('treating_doctor', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -664,6 +666,7 @@ export const getCasesWithPatientInfo = async (
             { count: 'exact' },
           )
           .eq('laboratory_id', profile.laboratory_id)
+          .eq('patients.is_active', true)
           .ilike('patients.nombre', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
 
@@ -684,6 +687,7 @@ export const getCasesWithPatientInfo = async (
             { count: 'exact' },
           )
           .eq('laboratory_id', profile.laboratory_id)
+          .eq('patients.is_active', true)
           .ilike('patients.cedula', `%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
       ];
@@ -902,8 +906,8 @@ export const getCasesWithPatientInfo = async (
       { count: 'exact' },
     );
 
-    // Filtro multi-tenant crítico
-    query = query.eq('laboratory_id', profile.laboratory_id);
+    // Filtro multi-tenant crítico y solo casos cuyo paciente está activo (soft delete)
+    query = query.eq('laboratory_id', profile.laboratory_id).eq('patients.is_active', true);
 
     // Aplicar filtros
     if (filters?.branchFilter && filters.branchFilter.length > 0) {
@@ -1149,13 +1153,13 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 						// IDs en orden de relevancia (exactos, luego primer nombre = término, score, código)
 						const caseIds = optimizedResults.map((r: any) => r.id)
 
-						// Obtener los casos completos (sin order para respetar relevancia después)
+						// Obtener los casos completos (solo pacientes activos; sin order para respetar relevancia después)
 						const { data: fullCases, error: fullCasesError } = await supabase
 							.from('medical_records_clean')
 							.select(
 								`
                 *,
-                patients(
+                patients!inner(
                   cedula,
                   nombre,
                   edad,
@@ -1165,6 +1169,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
                 )
               `,
 							)
+							.eq('laboratory_id', laboratoryId)
+							.eq('patients.is_active', true)
 							.in('id', caseIds)
 
 						if (!fullCasesError && fullCases) {
@@ -1298,6 +1304,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
 
         // Hacer múltiples consultas separadas y combinar resultados
+        const laboratoryId = await getUserLaboratoryId();
         const searchPromises = [
           // Búsqueda por nombre del paciente
           supabase
@@ -1314,6 +1321,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							)
 						`,
             )
+            .eq('laboratory_id', laboratoryId)
+            .eq('patients.is_active', true)
             .ilike('patients.nombre', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1332,6 +1341,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							)
 						`,
             )
+            .eq('laboratory_id', laboratoryId)
+            .eq('patients.is_active', true)
             .ilike('patients.cedula', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1350,6 +1361,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							)
 						`,
             )
+            .eq('laboratory_id', laboratoryId)
+            .eq('patients.is_active', true)
             .ilike('treating_doctor', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1368,6 +1381,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							)
 						`,
             )
+            .eq('laboratory_id', laboratoryId)
+            .eq('patients.is_active', true)
             .ilike('exam_type', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1386,6 +1401,8 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							)
 						`,
             )
+            .eq('laboratory_id', laboratoryId)
+            .eq('patients.is_active', true)
             .ilike('code', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
         ];
@@ -1576,6 +1593,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
     }
 
     // Si no hay término de búsqueda, usar la consulta normal
+    const laboratoryIdAll = await getUserLaboratoryId();
     const allData: MedicalCaseWithPatient[] = [];
     let page = 1;
     const pageSize = 1000;
@@ -1595,7 +1613,9 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 					)
 				`,
         { count: 'exact' },
-      );
+      )
+        .eq('laboratory_id', laboratoryIdAll)
+        .eq('patients.is_active', true);
 
       // Aplicar otros filtros
       if (filters?.branch) {

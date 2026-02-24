@@ -196,6 +196,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', filterStart.toISOString())
 					.lte('created_at', filterEnd.toISOString())
 
@@ -313,11 +314,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					0,
 				)
 
-				// Para el total histórico, necesitamos una consulta separada (sin filtro de fecha)
+				// Para el total histórico, necesitamos una consulta separada (sin filtro de fecha; solo pacientes activos)
 				const { data: allRecordsForTotal } = await supabase
 					.from('medical_records_clean')
-					.select('total_amount, patient_id, created_at')
+					.select('total_amount, patient_id, created_at, patients!inner(id)')
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.not('created_at', 'is', null)
 
 				const allRecords = allRecordsForTotal || []
@@ -329,11 +331,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const uniquePatientIds = new Set(allRecords?.filter((r) => r.patient_id).map((record) => record.patient_id))
 				const uniquePatients = uniquePatientIds.size
 
-				// Alternative: Get actual count from patients table for accuracy
+				// Alternative: Get actual count from patients table for accuracy (solo activos)
 				const { count: actualPatientsCount } = await supabase
 					.from('patients')
 					.select('*', { count: 'exact', head: true })
 					.eq('laboratory_id', laboratoryId)
+					.eq('is_active', true)
 
 				// Use actual count from patients table for more accurate stats
 				const finalUniquePatients = actualPatientsCount || uniquePatients
@@ -441,10 +444,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						payment_method_3,
 						payment_amount_3,
 						payment_method_4,
-						payment_amount_4
+						payment_amount_4,
+						patients!inner(id)
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', previousPeriodStart.toISOString())
 					.lte('created_at', previousPeriodEnd.toISOString())
 
@@ -523,7 +528,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const yearStart = startOfYear(new Date(currentYear, 0, 1))
 				const yearEnd = endOfYear(new Date(currentYear, 0, 1))
 
-				// Filter records for the selected year - usar consulta separada para el año completo
+				// Filter records for the selected year - solo casos con paciente activo
 				const { data: yearRecordsData } = await supabase
 					.from('medical_records_clean')
 					.select(
@@ -538,10 +543,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						payment_method_3,
 						payment_amount_3,
 						payment_method_4,
-						payment_amount_4
+						payment_amount_4,
+						patients!inner(id)
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', yearStart.toISOString())
 					.lte('created_at', yearEnd.toISOString())
 					.not('created_at', 'is', null)

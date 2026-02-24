@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPatients, getPatientsCountByBranch } from '@/services/supabase/patients/patients-service'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getPatients, getPatientsCountByBranch, setPatientActive } from '@/services/supabase/patients/patients-service'
 import { Input } from '@shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Button } from '@shared/components/ui/button'
@@ -8,6 +8,7 @@ import { X } from 'lucide-react'
 import PatientsList from '../../patients/components/PatientsList'
 import { supabase } from '@/services/supabase/config/config'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import type { Patient } from '@/services/supabase/patients/patients-service'
 
 const PatientsPage: React.FC = React.memo(() => {
 	const [searchTerm, setSearchTerm] = useState('')
@@ -97,6 +98,22 @@ const PatientsPage: React.FC = React.memo(() => {
 		setCurrentPage(1)
 	}, [])
 
+	// Soft delete: desactivar paciente (oculta de la lista, datos se mantienen)
+	const deletePatientMutation = useMutation({
+		mutationFn: (patientId: string) => setPatientActive(patientId, false),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['patients'] })
+			queryClient.invalidateQueries({ queryKey: ['patientsCountByBranch'] })
+		},
+	})
+
+	const handleDeletePatient = useCallback(
+		(patient: Patient) => {
+			deletePatientMutation.mutate(patient.id)
+		},
+		[deletePatientMutation],
+	)
+
 	// Check if any filter is active
 	const hasActiveFilters = searchTerm !== '' || selectedBranch !== 'all'
 
@@ -170,6 +187,8 @@ const PatientsPage: React.FC = React.memo(() => {
 				sortField={sortField}
 				sortDirection={sortDirection}
 				onSortChange={handleSortChange}
+				onDeletePatient={handleDeletePatient}
+				isDeleting={deletePatientMutation.isPending}
 			/>
 		</div>
 	)
