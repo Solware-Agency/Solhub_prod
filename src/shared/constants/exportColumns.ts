@@ -10,7 +10,7 @@ export interface ExportColumnOption {
 	group: string
 	defaultWidth: number
 	/** Si está definido, la columna solo se incluye cuando el lab tiene esta feature habilitada. */
-	feature?: 'hasPayment'
+	feature?: 'hasPayment' | 'hasEvaluateCitology'
 }
 
 export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
@@ -45,7 +45,7 @@ export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
 	{ key: 'Referencia Pago 4', label: 'Referencia pago 4', group: 'Pagos', defaultWidth: 25, feature: 'hasPayment' },
 	// Documentos / Citología
 	{ key: 'PDF Listo', label: 'PDF listo', group: 'Documentos', defaultWidth: 12 },
-	{ key: 'Estatus Citología', label: 'Estatus citología', group: 'Documentos', defaultWidth: 15 },
+	{ key: 'Estatus Citología', label: 'Estatus citología', group: 'Documentos', defaultWidth: 15, feature: 'hasEvaluateCitology' },
 ]
 
 export const EXPORT_COLUMN_KEYS = EXPORT_COLUMN_OPTIONS.map((c) => c.key)
