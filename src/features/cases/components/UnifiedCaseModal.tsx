@@ -279,6 +279,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false)
 		const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
 		const [isFechaMuestraCalendarOpen, setIsFechaMuestraCalendarOpen] = useState(false)
+		const [isFechaEntregaCalendarOpen, setIsFechaEntregaCalendarOpen] = useState(false)
 
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
@@ -831,7 +832,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner
 						? ['owner_display_code' as const]
 						: []),
-					...(isMarihorgen ? ['bloques_biopsia', 'fecha_muestra'] as const : []),
+					...(isMarihorgen ? ['bloques_biopsia', 'fecha_muestra', 'fecha_entrega'] as const : []),
 				]
 				const financialFields = ['total_amount', 'exchange_rate']
 
@@ -883,6 +884,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						} else if (field === 'fecha_muestra') {
 							const raw = newValue as string | null | undefined
 							caseChanges.fecha_muestra = raw === '' || raw == null ? null : raw
+						} else if (field === 'fecha_entrega') {
+							const raw = newValue as string | null | undefined
+							caseChanges.fecha_entrega = raw === '' || raw == null ? null : raw
 						}
 						caseChangeLogs.push({
 							field,
@@ -1038,14 +1042,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de imágenes (images_urls) - editable por roles específicos
-				if (
-					imagesChanged &&
-					(profile?.role === 'imagenologia' ||
-						profile?.role === 'owner' ||
-						profile?.role === 'prueba' ||
-						profile?.role === 'call_center')
-				) {
+				// Guardar URLs de imágenes (images_urls) - en SPT todos los roles pueden guardar
+				if (imagesChanged && isSpt) {
 					const { error: imageUrlsError } = await supabase
 						.from('medical_records_clean')
 						.update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
@@ -1534,6 +1532,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				owner_display_code: 'Código (visible)',
 				bloques_biopsia: 'Bloques de biopsia',
 				fecha_muestra: 'Fecha de Muestra',
+				fecha_entrega: 'Fecha de entrega',
 				// Legacy fields (for backward compatibility)
 				full_name: 'Nombre Completo',
 				id_number: 'Cédula',
@@ -2482,7 +2481,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												</div>
 											)}
 
-											{/* Image URLs field - Visible for all roles if images exist, editable only for imagenologia/owner/prueba/call_center */}
+											{/* Image URLs field - Visible for all roles if images exist; en SPT todos los roles pueden subir/editar */}
 											{/* Oculto para marihorgen */}
 											{!isMarihorgen && (
 												<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
@@ -2494,13 +2493,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															images={imageUrls}
 															onChange={setImageUrls}
 															maxImages={10}
-															isEditing={
-																(profile?.role === 'imagenologia' ||
-																	profile?.role === 'owner' ||
-																	profile?.role === 'prueba' ||
-																	profile?.role === 'call_center') &&
-																isEditing
-															}
+															isEditing={isSpt && isEditing}
 															onUploadFile={
 																isSpt && currentCase?.id && profile?.laboratory_id
 																	? handleUploadImage
@@ -3005,7 +2998,93 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													value={new Date(caseData.created_at || '').toLocaleDateString('es-ES')}
 													editable={false}
 												/>
-												{caseData.fecha_entrega && (
+												{/* Fecha de entrega: solo visible para marihorgen; editable al editar (entrega presencial) */}
+												{isMarihorgen && (
+													<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+															Fecha de entrega
+														</span>
+														{isEditing ? (
+															<div className="sm:w-1/2">
+																<Popover open={isFechaEntregaCalendarOpen} onOpenChange={setIsFechaEntregaCalendarOpen}>
+																	<PopoverTrigger asChild>
+																		<Button
+																			variant="outline"
+																			className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
+																		>
+																			<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
+																			{(editedCase.fecha_entrega !== undefined
+																				? editedCase.fecha_entrega
+																				: caseData.fecha_entrega)
+																				? format(
+																						new Date(
+																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
+																						),
+																						'PPP',
+																						{ locale: es },
+																					)
+																				: 'Seleccionar fecha'}
+																		</Button>
+																	</PopoverTrigger>
+																	<PopoverContent className="w-auto p-0 z-[9999]" align="end">
+																		<Calendar
+																			mode="single"
+																			selected={
+																				(editedCase.fecha_entrega ?? caseData.fecha_entrega)
+																					? new Date(
+																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
+																						)
+																					: undefined
+																			}
+																			onSelect={(date) => {
+																				handleInputChange('fecha_entrega', date ? format(date, 'yyyy-MM-dd') : null)
+																				setIsFechaEntregaCalendarOpen(false)
+																			}}
+																			initialFocus
+																			locale={es}
+																			defaultMonth={
+																				(editedCase.fecha_entrega ?? caseData.fecha_entrega)
+																					? new Date(
+																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
+																						)
+																					: new Date()
+																			}
+																		/>
+																		<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+																			<Button
+																				variant="ghost"
+																				size="sm"
+																				onClick={() => {
+																					handleInputChange('fecha_entrega', null)
+																					setIsFechaEntregaCalendarOpen(false)
+																				}}
+																			>
+																				Borrar
+																			</Button>
+																			<Button
+																				variant="ghost"
+																				size="sm"
+																				onClick={() => {
+																					handleInputChange('fecha_entrega', format(new Date(), 'yyyy-MM-dd'))
+																					setIsFechaEntregaCalendarOpen(false)
+																				}}
+																			>
+																				Hoy
+																			</Button>
+																		</div>
+																	</PopoverContent>
+																</Popover>
+															</div>
+														) : (
+															<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+																{caseData.fecha_entrega
+																	? new Date(`${caseData.fecha_entrega}T00:00:00`).toLocaleDateString('es-ES')
+																	: '-'}
+															</span>
+														)}
+													</div>
+												)}
+												{!isMarihorgen && caseData.fecha_entrega && (
 													<div className="flex items-center justify-between py-2">
 														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
 															Fecha de entrega

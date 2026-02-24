@@ -1,12 +1,12 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeftFromLine, Save, Building2, Phone, MapPin, Globe } from 'lucide-react'
+import { ArrowLeftFromLine, Save, Building2, Phone } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useToast } from '@shared/hooks/use-toast'
-import type { Aseguradora, AseguradoraUpdate } from '@services/supabase/aseguradoras/aseguradoras-service'
+import type { Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { updateAseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 
 interface EditAseguradoraModalProps {
@@ -34,13 +34,27 @@ const CardSection = ({
 	</div>
 )
 
+const parseRif = (rif: string): string => {
+	const t = (rif ?? '').trim()
+	if (!t) return ''
+	if (t.startsWith('J-')) return t.slice(2).replace(/\D/g, '')
+	return t.replace(/\D/g, '')
+}
+
+const buildRif = (numero: string): string => {
+	const n = numero.replace(/\D/g, '')
+	if (!n) return ''
+	if (n.length === 9) return `J-${n.slice(0, 8)}-${n.slice(8)}`
+	return `J-${n}`
+}
+
 export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: EditAseguradoraModalProps) => {
 	const { toast } = useToast()
 	const [isLoading, setIsLoading] = useState(false)
-	const [form, setForm] = useState<AseguradoraUpdate>({
+	const [form, setForm] = useState({
 		nombre: '',
 		codigo_interno: '',
-		rif: '',
+		rif_numero: '',
 		telefono: '',
 		email: '',
 		web: '',
@@ -53,8 +67,8 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 			setForm({
 				nombre: aseguradora.nombre,
 				codigo_interno: aseguradora.codigo_interno ?? '',
-				rif: aseguradora.rif ?? '',
-				telefono: aseguradora.telefono ?? '',
+				rif_numero: parseRif(aseguradora.rif ?? ''),
+				telefono: (aseguradora.telefono ?? '').replace(/\D/g, ''),
 				email: aseguradora.email ?? '',
 				web: aseguradora.web ?? '',
 				direccion: aseguradora.direccion ?? '',
@@ -63,24 +77,43 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 		}
 	}, [aseguradora, isOpen])
 
-	const isValidEmail = (value: string): boolean =>
-		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value ?? '').trim())
+	const isValidEmailChar = (char: string) => /[a-zA-Z0-9@._+-]/.test(char)
+	const isValidEmail = (value: string): boolean => {
+		const t = (value ?? '').trim()
+		if (!t) return true
+		if (!t.includes('@')) return false
+		return /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(t)
+	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!aseguradora) return
 		const email = (form.email ?? '').trim()
+		if (email && !form.email?.includes('@')) {
+			toast({ title: 'Email debe contener @', variant: 'destructive' })
+			return
+		}
 		if (email && !isValidEmail(form.email ?? '')) {
-			toast({
-				title: 'Email inválido',
-				description: 'Use un formato válido (ej: nombre@dominio.com)',
-				variant: 'destructive',
-			})
+			toast({ title: 'Email con formato inválido', variant: 'destructive' })
+			return
+		}
+		if (!form.rif_numero?.trim()) {
+			toast({ title: 'RIF es obligatorio', variant: 'destructive' })
 			return
 		}
 		setIsLoading(true)
 		try {
-			const updated = await updateAseguradora(aseguradora.id, form)
+			const rif = buildRif(form.rif_numero)
+			const updated = await updateAseguradora(aseguradora.id, {
+				nombre: form.nombre,
+				codigo_interno: form.codigo_interno,
+				rif,
+				telefono: form.telefono,
+				email: form.email || null,
+				web: form.web || null,
+				direccion: form.direccion || null,
+				activo: form.activo,
+			})
 			toast({ title: 'Aseguradora actualizada' })
 			onSave?.(updated)
 			onClose()
@@ -160,10 +193,38 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 											</div>
 											<div className="space-y-2">
 												<Label>RIF</Label>
-												<Input
-													value={form.rif ?? ''}
-													onChange={(e) => setForm((prev) => ({ ...prev, rif: e.target.value || null }))}
-												/>
+												<div className="flex gap-2">
+													<div className="flex h-10 w-12 shrink-0 items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background">
+														J
+													</div>
+													<Input
+														placeholder="12345678-9"
+														value={form.rif_numero}
+														onChange={(e) => {
+															const onlyNumbers = e.target.value.replace(/\D/g, '')
+															setForm((prev) => ({ ...prev, rif_numero: onlyNumbers }))
+														}}
+														inputMode="numeric"
+														maxLength={9}
+														className="flex-1"
+														required
+													/>
+												</div>
+											</div>
+											<div className="space-y-2">
+												<Label>Estado</Label>
+												<Select
+													value={form.activo ? 'true' : 'false'}
+													onValueChange={(value) => setForm((prev) => ({ ...prev, activo: value === 'true' }))}
+												>
+													<SelectTrigger>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="true">Activo</SelectItem>
+														<SelectItem value="false">Inactivo</SelectItem>
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
 									</CardSection>
@@ -174,7 +235,11 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 												<Label>Teléfono</Label>
 												<Input
 													value={form.telefono ?? ''}
-													onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value || null }))}
+													onChange={(e) => {
+														const onlyNumbers = e.target.value.replace(/\D/g, '')
+														setForm((prev) => ({ ...prev, telefono: onlyNumbers }))
+													}}
+													inputMode="numeric"
 												/>
 											</div>
 											<div className="space-y-2">
@@ -182,44 +247,26 @@ export const EditAseguradoraModal = ({ isOpen, onClose, aseguradora, onSave }: E
 												<Input
 													type="email"
 													value={form.email ?? ''}
-													onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value || null }))}
+													onChange={(e) => {
+														const filtered = [...e.target.value].filter((c) => isValidEmailChar(c)).join('')
+														setForm((prev) => ({ ...prev, email: filtered || null }))
+													}}
 												/>
 											</div>
-											<div className="space-y-2 sm:col-span-2">
+											<div className="space-y-2">
 												<Label>Web</Label>
 												<Input
 													value={form.web ?? ''}
 													onChange={(e) => setForm((prev) => ({ ...prev, web: e.target.value || null }))}
 												/>
 											</div>
-										</div>
-									</CardSection>
-
-									<CardSection title="Dirección" icon={MapPin}>
-										<div className="space-y-2">
-											<Label>Dirección</Label>
-											<Input
-												value={form.direccion ?? ''}
-												onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value || null }))}
-											/>
-										</div>
-									</CardSection>
-
-									<CardSection title="Estado" icon={Globe}>
-										<div className="space-y-2">
-											<Label>Activo</Label>
-											<Select
-												value={form.activo ? 'true' : 'false'}
-												onValueChange={(value) => setForm((prev) => ({ ...prev, activo: value === 'true' }))}
-											>
-												<SelectTrigger>
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="true">Activo</SelectItem>
-													<SelectItem value="false">Inactivo</SelectItem>
-												</SelectContent>
-											</Select>
+											<div className="space-y-2">
+												<Label>Dirección</Label>
+												<Input
+													value={form.direccion ?? ''}
+													onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value || null }))}
+												/>
+											</div>
 										</div>
 									</CardSection>
 								</div>

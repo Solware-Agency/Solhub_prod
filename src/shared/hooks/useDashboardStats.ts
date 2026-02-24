@@ -515,6 +515,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						revenue: data.revenue,
 						count: data.count,
 					}))
+					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
 					.sort((a, b) => b.revenue - a.revenue)
 
 				// Calculate sales trend by month for the selected year (independent of dateRange)
@@ -606,6 +607,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						count: data.count,
 						revenue: data.revenue,
 					}))
+					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
 					.sort((a, b) => b.count - a.count)
 					.slice(0, 5) // Top 5
 

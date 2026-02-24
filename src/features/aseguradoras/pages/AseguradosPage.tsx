@@ -34,7 +34,8 @@ const AseguradosPage = () => {
 	const [historyModalOpen, setHistoryModalOpen] = useState(false)
 	const [form, setForm] = useState({
 		full_name: '',
-		document_id: '',
+		document_tipo: 'V' as 'V' | 'J',
+		document_numero: '',
 		phone: '',
 		email: '',
 		address: '',
@@ -72,7 +73,8 @@ const AseguradosPage = () => {
 	const resetForm = () => {
 		setForm({
 			full_name: '',
-			document_id: '',
+			document_tipo: 'V',
+			document_numero: '',
 			phone: '',
 			email: '',
 			address: '',
@@ -91,18 +93,34 @@ const AseguradosPage = () => {
 		setHistoryModalOpen(true)
 	}
 
-	const isValidEmail = (value: string): boolean =>
-		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+	/** Solo caracteres válidos en correo: letras, números, @ . - _ + */
+	const isValidEmailChar = (char: string) => /[a-zA-Z0-9@._+-]/.test(char)
+	const isValidEmail = (value: string): boolean => {
+		const t = value.trim()
+		if (!t.includes('@')) return false
+		return /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(t)
+	}
+
+	const buildDocumentId = (): string => {
+		const n = form.document_numero.replace(/\D/g, '')
+		if (!n) return ''
+		if (form.document_tipo === 'J' && n.length === 9) {
+			return `J-${n.slice(0, 8)}-${n.slice(8)}`
+		}
+		return `${form.document_tipo}-${n}`
+	}
 
 	const getValidationErrors = (): string[] => {
 		const err: string[] = []
 		if (!form.full_name?.trim()) err.push('Nombre / Razón social')
-		if (!form.document_id?.trim()) err.push('Documento')
+		if (!form.document_numero?.trim()) err.push('Documento')
 		if (!form.phone?.trim()) err.push('Teléfono')
 		if (!form.email?.trim()) {
 			err.push('Email')
+		} else if (!form.email.includes('@')) {
+			err.push('Email debe contener @')
 		} else if (!isValidEmail(form.email)) {
-			err.push('Email (formato inválido; use ej: nombre@dominio.com)')
+			err.push('Email con formato inválido')
 		}
 		if (!form.address?.trim()) err.push('Dirección')
 		if (!form.notes?.trim()) err.push('Notas internas')
@@ -121,7 +139,15 @@ const AseguradosPage = () => {
 		}
 		setSaving(true)
 		try {
-			await createAsegurado(form)
+			await createAsegurado({
+				full_name: form.full_name,
+				document_id: buildDocumentId(),
+				phone: form.phone,
+				email: form.email,
+				address: form.address,
+				notes: form.notes,
+				tipo_asegurado: form.tipo_asegurado,
+			})
 			toast({ title: 'Asegurado creado' })
 			queryClient.invalidateQueries({ queryKey: ['asegurados'] })
 			setOpenModal(false)
@@ -262,25 +288,48 @@ const AseguradosPage = () => {
 						<div className="space-y-2">
 							<Label>Nombre / Razón social <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: Juan Pérez o Empresa S.A."
+								placeholder="Juan Pérez o Empresa S.A."
 								value={form.full_name}
 								onChange={(e) => setForm((prev) => ({ ...prev, full_name: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Documento <span className="text-destructive">*</span></Label>
-							<Input
-								placeholder="Ej: V-12345678 o J-12345678-9"
-								value={form.document_id}
-								onChange={(e) => setForm((prev) => ({ ...prev, document_id: e.target.value }))}
-							/>
+							<div className="flex gap-2">
+								<Select
+									value={form.document_tipo}
+									onValueChange={(value) => setForm((prev) => ({ ...prev, document_tipo: value as 'V' | 'J' }))}
+								>
+									<SelectTrigger className="w-16 shrink-0">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="V">V</SelectItem>
+										<SelectItem value="J">J</SelectItem>
+									</SelectContent>
+								</Select>
+								<Input
+									placeholder={form.document_tipo === 'J' ? '12345678-9' : '12345678'}
+									value={form.document_numero}
+									onChange={(e) => {
+										const onlyNumbers = e.target.value.replace(/\D/g, '')
+										setForm((prev) => ({ ...prev, document_numero: onlyNumbers }))
+									}}
+									inputMode="numeric"
+									maxLength={form.document_tipo === 'J' ? 9 : 15}
+								/>
+							</div>
 						</div>
 						<div className="space-y-2">
 							<Label>Teléfono <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: 0414-1234567"
+								placeholder="04141234567"
 								value={form.phone}
-								onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+								onChange={(e) => {
+									const onlyNumbers = e.target.value.replace(/\D/g, '')
+									setForm((prev) => ({ ...prev, phone: onlyNumbers }))
+								}}
+								inputMode="numeric"
 							/>
 						</div>
 						<div className="space-y-2">
@@ -288,15 +337,18 @@ const AseguradosPage = () => {
 							<Input
 								type="email"
 								autoComplete="email"
-								placeholder="ej: nombre@dominio.com"
+								placeholder="nombre@dominio.com"
 								value={form.email}
-								onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+								onChange={(e) => {
+									const filtered = [...e.target.value].filter((c) => isValidEmailChar(c)).join('')
+									setForm((prev) => ({ ...prev, email: filtered }))
+								}}
 							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Dirección <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: Av. Principal, edificio X, piso 2"
+								placeholder="Av. Principal, edificio X, piso 2"
 								value={form.address}
 								onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
 							/>
@@ -304,7 +356,7 @@ const AseguradosPage = () => {
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Notas internas <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: Contacto preferente, horario de atención"
+								placeholder="Contacto preferente, horario de atención"
 								value={form.notes}
 								onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
 							/>

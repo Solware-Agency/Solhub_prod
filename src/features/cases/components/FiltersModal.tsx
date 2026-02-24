@@ -249,7 +249,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             <TabsList className={`flex shrink-0 gap-2 sm:gap-4 bg-transparent p-0 rounded-none`}>
             <TabsTrigger
               value='general'
-              className='flex items-center gap-2 cursor-pointer w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent'
+              className='flex items-center gap-2 cursor-default w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent hover:shadow-none hover:text-inherit'
             >
               <Filter className='w-4 h-4' />
               Filtros Generales
@@ -257,7 +257,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
             {!isSpt && (
               <TabsTrigger
                 value='role-specific'
-                className='flex items-center gap-2 cursor-pointer w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent'
+                className='flex items-center gap-2 cursor-default w-fit data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold hover:bg-transparent hover:shadow-none hover:text-inherit'
               >
                 <Settings className='w-4 h-4' />
                 Filtros por Rol
@@ -341,16 +341,12 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     >
                       <CalendarIcon className='w-4 h-4' />
                       {dateRange?.from && dateRange?.to
-                        ? `${format(dateRange.from, 'dd/MM/yyyy', {
-                          locale: es,
-                        })} - ${format(dateRange.to, 'dd/MM/yyyy', {
-                          locale: es,
-                        })}`
+                        ? `Rango: ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', { locale: es })}`
                         : dateRange?.from
-                          ? `Desde ${format(dateRange.from, 'dd/MM/yyyy', {
-                            locale: es,
-                          })}`
-                          : 'Seleccionar rango de fechas'}
+                          ? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+                          : dateRange?.to
+                            ? format(dateRange.to, 'dd/MM/yyyy', { locale: es })
+                            : 'Seleccionar fecha(s)'}
                     </Button>
                   </DatePopoverTrigger>
                   <DatePopoverContent
@@ -574,15 +570,9 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
                   {(dateRange?.from || dateRange?.to) && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-sm rounded-full'>
-                      Rango:{' '}
                       {dateRange?.from && dateRange?.to
-                        ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(
-                          dateRange.to,
-                          'dd/MM/yyyy',
-                        )}`
-                        : dateRange?.from
-                          ? `Desde ${format(dateRange.from, 'dd/MM/yyyy')}`
-                          : `Hasta ${format(dateRange.to!, 'dd/MM/yyyy')}`}
+                        ? `Rango: ${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
+                        : format((dateRange?.from ?? dateRange?.to)!, 'dd/MM/yyyy')}
                       <button
                         onClick={() => onDateRangeChange(undefined)}
                         className='ml-1 hover:text-purple-600 dark:hover:text-purple-200'

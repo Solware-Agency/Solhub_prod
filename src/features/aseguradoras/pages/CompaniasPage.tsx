@@ -35,7 +35,7 @@ const CompaniasPage = () => {
 	const [form, setForm] = useState({
 		nombre: '',
 		codigo_interno: '',
-		rif: '',
+		rif_numero: '',
 		telefono: '',
 		email: '',
 		web: '',
@@ -89,7 +89,7 @@ const CompaniasPage = () => {
 		setForm({
 			nombre: '',
 			codigo_interno: '',
-			rif: '',
+			rif_numero: '',
 			telefono: '',
 			email: '',
 			web: '',
@@ -113,19 +113,33 @@ const CompaniasPage = () => {
 		queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
 	}, [queryClient])
 
-	const isValidEmail = (value: string): boolean =>
-		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+	/** Solo caracteres válidos en correo: letras, números, @ . - _ + */
+	const isValidEmailChar = (char: string) => /[a-zA-Z0-9@._+-]/.test(char)
+	const isValidEmail = (value: string): boolean => {
+		const t = value.trim()
+		if (!t.includes('@')) return false
+		return /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(t)
+	}
+
+	const buildRif = (): string => {
+		const n = form.rif_numero.replace(/\D/g, '')
+		if (!n) return ''
+		if (n.length === 9) return `J-${n.slice(0, 8)}-${n.slice(8)}`
+		return `J-${n}`
+	}
 
 	const getValidationErrors = (): string[] => {
 		const err: string[] = []
 		if (!form.nombre?.trim()) err.push('Nombre')
 		if (!form.codigo_interno?.trim()) err.push('Código interno')
-		if (!form.rif?.trim()) err.push('RIF')
+		if (!form.rif_numero?.trim()) err.push('RIF')
 		if (!form.telefono?.trim()) err.push('Teléfono')
 		if (!form.email?.trim()) {
 			err.push('Email')
+		} else if (!form.email.includes('@')) {
+			err.push('Email debe contener @')
 		} else if (!isValidEmail(form.email)) {
-			err.push('Email (formato inválido; use ej: nombre@dominio.com)')
+			err.push('Email con formato inválido')
 		}
 		if (!form.web?.trim()) err.push('Web')
 		if (!form.direccion?.trim()) err.push('Dirección')
@@ -144,7 +158,16 @@ const CompaniasPage = () => {
 		}
 		setSaving(true)
 		try {
-			await createAseguradora(form)
+			await createAseguradora({
+				nombre: form.nombre,
+				codigo_interno: form.codigo_interno,
+				rif: buildRif(),
+				telefono: form.telefono,
+				email: form.email,
+				web: form.web,
+				direccion: form.direccion,
+				activo: form.activo,
+			})
 			toast({ title: 'Aseguradora creada' })
 			queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
 			setOpenModal(false)
@@ -270,7 +293,7 @@ const CompaniasPage = () => {
 						<div className="space-y-2">
 							<Label>Nombre <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: Seguros La Previsora C.A."
+								placeholder="Seguros La Previsora C.A."
 								value={form.nombre}
 								onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
 							/>
@@ -278,25 +301,40 @@ const CompaniasPage = () => {
 						<div className="space-y-2">
 							<Label>Código interno <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: PREV-01"
+								placeholder="PREV-01"
 								value={form.codigo_interno}
 								onChange={(e) => setForm((prev) => ({ ...prev, codigo_interno: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
 							<Label>RIF <span className="text-destructive">*</span></Label>
-							<Input
-								placeholder="Ej: J-12345678-9"
-								value={form.rif}
-								onChange={(e) => setForm((prev) => ({ ...prev, rif: e.target.value }))}
-							/>
+							<div className="flex gap-2">
+								<div className="flex h-10 w-12 shrink-0 items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background">
+									J
+								</div>
+								<Input
+									placeholder="12345678-9"
+									value={form.rif_numero}
+									onChange={(e) => {
+										const onlyNumbers = e.target.value.replace(/\D/g, '')
+										setForm((prev) => ({ ...prev, rif_numero: onlyNumbers }))
+									}}
+									inputMode="numeric"
+									maxLength={9}
+									className="flex-1"
+								/>
+							</div>
 						</div>
 						<div className="space-y-2">
 							<Label>Teléfono <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: 0212-1234567"
+								placeholder="02121234567"
 								value={form.telefono}
-								onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))}
+								onChange={(e) => {
+									const onlyNumbers = e.target.value.replace(/\D/g, '')
+									setForm((prev) => ({ ...prev, telefono: onlyNumbers }))
+								}}
+								inputMode="numeric"
 							/>
 						</div>
 						<div className="space-y-2">
@@ -304,15 +342,18 @@ const CompaniasPage = () => {
 							<Input
 								type="email"
 								autoComplete="email"
-								placeholder="ej: nombre@dominio.com"
+								placeholder="nombre@dominio.com"
 								value={form.email}
-								onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+								onChange={(e) => {
+									const filtered = [...e.target.value].filter((c) => isValidEmailChar(c)).join('')
+									setForm((prev) => ({ ...prev, email: filtered }))
+								}}
 							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Web <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: https://www.aseguradora.com"
+								placeholder="https://www.aseguradora.com"
 								value={form.web}
 								onChange={(e) => setForm((prev) => ({ ...prev, web: e.target.value }))}
 							/>
@@ -320,7 +361,7 @@ const CompaniasPage = () => {
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Dirección <span className="text-destructive">*</span></Label>
 							<Input
-								placeholder="Ej: Av. Principal, Torre Corporativa, piso 5"
+								placeholder="Av. Principal, Torre Corporativa, piso 5"
 								value={form.direccion}
 								onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value }))}
 							/>

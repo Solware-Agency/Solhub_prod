@@ -244,7 +244,31 @@ const PolizasPage = () => {
 		setPanelOpen(true)
 	}
 
+	/** Validación parte 2 (Datos póliza): todos los campos obligatorios */
+	const getValidationErrorsPart2 = (): string[] => {
+		const err: string[] = []
+		if (!form.aseguradora_id?.trim()) err.push('Aseguradora')
+		if (!form.agente_nombre?.trim()) err.push('Agente / Productor')
+		if (!form.numero_poliza?.trim()) err.push('Número de póliza')
+		if (!form.ramo?.trim()) err.push('Ramo')
+		if (!form.suma_asegurada?.trim()) err.push('Suma asegurada')
+		return err
+	}
+
 	const handleSave = async () => {
+		if (!editingPoliza && !form.asegurado_id?.trim()) {
+			toast({ title: 'Seleccione un asegurado', variant: 'destructive' })
+			return
+		}
+		const part2Errors = getValidationErrorsPart2()
+		if (part2Errors.length > 0) {
+			toast({
+				title: 'Parte 2: campos obligatorios',
+				description: `Complete: ${part2Errors.join(', ')}`,
+				variant: 'destructive',
+			})
+			return
+		}
 		if (!editingPoliza) {
 			setSaving(true)
 			try {
@@ -375,7 +399,7 @@ const PolizasPage = () => {
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Aseguradora</Label>
+							<Label>Aseguradora <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.aseguradora_id}
 								onValueChange={(value) => setForm((prev) => ({ ...prev, aseguradora_id: value }))}
@@ -393,22 +417,22 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Agente / Productor</Label>
+							<Label>Agente / Productor <span className="text-destructive">*</span></Label>
 							<Input value={form.agente_nombre} onChange={(e) => setForm((prev) => ({ ...prev, agente_nombre: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Número de póliza</Label>
+							<Label>Número de póliza <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.numero_poliza}
 								onChange={(e) => setForm((prev) => ({ ...prev, numero_poliza: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Ramo</Label>
+							<Label>Ramo <span className="text-destructive">*</span></Label>
 							<Input value={form.ramo} onChange={(e) => setForm((prev) => ({ ...prev, ramo: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Suma asegurada</Label>
+							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
 							<Input
 								type="number"
 								value={form.suma_asegurada}
@@ -416,7 +440,7 @@ const PolizasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Modalidad de pago</Label>
+							<Label>Modalidad de pago <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.modalidad_pago}
 								onValueChange={(value) =>
@@ -438,7 +462,7 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus póliza</Label>
+							<Label>Estatus póliza <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.estatus_poliza}
 								onValueChange={(value) =>
@@ -458,7 +482,7 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus pago</Label>
+							<Label>Estatus pago <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.estatus_pago}
 								onValueChange={(value) =>
@@ -853,7 +877,26 @@ const PolizasPage = () => {
 							Cancelar
 						</Button>
 						{step < STEPS.length - 1 ? (
-							<Button onClick={() => setStep((prev) => prev + 1)} size="sm" className="shrink-0">Siguiente</Button>
+							<Button
+								onClick={() => {
+									if (step === 1) {
+										const part2Errors = getValidationErrorsPart2()
+										if (part2Errors.length > 0) {
+											toast({
+												title: 'Parte 2: campos obligatorios',
+												description: `Complete: ${part2Errors.join(', ')}`,
+												variant: 'destructive',
+											})
+											return
+										}
+									}
+									setStep((prev) => prev + 1)
+								}}
+								size="sm"
+								className="shrink-0"
+							>
+								Siguiente
+							</Button>
 						) : (
 							<Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
 								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}

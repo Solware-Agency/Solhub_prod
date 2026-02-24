@@ -434,19 +434,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           } else if (citologyNegativeFilter) {
             currentFilters.citoStatus = 'negativo';
           }
-          if (dateRange?.from) {
-            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-            const year = dateRange.from.getFullYear();
-            const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
-            const day = String(dateRange.from.getDate()).padStart(2, '0');
-            currentFilters.dateFrom = `${year}-${month}-${day}`;
-          }
-          if (dateRange?.to) {
-            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-            const year = dateRange.to.getFullYear();
-            const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
-            const day = String(dateRange.to.getDate()).padStart(2, '0');
-            currentFilters.dateTo = `${year}-${month}-${day}`;
+          if (dateRange?.from || dateRange?.to) {
+            const formatYmd = (d: Date) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            };
+            const fromStr = dateRange.from ? formatYmd(dateRange.from) : null;
+            const toStr = dateRange.to ? formatYmd(dateRange.to) : null;
+            currentFilters.dateFrom = fromStr ?? toStr ?? undefined;
+            currentFilters.dateTo = toStr ?? fromStr ?? undefined;
           }
 
           // Agregar el nuevo sort
@@ -653,19 +651,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         } else if (tempCitologyNegativeFilter) {
           serverFilters.citoStatus = 'negativo';
         }
-        if (tempDateRange?.from) {
-          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-          const year = tempDateRange.from.getFullYear();
-          const month = String(tempDateRange.from.getMonth() + 1).padStart(2, '0');
-          const day = String(tempDateRange.from.getDate()).padStart(2, '0');
-          serverFilters.dateFrom = `${year}-${month}-${day}`;
-        }
-        if (tempDateRange?.to) {
-          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-          const year = tempDateRange.to.getFullYear();
-          const month = String(tempDateRange.to.getMonth() + 1).padStart(2, '0');
-          const day = String(tempDateRange.to.getDate()).padStart(2, '0');
-          serverFilters.dateTo = `${year}-${month}-${day}`;
+        if (tempDateRange?.from || tempDateRange?.to) {
+          const formatYmd = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          };
+          const fromStr = tempDateRange.from ? formatYmd(tempDateRange.from) : null;
+          const toStr = tempDateRange.to ? formatYmd(tempDateRange.to) : null;
+          serverFilters.dateFrom = fromStr ?? toStr ?? undefined;
+          serverFilters.dateTo = toStr ?? fromStr ?? undefined;
         }
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
@@ -827,14 +823,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       } else if (citologyNegativeFilter) {
         serverFilters.citoStatus = 'negativo';
       }
-      if (dateRange?.from) {
-        serverFilters.dateFrom = dateRange.from.toISOString();
-      }
-      if (dateRange?.to) {
-        // Siempre ajustar dateTo al final del día (23:59:59.999)
-        // para incluir todos los registros del último día del rango
-        const endOfDay = new Date(dateRange.to);
-        endOfDay.setHours(23, 59, 59, 999);
+      if (dateRange?.from || dateRange?.to) {
+        const d = dateRange.from ?? dateRange.to!;
+        const dTo = dateRange.to ?? dateRange.from!;
+        serverFilters.dateFrom = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+        const endOfDay = new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999);
         serverFilters.dateTo = endOfDay.toISOString();
       }
       if (emailSentStatusFilter !== 'all') {
@@ -1016,21 +1009,19 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           }
 
           if (createdDateStr) {
-            // Check if date is within range
-            if (dateRange.from && dateRange.to) {
-              // Both from and to dates selected - check if within range
-              const fromStr = formatLocalYmd(dateRange.from);
-              const toStr = formatLocalYmd(dateRange.to);
-              matchesDate =
-                createdDateStr >= fromStr && createdDateStr <= toStr;
-            } else if (dateRange.from) {
-              // Only from date selected - check if date is >= from
-              const fromStr = formatLocalYmd(dateRange.from);
-              matchesDate = createdDateStr >= fromStr;
-            } else if (dateRange.to) {
-              // Only to date selected - check if date is <= to
-              const toStr = formatLocalYmd(dateRange.to);
-              matchesDate = createdDateStr <= toStr;
+            const fromStr = dateRange.from ? formatLocalYmd(dateRange.from) : null;
+            const toStr = dateRange.to ? formatLocalYmd(dateRange.to) : null;
+            // Una sola fecha seleccionada → solo casos de ese día. Dos fechas → rango.
+            if (fromStr && toStr) {
+              if (fromStr === toStr) {
+                matchesDate = createdDateStr === fromStr;
+              } else {
+                matchesDate = createdDateStr >= fromStr && createdDateStr <= toStr;
+              }
+            } else if (fromStr) {
+              matchesDate = createdDateStr === fromStr;
+            } else if (toStr) {
+              matchesDate = createdDateStr === toStr;
             }
           } else {
             matchesDate = false;
