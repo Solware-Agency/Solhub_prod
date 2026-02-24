@@ -118,7 +118,7 @@ export const ExportColumnsModal: React.FC<ExportColumnsModalProps> = ({
 				<div className="flex-1 overflow-y-auto min-h-0 py-3 space-y-4">
 					{grouped.map(([groupName, options]) => (
 						<div key={groupName}>
-							<h3 className="text-sm font-semibold text-foreground mb-2 sticky top-0 bg-background/95 dark:bg-background/95 py-1">
+							<h3 className="text-sm font-semibold text-foreground mb-2 border-b border-border pb-2">
 								{groupName}
 							</h3>
 							<ul className="space-y-2">
