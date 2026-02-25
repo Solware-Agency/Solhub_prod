@@ -1,17 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { Phone, Mail, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
+import { Phone, Mail, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@shared/components/ui/alert-dialog'
 import PatientHistoryModal from './PatientHistoryModal'
 import type { Patient } from '@/services/supabase/patients/patients-service'
 
@@ -168,8 +158,6 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 										key={patient.id}
 										patient={patient}
 										onClick={() => handlePatientClick(patient)}
-										onDelete={onDeletePatient}
-										isDeleting={isDeleting}
 									/>
 								))}
 							</div>
@@ -210,7 +198,13 @@ const PatientsList: React.FC<PatientsListProps> = React.memo(
 				</Card>
 
 				{/* Patient History Modal */}
-				<PatientHistoryModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} patient={selectedPatient} />
+				<PatientHistoryModal
+					isOpen={isModalOpen}
+					onClose={() => setIsModalOpen(false)}
+					patient={selectedPatient}
+					onDeletePatient={onDeletePatient}
+					isDeleting={isDeleting}
+				/>
 			</div>
 		)
 	},
@@ -222,43 +216,15 @@ PatientsList.displayName = 'PatientsList'
 interface PatientCardProps {
 	patient: Patient
 	onClick: () => void
-	onDelete?: (patient: Patient) => void
-	isDeleting?: boolean
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick, onDelete, isDeleting = false }) => {
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-
-	const handleDeleteClick = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		setDeleteDialogOpen(true)
-	}
-
-	const handleConfirmDelete = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		onDelete?.(patient)
-		setDeleteDialogOpen(false)
-	}
-
+const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
 	return (
-		<>
-			<div
-				className="bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer relative group"
-				onClick={onClick}
-			>
-				{onDelete && (
-					<Button
-						variant="ghost"
-						size="icon"
-						className="absolute top-2 right-2 h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 invisible group-hover:visible"
-						onClick={handleDeleteClick}
-						disabled={isDeleting}
-						title="Eliminar paciente (se ocultará de la lista)"
-					>
-						<Trash2 className="h-4 w-4" />
-					</Button>
-				)}
-				<div className="mb-3 pr-8">
+		<div
+			className="bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer relative group"
+			onClick={onClick}
+		>
+			<div className="mb-3">
 					<p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
 						{patient.nombre}
 					</p>
@@ -281,29 +247,6 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick, onDelete, i
 					)}
 				</div>
 			</div>
-
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent onClick={(e) => e.stopPropagation()}>
-					<AlertDialogHeader>
-						<AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
-						<AlertDialogDescription>
-							El paciente &quot;{patient.nombre}&quot; se ocultará de la lista. Los datos se conservan en el sistema y
-							los casos asociados no se modifican.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleConfirmDelete}
-							disabled={isDeleting}
-							className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-						>
-							{isDeleting ? 'Eliminando...' : 'Eliminar'}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</>
 	)
 }
 

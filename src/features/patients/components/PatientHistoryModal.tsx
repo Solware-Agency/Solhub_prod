@@ -63,6 +63,9 @@ interface PatientHistoryModalProps {
 	patient: Patient | null
 	/** Cuando true, el modal usa z-index mayor que Detalles del caso (p. ej. abierto desde página de casos) */
 	elevatedZIndex?: boolean
+	/** Callback para eliminar paciente (oculta de la lista). Si no se pasa, no se muestra el botón eliminar. */
+	onDeletePatient?: (patient: Patient) => void
+	isDeleting?: boolean
 }
 
 // Helper to calculate age from fecha_nacimiento
@@ -118,6 +121,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 	onClose,
 	patient,
 	elevatedZIndex = false,
+	onDeletePatient,
+	isDeleting = false,
 }) => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [isEditing, setIsEditing] = useState(false)
@@ -142,6 +147,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 		nombre: string
 		dependienteId: string
 	} | null>(null)
+	const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null)
 	const [isDeletingRepresentado, setIsDeletingRepresentado] = useState(false)
 	const [pendingEmailFromRepresentado, setPendingEmailFromRepresentado] = useState(false)
 
@@ -1062,9 +1068,20 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 														<button
 															onClick={editPatient}
 															className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 cursor-pointer"
+															title="Editar paciente"
 														>
 															<UserPen className="size-5 cursor-pointer" />
 														</button>
+														{onDeletePatient && (
+															<button
+																onClick={() => setPatientToDelete(patient)}
+																disabled={isDeleting}
+																className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+																title="Eliminar paciente (se ocultará de la lista)"
+															>
+																<Trash2 className="size-5 cursor-pointer" />
+															</button>
+														)}
 													</h3>
 													<p className="text-sm text-gray-600 dark:text-gray-400">
 														{isRepresentado && responsableData?.responsable ? (
@@ -1878,6 +1895,38 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 					isSending={isSendingEmails}
 				/>
 			)}
+
+			{/* Diálogo confirmar eliminar paciente */}
+			<AlertDialog
+				key="alert-delete-patient"
+				open={!!patientToDelete}
+				onOpenChange={(open) => !open && setPatientToDelete(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El paciente &quot;{patientToDelete?.nombre}&quot; se ocultará de la lista. Los datos se conservan en el sistema
+							y los casos asociados no se modifican.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (!patientToDelete || !onDeletePatient) return
+								onDeletePatient(patientToDelete)
+								setPatientToDelete(null)
+								onClose()
+							}}
+							disabled={isDeleting}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							{isDeleting ? 'Eliminando...' : 'Eliminar'}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 
 			{/* Diálogo confirmar eliminar representado */}
 			<AlertDialog
