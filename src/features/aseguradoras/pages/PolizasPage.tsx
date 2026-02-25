@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, FileText } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { format } from 'date-fns'
+import { format, addMonths } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import { getAseguradoras, type Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { findAseguradoById, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
@@ -244,29 +244,70 @@ const PolizasPage = () => {
 		setPanelOpen(true)
 	}
 
-	/** Validación parte 2 (Datos póliza): todos los campos obligatorios */
-	const getValidationErrorsPart2 = (): string[] => {
-		const err: string[] = []
-		if (!form.aseguradora_id?.trim()) err.push('Aseguradora')
-		if (!form.agente_nombre?.trim()) err.push('Agente / Productor')
-		if (!form.numero_poliza?.trim()) err.push('Número de póliza')
-		if (!form.ramo?.trim()) err.push('Ramo')
-		if (!form.suma_asegurada?.trim()) err.push('Suma asegurada')
-		return err
+	/** Validación unificada por paso. Devuelve los campos obligatorios faltantes agrupados por sección. */
+	const getValidationErrors = (): { step: string; fields: string[] }[] => {
+		const errors: { step: string; fields: string[] }[] = []
+
+		// Paso 1: Asegurado (solo al crear)
+		if (!editingPoliza && !form.asegurado_id?.trim()) {
+			errors.push({ step: 'Asegurado', fields: ['Seleccione un asegurado'] })
+		}
+
+		// Paso 2: Datos póliza
+		const part2: string[] = []
+		if (!form.aseguradora_id?.trim()) part2.push('Aseguradora')
+		if (!form.agente_nombre?.trim()) part2.push('Agente / Productor')
+		if (!form.numero_poliza?.trim()) part2.push('Número de póliza')
+		if (!form.ramo?.trim()) part2.push('Ramo')
+		if (!form.suma_asegurada?.trim()) part2.push('Suma asegurada')
+		if (part2.length > 0) errors.push({ step: 'Datos póliza', fields: part2 })
+
+		// Paso 3: Fechas (requeridos por backend)
+		const fechas: string[] = []
+		if (!form.fecha_inicio?.trim()) fechas.push('Fecha de emisión')
+		if (!form.fecha_vencimiento?.trim()) fechas.push('Fecha vencimiento')
+		if (fechas.length > 0) errors.push({ step: 'Fechas', fields: fechas })
+
+		return errors
+	}
+
+	/** Validación solo del paso actual (para botón Siguiente) */
+	const getValidationErrorsForStep = (stepIndex: number): string[] => {
+		if (stepIndex === 0) {
+			if (!editingPoliza && !form.asegurado_id?.trim()) return ['Seleccione un asegurado']
+			return []
+		}
+		if (stepIndex === 1) {
+			const err: string[] = []
+			if (!form.aseguradora_id?.trim()) err.push('Aseguradora')
+			if (!form.agente_nombre?.trim()) err.push('Agente / Productor')
+			if (!form.numero_poliza?.trim()) err.push('Número de póliza')
+			if (!form.ramo?.trim()) err.push('Ramo')
+			if (!form.suma_asegurada?.trim()) err.push('Suma asegurada')
+			return err
+		}
+		if (stepIndex === 2) {
+			const err: string[] = []
+			if (!form.fecha_inicio?.trim()) err.push('Fecha de emisión')
+			if (!form.fecha_vencimiento?.trim()) err.push('Fecha vencimiento')
+			return err
+		}
+		return []
+	}
+
+	const showValidationToast = (errors: { step: string; fields: string[] }[]) => {
+		const description = errors.map((e) => `En ${e.step}: ${e.fields.join(', ')}`).join('. ')
+		toast({
+			title: 'Complete los campos obligatorios',
+			description,
+			variant: 'destructive',
+		})
 	}
 
 	const handleSave = async () => {
-		if (!editingPoliza && !form.asegurado_id?.trim()) {
-			toast({ title: 'Seleccione un asegurado', variant: 'destructive' })
-			return
-		}
-		const part2Errors = getValidationErrorsPart2()
-		if (part2Errors.length > 0) {
-			toast({
-				title: 'Parte 2: campos obligatorios',
-				description: `Complete: ${part2Errors.join(', ')}`,
-				variant: 'destructive',
-			})
+		const allErrors = getValidationErrors()
+		if (allErrors.length > 0) {
+			showValidationToast(allErrors)
 			return
 		}
 		if (!editingPoliza) {
@@ -443,12 +484,25 @@ const PolizasPage = () => {
 							<Label>Modalidad de pago <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.modalidad_pago}
-								onValueChange={(value) =>
-									setForm((prev) => ({
-										...prev,
-										modalidad_pago: value as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
-									}))
-								}
+								onValueChange={(value) => {
+									const modalidad = value as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
+									const months =
+										modalidad === 'Mensual' ? 1 : modalidad === 'Trimestral' ? 3 : modalidad === 'Semestral' ? 6 : 12
+									setForm((prev) => {
+										const baseDate = prev.fecha_inicio ? new Date(prev.fecha_inicio + 'T12:00:00') : null
+										const proxStr =
+											baseDate && !isNaN(baseDate.getTime())
+												? format(addMonths(baseDate, months), 'yyyy-MM-dd')
+												: prev.fecha_prox_vencimiento
+										const dia = proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento
+										return {
+											...prev,
+											modalidad_pago: modalidad,
+											fecha_prox_vencimiento: proxStr,
+											dia_vencimiento: dia,
+										}
+									})
+								}}
 							>
 								<SelectTrigger>
 									<SelectValue />
@@ -507,7 +561,7 @@ const PolizasPage = () => {
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha inicio</Label>
+							<Label>Fecha de emisión <span className="text-destructive">*</span></Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -525,19 +579,35 @@ const PolizasPage = () => {
 									<Calendar
 										mode="single"
 										selected={parseIsoDate(form.fecha_inicio)}
-										onSelect={(date) =>
+										onSelect={(date) => {
+											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+											const months =
+												form.modalidad_pago === 'Mensual'
+													? 1
+													: form.modalidad_pago === 'Trimestral'
+														? 3
+														: form.modalidad_pago === 'Semestral'
+															? 6
+															: 12
+											const proxStr =
+												fechaStr && date
+													? format(addMonths(date, months), 'yyyy-MM-dd')
+													: ''
 											setForm((prev) => ({
 												...prev,
-												fecha_inicio: date ? format(date, 'yyyy-MM-dd') : '',
+												fecha_inicio: fechaStr,
+												fecha_prox_vencimiento: proxStr,
+												dia_vencimiento: proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento,
 											}))
-										}
+										}}
+										allowFutureDates
 										initialFocus
 									/>
 								</PopoverContent>
 							</Popover>
 						</div>
 						<div className="space-y-2">
-							<Label>Fecha vencimiento</Label>
+							<Label>Fecha vencimiento <span className="text-destructive">*</span></Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -555,82 +625,47 @@ const PolizasPage = () => {
 									<Calendar
 										mode="single"
 										selected={parseIsoDate(form.fecha_vencimiento)}
-										onSelect={(date) =>
+										onSelect={(date) => {
+											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+											// fecha_prox_vencimiento = fecha_emisión + periodo; si no hay emisión, usar vencimiento
+											const baseDate = form.fecha_inicio ? new Date(form.fecha_inicio + 'T12:00:00') : date
+											const months =
+												form.modalidad_pago === 'Mensual'
+													? 1
+													: form.modalidad_pago === 'Trimestral'
+														? 3
+														: form.modalidad_pago === 'Semestral'
+															? 6
+															: 12
+											const proxDate =
+												baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : date
+											const proxStr = proxDate ? format(proxDate, 'yyyy-MM-dd') : fechaStr
 											setForm((prev) => ({
 												...prev,
-												fecha_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
+												fecha_vencimiento: fechaStr,
+												dia_vencimiento: proxDate ? String(proxDate.getDate()) : '',
+												fecha_prox_vencimiento: proxStr,
 											}))
-										}
+										}}
+										allowFutureDates
 										initialFocus
 									/>
 								</PopoverContent>
 							</Popover>
 						</div>
 						<div className="space-y-2">
-							<Label>Día de vencimiento</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.dia_vencimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.dia_vencimiento ? `Día ${form.dia_vencimiento}` : 'Seleccionar día'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={
-											form.dia_vencimiento
-												? new Date(new Date().getFullYear(), new Date().getMonth(), Number(form.dia_vencimiento))
-												: undefined
-										}
-										onSelect={(date) =>
-											setForm((prev) => ({
-												...prev,
-												dia_vencimiento: date ? String(date.getDate()) : '',
-											}))
-										}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<Label className="text-muted-foreground">Día de vencimiento</Label>
+							<div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+								{form.dia_vencimiento ? `Día ${form.dia_vencimiento}` : ''}
+							</div>
 						</div>
 						<div className="space-y-2">
-							<Label>Fecha próximo vencimiento</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.fecha_prox_vencimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.fecha_prox_vencimiento
-											? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
-											: 'Fecha'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={parseIsoDate(form.fecha_prox_vencimiento)}
-										onSelect={(date) =>
-											setForm((prev) => ({
-												...prev,
-												fecha_prox_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
-											}))
-										}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<Label className="text-muted-foreground">Fecha próximo vencimiento</Label>
+							<div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+								{form.fecha_prox_vencimiento
+									? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
+									: ''}
+							</div>
 						</div>
 					</div>
 				)
@@ -879,16 +914,15 @@ const PolizasPage = () => {
 						{step < STEPS.length - 1 ? (
 							<Button
 								onClick={() => {
-									if (step === 1) {
-										const part2Errors = getValidationErrorsPart2()
-										if (part2Errors.length > 0) {
-											toast({
-												title: 'Parte 2: campos obligatorios',
-												description: `Complete: ${part2Errors.join(', ')}`,
-												variant: 'destructive',
-											})
-											return
-										}
+									const stepErrors = getValidationErrorsForStep(step)
+									if (stepErrors.length > 0) {
+										const stepName = STEPS[step]
+										toast({
+											title: 'Campos obligatorios',
+											description: `En ${stepName}: ${stepErrors.join(', ')}`,
+											variant: 'destructive',
+										})
+										return
 									}
 									setStep((prev) => prev + 1)
 								}}
