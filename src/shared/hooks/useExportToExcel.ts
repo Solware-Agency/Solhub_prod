@@ -68,13 +68,19 @@ export const useExportToExcel = () => {
 	const hasPayment =
 		Boolean(laboratory?.features?.hasPayment) && laboratory?.slug !== 'spt'
 
-	// Columnas visibles según features del lab (ej. SPT sin hasPayment no ve columnas de Pagos)
+	// Columnas visibles según features y slug del lab
 	const effectiveOptions = useMemo(
 		() =>
-			EXPORT_COLUMN_OPTIONS.filter(
-				(c) => !c.feature || (c.feature === 'hasPayment' && hasPayment),
-			),
-		[hasPayment],
+			EXPORT_COLUMN_OPTIONS.filter((c) => {
+				// Solo para lab con este slug (ej. Tipo de consulta para SPT)
+				if (c.laboratorySlug && laboratory?.slug !== c.laboratorySlug) return false
+				// Sin feature = siempre visible
+				if (!c.feature) return true
+				if (c.feature === 'hasPayment' && hasPayment) return true
+				if (c.feature === 'hasEvaluateCitology' && Boolean(laboratory?.features?.hasEvaluateCitology)) return true
+				return false
+			}),
+		[hasPayment, laboratory?.slug, laboratory?.features?.hasEvaluateCitology],
 	)
 	const effectiveKeys = useMemo(() => effectiveOptions.map((c) => c.key), [effectiveOptions])
 
@@ -154,6 +160,7 @@ export const useExportToExcel = () => {
 						Edad: ageDisplay,
 						Sede: case_.branch || '',
 						'Tipo de Estudio': case_.exam_type || '',
+						'Tipo de consulta': case_.consulta || '',
 						'Médico Tratante': case_.treating_doctor || '',
 						'Tasa de Cambio (Bs)': exchangeRate,
 						'Monto Total (USD)': case_.total_amount || 0,

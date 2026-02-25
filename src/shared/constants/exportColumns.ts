@@ -11,6 +11,8 @@ export interface ExportColumnOption {
 	defaultWidth: number
 	/** Si está definido, la columna solo se incluye cuando el lab tiene esta feature habilitada. */
 	feature?: 'hasPayment' | 'hasEvaluateCitology'
+	/** Si está definido, la columna solo se incluye cuando el lab tiene este slug (ej. spt). */
+	laboratorySlug?: string
 }
 
 export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
@@ -18,7 +20,8 @@ export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
 	{ key: 'Código', label: 'Código', group: 'Caso', defaultWidth: 15 },
 	{ key: 'Registro', label: 'Fecha de registro', group: 'Caso', defaultWidth: 18 },
 	{ key: 'Sede', label: 'Sede', group: 'Caso', defaultWidth: 10 },
-	{ key: 'Tipo de Estudio', label: 'Tipo de estudio', group: 'Caso', defaultWidth: 20 },
+	{ key: 'Tipo de Examen', label: 'Tipo de examen', group: 'Caso', defaultWidth: 20 },
+	{ key: 'Tipo de consulta', label: 'Tipo de consulta', group: 'Caso', defaultWidth: 20, laboratorySlug: 'spt' },
 	{ key: 'Médico Tratante', label: 'Médico tratante', group: 'Caso', defaultWidth: 25 },
 	// Paciente
 	{ key: 'Nombre del Paciente', label: 'Nombre del paciente', group: 'Paciente', defaultWidth: 25 },
