@@ -21,7 +21,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 	CalendarIcon,
-	// Download,
+	Download,
 	Phone,
 } from 'lucide-react'
 import type { MedicalCaseWithPatient, MedicalCaseUpdate } from '@/services/supabase/cases/medical-cases-service'
@@ -284,6 +284,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
 		const [isUploadingImages, setIsUploadingImages] = useState(false)
+		const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
 		// Image URLs state for imagenologia role (hasta 10 imágenes)
 		const [imageUrls, setImageUrls] = useState<string[]>([])
@@ -1167,6 +1168,55 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			setIsSendEmailModalOpen(true)
 		}
 
+		const handleDownloadInformeQR = async () => {
+			const informeQrUrl = (currentCase as any)?.informe_qr
+			if (!informeQrUrl?.trim()) {
+				toast({
+					title: '❌ Sin informe',
+					description: 'Este caso no tiene un PDF generado aún.',
+					variant: 'destructive',
+				})
+				return
+			}
+
+			try {
+				setIsDownloadingPDF(true)
+				const response = await fetch(informeQrUrl)
+				if (!response.ok) {
+					throw new Error(`Error al descargar: ${response.status}`)
+				}
+				const blob = await response.blob()
+				const url = window.URL.createObjectURL(blob)
+				const link = document.createElement('a')
+				link.href = url
+				const sanitizedName = (currentCase?.nombre || 'Paciente')
+					.normalize('NFD')
+					.replace(/[\u0300-\u036f]/g, '')
+					.replace(/[^a-zA-Z0-9\s]/g, '')
+					.replace(/\s+/g, '_')
+					.trim()
+				link.download = `${currentCase?.code || 'informe'}-${sanitizedName}.pdf`
+				document.body.appendChild(link)
+				link.click()
+				document.body.removeChild(link)
+				window.URL.revokeObjectURL(url)
+				toast({
+					title: '✅ PDF descargado',
+					description: 'El informe se ha descargado correctamente.',
+				})
+			} catch (err) {
+				console.error('Error al descargar el PDF:', err)
+				// Fallback: abrir en nueva pestaña si fetch falla (ej. CORS)
+				window.open(informeQrUrl, '_blank')
+				toast({
+					title: 'ℹ️ Abriendo informe',
+					description: 'El PDF se abrió en una nueva pestaña. Puedes descargarlo desde allí.',
+				})
+			} finally {
+				setIsDownloadingPDF(false)
+			}
+		}
+
 		const handleConfirmSendEmail = async (emails: { to: string; cc: string[]; bcc: string[] }) => {
 			const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url
 
@@ -1445,70 +1495,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				description: `Iniciando llamada a ${case_.telefono}.`,
 			})
 		}
-
-		// const handleDownloadCase = async () => {
-		// 	if (!currentCase) {
-		// 		toast({
-		// 			title: '❌ Error',
-		// 			description: 'No se encontró información del caso.',
-		// 			variant: 'destructive',
-		// 		})
-		// 		return
-		// 	}
-
-		// 	const pdfUrl = (currentCase as any)?.informepdf_url || (currentCase as any)?.informe_qr
-
-		// 	if (!pdfUrl) {
-		// 		toast({
-		// 			title: '❌ Error',
-		// 			description: 'No hay PDF disponible para descargar.',
-		// 			variant: 'destructive',
-		// 		})
-		// 		return
-		// 	}
-
-		// 	try {
-		// 		setIsSaving(true)
-
-		// 		const response = await fetch(pdfUrl)
-		// 		if (!response.ok) {
-		// 			throw new Error(`Error al descargar: ${response.status}`)
-		// 		}
-
-		// 		const sanitizedName =
-		// 			currentCase.nombre ||
-		// 			'Paciente'
-		// 				.normalize('NFD')
-		// 				.replace(/[\u0300-\u036f]/g, '')
-		// 				.replace(/[^a-zA-Z0-9\s]/g, '')
-		// 				.replace(/\s+/g, '_')
-		// 				.trim()
-
-		// 		const blob = await response.blob()
-		// 		const url = window.URL.createObjectURL(blob)
-		// 		const link = document.createElement('a')
-		// 		link.href = url
-		// 		link.download = `${currentCase.code || currentCase.id}-${sanitizedName}.pdf`
-		// 		document.body.appendChild(link)
-		// 		link.click()
-		// 		document.body.removeChild(link)
-		// 		window.URL.revokeObjectURL(url)
-
-		// 		toast({
-		// 			title: '✅ PDF descargado',
-		// 			description: 'El documento se ha descargado correctamente.',
-		// 		})
-		// 	} catch (error) {
-		// 		console.error('Error al descargar el PDF:', error)
-		// 		toast({
-		// 			title: '❌ Error',
-		// 			description: 'No se pudo descargar el PDF. Intenta nuevamente.',
-		// 			variant: 'destructive',
-		// 		})
-		// 	} finally {
-		// 		setIsSaving(false)
-		// 	}
-		// }
 
 		const getFieldLabel = (field: string): string => {
 			const labels: Record<string, string> = {
@@ -1840,6 +1826,34 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															<Send className="w-4 h-4" />
 														)}
 													</button>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<span className="inline-flex">
+																<button
+																	onClick={handleDownloadInformeQR}
+																	disabled={!((currentCase as any)?.informe_qr?.trim()) || isDownloadingPDF}
+																	title={
+																		(currentCase as any)?.informe_qr
+																			? 'Descargar el informe PDF del caso'
+																			: 'Este caso no tiene un PDF generado aún'
+																	}
+																	className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+																	aria-label="Descargar informe PDF"
+																>
+																	{isDownloadingPDF ? (
+																		<Loader2 className="w-4 h-4 animate-spin" />
+																	) : (
+																		<Download className="w-4 h-4" />
+																	)}
+																</button>
+															</span>
+														</TooltipTrigger>
+														<TooltipContent style={{ zIndex: 2147483647 }}>
+															{(currentCase as any)?.informe_qr?.trim()
+																? 'Descargar el informe PDF del caso'
+																: 'Este caso no tiene un PDF generado aún'}
+														</TooltipContent>
+													</Tooltip>
 													<button
 														onClick={handleCall}
 														title="Llamar al paciente por teléfono"
