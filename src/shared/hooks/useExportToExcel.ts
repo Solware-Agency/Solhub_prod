@@ -159,7 +159,7 @@ export const useExportToExcel = () => {
 						Email: case_.patient_email || '',
 						Edad: ageDisplay,
 						Sede: case_.branch || '',
-						'Tipo de Estudio': case_.exam_type || '',
+						'Tipo de Examen': case_.exam_type || '',
 						'Tipo de consulta': case_.consulta || '',
 						'Médico Tratante': case_.treating_doctor || '',
 						'Tasa de Cambio (Bs)': exchangeRate,
