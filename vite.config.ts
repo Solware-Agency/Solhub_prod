@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
 						brotliSize: true,
 						template: 'treemap',
 					}),
-			  ]
+				]
 			: []),
 	],
 	resolve: {
@@ -47,6 +47,13 @@ export default defineConfig(({ mode }) => ({
 				entryFileNames: 'assets/[name]-[hash].js',
 				chunkFileNames: 'assets/[name]-[hash].js',
 				assetFileNames: 'assets/[name]-[hash][extname]',
+				manualChunks(id) {
+					if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react-vendor'
+					if (id.includes('node_modules/@supabase')) return 'supabase-vendor'
+					if (id.includes('node_modules/recharts')) return 'recharts-vendor'
+					if (id.includes('node_modules/@tanstack/react-query')) return 'tanstack-query-vendor'
+					if (id.includes('node_modules/react-router-dom')) return 'router-vendor'
+				},
 			},
 		},
 		// Eliminar console.log en builds (producción)

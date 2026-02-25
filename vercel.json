@@ -1,16 +1,23 @@
 {
-  "rewrites": [
-    {
-      "source": "/((?!site\\.webmanifest|favicon|apple-touch-icon|android-chrome|api/|assets/).*)",
-      "destination": "/index.html"
-    }
-  ],
-  "functions": {
-    "api/download-pdf.js": {
-      "maxDuration": 40
-    },
-    "api/send-email.js": {
-      "maxDuration": 40
-    }
-  }
+	"rewrites": [
+		{
+			"source": "/((?!site\\.webmanifest|favicon|apple-touch-icon|android-chrome|api/|assets/).*)",
+			"destination": "/index.html"
+		}
+	],
+	"headers": [
+		{
+			"source": "/((?!assets/|api/|site\\.webmanifest|favicon|apple-touch-icon|android-chrome).*)",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "no-cache, must-revalidate"
+				}
+			]
+		}
+	],
+	"functions": {
+		"api/download-pdf.js": { "maxDuration": 40 },
+		"api/send-email.js": { "maxDuration": 40 }
+	}
 }

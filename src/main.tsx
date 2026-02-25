@@ -1,7 +1,16 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+
+// Manejo de errores de carga de chunks (lazy loading) - recarga inmediata en producción
+// Evita que el usuario vea el ErrorBoundary cuando Vite falla al cargar un chunk obsoleto
+// (ej: después de un deploy mientras tenía la app abierta)
+if (import.meta.env.PROD && typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault()
+    window.location.reload()
+  })
+}
 import { AuthProvider } from '@app/providers/AuthContext.tsx'
 import { LaboratoryProvider } from '@app/providers/LaboratoryContext.tsx';
 import { LaboratoryThemeProvider } from '@app/providers/LaboratoryThemeProvider.tsx';
