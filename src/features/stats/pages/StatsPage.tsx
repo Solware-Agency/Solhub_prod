@@ -1,5 +1,15 @@
 import React, { useState, Suspense } from 'react'
-import { Users, DollarSign, CheckCircle2, ArrowUpRight, AlertTriangle, Clock, Info, Stethoscope, Layers } from 'lucide-react'
+import {
+	Users,
+	DollarSign,
+	CheckCircle2,
+	ArrowUpRight,
+	AlertTriangle,
+	Clock,
+	Info,
+	Stethoscope,
+	Layers,
+} from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { YearSelector } from '@shared/components/ui/year-selector'
 import DateRangeSelector from '@shared/components/ui/date-range-selector'
@@ -37,8 +47,7 @@ const StatsPage: React.FC = () => {
 	const isSpt = laboratory?.slug === 'spt'
 	const hasMedicalTypeRoles =
 		laboratory?.available_roles?.includes('patologo') || laboratory?.available_roles?.includes('citotecno')
-	const totalCasesByMedicalType =
-		(stats?.totalCasesWithPathologist || 0) + (stats?.totalCasesWithCitotecno || 0)
+	const totalCasesByMedicalType = (stats?.totalCasesWithPathologist || 0) + (stats?.totalCasesWithCitotecno || 0)
 	const [selectedStat, setSelectedStat] = useState<StatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
 	const [selectedChart, setSelectedChart] = useState<StatType | null>(null)
@@ -97,24 +106,25 @@ const StatsPage: React.FC = () => {
 		<>
 			<div>
 				<div className="mb-4 sm:mb-6">
-					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 						<div>
-							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estadísticas</h1>
-							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
+							<h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Estadísticas</h2>
+							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 						</div>
 						<DateRangeSelector value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
 					</div>
 				</div>
-				{/* <div className="text-sm text-gray-600 dark:text-gray-400">
-							Mes seleccionado:{' '}
-							<span className="font-medium">{format(selectedMonth, 'MMMM yyyy', { locale: es })}</span>
-						</div> */}
-				{/* KPI Cards Grid - SPT: 3 en línea (Casos, Pacientes, Recepcionista); no-SPT: 4 */}
-				<div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+				<div
+					className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}
+				>
 					{/* Total Revenue / Casos del Período Card */}
 					<StatCard
 						title={isSpt ? 'Casos del Período' : 'Ingresos del Período'}
-						value={isSpt ? `${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}` : `${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`}
+						value={
+							isSpt
+								? `${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}`
+								: `${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`
+						}
 						description={undefined}
 						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 						onClick={() => handleStatCardClick(isSpt ? 'totalCases' : 'totalRevenue')}
@@ -184,46 +194,48 @@ const StatsPage: React.FC = () => {
 
 				{/* KPI Cards: Recepcionistas / Bloques / Patólogos - Casos por Recepcionista ya está en primera línea para SPT */}
 				{(!isSpt || hasMedicalTypeRoles) && (
-				<div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}>
-					{!isSpt && (
-						<StatCard
-							title="Casos por Recepcionista"
-							value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCases || 0)}`}
-							icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
-							onClick={() => handleStatCardClick('casesByReceptionist')}
-							statType="casesByReceptionist"
-							isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}
-						/>
-					)}
+					<div
+						className={`grid grid-cols-1 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}
+					>
+						{!isSpt && (
+							<StatCard
+								title="Casos por Recepcionista"
+								value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCases || 0)}`}
+								icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
+								onClick={() => handleStatCardClick('casesByReceptionist')}
+								statType="casesByReceptionist"
+								isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}
+							/>
+						)}
 
-					{!isSpt && (
-						<StatCard
-							title="Bloques del período"
-							value={isLoading ? '...' : formatNumber(stats?.totalBlocks ?? 0)}
-							icon={<Layers className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400" />}
-							onClick={() => handleStatCardClick('totalBlocks')}
-							statType="totalBlocks"
-							isSelected={selectedStat === 'totalBlocks' && isDetailPanelOpen}
-						/>
-					)}
+						{!isSpt && (
+							<StatCard
+								title="Bloques del período"
+								value={isLoading ? '...' : formatNumber(stats?.totalBlocks ?? 0)}
+								icon={<Layers className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400" />}
+								onClick={() => handleStatCardClick('totalBlocks')}
+								statType="totalBlocks"
+								isSelected={selectedStat === 'totalBlocks' && isDetailPanelOpen}
+							/>
+						)}
 
-					{hasMedicalTypeRoles && (
-						<StatCard
-							title="Casos por tipo de médico"
-							value={isLoading ? '...' : `Total ${formatNumber(totalCasesByMedicalType)}`}
-							icon={<Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />}
-							onClick={() => handleStatCardClick('casesByMedicalType')}
-							statType="casesByMedicalType"
-							isSelected={selectedStat === 'casesByMedicalType' && isDetailPanelOpen}
-						/>
-					)}
-				</div>
+						{hasMedicalTypeRoles && (
+							<StatCard
+								title="Casos por tipo de médico"
+								value={isLoading ? '...' : `Total ${formatNumber(totalCasesByMedicalType)}`}
+								icon={<Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />}
+								onClick={() => handleStatCardClick('casesByMedicalType')}
+								statType="casesByMedicalType"
+								isSelected={selectedStat === 'casesByMedicalType' && isDetailPanelOpen}
+							/>
+						)}
+					</div>
 				)}
 
 				{/* Charts Section */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-5 mb-3 sm:mb-5 md:mb-6">
 					{/* 12-Month Revenue Trend Chart with Interactive Bars */}
-					<Card 
+					<Card
 						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
 						onClick={() => handleChartClick('revenueTrend')}
 					>
@@ -268,8 +280,8 @@ const StatsPage: React.FC = () => {
 												key={month.month}
 												className={`flex-1 rounded-t-sm transition-transform duration-200 cursor-pointer hover:translate-y-[-4px] ${
 													isSelected
-														? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
-														: 'bg-gradient-to-t from-blue-500 to-blue-300 hover:from-blue-600 hover:to-blue-400'
+														? 'bg-linear-to-t from-purple-600 to-purple-400 shadow-lg'
+														: 'bg-linear-to-t from-blue-500 to-blue-300 hover:from-blue-600 hover:to-blue-400'
 												}`}
 												style={{ height: `${Math.max(height, 20)}%` }} // FIXED: Increased minimum height for better UX
 												title={`${month.month}: ${isSpt ? formatNumber(month.revenue) : formatCurrency(month.revenue)}`}
@@ -282,7 +294,7 @@ const StatsPage: React.FC = () => {
 							<div className="flex justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1.5 sm:mt-2">
 								{/* FIXED: Force Spanish month labels regardless of system language */}
 								{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((month) => (
-									<span key={month} className="flex-shrink-0">
+									<span key={month} className="shrink-0">
 										{month}
 									</span>
 								))}
@@ -291,7 +303,7 @@ const StatsPage: React.FC = () => {
 					</Card>
 
 					{/* Service Distribution by Branch */}
-					<Card 
+					<Card
 						className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
 						onClick={() => handleChartClick('branchDistribution')}
 					>
@@ -303,14 +315,18 @@ const StatsPage: React.FC = () => {
 										<Info className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>{isSpt ? 'Esta estadística refleja el porcentaje de casos por sede en el período seleccionado.' : 'Esta estadística refleja el porcentaje de ingresos por sede en el período seleccionado.'}</p>
+										<p>
+											{isSpt
+												? 'Esta estadística refleja el porcentaje de casos por sede en el período seleccionado.'
+												: 'Esta estadística refleja el porcentaje de ingresos por sede en el período seleccionado.'}
+										</p>
 									</TooltipContent>
 								</Tooltip>
 							</h3>
 							{/* Donut Chart con Recharts */}
 							<CustomPieChart
 								data={stats?.revenueByBranch || []}
-								total={isSpt ? (stats?.totalCases || 0) : (stats?.monthlyRevenue || 0)}
+								total={isSpt ? stats?.totalCases || 0 : stats?.monthlyRevenue || 0}
 								isLoading={isLoading}
 								valueMode={isSpt ? 'cases' : 'revenue'}
 							/>
@@ -322,8 +338,8 @@ const StatsPage: React.FC = () => {
 				<div className={`grid grid-cols-1 gap-4 mb-6 ${isSpt ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
 					{/* Exam Type Pie Chart - Exámenes más solicitados */}
 					<Suspense fallback={<ComponentFallback />}>
-						<ExamTypePieChart 
-							startDate={dateRange.start} 
+						<ExamTypePieChart
+							startDate={dateRange.start}
 							endDate={dateRange.end}
 							onClick={() => handleChartClick('examTypes')}
 							isSpt={isSpt}
@@ -333,8 +349,8 @@ const StatsPage: React.FC = () => {
 					{/* Doctor Revenue Report - Casos por médico tratante - en misma línea que Exámenes para SPT */}
 					{isSpt && (
 						<Suspense fallback={<ComponentFallback />}>
-							<DoctorRevenueReport 
-								startDate={dateRange.start} 
+							<DoctorRevenueReport
+								startDate={dateRange.start}
 								endDate={dateRange.end}
 								onClick={() => handleChartClick('doctorRevenue')}
 								isSpt={isSpt}
@@ -345,7 +361,7 @@ const StatsPage: React.FC = () => {
 					{/* Currency Distribution / Completados vs Pendientes (solo no-SPT) */}
 					{!isSpt && (
 						<>
-							<Card 
+							<Card
 								className="col-span-1 grid hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300 shadow-lg cursor-pointer"
 								onClick={() => handleChartClick('currencyDistribution')}
 							>
@@ -357,7 +373,10 @@ const StatsPage: React.FC = () => {
 												<Info className="size-4" />
 											</TooltipTrigger>
 											<TooltipContent>
-												<p>Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el período seleccionado.</p>
+												<p>
+													Esta estadística refleja la distribución de ingresos entre Bolívares y Dólares en el período
+													seleccionado.
+												</p>
 											</TooltipContent>
 										</Tooltip>
 									</h3>
@@ -370,8 +389,8 @@ const StatsPage: React.FC = () => {
 							</Card>
 							{/* Remaining Amount / Casos Pendientes */}
 							<Suspense fallback={<ComponentFallback />}>
-								<RemainingAmount 
-									startDate={dateRange.start} 
+								<RemainingAmount
+									startDate={dateRange.start}
 									endDate={dateRange.end}
 									onClick={() => handleChartClick('remainingAmount')}
 									isSpt={false}
@@ -383,25 +402,25 @@ const StatsPage: React.FC = () => {
 
 				{/* Additional Reports Grid - solo no-SPT (Origin + Doctor); SPT ya tiene Doctor en la línea anterior */}
 				{!isSpt && (
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-					<Suspense fallback={<ComponentFallback />}>
-						<OriginRevenueReport 
-							startDate={dateRange.start} 
-							endDate={dateRange.end}
-							onClick={() => handleChartClick('originRevenue')}
-							isSpt={isSpt}
-						/>
-					</Suspense>
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+						<Suspense fallback={<ComponentFallback />}>
+							<OriginRevenueReport
+								startDate={dateRange.start}
+								endDate={dateRange.end}
+								onClick={() => handleChartClick('originRevenue')}
+								isSpt={isSpt}
+							/>
+						</Suspense>
 
-					<Suspense fallback={<ComponentFallback />}>
-						<DoctorRevenueReport 
-							startDate={dateRange.start} 
-							endDate={dateRange.end}
-							onClick={() => handleChartClick('doctorRevenue')}
-							isSpt={isSpt}
-						/>
-					</Suspense>
-				</div>
+						<Suspense fallback={<ComponentFallback />}>
+							<DoctorRevenueReport
+								startDate={dateRange.start}
+								endDate={dateRange.end}
+								onClick={() => handleChartClick('doctorRevenue')}
+								isSpt={isSpt}
+							/>
+						</Suspense>
+					</div>
 				)}
 			</div>
 
