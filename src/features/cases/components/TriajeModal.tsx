@@ -86,6 +86,8 @@ interface TriajeModalProps {
   onClose: () => void;
   onSave?: () => void;
   isFullscreen?: boolean;
+  /** Key para forzar remount del formulario cada vez que se abre (evita estado de edición persistente) */
+  openKey?: number;
 }
 
 const TriajeModal: React.FC<TriajeModalProps> = ({
@@ -94,6 +96,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   onClose,
   onSave,
   isFullscreen = false,
+  openKey = 0,
 }) => {
   const [error, setError] = useState<string | null>(null);
 
@@ -145,13 +148,18 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     retry: 1,
   });
 
-  // Reset forceEditMode when modal closes
+  // Reset forceEditMode when modal closes (para que al reabrir muestre vista, no edición)
   React.useEffect(() => {
     if (!isOpen) {
       setForceEditMode(false);
       setError(null);
     }
   }, [isOpen]);
+
+  const handleClose = React.useCallback(() => {
+    setForceEditMode(false);
+    onClose();
+  }, [onClose]);
 
   // Reset forceEditMode when case changes (e.g., opening modal for different patient)
   React.useEffect(() => {
@@ -174,7 +182,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             {error || 'Error al cargar el triaje. Por favor, intenta de nuevo.'}
           </p>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
           >
             Cerrar
@@ -202,7 +210,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className='fixed inset-0 bg-black/50 dark:bg-black/70 z-[999998] backdrop-blur-sm'
-            onClick={onClose}
+            onClick={handleClose}
           />
 
           {/* Modal */}
@@ -238,7 +246,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       </Button>
                     )}
                     <button
-                      onClick={onClose}
+                      onClick={handleClose}
                       className='p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border border-gray-200 dark:border-gray-600'
                       aria-label='Cerrar modal'
                     >
@@ -287,11 +295,12 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
 
               {/* Content - Scrollable */}
               <div className='flex-1 overflow-y-auto'>
-                <TriajeFormErrorBoundary onClose={onClose}>
+                <TriajeFormErrorBoundary onClose={handleClose}>
                   {canEditTriaje ? (
                     <TriajeModalForm
+                      key={openKey}
                       case_={case_}
-                      onClose={onClose}
+                      onClose={handleClose}
                       onSave={() => {
                         setForceEditMode(false);
                         onSave?.();
@@ -350,7 +359,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             Error al mostrar el modal. Por favor, recarga la página.
           </p>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
           >
             Cerrar

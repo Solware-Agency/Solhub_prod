@@ -196,6 +196,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [selectedCaseForTriaje, setSelectedCaseForTriaje] =
       useState<UnifiedMedicalRecord | null>(null);
     const [isTriajeModalOpen, setIsTriajeModalOpen] = useState(false);
+    const [triajeOpenKey, setTriajeOpenKey] = useState(0);
     const [showPdfReadyOnly, setShowPdfReadyOnly] = useState(false);
     const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
     const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
@@ -775,6 +776,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
     const handleTriaje = useCallback((case_: UnifiedMedicalRecord) => {
       setSelectedCaseForTriaje(case_);
+      setTriajeOpenKey((k) => k + 1);
       setIsTriajeModalOpen(true);
     }, []);
 
@@ -1611,6 +1613,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           <TriajeModal
             case_={selectedCaseForTriaje}
             isOpen={isTriajeModalOpen}
+            openKey={triajeOpenKey}
             onClose={() => {
               setIsTriajeModalOpen(false);
               setSelectedCaseForTriaje(null);
@@ -1930,6 +1933,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <TriajeModal
           case_={selectedCaseForTriaje}
           isOpen={isTriajeModalOpen}
+          openKey={triajeOpenKey}
           onClose={() => {
             setIsTriajeModalOpen(false);
             setSelectedCaseForTriaje(null);
