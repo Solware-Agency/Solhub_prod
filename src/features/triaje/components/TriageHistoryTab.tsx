@@ -15,7 +15,7 @@ interface TriageHistoryTabProps {
 const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }) => {
   const queryClient = useQueryClient();
   // Fetch latest triage record
-  const { data: latestTriage, isLoading: isLoadingLatest, error: errorLatest, refetch: refetchLatest } = useQuery({
+  const { data: latestTriage, isLoading: isLoadingLatest, error: errorLatest } = useQuery({
     queryKey: ['latest-triage', patientId],
     queryFn: async () => {
       if (!patientId) return null;
@@ -26,7 +26,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
   });
 
   // Fetch triage history
-  const { data: triageHistory, isLoading, error, refetch } = useQuery({
+  const { data: triageHistory, isLoading, error } = useQuery({
     queryKey: ['triage-history', patientId],
     queryFn: async () => {
       if (!patientId) return [];
@@ -124,7 +124,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Altura */}
         {record.height_cm && (
           <div className='flex items-start gap-2'>
-            <Ruler className='h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0' />
+            <Ruler className='h-4 w-4 text-blue-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>Altura</p>
               <p className='text-sm font-medium'>{record.height_cm} cm</p>
@@ -135,7 +135,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Peso */}
         {record.weight_kg && (
           <div className='flex items-start gap-2'>
-            <Scale className='h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0' />
+            <Scale className='h-4 w-4 text-purple-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>Peso</p>
               <p className='text-sm font-medium'>{record.weight_kg} kg</p>
@@ -146,7 +146,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* IMC */}
         {record.bmi && (
           <div className='flex items-start gap-2'>
-            <Activity className='h-4 w-4 text-green-500 mt-0.5 flex-shrink-0' />
+            <Activity className='h-4 w-4 text-green-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>IMC</p>
               <p className='text-sm font-medium'>{record.bmi}</p>
@@ -157,7 +157,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Presión arterial */}
         {record.blood_pressure && (
           <div className='flex items-start gap-2'>
-            <Gauge className='h-4 w-4 text-red-500 mt-0.5 flex-shrink-0' />
+            <Gauge className='h-4 w-4 text-red-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>Presión</p>
               <p className='text-sm font-medium'>{record.blood_pressure} mmHg</p>
@@ -168,7 +168,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Frecuencia cardíaca */}
         {record.heart_rate && (
           <div className='flex items-start gap-2'>
-            <Heart className='h-4 w-4 text-pink-500 mt-0.5 flex-shrink-0' />
+            <Heart className='h-4 w-4 text-pink-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>FC</p>
               <p className='text-sm font-medium'>{record.heart_rate} lpm</p>
@@ -179,7 +179,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Frecuencia respiratoria */}
         {record.respiratory_rate && (
           <div className='flex items-start gap-2'>
-            <Wind className='h-4 w-4 text-cyan-500 mt-0.5 flex-shrink-0' />
+            <Wind className='h-4 w-4 text-cyan-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>FR</p>
               <p className='text-sm font-medium'>{record.respiratory_rate} rpm</p>
@@ -190,7 +190,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Saturación de oxígeno */}
         {record.oxygen_saturation !== null && record.oxygen_saturation !== undefined && (
           <div className='flex items-start gap-2'>
-            <Droplets className='h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0' />
+            <Droplets className='h-4 w-4 text-blue-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>SpO₂</p>
               <p className='text-sm font-medium'>{record.oxygen_saturation}%</p>
@@ -201,7 +201,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Temperatura */}
         {record.temperature_celsius && (
           <div className='flex items-start gap-2'>
-            <Thermometer className='h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0' />
+            <Thermometer className='h-4 w-4 text-orange-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>Temp</p>
               <p className='text-sm font-medium'>{record.temperature_celsius}°C</p>
@@ -212,7 +212,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
         {/* Glicemia */}
         {record.blood_glucose && (
           <div className='flex items-start gap-2'>
-            <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0' />
+            <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 shrink-0' />
             <div>
               <p className='text-xs text-gray-500 dark:text-gray-400'>Glicemia</p>
               <p className='text-sm font-medium'>{record.blood_glucose} mg/dL</p>

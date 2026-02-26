@@ -59,7 +59,7 @@ function PendingApprovalPage() {
 	}, [profile?.id, redirectUser, queryClient])
 
 	return (
-    <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+    <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
       {/* Aurora Background with New Color Palette */}
       <Aurora
         colorStops={['#3d84f5', '#06337b', '#3d84f5']}
@@ -69,7 +69,7 @@ function PendingApprovalPage() {
       />
 
       {/* Content Container with FadeContent Animation */}
-      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+      <div className='relative z-10 w-screen h-screen bg-linear-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
         <FadeContent
           blur={true}
           duration={1000}
