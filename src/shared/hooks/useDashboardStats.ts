@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
 import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
+import { getCallCenterStats } from '@/services/supabase/call-center/call-center-registros-service'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'
@@ -85,6 +86,8 @@ export interface DashboardStats {
 	casesByReceptionist: Array<{ id: string; name: string; cases: number }>
 	casesByPathologist: Array<{ id: string; name: string; cases: number; blocks: number }>
 	casesByCitotecno?: Array<{ id: string; name: string; cases: number }>
+	/** Estadísticas del call center (solo SPT con hasCallCenter) */
+	callCenterStats?: { totalCalls: number; topByAtendidoPor: Array<{ name: string; calls: number }> }
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number
@@ -144,16 +147,18 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
 
-				// Roles del laboratorio y slug para estadísticas por tipo de médico y SPT
+				// Roles del laboratorio, slug y features para estadísticas por tipo de médico, SPT y call center
 				const { data: labRow } = await supabase
 					.from('laboratories')
-					.select('available_roles, slug')
+					.select('available_roles, slug, features')
 					.eq('id', laboratoryId)
 					.single()
 				const availableRoles: string[] = Array.isArray(labRow?.available_roles) ? (labRow.available_roles as string[]) : []
 				const isSpt = (labRow as any)?.slug === 'spt'
 				const hasPatologo = availableRoles.includes('patologo')
 				const hasCitotecno = availableRoles.includes('citotecno')
+				const features = (labRow as any)?.features as Record<string, boolean> | undefined
+				const hasCallCenter = features?.hasCallCenter === true
 
 				// OPTIMIZACIÓN: Filtrar en el servidor en lugar de traer todos los registros
 				// Solo traer campos necesarios para las estadísticas
@@ -663,6 +668,15 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
 					.slice(0, 5) // Top 5 origins
 
+				// Estadísticas del call center (solo SPT con hasCallCenter)
+				let callCenterStats: DashboardStats['callCenterStats'] = undefined
+				if (isSpt && hasCallCenter) {
+					const ccResult = await getCallCenterStats(laboratoryId, filterStart, filterEnd)
+					if (ccResult.success && ccResult.data) {
+						callCenterStats = ccResult.data
+					}
+				}
+
 				return {
 					totalRevenue,
 					uniquePatients: finalUniquePatients,
@@ -690,6 +704,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					casesWithPaymentInBolivares,
 					revenueGrowthPercentage,
 					casesGrowthPercentage,
+					callCenterStats,
 				}
 			} catch (error) {
 				console.error('Error fetching dashboard stats:', error)
@@ -706,6 +721,8 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 	useRealtimeInvalidate('medical_records_clean', ['dashboard-stats', 'medical-cases', 'my-medical-cases'], {
 		delayMs: 2000,
 	})
+	// REALTIME: Call center registros (para dashboard SPT con hasCallCenter)
+	useRealtimeInvalidate('call_center_registros', ['dashboard-stats'], { delayMs: 2000 })
 
 	return {
 		data: query.data,

@@ -106,3 +106,65 @@ export async function getCallCenterRegistros(
     return { success: false, error: message }
   }
 }
+
+/** Estadísticas del call center para un período (total de llamadas y top por atendido_por) */
+export interface CallCenterStats {
+  totalCalls: number
+  topByAtendidoPor: Array<{ name: string; calls: number }>
+}
+
+export interface GetCallCenterStatsResult {
+  success: boolean
+  data?: CallCenterStats
+  error?: string
+}
+
+/**
+ * Obtiene estadísticas del call center para un laboratorio en un rango de fechas.
+ * Incluye total de llamadas y top operadores (atendido_por) por cantidad de llamadas.
+ */
+export async function getCallCenterStats(
+  laboratoryId: string,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<GetCallCenterStatsResult> {
+  try {
+    const fromStr = dateFrom.toISOString()
+    const toStr = dateTo.toISOString()
+
+    const { data, error } = await supabase
+      .from('call_center_registros')
+      .select('atendido_por')
+      .eq('laboratory_id', laboratoryId)
+      .gte('created_at', fromStr)
+      .lte('created_at', toStr)
+
+    if (error) {
+      console.error('Error fetching call center stats:', error)
+      return { success: false, error: error.message }
+    }
+
+    const registros = (data ?? []) as { atendido_por: string | null }[]
+    const totalCalls = registros.length
+
+    // Agrupar por atendido_por (quien atendió la llamada)
+    const counts: Record<string, number> = {}
+    registros.forEach((r) => {
+      const name = (r.atendido_por || '').trim() || 'Sin asignar'
+      counts[name] = (counts[name] || 0) + 1
+    })
+
+    const topByAtendidoPor = Object.entries(counts)
+      .map(([name, calls]) => ({ name, calls }))
+      .sort((a, b) => b.calls - a.calls)
+
+    return {
+      success: true,
+      data: { totalCalls, topByAtendidoPor },
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    console.error('getCallCenterStats:', message)
+    return { success: false, error: message }
+  }
+}
