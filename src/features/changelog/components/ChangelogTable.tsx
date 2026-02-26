@@ -1,6 +1,7 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getAllChangeLogs } from '@/services/legacy/supabase-service'
 import { supabase } from '@/services/supabase/config/config'
+import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { Button } from '@shared/components/ui/button'
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
 import { Card } from '@shared/components/ui/card'
@@ -9,7 +10,7 @@ import { Input } from '@shared/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
@@ -28,7 +29,7 @@ import {
 	RefreshCw,
 	Trash2,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 
@@ -45,7 +46,6 @@ type GroupedChangeLog = {
 
 const ChangelogTable: React.FC = () => {
 	const { toast } = useToast()
-	const queryClient = useQueryClient()
 
 	// Función para traducir nombres de campos en inglés a español
 	const translateFieldLabel = (fieldName: string, fieldLabel: string): string => {
@@ -94,118 +94,20 @@ const ChangelogTable: React.FC = () => {
 		return { text: displayText, isDeletedCase }
 	}
 
-	useUserProfile()
+	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
 
-	// Realtime subscription for change logs
-	useEffect(() => {
-		let channel: ReturnType<typeof supabase.channel> | null = null
-
-		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
-		const timeoutId = setTimeout(async () => {
-			try {
-				// Obtener laboratory_id del usuario para filtrar cambios
-				const {
-					data: { user },
-				} = await supabase.auth.getUser()
-				if (!user) {
-					console.warn('⚠️ [ChangelogTable] Usuario no autenticado, omitiendo suscripción realtime')
-					return
-				}
-
-				const { data: profile } = (await supabase
-					.from('profiles')
-					.select('laboratory_id')
-					.eq('id', user.id)
-					.single()) as { data: { laboratory_id?: string } | null; error: any | null }
-
-				if (!profile?.laboratory_id) {
-					console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
-					return
-				}
-
-				console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
-
-				channel = supabase
-					.channel('realtime-changelog', {
-						config: {
-							broadcast: { self: true },
-						},
-					})
-					.on(
-						'postgres_changes',
-						{
-							event: '*', // INSERT | UPDATE | DELETE
-							schema: 'public',
-							table: 'change_logs',
-							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
-						},
-						(payload) => {
-							console.log('🔄 [ChangelogTable] Cambio detectado en change_logs:', {
-								event: payload.eventType,
-								table: payload.table,
-								new: payload.new,
-								old: payload.old,
-							})
-
-							// Invalidar queries para forzar refetch
-							queryClient.invalidateQueries({
-								queryKey: ['change-logs'],
-								exact: false, // Invalidar todas las variaciones (diferentes páginas)
-							})
-
-							console.log('✅ [ChangelogTable] Queries invalidadas, refetch automático')
-						},
-					)
-					.on(
-						'postgres_changes',
-						{
-							event: '*', // INSERT | UPDATE | DELETE
-							schema: 'public',
-							table: 'email_send_logs',
-							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
-						},
-						(payload) => {
-							console.log('📧 [ChangelogTable] Cambio detectado en email_send_logs:', {
-								event: payload.eventType,
-								table: payload.table,
-								new: payload.new,
-							})
-
-							// Invalidar queries para forzar refetch
-							queryClient.invalidateQueries({
-								queryKey: ['change-logs'],
-								exact: false,
-							})
-
-							console.log('✅ [ChangelogTable] Queries invalidadas (email logs), refetch automático')
-						},
-					)
-					.subscribe((status) => {
-						console.log('📡 [ChangelogTable] Estado del canal realtime:', status)
-						if (status === 'SUBSCRIBED') {
-							console.log('✅ [ChangelogTable] Suscripción realtime exitosa')
-						} else if (status === 'CHANNEL_ERROR') {
-							console.error('❌ [ChangelogTable] Error en canal realtime')
-						} else if (status === 'CLOSED') {
-							console.warn('⚠️ [ChangelogTable] Canal realtime cerrado')
-						} else if (status === 'TIMED_OUT') {
-							console.warn('⏱️ [ChangelogTable] Canal realtime timeout')
-						}
-					})
-			} catch (error) {
-				console.error('❌ [ChangelogTable] Error configurando suscripción realtime:', error)
-			}
-		}, 1000) // Esperar 1 segundo para asegurar que la conexión esté lista
-
-		return () => {
-			clearTimeout(timeoutId)
-			if (channel) {
-				console.log('🧹 [ChangelogTable] Limpiando suscripción realtime')
-				supabase.removeChannel(channel)
-			}
-		}
-	}, [queryClient])
+	const labId = profile?.laboratory_id
+	useRealtimeInvalidate('change_logs', ['change-logs'], {
+		filter: labId ? `laboratory_id=eq.${labId}` : undefined,
+		enabled: !!labId,
+		delayMs: 1000,
+	})
+	useRealtimeInvalidate('email_send_logs', ['change-logs'], {
+		filter: labId ? `laboratory_id=eq.${labId}` : undefined,
+		enabled: !!labId,
+		delayMs: 1000,
+	})
 
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')

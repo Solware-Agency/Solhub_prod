@@ -1,10 +1,9 @@
-import React, { useMemo, useEffect, useRef } from 'react'
+import React, { useMemo } from 'react'
 import CasesTable from '@features/cases/components/CasesTable'
 import { MapPin } from 'lucide-react'
 import { type MedicalRecord } from '@shared/types/types'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/services/supabase/config/config'
+import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 
 interface RecordsSectionProps {
 	cases: MedicalRecord[]
@@ -47,67 +46,11 @@ export const RecordsSection: React.FC<RecordsSectionProps> = ({
 	onFiltersChange,
 	pagination,
 }) => {
-	const queryClient = useQueryClient()
-	const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-
-	useEffect(() => {
-		console.log('🚀 [RecordsSection] Iniciando suscripción realtime...')
-		console.log('🔍 [RecordsSection] Estado de realtime:', supabase.realtime.isConnected())
-
-		// Verificar autenticación
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			console.log('🔐 [RecordsSection] Usuario autenticado:', session?.user?.email)
-			console.log('🔐 [RecordsSection] Token válido:', !!session?.access_token)
-		})
-
-		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
-		const timeoutId = setTimeout(() => {
-			console.log('⏰ [RecordsSection] Intentando suscripción después del timeout...')
-
-			const channel = supabase
-				.channel('realtime-records-section')
-				.on(
-					'postgres_changes',
-					{
-						event: '*', // INSERT | UPDATE | DELETE
-						schema: 'public',
-						table: 'medical_records_clean',
-					},
-					(payload) => {
-						console.log('🔄 [RecordsSection] Cambio detectado en medical_records_clean:', payload)
-						console.log('🔄 [RecordsSection] Invalidando queries...')
-						// Invalidate any queries that might be used by the parent component
-						queryClient.invalidateQueries({ queryKey: ['medical-cases'] })
-						queryClient.invalidateQueries({ queryKey: ['my-medical-cases'] })
-						// Also trigger the refetch function passed as prop
-						refetch()
-					},
-				)
-				.subscribe((status) => {
-					console.log('📡 [RecordsSection] Estado del canal:', status)
-					if (status === 'SUBSCRIBED') {
-						console.log('✅ [RecordsSection] Suscripción exitosa')
-					} else if (status === 'CHANNEL_ERROR') {
-						console.error('❌ [RecordsSection] Error en canal')
-					} else if (status === 'CLOSED') {
-						console.warn('⚠️ [] Canal cerrado')
-					}
-				})
-
-			channelRef.current = channel
-		}, 2000) // Esperar 2 segundos
-
-		return () => {
-			console.log('🧹 [RecordsSection] Limpiando suscripción')
-			clearTimeout(timeoutId)
-			if (channelRef.current) {
-				supabase.removeChannel(channelRef.current)
-				channelRef.current = null
-			}
-		}
-	}, [queryClient, refetch])
-
 	const { profile } = useUserProfile()
+
+	useRealtimeInvalidate('medical_records_clean', ['medical-cases', 'my-medical-cases'], {
+		delayMs: 2000,
+	})
 
 	// Filter cases by assigned branch if user has an assigned branch
 	// IMPORTANTE: Si hay paginación del servidor, NO filtrar aquí porque el servidor ya lo hizo

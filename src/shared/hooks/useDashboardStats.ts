@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
+import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'
-import { useEffect, useRef } from 'react'
 import { extractLaboratoryId } from '@services/supabase/types/helpers'
 
 // Tipo local para casos médicos con información del paciente
@@ -703,51 +703,9 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 	})
 
 	// REALTIME: Suscripción para actualizar stats automáticamente
-	const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-	useEffect(() => {
-		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
-		const timeoutId = setTimeout(() => {
-			const channel = supabase
-				.channel('realtime-dashboard-stats')
-				.on(
-					'postgres_changes',
-					{
-						event: '*', // INSERT | UPDATE | DELETE
-						schema: 'public',
-						table: 'medical_records_clean',
-					},
-					(payload) => {
-						// Invalidar todas las queries de dashboard-stats para forzar refetch
-						queryClient.invalidateQueries({
-							queryKey: ['dashboard-stats'],
-							exact: false, // Invalidar todas las variaciones (con diferentes fechas)
-						})
-
-						// También invalidar queries relacionadas que podrían afectar las stats
-						queryClient.invalidateQueries({ queryKey: ['medical-cases'] })
-						queryClient.invalidateQueries({ queryKey: ['my-medical-cases'] })
-					},
-				)
-				.subscribe((status, err) => {
-					if (status === 'CHANNEL_ERROR') {
-						console.warn(
-							'[Realtime] Canal de dashboard no disponible:',
-							err?.message ?? err ?? 'Revisa que la tabla medical_records_clean esté en Database → Replication en Supabase.',
-						)
-					}
-				})
-
-			channelRef.current = channel
-		}, 2000) // Esperar 2 segundos
-
-		return () => {
-			clearTimeout(timeoutId)
-			if (channelRef.current) {
-				supabase.removeChannel(channelRef.current)
-				channelRef.current = null
-			}
-		}
-	}, [queryClient])
+	useRealtimeInvalidate('medical_records_clean', ['dashboard-stats', 'medical-cases', 'my-medical-cases'], {
+		delayMs: 2000,
+	})
 
 	return {
 		data: query.data,

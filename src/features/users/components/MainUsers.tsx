@@ -220,20 +220,29 @@ const MainUsers: React.FC = () => {
 		}
 	}, [profile?.role])
 
-	// Realtime: refetch users when profiles change (insert/update/delete)
+	// Realtime: refetch users when profiles change (filtrado por laboratory_id multi-tenant)
 	useEffect(() => {
+		if (!profile?.laboratory_id) return
 		const channel = supabase
 			.channel('realtime-users')
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-				// O bien invalidar la query, o usar refetch directo
-				queryClient.invalidateQueries({ queryKey: ['users'] })
-			})
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'profiles',
+					filter: `laboratory_id=eq.${profile.laboratory_id}`,
+				},
+				() => {
+					queryClient.invalidateQueries({ queryKey: ['users'] })
+				},
+			)
 			.subscribe()
 
 		return () => {
 			supabase.removeChannel(channel)
 		}
-	}, [queryClient])
+	}, [queryClient, profile?.laboratory_id])
 
 	// Query para verificar permisos del usuario actual
 	const { data: canManage } = useQuery({

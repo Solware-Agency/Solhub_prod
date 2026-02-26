@@ -31,26 +31,24 @@ const PatientsPage: React.FC = React.memo(() => {
 
 	// Suscripción a cambios en tiempo real para la tabla patients
 	useEffect(() => {
-		const subscription = supabase
+		const channel = supabase
 			.channel('patients_changes')
 			.on(
 				'postgres_changes',
 				{
-					event: '*', // Escuchar INSERT, UPDATE y DELETE
+					event: '*',
 					schema: 'public',
 					table: 'patients',
 				},
 				() => {
-					// Invalidar la caché para forzar una nueva consulta
 					queryClient.invalidateQueries({ queryKey: ['patients'] })
 					queryClient.invalidateQueries({ queryKey: ['patientsCountByBranch'] })
 				},
 			)
 			.subscribe()
 
-		// Limpiar la suscripción cuando el componente se desmonte
 		return () => {
-			subscription.unsubscribe()
+			supabase.removeChannel(channel)
 		}
 	}, [queryClient])
 

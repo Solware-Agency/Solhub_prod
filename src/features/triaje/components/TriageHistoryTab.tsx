@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, Calendar, Heart, Thermometer, Gauge, Wind, Droplets, Scale, Ruler, FileText, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,6 +13,7 @@ interface TriageHistoryTabProps {
 }
 
 const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }) => {
+  const queryClient = useQueryClient();
   // Fetch latest triage record
   const { data: latestTriage, isLoading: isLoadingLatest, error: errorLatest, refetch: refetchLatest } = useQuery({
     queryKey: ['latest-triage', patientId],
@@ -50,8 +51,8 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           filter: `patient_id=eq.${patientId}`,
         },
         () => {
-          refetch();
-          refetchLatest();
+          queryClient.invalidateQueries({ queryKey: ['triage-history', patientId] });
+          queryClient.invalidateQueries({ queryKey: ['latest-triage', patientId] });
         },
       )
       .subscribe();
@@ -59,7 +60,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, patientId, refetch, refetchLatest]);
+  }, [isOpen, patientId, queryClient]);
 
   if (isLoading || isLoadingLatest) {
     return (

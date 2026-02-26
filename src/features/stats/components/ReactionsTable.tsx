@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
+import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { useToast } from '@shared/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { formatCurrency } from '@shared/utils/number-utils'
@@ -28,12 +29,14 @@ interface ImmunoRequest {
 const ReactionsTable: React.FC = () => {
 	const reportRef = useRef<HTMLDivElement>(null)
 	const { toast } = useToast()
+	const { profile } = useUserProfile()
 	const [selectAll, setSelectAll] = useState(false)
 	const [editingPrices, setEditingPrices] = useState<Record<string, string>>({})
 	const queryClient = useQueryClient()
 
-	// Realtime subscription for immuno_requests
+	// Realtime subscription for immuno_requests (filtrado por laboratory_id multi-tenant)
 	useEffect(() => {
+		if (!profile?.laboratory_id) return
 		const channel = supabase
 			.channel('realtime-immuno-requests')
 			.on(
@@ -42,9 +45,9 @@ const ReactionsTable: React.FC = () => {
 					event: '*',
 					schema: 'public',
 					table: 'immuno_requests',
+					filter: `laboratory_id=eq.${profile.laboratory_id}`,
 				},
 				() => {
-					// Invalidate and refetch the immuno requests query
 					queryClient.invalidateQueries({ queryKey: ['immuno-requests'] })
 				},
 			)
@@ -53,7 +56,7 @@ const ReactionsTable: React.FC = () => {
 		return () => {
 			supabase.removeChannel(channel)
 		}
-	}, [queryClient])
+	}, [queryClient, profile?.laboratory_id])
 
 	// Query to fetch immuno requests
 	const {

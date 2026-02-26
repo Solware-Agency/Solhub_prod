@@ -518,7 +518,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 					filter: `patient_id=eq.${patient.id}`,
 				},
 				() => {
-					refetch()
+					queryClient.invalidateQueries({ queryKey: ['patient-history', patient.id] })
+					queryClient.invalidateQueries({ queryKey: ['dependents-cases', patient.id] })
 				},
 			)
 			.subscribe()
@@ -526,7 +527,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 		return () => {
 			supabase.removeChannel(channel)
 		}
-	}, [isOpen, patient?.id, refetch])
+	}, [isOpen, patient?.id, queryClient])
 
 	// Filter cases based on search term - usando nueva estructura
 	const filteredCases = React.useMemo(() => {

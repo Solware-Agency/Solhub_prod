@@ -56,7 +56,7 @@ function PendingApprovalPage() {
 		return () => {
 			supabase.removeChannel(channel)
 		}
-	}, [profile?.id, redirectUser])
+	}, [profile?.id, redirectUser, queryClient])
 
 	return (
     <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
