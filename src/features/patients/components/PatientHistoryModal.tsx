@@ -1422,6 +1422,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 													) : (
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 															{filteredCases.map((caseItem: MedicalCaseWithPatient, index: number) => (
+																
 																<div
 																	key={caseItem.id || caseItem.code || `case-${index}`}
 																	onClick={(e) => {
@@ -1438,14 +1439,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																	<div className="space-y-3 mb-3">
 																		{/* Checkbox y Estado de Pago */}
 																		<div className="flex items-center gap-2">
-																			{caseItem.doc_aprobado === 'aprobado' && (
 																				<Checkbox
 																					checked={selectedCases.has(caseItem.id)}
 																					onCheckedChange={() => toggleCaseSelection(caseItem.id)}
 																					disabled={isDownloadingMultiple || isGeneratingPDF || isSaving}
-																					className="mr-1"
+																					className={`mr-1 ${caseItem.doc_aprobado === 'aprobado' ? 'visible' : 'invisible'}`}
 																				/>
-																			)}
 																		</div>
 
 																		{/* Código, Fecha y Sede en la misma línea */}
