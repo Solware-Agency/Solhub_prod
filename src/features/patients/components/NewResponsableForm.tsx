@@ -33,13 +33,15 @@ import type { PatientProfile } from './PatientSearchAutocomplete'
 interface NewResponsableFormProps {
 	onResponsableCreated?: (responsable: PatientProfile) => void
 	trigger?: React.ReactNode
+	/** Si true (laboratorio Conspat), edad y fecha de nacimiento no son obligatorios */
+	isConspat?: boolean
 }
 
 // =====================================================================
 // COMPONENTE
 // =====================================================================
 
-export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewResponsableFormProps) => {
+export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = false }: NewResponsableFormProps) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [nombre, setNombre] = useState('')
@@ -156,7 +158,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			return
 		}
 
-		if (!fechaNacimiento && !edad.trim()) {
+		if (!isConspat && !fechaNacimiento && !edad.trim()) {
 			toast({
 				title: 'Error',
 				description: 'Debe indicar fecha de nacimiento o edad',
@@ -165,7 +167,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 			return
 		}
 
-		if (!fechaNacimiento && edad.trim() && !/^\d+$/.test(edad.trim())) {
+		if (edad.trim() && !/^\d+$/.test(edad.trim())) {
 			toast({
 				title: 'Error',
 				description: 'La edad debe ser un número válido',
@@ -399,7 +401,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger }: NewRespons
 					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha de Nacimiento *</Label>
+							<Label>Fecha de Nacimiento{!isConspat && ' *'}</Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button

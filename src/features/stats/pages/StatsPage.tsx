@@ -143,11 +143,25 @@ const StatsPage: React.FC = () => {
 						isSelected={selectedStat === 'uniquePatients' && isDetailPanelOpen}
 					/>
 
-					{/* Casos por Recepcionista - en primera línea para SPT */}
+					{/* Promedio por Recepcionista - SPT: evita redundancia con Casos del Período */}
 					{isSpt && (
 						<StatCard
-							title="Casos por Recepcionista"
-							value={isLoading ? '...' : `Total ${formatNumber(stats?.totalCases || 0)}`}
+							title="Promedio por Recepcionista"
+							value={
+								isLoading
+									? '...'
+									: (() => {
+											const count = stats?.casesByReceptionist?.length ?? 0
+											const total = stats?.totalCases ?? 0
+											const avg = count > 0 ? Math.round(total / count) : 0
+											return formatNumber(avg)
+										})()
+							}
+							description={
+								stats?.casesByReceptionist?.length
+									? `${stats.casesByReceptionist.length} recepcionistas`
+									: undefined
+							}
 							icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
 							onClick={() => handleStatCardClick('casesByReceptionist')}
 							statType="casesByReceptionist"

@@ -9,6 +9,7 @@ import PatientsList from '../../patients/components/PatientsList'
 import { supabase } from '@/services/supabase/config/config'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import type { Patient } from '@/services/supabase/patients/patients-service'
+import { getCanonicalBranchSPT, getBranchVariantsForFilter } from '@shared/constants/branch-aliases'
 
 const PatientsPage: React.FC = React.memo(() => {
 	const [searchTerm, setSearchTerm] = useState('')
@@ -19,15 +20,18 @@ const PatientsPage: React.FC = React.memo(() => {
 	const queryClient = useQueryClient()
 	const { laboratory } = useLaboratory()
 
-	// Obtener branches del laboratorio actual
-	const branches = laboratory?.config?.branches || []
-
 	// Fetch patients count by branch
-	const { data: patientsCountByBranch } = useQuery({
+	const { data: patientsCountData } = useQuery({
 		queryKey: ['patientsCountByBranch'],
 		queryFn: getPatientsCountByBranch,
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
+
+	// Sedes: unión de config y sedes con datos (consolidar variantes a canónico: Cafetal+El Cafetal -> El Cafetal, todos los labs)
+	const toCanonical = (b: string) => getCanonicalBranchSPT(b)
+	const branchesFromConfig = (laboratory?.config?.branches || []).map(toCanonical)
+	const branchesFromData = patientsCountData?.byBranch ? Object.keys(patientsCountData.byBranch) : []
+	const branches = Array.from(new Set([...branchesFromConfig, ...branchesFromData])).sort()
 
 	// Suscripción a cambios en tiempo real para la tabla patients
 	useEffect(() => {
@@ -59,7 +63,11 @@ const PatientsPage: React.FC = React.memo(() => {
 		error,
 	} = useQuery({
 		queryKey: ['patients', currentPage, searchTerm, selectedBranch, sortField, sortDirection],
-		queryFn: () => getPatients(currentPage, 50, searchTerm, selectedBranch === 'all' ? undefined : selectedBranch, sortField, sortDirection),
+		queryFn: () => {
+			if (selectedBranch === 'all') return getPatients(currentPage, 50, searchTerm, undefined, sortField, sortDirection)
+			const branchFilter = getBranchVariantsForFilter(selectedBranch)
+			return getPatients(currentPage, 50, searchTerm, branchFilter, sortField, sortDirection)
+		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 		refetchOnWindowFocus: false,
 		refetchOnReconnect: false,
@@ -115,8 +123,8 @@ const PatientsPage: React.FC = React.memo(() => {
 	// Check if any filter is active
 	const hasActiveFilters = searchTerm !== '' || selectedBranch !== 'all'
 
-	// Calculate total patients count for "Todas las sedes"
-	const totalPatientsCount = patientsCountByBranch ? Object.values(patientsCountByBranch).reduce((sum, count) => sum + count, 0) : 0
+	// Total pacientes únicos con al menos un caso (para "Todas las sedes")
+	const totalPatientsCount = patientsCountData?.totalUnique ?? 0
 
 	return (
 		<div>
@@ -153,7 +161,7 @@ const PatientsPage: React.FC = React.memo(() => {
 							</SelectItem>
 							{branches.map((branch: string) => (
 								<SelectItem key={branch} value={branch}>
-									{branch} ({patientsCountByBranch?.[branch] || 0} pacientes)
+									{branch} ({patientsCountData?.byBranch?.[branch] ?? 0} pacientes)
 								</SelectItem>
 							))}
 						</SelectContent>

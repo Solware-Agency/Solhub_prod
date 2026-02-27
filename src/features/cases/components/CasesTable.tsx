@@ -1707,9 +1707,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             // totalFilteredCases={pagination?.totalItems}
           />
         </div>
-        <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
+        <div className='bg-white dark:bg-background rounded-xl min-h-0 md:min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col'>
           {/* Search and Filter Controls */}
-          <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
+          <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 shrink-0'>
             <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
               {/* Search Row */}
               <div className='flex-1 w-full md:w-auto'>
@@ -1816,10 +1816,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
           </div>
 
-          {/* Unified Cards View - Responsive for all screen sizes */}
-          <div className='overflow-hidden'>
+          {/* Unified Cards View - se adapta al tamaño de pantalla */}
+          <div className='flex-1 min-h-0 flex flex-col overflow-hidden'>
             {/* Sort filters header */}
-            <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3'>
+            <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0'>
               <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
                 <button
                   onClick={() => handleSort('code')}
@@ -1864,7 +1864,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
 
             {/* Cards grid - responsive */}
-            <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto p-3 sm:p-4'>
+            <div className='flex-1 min-h-0 overflow-y-auto p-3 sm:p-4'>
               {isLoading ? (
                 <div className='flex items-center justify-center py-12'>
                   <div className='flex items-center gap-3'>

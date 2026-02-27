@@ -112,7 +112,6 @@ const ChangelogTable: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-	const [tempRange, setTempRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
 	const [rowsPerPage] = useState(20)
@@ -139,20 +138,17 @@ const ChangelogTable: React.FC = () => {
 		queryKey: ['change-logs', page, rowsPerPage, dateRange, searchTerm.trim()],
 		queryFn: () => {
 			const filters: { dateFrom?: string; dateTo?: string; search?: string } = {}
-
-			// Convertir dateRange a formato YYYY-MM-DD para el filtro del servidor
-			if (dateRange?.from) {
-				const year = dateRange.from.getFullYear()
-				const month = String(dateRange.from.getMonth() + 1).padStart(2, '0')
-				const day = String(dateRange.from.getDate()).padStart(2, '0')
-				filters.dateFrom = `${year}-${month}-${day}`
+			const formatYmd = (d: Date) => {
+				const y = d.getFullYear()
+				const m = String(d.getMonth() + 1).padStart(2, '0')
+				const day = String(d.getDate()).padStart(2, '0')
+				return `${y}-${m}-${day}`
 			}
 
-			if (dateRange?.to) {
-				const year = dateRange.to.getFullYear()
-				const month = String(dateRange.to.getMonth() + 1).padStart(2, '0')
-				const day = String(dateRange.to.getDate()).padStart(2, '0')
-				filters.dateTo = `${year}-${month}-${day}`
+			// Si solo hay from (una fecha), filtrar solo ese día; si hay from y to, filtrar el rango
+			if (dateRange?.from) {
+				filters.dateFrom = formatYmd(dateRange.from)
+				filters.dateTo = dateRange.to ? formatYmd(dateRange.to) : filters.dateFrom
 			}
 
 			// Búsqueda en servidor para que filtre en todos los resultados, no solo en la página actual
@@ -394,11 +390,11 @@ const ChangelogTable: React.FC = () => {
 				</div>
 			</div>
 
-			{/* Filters */}
+			{/* Filters - desktop: todo en una línea; móvil: búsqueda arriba, filtros abajo en una línea */}
 			<Card className="mb-6 p-4">
-				<div className="flex flex-col sm:flex-row gap-4">
+				<div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
 					{/* Search */}
-					<div className="flex-1 relative">
+					<div className="flex-1 min-w-0">
 						<Input
 							type="text"
 							placeholder="Buscar por usuario, caso, acción..."
@@ -407,63 +403,60 @@ const ChangelogTable: React.FC = () => {
 						/>
 					</div>
 
-					{/* Action Type Filter */}
-					<div className="flex items-center gap-2">
-						<Filter className="w-4 h-4 text-gray-400" />
-						<div className="w-40">
-							<CustomDropdown
-								value={actionFilter}
-								onChange={(v) => setActionFilter(v)}
-								placeholder="Tipo de acción"
-								options={[
-									{ value: 'all', label: 'Todas las acciones' },
-									{ value: 'created', label: 'Creaciones' },
-									{ value: 'edited', label: 'Ediciones' },
-									{ value: 'deleted', label: 'Eliminaciones' },
-								]}
-							/>
+					{/* Tipo de acción + Rango fechas + Limpiar */}
+					<div className="flex flex-wrap items-center gap-2 shrink-0">
+						{/* Action Type Filter */}
+						<div className="flex items-center gap-2">
+							<Filter className="w-4 h-4 text-gray-400 shrink-0" />
+							<div className="w-40">
+								<CustomDropdown
+									value={actionFilter}
+									onChange={(v) => setActionFilter(v)}
+									placeholder="Tipo de acción"
+									options={[
+										{ value: 'all', label: 'Todas' },
+										{ value: 'created', label: 'Creaciones' },
+										{ value: 'edited', label: 'Ediciones' },
+										{ value: 'deleted', label: 'Eliminaciones' },
+									]}
+								/>
+							</div>
 						</div>
-					</div>
 
-					{/* Date Range Filter */}
-					<div className="flex items-center gap-2">
-						<Popover
-							open={isDatePickerOpen}
-							onOpenChange={(open) => {
-								setIsDatePickerOpen(open)
-								if (open) {
-									setTempRange(undefined)
-								}
-							}}
-						>
+						{/* Date Range Filter - responsive: "Rango" + icon en móvil; texto completo en desktop */}
+						<Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
 							<PopoverTrigger asChild>
-								<Button variant="outline" className="flex items-center gap-2">
-									<Calendar className="w-4 h-4 text-gray-400" />
-									{dateRange?.from && dateRange?.to
-										? dateRange.from.toDateString() === dateRange.to.toDateString()
-											? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
-											: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
-													dateRange.to,
-													'dd/MM/yyyy',
-													{
-														locale: es,
-													},
-												)}`
-										: dateRange?.from
-											? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
+								<Button variant="outline" className="flex items-center gap-2 shrink-0">
+									<Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+									<span className="sm:hidden">
+										{dateRange?.from
+											? dateRange.from.toDateString() === dateRange.to?.toDateString() || !dateRange?.to
+												? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+												: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', { locale: es })}`
+											: 'Rango'}
+									</span>
+									<span className="hidden sm:inline">
+										{dateRange?.from
+											? dateRange.from.toDateString() === dateRange.to?.toDateString() || !dateRange?.to
+												? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+												: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
+														dateRange.to!,
+														'dd/MM/yyyy',
+														{ locale: es },
+													)}`
 											: 'Filtrar por rango de fechas'}
+									</span>
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0">
 								<CalendarComponent
 									mode="range"
-									selected={tempRange}
+									selected={dateRange}
 									onSelect={(range) => {
-										setTempRange(range)
+										setDateRange(range ?? undefined)
+										// Cerrar solo cuando hay rango completo (segundo click), no al elegir la primera fecha
 										if (range?.from && range?.to) {
-											setDateRange(range)
 											setIsDatePickerOpen(false)
-											setTempRange(undefined)
 										}
 									}}
 									initialFocus
@@ -474,14 +467,14 @@ const ChangelogTable: React.FC = () => {
 								/>
 							</PopoverContent>
 						</Popover>
-					</div>
 
-					{/* Clear Filters */}
-					{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
-						<Button variant="ghost" onClick={clearFilters} className="text-sm">
-							Limpiar filtros
-						</Button>
-					)}
+						{/* Clear Filters */}
+						{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
+							<Button variant="ghost" onClick={clearFilters} className="text-sm shrink-0">
+								Limpiar filtros
+							</Button>
+						)}
+					</div>
 				</div>
 			</Card>
 

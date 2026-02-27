@@ -636,11 +636,12 @@ const MAX_IDS_IN_QUERY = 80
  * Obtener todos los pacientes con paginación - MULTI-TENANT
  * SOLO muestra pacientes del laboratorio del usuario autenticado
  */
+/** branchFilter: string para una sede, string[] para variantes (ej. SPT: ['Paseo Hatillo','Paseo El Hatillo']) */
 export const getPatients = async (
 	page = 1,
 	limit = 50,
 	searchTerm?: string,
-	branchFilter?: string,
+	branchFilter?: string | string[],
 	sortField: string = 'created_at',
 	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
@@ -659,11 +660,14 @@ export const getPatients = async (
 
 					// Aplicar filtro de branch si existe
 					if (branchFilter && branchFilter !== 'all') {
-						const { data: casesData, error: casesError } = await supabase
+						const branchList = Array.isArray(branchFilter) ? branchFilter : [branchFilter]
+						const casesQuery = supabase
 							.from('medical_records_clean')
 							.select('patient_id')
 							.eq('laboratory_id', laboratoryId)
-							.eq('branch', branchFilter)
+						const { data: casesData, error: casesError } = branchList.length === 1
+							? await casesQuery.eq('branch', branchList[0])
+							: await casesQuery.in('branch', branchList)
 
 						if (casesError) {
 							console.error('Error obteniendo casos por branch:', casesError)
@@ -751,14 +755,15 @@ export const getPatients = async (
 		}
 
 		// Si hay filtro de branch, necesitamos obtener los patient_ids de medical_records_clean
-		// que coincidan con esa branch, y luego filtrar pacientes
 		if (branchFilter && branchFilter !== 'all') {
-			// Primero obtenemos los patient_ids únicos de medical_records_clean con esa branch
-			const { data: casesData, error: casesError } = await supabase
+			const branchList = Array.isArray(branchFilter) ? branchFilter : [branchFilter]
+			const casesQuery = supabase
 				.from('medical_records_clean')
 				.select('patient_id')
 				.eq('laboratory_id', laboratoryId)
-				.eq('branch', branchFilter)
+			const { data: casesData, error: casesError } = branchList.length === 1
+				? await casesQuery.eq('branch', branchList[0])
+				: await casesQuery.in('branch', branchList)
 
 			if (casesError) {
 				console.error('Error obteniendo casos por branch:', casesError)
@@ -952,38 +957,52 @@ export const getPatients = async (
 }
 
 /**
- * Obtener conteo de pacientes por branch (sede/sucursal)
- * Cuenta solo pacientes activos que tienen casos en cada branch
+ * Resultado del conteo de pacientes por sede
  */
-export const getPatientsCountByBranch = async (): Promise<Record<string, number>> => {
+export interface PatientsCountByBranchResult {
+	/** Conteo por sede (solo pacientes activos con casos en esa sede) */
+	byBranch: Record<string, number>
+	/** Total de pacientes activos únicos con al menos un caso en alguna sede */
+	totalUnique: number
+}
+
+/**
+ * Obtener conteo de pacientes por branch (sede/sucursal)
+ * Usa RPC con SECURITY DEFINER para evitar que RLS devuelva 0 filas incorrectamente.
+ * Fallback a query directa si la RPC no existe (ej. migración pendiente).
+ */
+export const getPatientsCountByBranch = async (): Promise<PatientsCountByBranchResult> => {
 	try {
+		// Intentar RPC primero (bypassa RLS, evita el bug de conteo 0)
+		const { data: rpcData, error: rpcError } = await supabase.rpc('get_patients_count_by_branch')
+
+		if (!rpcError && rpcData && typeof rpcData === 'object') {
+			const byBranch = (rpcData as { byBranch?: Record<string, number> }).byBranch ?? {}
+			const totalUnique = Number((rpcData as { totalUnique?: number }).totalUnique ?? 0)
+			return { byBranch, totalUnique }
+		}
+
+		// Fallback: query directa (puede devolver 0 por RLS en algunos roles)
 		const laboratoryId = await getUserLaboratoryId()
 
-		// Obtener todos los casos del laboratorio con su branch y patient_id
 		const { data, error } = await supabase
 			.from('medical_records_clean')
 			.select('branch, patient_id')
 			.eq('laboratory_id', laboratoryId)
 			.not('branch', 'is', null)
 
-		if (error) {
-			throw error
-		}
+		if (error) throw error
 
-		// Agrupar pacientes únicos por branch
 		const countMap: Record<string, Set<string>> = {}
 		const allPatientIds = new Set<string>()
 		data?.forEach((record) => {
 			if (record.branch && record.patient_id) {
-				if (!countMap[record.branch]) {
-					countMap[record.branch] = new Set()
-				}
+				if (!countMap[record.branch]) countMap[record.branch] = new Set()
 				countMap[record.branch].add(record.patient_id)
 				allPatientIds.add(record.patient_id)
 			}
 		})
 
-		// Filtrar solo IDs de pacientes activos
 		let activePatientIds = new Set<string>()
 		if (allPatientIds.size > 0) {
 			const { data: activePatients } = await supabase
@@ -995,13 +1014,13 @@ export const getPatientsCountByBranch = async (): Promise<Record<string, number>
 			activePatientIds = new Set((activePatients || []).map((p) => p.id))
 		}
 
-		// Conteo por branch solo de pacientes activos
-		const result: Record<string, number> = {}
+		const byBranch: Record<string, number> = {}
 		Object.entries(countMap).forEach(([branch, patientIds]) => {
-			result[branch] = [...patientIds].filter((id) => activePatientIds.has(id)).length
+			byBranch[branch] = [...patientIds].filter((id) => activePatientIds.has(id)).length
 		})
+		const totalUnique = [...allPatientIds].filter((id) => activePatientIds.has(id)).length
 
-		return result
+		return { byBranch, totalUnique }
 	} catch (error) {
 		console.error('Error obteniendo conteo de pacientes por branch:', error)
 		throw error
