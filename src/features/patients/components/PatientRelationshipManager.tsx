@@ -39,6 +39,8 @@ interface PatientRelationshipManagerProps {
 	onDependentUpdated?: (dependent: PatientProfile) => void
 	trigger?: React.ReactNode
 	dependentToEdit?: PatientProfile | null // Si se proporciona, modo edición
+	/** Si true (laboratorio Conspat), edad y fecha de nacimiento no son obligatorios */
+	isConspat?: boolean
 }
 
 // =====================================================================
@@ -51,6 +53,7 @@ export const PatientRelationshipManager = ({
 	onDependentUpdated,
 	trigger,
 	dependentToEdit = null, // Modo edición
+	isConspat = false,
 }: PatientRelationshipManagerProps) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [isSubmitting, setIsSubmitting] = useState(false)
@@ -151,7 +154,7 @@ export const PatientRelationshipManager = ({
 			return
 		}
 
-		if (!fechaNacimiento && !edad) {
+		if (!isConspat && !fechaNacimiento && !edad) {
 			toast({
 				title: 'Error',
 				description: 'Debe proporcionar fecha de nacimiento o edad',

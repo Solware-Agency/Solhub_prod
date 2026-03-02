@@ -361,7 +361,7 @@ const getTriageErrorMessage = (error: any): string => {
   // Errores de constraints de validación en orden lógico del formulario
   // Primero: datos antropométricos básicos que ingresa el usuario
   if (message.includes('valid_height')) {
-    return 'Altura inválida. Debe estar entre 20 y 300 cm.';
+    return 'Altura inválida. Debe estar entre 30 y 250 cm.';
   }
   if (message.includes('valid_weight')) {
     return 'Peso inválido. Debe estar entre 0.5 y 500 kg.';
@@ -369,7 +369,7 @@ const getTriageErrorMessage = (error: any): string => {
   
   // Segundo: signos vitales
   if (message.includes('valid_heart_rate')) {
-    return 'Frecuencia cardíaca inválida. Debe estar entre 30 y 220 latidos por minuto.';
+    return 'Frecuencia cardíaca inválida. Debe estar entre 30 y 250 latidos por minuto.';
   }
   if (message.includes('valid_respiratory_rate')) {
     return 'Frecuencia respiratoria inválida. Debe estar entre 8 y 60 respiraciones por minuto.';
@@ -394,7 +394,7 @@ const getTriageErrorMessage = (error: any): string => {
   
   // Último: IMC (es calculado automáticamente, no lo ingresa el usuario)
   if (message.includes('valid_bmi')) {
-    return 'La combinación de talla y peso genera un IMC fuera del rango válido (5-100). Verifique los valores ingresados.';
+    return 'La combinación de talla y peso genera un IMC fuera del rango válido (10-60). Verifique los valores ingresados.';
   }
 
   // Error de overflow numérico
@@ -458,6 +458,47 @@ const getTriageErrorMessage = (error: any): string => {
 };
 
 /**
+ * Sanitiza valores numéricos del payload para no enviar NaN ni valores fuera de los
+ * check constraints de la BD (evita 400 por valid_*).
+ * Rangos en BD: height_cm 30-250, bmi 10-60, heart_rate 30-250, temperature 30-45.
+ */
+const sanitizeTriageNumericFields = (
+  obj: Record<string, any>
+): Record<string, any> => {
+  const out = { ...obj }
+  const num = (v: any): number => (typeof v === 'number' && !Number.isNaN(v) ? v : Number.NaN)
+  if (obj.height_cm !== undefined) {
+    const v = num(obj.height_cm)
+    out.height_cm = v >= 30 && v <= 250 ? v : null
+  }
+  if (obj.weight_kg !== undefined) {
+    const v = num(obj.weight_kg)
+    out.weight_kg = v > 0 ? v : null
+  }
+  if (obj.bmi !== undefined) {
+    const v = num(obj.bmi)
+    out.bmi = v >= 10 && v <= 60 ? v : null
+  }
+  if (obj.heart_rate !== undefined) {
+    const v = num(obj.heart_rate)
+    out.heart_rate = v >= 30 && v <= 250 ? v : null
+  }
+  if (obj.respiratory_rate !== undefined) {
+    const v = num(obj.respiratory_rate)
+    out.respiratory_rate = v >= 0 ? v : null
+  }
+  if (obj.oxygen_saturation !== undefined) {
+    const v = num(obj.oxygen_saturation)
+    out.oxygen_saturation = v >= 0 && v <= 100 ? v : null
+  }
+  if (obj.temperature_celsius !== undefined) {
+    const v = num(obj.temperature_celsius)
+    out.temperature_celsius = v >= 30 && v <= 45 ? v : null
+  }
+  return out
+}
+
+/**
  * Validar que la historia clínica tenga datos mínimos necesarios
  */
 const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>): void => {
@@ -500,14 +541,13 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
     throw new Error(`Debe completar todos los signos vitales. Faltantes: ${missingFields.join(', ')}`);
   }
   
-  // Validar que el IMC calculado esté en rango válido (5-100)
-  // Esto previene errores de constraint en la base de datos
+  // Validar que el IMC calculado esté en rango válido (10-60, según check en BD)
   if (data.height_cm && data.weight_kg && data.height_cm > 0 && data.weight_kg > 0) {
     const calculatedBMI = calculateBMI(data.height_cm, data.weight_kg);
-    if (calculatedBMI !== null && (calculatedBMI < 5 || calculatedBMI > 100)) {
+    if (calculatedBMI !== null && (calculatedBMI < 10 || calculatedBMI > 60)) {
       throw new Error(
         `La combinación de talla (${data.height_cm} cm) y peso (${data.weight_kg} kg) genera un IMC de ${calculatedBMI.toFixed(2)}, ` +
-        `que está fuera del rango válido (5-100). Verifique que los valores sean correctos.`
+        `que está fuera del rango válido (10-60). Verifique que los valores sean correctos.`
       );
     }
   }
@@ -525,25 +565,22 @@ export const createTriageRecord = async (
   data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>
 ): Promise<TriageRecord> => {
   try {
-    // Validar datos mínimos antes de continuar
-    validateTriageData(data);
-    
+    const dataSanitized = sanitizeTriageNumericFields(data as Record<string, any>);
+    validateTriageData(dataSanitized);
+
     const laboratoryId = await getUserLaboratoryId();
     const userId = await getCurrentUserId();
 
-    // Calcular BMI si hay altura y peso
-    const bmi = calculateBMI(data.height_cm || null, data.weight_kg || null);
-
-    // Parsear presión arterial si viene como string
+    const bmi = calculateBMI(dataSanitized.height_cm ?? null, dataSanitized.weight_kg ?? null);
     const blood_pressure = parseBloodPressure(data.blood_pressure);
 
     const recordData: TriageRecordInsert = {
-      ...data,
+      ...dataSanitized,
       laboratory_id: laboratoryId,
       created_by: userId,
-      bmi: bmi,
+      bmi: bmi !== null && bmi >= 10 && bmi <= 60 ? bmi : null,
       blood_pressure: blood_pressure,
-      measurement_date: data.measurement_date || new Date().toISOString(),
+      measurement_date: dataSanitized.measurement_date || new Date().toISOString(),
     };
 
     const { data: record, error } = await (supabase as any as { from(table: 'triaje_records'): any })
@@ -591,30 +628,35 @@ export const updateTriageRecord = async (
       throw new Error('No se encontró el registro de historia clínica para actualizar');
     }
 
+    // Sanitizar payload para no enviar NaN ni valores fuera de los check constraints de la BD
+    const dataSanitized = sanitizeTriageNumericFields(data as Record<string, any>);
+
     // Combinar datos actuales con los nuevos para validación
-    const mergedData = {
+    const mergedData = sanitizeTriageNumericFields({
       ...currentRecord,
-      ...data,
-    };
+      ...dataSanitized,
+    });
 
     // Validar que los datos completos cumplan con los requisitos
     validateTriageData(mergedData);
 
-    // Calcular BMI si hay altura y peso
-    const bmi = calculateBMI(data.height_cm || null, data.weight_kg || null);
+    // Calcular BMI si hay altura y peso (usar valores ya sanitizados)
+    const bmi = calculateBMI(dataSanitized.height_cm ?? null, dataSanitized.weight_kg ?? null);
 
     // Parsear presión arterial si viene como string
-    const blood_pressure = data.blood_pressure !== undefined 
-      ? parseBloodPressure(data.blood_pressure) 
+    const blood_pressure = data.blood_pressure !== undefined
+      ? parseBloodPressure(data.blood_pressure)
       : undefined;
 
     const updateData: Record<string, any> = {
-      ...data,
+      ...dataSanitized,
     };
 
-    // Agregar BMI si se calculó
-    if (bmi !== null) {
+    // Agregar BMI si se calculó y está en rango permitido por la BD (10-60)
+    if (bmi !== null && bmi >= 10 && bmi <= 60) {
       updateData.bmi = bmi;
+    } else if (updateData.bmi !== undefined) {
+      updateData.bmi = null;
     }
 
     // Agregar presión arterial parseada si existe
@@ -672,15 +714,14 @@ export const getTriageByCase = async (
       .order('updated_at', { ascending: false })
       .order('measurement_date', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      // Si no hay registros, retornar null (no es un error)
-      if (error.code === 'PGRST116') {
-        return null;
-      }
       console.error('Error obteniendo historia clínica del caso:', error);
       throw new Error('Error al obtener la historia clínica del caso médico.');
+    }
+    if (!record) {
+      return null;
     }
 
     return record as TriageRecord;
@@ -750,15 +791,14 @@ export const getLatestTriageRecord = async (
       .eq('laboratory_id', laboratoryId)
       .order('measurement_date', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      // Si no hay registros, retornar null (no es un error)
-      if (error.code === 'PGRST116') {
-        return null;
-      }
       console.error('Error obteniendo último triaje:', error);
       throw new Error('Error al obtener el último registro de triaje.');
+    }
+    if (!record) {
+      return null;
     }
 
     // Transformar los datos para incluir el código del caso

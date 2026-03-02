@@ -20,6 +20,7 @@ import { NewResponsableForm } from '@features/patients/components/NewResponsable
 import { EditResponsableForm } from '@features/patients/components/EditResponsableForm'
 import { findPatientById, type Patient } from '@services/supabase/patients/patients-service'
 import { getDependentsByResponsable } from '@services/supabase/patients/responsabilidades-service'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 
 interface NewPatientDataSectionProps {
 	control: Control<FormValues>
@@ -32,6 +33,8 @@ interface NewPatientDataSectionProps {
 
 export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) => {
 	const { setValue } = useFormContext<FormValues>()
+	const { laboratory } = useLaboratory()
+	const isConspat = laboratory?.slug === 'conspat'
 	const [selectedResponsable, setSelectedResponsable] = useState<PatientProfile | null>(null)
 	const [selectedResponsableData, setSelectedResponsableData] = useState<Patient | null>(null) // Información completa del responsable
 	const [selectedProfile, setSelectedProfile] = useState<PatientProfile | null>(null)
@@ -398,6 +401,7 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 							className="w-full"
 						/>
 						<NewResponsableForm
+							isConspat={isConspat}
 							onResponsableCreated={handleSelectResponsable}
 							trigger={
 								<Button type="button" variant="outline" size="sm" className="w-full">
@@ -508,6 +512,7 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 											</TooltipProvider>
 										</div>
 										<PatientRelationshipManager
+											isConspat={isConspat}
 											responsable={selectedResponsable}
 											onDependentAdded={handleDependentAdded}
 											onDependentUpdated={handleDependentUpdated}
@@ -596,6 +601,7 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 			{/* Modal de edición de dependiente */}
 			{selectedResponsable && editDependentOpen && dependentToEdit && (
 				<PatientRelationshipManager
+					isConspat={isConspat}
 					responsable={selectedResponsable}
 					onDependentUpdated={handleDependentUpdated}
 					dependentToEdit={dependentToEdit}

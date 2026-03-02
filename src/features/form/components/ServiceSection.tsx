@@ -217,7 +217,11 @@ export const ServiceSection = memo(
                       {...field}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const { value } = e.target;
-                        if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)) {
+                        // Marihorgen/LM: permitir caracteres de nombres de hospitales (comillas, puntos, guiones, paréntesis)
+                        const allowed = isLM
+                          ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9."\-()]*$/
+                          : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/;
+                        if (allowed.test(value)) {
                           field.onChange(e);
                         }
                       }}

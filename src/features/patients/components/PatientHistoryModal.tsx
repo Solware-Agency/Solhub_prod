@@ -63,6 +63,9 @@ interface PatientHistoryModalProps {
 	patient: Patient | null
 	/** Cuando true, el modal usa z-index mayor que Detalles del caso (p. ej. abierto desde página de casos) */
 	elevatedZIndex?: boolean
+	/** Callback para eliminar paciente (oculta de la lista). Si no se pasa, no se muestra el botón eliminar. */
+	onDeletePatient?: (patient: Patient) => void
+	isDeleting?: boolean
 }
 
 // Helper to calculate age from fecha_nacimiento
@@ -118,6 +121,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 	onClose,
 	patient,
 	elevatedZIndex = false,
+	onDeletePatient,
+	isDeleting = false,
 }) => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [isEditing, setIsEditing] = useState(false)
@@ -142,6 +147,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 		nombre: string
 		dependienteId: string
 	} | null>(null)
+	const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null)
 	const [isDeletingRepresentado, setIsDeletingRepresentado] = useState(false)
 	const [pendingEmailFromRepresentado, setPendingEmailFromRepresentado] = useState(false)
 
@@ -512,7 +518,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 					filter: `patient_id=eq.${patient.id}`,
 				},
 				() => {
-					refetch()
+					queryClient.invalidateQueries({ queryKey: ['patient-history', patient.id] })
+					queryClient.invalidateQueries({ queryKey: ['dependents-cases', patient.id] })
 				},
 			)
 			.subscribe()
@@ -520,7 +527,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 		return () => {
 			supabase.removeChannel(channel)
 		}
-	}, [isOpen, patient?.id, refetch])
+	}, [isOpen, patient?.id, queryClient])
 
 	// Filter cases based on search term - usando nueva estructura
 	const filteredCases = React.useMemo(() => {
@@ -852,7 +859,10 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 
 					// Marcar como enviado y guardar fecha de envío en la base de datos
 					const deliveryDate = new Date().toISOString().split('T')[0]
-					await supabase.from('medical_records_clean').update({ email_sent: true, fecha_entrega: deliveryDate }).eq('id', caseItem.id)
+					await supabase
+						.from('medical_records_clean')
+						.update({ email_sent: true, fecha_entrega: deliveryDate })
+						.eq('id', caseItem.id)
 
 					// Registrar el envío en email_send_logs
 					await logEmailSend({
@@ -987,7 +997,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<>
+				<React.Fragment key="patient-history-modal">
 					{/* Backdrop */}
 					{!isEditing && (
 						<motion.div
@@ -995,14 +1005,14 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							onClick={onClose}
-							className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-[100000000000000000]' : 'z-[99999998]'}`}
+							className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-100000000000000000' : 'z-99999998'}`}
 						/>
 					)}
 
 					{/* Modal */}
 					{!isEditing && (
 						<div
-							className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-[100000000000000001]' : 'z-[99999999]'}`}
+							className={`fixed inset-0 flex items-center justify-center p-4 ${elevatedZIndex ? 'z-100000000000000001' : 'z-99999999'}`}
 						>
 							{/* Overlay de fondo con opacidad desde el inicio */}
 							<motion.div
@@ -1059,9 +1069,20 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 														<button
 															onClick={editPatient}
 															className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 cursor-pointer"
+															title="Editar paciente"
 														>
 															<UserPen className="size-5 cursor-pointer" />
 														</button>
+														{onDeletePatient && (
+															<button
+																onClick={() => setPatientToDelete(patient)}
+																disabled={isDeleting}
+																className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+																title="Eliminar paciente (se ocultará de la lista)"
+															>
+																<Trash2 className="size-5 cursor-pointer" />
+															</button>
+														)}
 													</h3>
 													<p className="text-sm text-gray-600 dark:text-gray-400">
 														{isRepresentado && responsableData?.responsable ? (
@@ -1402,6 +1423,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 													) : (
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 															{filteredCases.map((caseItem: MedicalCaseWithPatient, index: number) => (
+																
 																<div
 																	key={caseItem.id || caseItem.code || `case-${index}`}
 																	onClick={(e) => {
@@ -1418,14 +1440,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																	<div className="space-y-3 mb-3">
 																		{/* Checkbox y Estado de Pago */}
 																		<div className="flex items-center gap-2">
-																			{caseItem.doc_aprobado === 'aprobado' && (
 																				<Checkbox
 																					checked={selectedCases.has(caseItem.id)}
 																					onCheckedChange={() => toggleCaseSelection(caseItem.id)}
 																					disabled={isDownloadingMultiple || isGeneratingPDF || isSaving}
-																					className="mr-1"
+																					className={`mr-1 ${caseItem.doc_aprobado === 'aprobado' ? 'visible' : 'invisible'}`}
 																				/>
-																			)}
 																		</div>
 
 																		{/* Código, Fecha y Sede en la misma línea */}
@@ -1462,20 +1482,16 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																			<div className="min-w-0">
 																				<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tipo de examen</p>
 																				<p className="text-sm font-medium flex items-center gap-1">
-																					{caseItem.exam_type}
+																					{caseItem.exam_type ? caseItem.exam_type : 'No especificado'}
 																				</p>
 																			</div>
 																			<div className="min-w-0">
-																				{caseItem.consulta ? (
-																					<>
-																						<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-																							Tipo de consulta
-																						</p>
-																						<p className="text-sm font-medium flex items-center gap-1">
-																							{caseItem.consulta}
-																						</p>
-																					</>
-																				) : null}
+																				<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+																					Tipo de consulta
+																				</p>
+																				<p className="text-sm font-medium flex items-center gap-1">
+																					{caseItem.consulta ? caseItem.consulta : 'No especificado'}
+																				</p>
 																			</div>
 																			<div className="min-w-0 flex flex-col justify-end">
 																				<Button
@@ -1858,12 +1874,13 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 						}}
 						onCaseSelect={() => {}} // No necesario en este contexto
 					/>
-				</>
+				</React.Fragment>
 			)}
 
 			{/* Send Email Modal */}
 			{patient && (
 				<SendEmailModal
+					key="send-email-modal"
 					isOpen={isSendEmailModalOpen}
 					onClose={() => {
 						setIsSendEmailModalOpen(false)
@@ -1879,8 +1896,44 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 				/>
 			)}
 
+			{/* Diálogo confirmar eliminar paciente */}
+			<AlertDialog
+				key="alert-delete-patient"
+				open={!!patientToDelete}
+				onOpenChange={(open) => !open && setPatientToDelete(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El paciente &quot;{patientToDelete?.nombre}&quot; se ocultará de la lista. Los datos se conservan en el sistema
+							y los casos asociados no se modifican.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (!patientToDelete || !onDeletePatient) return
+								onDeletePatient(patientToDelete)
+								setPatientToDelete(null)
+								onClose()
+							}}
+							disabled={isDeleting}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							{isDeleting ? 'Eliminando...' : 'Eliminar'}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
 			{/* Diálogo confirmar eliminar representado */}
-			<AlertDialog open={!!representadoToDelete} onOpenChange={(open) => !open && setRepresentadoToDelete(null)}>
+			<AlertDialog
+				key="alert-delete-representado"
+				open={!!representadoToDelete}
+				onOpenChange={(open) => !open && setRepresentadoToDelete(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>¿Eliminar representado?</AlertDialogTitle>

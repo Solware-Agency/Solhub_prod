@@ -19,6 +19,14 @@ import { createPagoPoliza, getPagosPoliza } from '@services/supabase/aseguradora
 import { uploadReciboPago, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 
+const METODOS_PAGO = [
+	{ value: 'Zelle', label: 'Zelle' },
+	{ value: 'Zinli', label: 'Zinli' },
+	{ value: 'Transferencia internacional', label: 'Transferencia internacional' },
+	{ value: 'Transferencia nacional', label: 'Transferencia nacional' },
+	{ value: 'Efectivo', label: 'Efectivo' },
+] as const
+
 const addMonths = (date: Date, months: number) => {
 	const d = new Date(date)
 	d.setMonth(d.getMonth() + months)
@@ -48,7 +56,6 @@ const PagosPage = () => {
 		fecha_pago: '',
 		monto: '',
 		metodo_pago: '',
-		banco: '',
 		referencia: '',
 		documento_pago_url: '',
 		notas: '',
@@ -89,7 +96,6 @@ const PagosPage = () => {
 			[
 				row.poliza?.numero_poliza,
 				row.referencia,
-				row.banco,
 				row.metodo_pago,
 			]
 				.filter(Boolean)
@@ -193,7 +199,6 @@ const PagosPage = () => {
 			fecha_pago: new Date().toISOString().slice(0, 10),
 			monto: '',
 			metodo_pago: '',
-			banco: '',
 			referencia: '',
 			documento_pago_url: '',
 			notas: '',
@@ -246,7 +251,6 @@ const PagosPage = () => {
 				fecha_pago: form.fecha_pago,
 				monto: Number(form.monto),
 				metodo_pago: form.metodo_pago || null,
-				banco: form.banco || null,
 				referencia: form.referencia || null,
 				documento_pago_url: form.documento_pago_url || null,
 				notas: form.notas || null,
@@ -304,7 +308,6 @@ const PagosPage = () => {
 								Fecha: row.fecha_pago,
 								Monto: row.monto,
 								Método: row.metodo_pago || '',
-								Banco: row.banco || '',
 								Referencia: row.referencia || '',
 							})),
 						)
@@ -416,7 +419,7 @@ const PagosPage = () => {
 								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 								<Input
 									className="pl-9"
-									placeholder="Buscar por póliza, referencia o banco"
+									placeholder="Buscar por póliza, referencia o método"
 									value={searchTerm}
 									onChange={(e) => handleSearch(e.target.value)}
 								/>
@@ -468,8 +471,8 @@ const PagosPage = () => {
 											</p>
 										</div>
 										<div>
-											<p className="text-xs text-gray-500 dark:text-gray-400">Banco / Método</p>
-											<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{pago.banco || pago.metodo_pago || '—'}</p>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Método</p>
+											<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{pago.metodo_pago || '—'}</p>
 										</div>
 									</div>
 								</div>
@@ -662,18 +665,28 @@ const PagosPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Método</Label>
-							<Input value={form.metodo_pago} onChange={(e) => setForm((prev) => ({ ...prev, metodo_pago: e.target.value }))} />
-						</div>
-						<div className="space-y-2">
-							<Label>Banco</Label>
-							<Input value={form.banco} onChange={(e) => setForm((prev) => ({ ...prev, banco: e.target.value }))} />
+							<Select
+								value={form.metodo_pago || undefined}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, metodo_pago: value }))}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccione método" />
+								</SelectTrigger>
+								<SelectContent>
+									{METODOS_PAGO.map((m) => (
+										<SelectItem key={m.value} value={m.value}>
+											{m.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 						<div className="space-y-2">
 							<Label>Referencia</Label>
 							<Input value={form.referencia} onChange={(e) => setForm((prev) => ({ ...prev, referencia: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Adjuntar recibo</Label>
+							<Label>Adjuntar factura</Label>
 							<input
 								ref={fileInputRef}
 								type="file"
@@ -715,12 +728,12 @@ const PagosPage = () => {
 								</Button>
 							)}
 						</div>
-						<div className="space-y-2 sm:col-span-2">
+						<div className="space-y-2">
 							<Label>Notas</Label>
 							<Input value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
 						</div>
 					</div>
-					<DialogFooter>
+					<DialogFooter className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
 						<Button variant="outline" onClick={() => setOpenModal(false)}>
 							Cancelar
 						</Button>

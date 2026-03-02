@@ -30,6 +30,7 @@ export type StatType =
 	| 'casesByPathologist'
 	| 'casesByMedicalType'
 	| 'totalBlocks'
+	| 'callCenterStats'
 
 interface StatDetailPanelProps {
 	isOpen: boolean
@@ -96,6 +97,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return 'Casos por tipo de médico'
 			case 'totalBlocks':
 				return 'Bloques del período'
+			case 'callCenterStats':
+				return 'Estadísticas Call Center'
 			default:
 				return 'Detalles'
 		}
@@ -1333,6 +1336,57 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total de bloques de casos en el período seleccionado.</p>
 							<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatNumber(total)}</p>
+						</div>
+					</div>
+				)
+			}
+
+			case 'callCenterStats': {
+				const cc = stats?.callCenterStats
+				const totalCalls = cc?.totalCalls ?? 0
+				const topData = cc?.topByAtendidoPor ?? []
+				const maxCalls = Math.max(...topData.map((item) => item.calls), 1)
+				return (
+					<div className="space-y-6">
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen de Llamadas</h3>
+							<div className="grid grid-cols-1 gap-4">
+								<div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
+									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Llamadas</p>
+									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+										{formatNumber(totalCalls)}
+									</p>
+								</div>
+							</div>
+						</div>
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Todos los operadores
+							</h3>
+							{topData.length === 0 ? (
+								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
+							) : (
+								<div className="max-h-72 overflow-auto space-y-3 pr-2">
+									{topData.map((item, index) => (
+										<div key={item.name} className="space-y-1">
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-gray-700 dark:text-gray-300">
+													{index + 1}. {item.name}
+												</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+													{formatNumber(item.calls)} llamada{item.calls !== 1 ? 's' : ''}
+												</span>
+											</div>
+											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+												<div
+													className="h-2 rounded-full bg-emerald-500"
+													style={{ width: `${(item.calls / maxCalls) * 100}%` }}
+												/>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
 						</div>
 					</div>
 				)

@@ -10,7 +10,9 @@ export interface ExportColumnOption {
 	group: string
 	defaultWidth: number
 	/** Si está definido, la columna solo se incluye cuando el lab tiene esta feature habilitada. */
-	feature?: 'hasPayment'
+	feature?: 'hasPayment' | 'hasEvaluateCitology'
+	/** Si está definido, la columna solo se incluye cuando el lab tiene este slug (ej. spt). */
+	laboratorySlug?: string
 }
 
 export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
@@ -18,7 +20,8 @@ export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
 	{ key: 'Código', label: 'Código', group: 'Caso', defaultWidth: 15 },
 	{ key: 'Registro', label: 'Fecha de registro', group: 'Caso', defaultWidth: 18 },
 	{ key: 'Sede', label: 'Sede', group: 'Caso', defaultWidth: 10 },
-	{ key: 'Tipo de Estudio', label: 'Tipo de estudio', group: 'Caso', defaultWidth: 20 },
+	{ key: 'Tipo de Examen', label: 'Tipo de examen', group: 'Caso', defaultWidth: 20 },
+	{ key: 'Tipo de consulta', label: 'Tipo de consulta', group: 'Caso', defaultWidth: 20, laboratorySlug: 'spt' },
 	{ key: 'Médico Tratante', label: 'Médico tratante', group: 'Caso', defaultWidth: 25 },
 	// Paciente
 	{ key: 'Nombre del Paciente', label: 'Nombre del paciente', group: 'Paciente', defaultWidth: 25 },
@@ -45,7 +48,7 @@ export const EXPORT_COLUMN_OPTIONS: ExportColumnOption[] = [
 	{ key: 'Referencia Pago 4', label: 'Referencia pago 4', group: 'Pagos', defaultWidth: 25, feature: 'hasPayment' },
 	// Documentos / Citología
 	{ key: 'PDF Listo', label: 'PDF listo', group: 'Documentos', defaultWidth: 12 },
-	{ key: 'Estatus Citología', label: 'Estatus citología', group: 'Documentos', defaultWidth: 15 },
+	{ key: 'Estatus Citología', label: 'Estatus citología', group: 'Documentos', defaultWidth: 15, feature: 'hasEvaluateCitology' },
 ]
 
 export const EXPORT_COLUMN_KEYS = EXPORT_COLUMN_OPTIONS.map((c) => c.key)

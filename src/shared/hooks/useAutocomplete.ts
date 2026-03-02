@@ -71,6 +71,43 @@ const MARIHORGEN_ORIGINS = [
 	'HOME CARE SOLUCIONES MÉDICAS',
 ]
 
+/** Mapeo código centro → nombre completo. Solo Marihorgen, campo Procedencia. */
+const MARIHORGEN_ORIGIN_CODES: Record<string, string> = {
+	HUC: 'HOSPITAL UNIVERSITARIO DE CARACAS',
+	HMCA: 'HOSPITAL MILITAR "DR. CARLOS ARVELO"',
+	HMVS: 'HOSPITAL MILITAR "DR. VICENTE SALIAS"',
+	COCHE: 'HOSPITAL PERIFÉRICO "DR. MIGUEL ANGEL RANGEL"',
+	MAGA: 'HOSP. GENERAL DEL OESTE "DR. JOSÉ GREGORIO HERNÁNDEZ"',
+	CATIA: 'HOSP. MÉDICO QUIRÚRGICO "DR. RICARDO BAQUERO GONZALEZ"',
+	VARGAS: 'HOSPITAL VARGAS DE CARACAS',
+	RISQ: 'HOSPITAL "DR. FRANCISCO RISQUEZ"',
+	'HMPC IVSS': 'HOSP. "DR. MIGUEL PÉREZ CARREÑO"',
+	'HDL IVSS': 'HOSP. "DR. DOMINGO LUCIANI"',
+	IOLR: 'INSTITUTO ONCOLÓGICO "DR. LUIS RAZETTI"',
+	HOPM: 'HOSPITAL ONCOLÓGICO PADRE MACHADO',
+	'GUAI IVSS': 'HOSP. "DR. JOSÉ MARÍA VARGAS"',
+	'GUAR IVSS': 'HOSP. GENERAL "DR. LUIS SALAZAR DOMINGUEZ"',
+	GUAT: 'HOSP. GENERAL GUARENAS-GUATIRE "EUGENIO P. DE BELLARD"',
+	MCP: 'MATERNIDAD CONCEPCIÓN PALACIOS',
+	IMQJR: 'INSTITUTO MÉDICO QUIRÚRGICO "DR. JIMÉNEZ ROJAS"',
+	OPIOLID: 'CENTRO DE ESPECIALIDADES MÉDICAS OPIOLID',
+	CMC: 'CENTRO MÉDICO DE CARACAS',
+	CMB: 'CENTRO MÉDICO BUENAVENTURA',
+	PA: 'POLICLÍNICA LA ARBOLEDA',
+	CMR: 'CENTRO MÉDICO REMBRANDT',
+	OZAN: 'CLÍNICA DE ESPECIALIDADES MÉDICAS FEDERICO OZANAM',
+	HIGUE: 'HOSPITAL GENERAL DE HIGUEROTE',
+	ABG: 'CLÍNICA ABG',
+	VIRG: 'CLÍNICA VIRGEN DEL VALLE',
+	HC: 'HOME CARE SOLUCIONES MÉDICAS',
+	SEBIN: 'SERVICIO BOLIVARIANO DE INTELIGENCIA NACIONAL',
+	IPAS: 'INSTITUTO DE PREVISIÓN SOCIAL DEL MINISTERIO DE EDUCACIÓN',
+	CNC: 'CLÍNICA NUEVA CARACAS',
+	CIEN: 'CLÍNICA LAS CIENCIAS',
+	VC: 'CLÍNICA VISTA CALIFORNIA',
+	CP: 'CONSULTA PRIVADA',
+}
+
 const normalizeForSearch = (text: string): string =>
 	text
 		.normalize('NFD')
@@ -174,6 +211,7 @@ export const useAutocomplete = (fieldName: string) => {
 	const [suggestions, setSuggestions] = useState<AutocompleteOption[]>([])
 	const [isLoading, setIsLoading] = useState(false)
 	const abortControllerRef = useRef<AbortController | null>(null)
+	const isMarihorgenLabRef = useRef(false)
 	const [allFieldValues, setAllFieldValues] = useState<AutocompleteOption[]>([])
 	const [hasPreloadedData, setHasPreloadedData] = useState(false)
 
@@ -202,7 +240,8 @@ export const useAutocomplete = (fieldName: string) => {
 				}
 
 			const isMarihorgenLab =
-				userLaboratoryId === '7fcd5a54-1f48-4dc0-b5b2-84d5ce9755b8'
+				userLaboratoryId === '7fcd5a54-1f48-4dc0-b5b2-84d5ce9755b8';
+			isMarihorgenLabRef.current = isMarihorgenLab;
 
 				// Updated field mapping to match the actual database schema
 				const fieldMapping: Record<string, string> = {
@@ -305,7 +344,7 @@ export const useAutocomplete = (fieldName: string) => {
 						fieldName === 'treatingDoctor'
 							? MARIHORGEN_TREATING_DOCTORS
 							: fieldName === 'origin'
-								? MARIHORGEN_ORIGINS
+								? [...MARIHORGEN_ORIGINS, ...Object.values(MARIHORGEN_ORIGIN_CODES)]
 								: []
 
 					extraValues.forEach((value) => {
@@ -349,6 +388,35 @@ export const useAutocomplete = (fieldName: string) => {
 				return [] // No mostrar sugerencias aleatorias cuando el campo está vacío
 			}
 
+			// Marihorgen + Procedencia: SOLO mostrar opciones que coincidan con el código
+			if (fieldName === 'origin' && isMarihorgenLabRef.current && searchTerm.trim()) {
+				const normalizedSearch = normalizeForSearch(searchTerm.trim())
+				const codeMatches: AutocompleteOption[] = []
+				for (const [code, fullName] of Object.entries(MARIHORGEN_ORIGIN_CODES)) {
+					const normalizedCode = normalizeForSearch(code)
+					if (
+						normalizedCode.includes(normalizedSearch) ||
+						normalizedCode === normalizedSearch
+					) {
+						codeMatches.push({ value: fullName, count: 1 })
+					}
+				}
+				if (codeMatches.length > 0) {
+					// Solo mostrar opciones según el código, ordenadas por coincidencia exacta primero
+					return codeMatches
+						.sort((a, b) => {
+							const aCode = Object.entries(MARIHORGEN_ORIGIN_CODES).find(([, n]) => n === a.value)?.[0] ?? ''
+							const bCode = Object.entries(MARIHORGEN_ORIGIN_CODES).find(([, n]) => n === b.value)?.[0] ?? ''
+							const aExact = normalizeForSearch(aCode) === normalizedSearch
+							const bExact = normalizeForSearch(bCode) === normalizedSearch
+							if (aExact && !bExact) return -1
+							if (!aExact && bExact) return 1
+							return aCode.localeCompare(bCode)
+						})
+						.slice(0, 8)
+				}
+			}
+
 			const filtered = allFieldValues.filter((item) => {
 				// Para el campo idNumber, buscar tanto en el formato completo como solo en el número
 				if (fieldName === 'idNumber') {
@@ -386,6 +454,18 @@ export const useAutocomplete = (fieldName: string) => {
 						if (aStartsWith && !bStartsWith) return -1
 						if (!aStartsWith && bStartsWith) return 1
 					} else {
+						// Marihorgen + Procedencia: priorizar coincidencia exacta por código
+						if (fieldName === 'origin' && isMarihorgenLabRef.current) {
+							const normalizedSearch = normalizeForSearch(searchTerm)
+							const aFromCode = Object.entries(MARIHORGEN_ORIGIN_CODES).some(
+								([code, name]) => name === a.value && normalizeForSearch(code) === normalizedSearch
+							)
+							const bFromCode = Object.entries(MARIHORGEN_ORIGIN_CODES).some(
+								([code, name]) => name === b.value && normalizeForSearch(code) === normalizedSearch
+							)
+							if (aFromCode && !bFromCode) return -1
+							if (!aFromCode && bFromCode) return 1
+						}
 						// Para otros campos, priorizar items que empiecen con el término de búsqueda
 						const normalizedSearch = normalizeForSearch(searchTerm)
 						const aStartsWith = normalizeForSearch(a.value).startsWith(normalizedSearch)

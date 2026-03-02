@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
+import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
+import { getCallCenterStats } from '@/services/supabase/call-center/call-center-registros-service'
 import { startOfMonth, endOfMonth, format, startOfYear, endOfYear } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isVESPaymentMethod } from '@shared/utils/number-utils'
-import { useEffect, useRef } from 'react'
 import { extractLaboratoryId } from '@services/supabase/types/helpers'
 
 // Tipo local para casos médicos con información del paciente
@@ -85,6 +86,8 @@ export interface DashboardStats {
 	casesByReceptionist: Array<{ id: string; name: string; cases: number }>
 	casesByPathologist: Array<{ id: string; name: string; cases: number; blocks: number }>
 	casesByCitotecno?: Array<{ id: string; name: string; cases: number }>
+	/** Estadísticas del call center (solo SPT con hasCallCenter) */
+	callCenterStats?: { totalCalls: number; topByAtendidoPor: Array<{ name: string; calls: number }> }
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number
@@ -144,16 +147,18 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
 
-				// Roles del laboratorio y slug para estadísticas por tipo de médico y SPT
+				// Roles del laboratorio, slug y features para estadísticas por tipo de médico, SPT y call center
 				const { data: labRow } = await supabase
 					.from('laboratories')
-					.select('available_roles, slug')
+					.select('available_roles, slug, features')
 					.eq('id', laboratoryId)
 					.single()
 				const availableRoles: string[] = Array.isArray(labRow?.available_roles) ? (labRow.available_roles as string[]) : []
 				const isSpt = (labRow as any)?.slug === 'spt'
 				const hasPatologo = availableRoles.includes('patologo')
 				const hasCitotecno = availableRoles.includes('citotecno')
+				const features = (labRow as any)?.features as Record<string, boolean> | undefined
+				const hasCallCenter = features?.hasCallCenter === true
 
 				// OPTIMIZACIÓN: Filtrar en el servidor en lugar de traer todos los registros
 				// Solo traer campos necesarios para las estadísticas
@@ -196,6 +201,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', filterStart.toISOString())
 					.lte('created_at', filterEnd.toISOString())
 
@@ -313,11 +319,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					0,
 				)
 
-				// Para el total histórico, necesitamos una consulta separada (sin filtro de fecha)
+				// Para el total histórico, necesitamos una consulta separada (sin filtro de fecha; solo pacientes activos)
 				const { data: allRecordsForTotal } = await supabase
 					.from('medical_records_clean')
-					.select('total_amount, patient_id, created_at')
+					.select('total_amount, patient_id, created_at, patients!inner(id)')
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.not('created_at', 'is', null)
 
 				const allRecords = allRecordsForTotal || []
@@ -329,11 +336,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const uniquePatientIds = new Set(allRecords?.filter((r) => r.patient_id).map((record) => record.patient_id))
 				const uniquePatients = uniquePatientIds.size
 
-				// Alternative: Get actual count from patients table for accuracy
+				// Alternative: Get actual count from patients table for accuracy (solo activos)
 				const { count: actualPatientsCount } = await supabase
 					.from('patients')
 					.select('*', { count: 'exact', head: true })
 					.eq('laboratory_id', laboratoryId)
+					.eq('is_active', true)
 
 				// Use actual count from patients table for more accurate stats
 				const finalUniquePatients = actualPatientsCount || uniquePatients
@@ -441,10 +449,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						payment_method_3,
 						payment_amount_3,
 						payment_method_4,
-						payment_amount_4
+						payment_amount_4,
+						patients!inner(id)
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', previousPeriodStart.toISOString())
 					.lte('created_at', previousPeriodEnd.toISOString())
 
@@ -515,6 +525,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						revenue: data.revenue,
 						count: data.count,
 					}))
+					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
 					.sort((a, b) => b.revenue - a.revenue)
 
 				// Calculate sales trend by month for the selected year (independent of dateRange)
@@ -522,7 +533,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const yearStart = startOfYear(new Date(currentYear, 0, 1))
 				const yearEnd = endOfYear(new Date(currentYear, 0, 1))
 
-				// Filter records for the selected year - usar consulta separada para el año completo
+				// Filter records for the selected year - solo casos con paciente activo
 				const { data: yearRecordsData } = await supabase
 					.from('medical_records_clean')
 					.select(
@@ -537,10 +548,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						payment_method_3,
 						payment_amount_3,
 						payment_method_4,
-						payment_amount_4
+						payment_amount_4,
+						patients!inner(id)
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
+					.eq('patients.is_active', true)
 					.gte('created_at', yearStart.toISOString())
 					.lte('created_at', yearEnd.toISOString())
 					.not('created_at', 'is', null)
@@ -606,6 +619,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						count: data.count,
 						revenue: data.revenue,
 					}))
+					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
 					.sort((a, b) => b.count - a.count)
 					.slice(0, 5) // Top 5
 
@@ -654,6 +668,15 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
 					.slice(0, 5) // Top 5 origins
 
+				// Estadísticas del call center (solo SPT con hasCallCenter)
+				let callCenterStats: DashboardStats['callCenterStats'] = undefined
+				if (isSpt && hasCallCenter) {
+					const ccResult = await getCallCenterStats(laboratoryId, filterStart, filterEnd)
+					if (ccResult.success && ccResult.data) {
+						callCenterStats = ccResult.data
+					}
+				}
+
 				return {
 					totalRevenue,
 					uniquePatients: finalUniquePatients,
@@ -681,6 +704,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					casesWithPaymentInBolivares,
 					revenueGrowthPercentage,
 					casesGrowthPercentage,
+					callCenterStats,
 				}
 			} catch (error) {
 				console.error('Error fetching dashboard stats:', error)
@@ -694,51 +718,11 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 	})
 
 	// REALTIME: Suscripción para actualizar stats automáticamente
-	const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-	useEffect(() => {
-		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
-		const timeoutId = setTimeout(() => {
-			const channel = supabase
-				.channel('realtime-dashboard-stats')
-				.on(
-					'postgres_changes',
-					{
-						event: '*', // INSERT | UPDATE | DELETE
-						schema: 'public',
-						table: 'medical_records_clean',
-					},
-					(payload) => {
-						// Invalidar todas las queries de dashboard-stats para forzar refetch
-						queryClient.invalidateQueries({
-							queryKey: ['dashboard-stats'],
-							exact: false, // Invalidar todas las variaciones (con diferentes fechas)
-						})
-
-						// También invalidar queries relacionadas que podrían afectar las stats
-						queryClient.invalidateQueries({ queryKey: ['medical-cases'] })
-						queryClient.invalidateQueries({ queryKey: ['my-medical-cases'] })
-					},
-				)
-				.subscribe((status, err) => {
-					if (status === 'CHANNEL_ERROR') {
-						console.warn(
-							'[Realtime] Canal de dashboard no disponible:',
-							err?.message ?? err ?? 'Revisa que la tabla medical_records_clean esté en Database → Replication en Supabase.',
-						)
-					}
-				})
-
-			channelRef.current = channel
-		}, 2000) // Esperar 2 segundos
-
-		return () => {
-			clearTimeout(timeoutId)
-			if (channelRef.current) {
-				supabase.removeChannel(channelRef.current)
-				channelRef.current = null
-			}
-		}
-	}, [queryClient])
+	useRealtimeInvalidate('medical_records_clean', ['dashboard-stats', 'medical-cases', 'my-medical-cases'], {
+		delayMs: 2000,
+	})
+	// REALTIME: Call center registros (para dashboard SPT con hasCallCenter)
+	useRealtimeInvalidate('call_center_registros', ['dashboard-stats'], { delayMs: 2000 })
 
 	return {
 		data: query.data,

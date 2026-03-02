@@ -447,6 +447,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const osRanges = stats.ranges?.oxygenSaturation || { low: 0, normal: 0, high: 0 }
 				const osTotal = osRanges.low + osRanges.normal + osRanges.high
 				const osNormalPct = osTotal > 0 ? ((osRanges.normal / osTotal) * 100).toFixed(1) : '0'
+				const osAbnormal = osRanges.low + osRanges.high
+				const osStatus = osTotal === 0 ? 'Sin datos' : Number(osNormalPct) >= 80 ? 'Normal' : osAbnormal > 0 ? 'Atención' : 'Normal'
 
 				return (
 					<div className="space-y-6">
@@ -454,40 +456,76 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Saturación de Oxígeno
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{osAvg ? `${osAvg.toFixed(1)}%` : 'N/A'}
-									</p>
-									<div className="mt-2">
-										{getTrend(osAvg, 'avgOxygenSaturation')}
-									</div>
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									osStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: osStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										osStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: osStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{osStatus}
+								</span>
+								{osTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{osTotal} mediciones
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{osAvg ? `${osAvg.toFixed(1)}%` : '—'}
+									</span>
+									{getTrend(osAvg, 'avgOxygenSaturation')}
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{osRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{osNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{osRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({osNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Bajos ({'< '}95%)</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{osRanges.low}
-									</p>
-									<p className="text-xs text-red-600 dark:text-red-400 mt-1">
-										⚠️ Requiere atención
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Bajos</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{osRanges.low}</span>
 								</div>
 							</div>
+						</div>
 
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Saturación de Oxígeno
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgOxygenSaturation" stroke="#3b82f6" strokeWidth={2} name="Promedio (%)" />
+										<Line type="monotone" dataKey={() => 95} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Crítico" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución por Rangos
-								</h4>
 								{[
 									{ label: `Baja (< 95%)`, value: osRanges.low, color: '#ef4444' },
 									{ label: 'Normal (95-100%)', value: osRanges.normal, color: '#22c55e' },
@@ -511,24 +549,6 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 								})}
 							</div>
 						</div>
-
-						{trends && trends.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Saturación de Oxígeno
-								</h3>
-								<ResponsiveContainer width="100%" height={300}>
-									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="date" />
-										<YAxis />
-										<Tooltip />
-										<Line type="monotone" dataKey="avgOxygenSaturation" stroke="#3b82f6" strokeWidth={2} name="Promedio (%)" />
-										<Line type="monotone" dataKey={() => 95} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Crítico" />
-									</LineChart>
-								</ResponsiveContainer>
-							</div>
-						)}
 					</div>
 				)
 
@@ -537,7 +557,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const tempRanges = stats.ranges?.temperature || { low: 0, normal: 0, high: 0 }
 				const tempTotal = tempRanges.low + tempRanges.normal + tempRanges.high
 				const tempNormalPct = tempTotal > 0 ? ((tempRanges.normal / tempTotal) * 100).toFixed(1) : '0'
-				const feverCount = tempRanges.high
+				const tempAbnormal = tempRanges.low + tempRanges.high
+				const tempStatus = tempTotal === 0 ? 'Sin datos' : Number(tempNormalPct) >= 80 ? 'Normal' : tempAbnormal > 0 ? 'Atención' : 'Normal'
 
 				return (
 					<div className="space-y-6">
@@ -545,40 +566,76 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Temperatura
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{tempAvg ? `${tempAvg.toFixed(1)}°C` : 'N/A'}
-									</p>
-									<div className="mt-2">
-										{getTrend(tempAvg, 'avgTemperature')}
-									</div>
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									tempStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: tempStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										tempStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: tempStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{tempStatus}
+								</span>
+								{tempTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{tempTotal} mediciones
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{tempAvg ? `${tempAvg.toFixed(1)}°C` : '—'}
+									</span>
+									{getTrend(tempAvg, 'avgTemperature')}
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{tempRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{tempNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{tempRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({tempNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Casos de Fiebre ({'> '}37.5°C)</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{feverCount}
-									</p>
-									<p className="text-xs text-red-600 dark:text-red-400 mt-1">
-										⚠️ Requiere atención
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Fiebre</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{tempRanges.high}</span>
 								</div>
 							</div>
+						</div>
 
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Temperatura
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgTemperature" stroke="#f97316" strokeWidth={2} name="Promedio (°C)" />
+										<Line type="monotone" dataKey={() => 37.5} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Fiebre" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución por Rangos
-								</h4>
 								{[
 									{ label: `Baja (< 36°C)`, value: tempRanges.low, color: '#3b82f6' },
 									{ label: 'Normal (36-37.5°C)', value: tempRanges.normal, color: '#22c55e' },
@@ -602,24 +659,6 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 								})}
 							</div>
 						</div>
-
-						{trends && trends.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Temperatura
-								</h3>
-								<ResponsiveContainer width="100%" height={300}>
-									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="date" />
-										<YAxis />
-										<Tooltip />
-										<Line type="monotone" dataKey="avgTemperature" stroke="#f97316" strokeWidth={2} name="Promedio (°C)" />
-										<Line type="monotone" dataKey={() => 37.5} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Fiebre" />
-									</LineChart>
-								</ResponsiveContainer>
-							</div>
-						)}
 					</div>
 				)
 
@@ -628,6 +667,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const bmiRanges = stats.ranges?.bmi || { underweight: 0, normal: 0, overweight: 0, obese: 0 }
 				const bmiTotal = bmiRanges.underweight + bmiRanges.normal + bmiRanges.overweight + bmiRanges.obese
 				const bmiNormalPct = bmiTotal > 0 ? ((bmiRanges.normal / bmiTotal) * 100).toFixed(1) : '0'
+				const bmiAbnormal = bmiRanges.underweight + bmiRanges.overweight + bmiRanges.obese
+				const bmiStatus = bmiTotal === 0 ? 'Sin datos' : Number(bmiNormalPct) >= 80 ? 'Normal' : bmiAbnormal > 0 ? 'Atención' : 'Normal'
 
 				const bmiChartData = [
 					{ name: 'Bajo peso', value: bmiRanges.underweight, color: '#3b82f6' },
@@ -642,67 +683,85 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Índice de Masa Corporal
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bmiAvg ? bmiAvg.toFixed(1) : 'N/A'}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">kg/m²</p>
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									bmiStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: bmiStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										bmiStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: bmiStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{bmiStatus}
+								</span>
+								{bmiTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{bmiTotal} mediciones
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{bmiAvg ? `${bmiAvg.toFixed(1)} kg/m²` : '—'}
+									</span>
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">IMC Normal</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bmiRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{bmiNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{bmiRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({bmiNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Sobrepeso + Obesidad</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bmiRanges.overweight + bmiRanges.obese}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{((((bmiRanges.overweight + bmiRanges.obese) / bmiTotal) * 100) || 0).toFixed(1)}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Sobrepeso + Obesidad</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{bmiRanges.overweight + bmiRanges.obese}</span>
 								</div>
 							</div>
+						</div>
 
-							{/* Gráfico de pastel */}
-							{bmiChartData.length > 0 && (
-								<div className="mb-6">
-									<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-										Distribución por Categorías
-									</h4>
-									<ResponsiveContainer width="100%" height={300}>
-										<PieChart>
-											<Pie
-												data={bmiChartData}
-												cx="50%"
-												cy="50%"
-												labelLine={false}
-												label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-												outerRadius={100}
-												fill="#8884d8"
-												dataKey="value"
-											>
-												{bmiChartData.map((entry, index) => (
-													<Cell key={`cell-${index}`} fill={entry.color} />
-												))}
-											</Pie>
-											<Tooltip />
-											<Legend />
-										</PieChart>
-									</ResponsiveContainer>
-								</div>
-							)}
+						{bmiChartData.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Distribución por Categorías
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<PieChart>
+										<Pie
+											data={bmiChartData}
+											cx="50%"
+											cy="50%"
+											labelLine={false}
+											label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+											outerRadius={100}
+											fill="#8884d8"
+											dataKey="value"
+										>
+											{bmiChartData.map((entry, index) => (
+												<Cell key={`cell-${index}`} fill={entry.color} />
+											))}
+										</Pie>
+										<Tooltip />
+										<Legend />
+									</PieChart>
+								</ResponsiveContainer>
+							</div>
+						)}
 
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución Detallada
-								</h4>
 								{[
 									{ label: `Bajo peso (< 18.5)`, value: bmiRanges.underweight, color: '#3b82f6' },
 									{ label: 'Normal (18.5-25)', value: bmiRanges.normal, color: '#22c55e' },
@@ -735,7 +794,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const bpRanges = stats.ranges?.bloodPressure || { low: 0, normal: 0, high: 0 }
 				const bpTotal = bpRanges.low + bpRanges.normal + bpRanges.high
 				const bpNormalPct = bpTotal > 0 ? ((bpRanges.normal / bpTotal) * 100).toFixed(1) : '0'
-				const hypertensionCount = bpRanges.high
+				const bpAbnormal = bpRanges.low + bpRanges.high
+				const bpStatus = bpTotal === 0 ? 'Sin datos' : Number(bpNormalPct) >= 80 ? 'Normal' : bpAbnormal > 0 ? 'Atención' : 'Normal'
 
 				return (
 					<div className="space-y-6">
@@ -743,40 +803,77 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Presión Arterial
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio Sistólica</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bpAvg ? `${bpAvg.toFixed(0)} mmHg` : 'N/A'}
-									</p>
-									<div className="mt-2">
-										{getTrend(bpAvg, 'avgSystolicBP')}
-									</div>
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									bpStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: bpStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										bpStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: bpStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{bpStatus}
+								</span>
+								{bpTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{bpTotal} mediciones
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio Sistólica</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{bpAvg ? `${bpAvg.toFixed(0)} mmHg` : '—'}
+									</span>
+									{getTrend(bpAvg, 'avgSystolicBP')}
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bpRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{bpNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{bpRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({bpNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Hipertensión ({'> '}120 mmHg)</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{hypertensionCount}
-									</p>
-									<p className="text-xs text-red-600 dark:text-red-400 mt-1">
-										⚠️ Requiere atención
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Hipertensión</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{bpRanges.high}</span>
 								</div>
 							</div>
+						</div>
 
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Presión Arterial
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgSystolicBP" stroke="#ef4444" strokeWidth={2} name="Promedio Sistólica (mmHg)" />
+										<Line type="monotone" dataKey={() => 90} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
+										<Line type="monotone" dataKey={() => 120} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución por Rangos
-								</h4>
 								{[
 									{ label: `Baja (< 90 mmHg)`, value: bpRanges.low, color: '#3b82f6' },
 									{ label: 'Normal (90-120 mmHg)', value: bpRanges.normal, color: '#22c55e' },
@@ -800,26 +897,6 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 								})}
 							</div>
 						</div>
-
-						{/* Gráfica de tendencia */}
-						{trends && trends.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Presión Arterial
-								</h3>
-								<ResponsiveContainer width="100%" height={300}>
-									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="date" />
-										<YAxis />
-										<Tooltip />
-										<Line type="monotone" dataKey="avgSystolicBP" stroke="#ef4444" strokeWidth={2} name="Promedio Sistólica (mmHg)" />
-										<Line type="monotone" dataKey={() => 90} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
-										<Line type="monotone" dataKey={() => 120} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
-									</LineChart>
-								</ResponsiveContainer>
-							</div>
-						)}
 					</div>
 				)
 
@@ -828,51 +905,86 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 				const bgRanges = stats.ranges?.bloodGlucose || { low: 0, normal: 0, high: 0 }
 				const bgTotal = bgRanges.low + bgRanges.normal + bgRanges.high
 				const bgNormalPct = bgTotal > 0 ? ((bgRanges.normal / bgTotal) * 100).toFixed(1) : '0'
-				const hyperglycemiaCount = bgRanges.high
-				const hypoglycemiaCount = bgRanges.low
+				const bgAbnormal = bgRanges.low + bgRanges.high
+				const bgStatus = bgTotal === 0 ? 'Sin datos' : Number(bgNormalPct) >= 80 ? 'Normal' : bgAbnormal > 0 ? 'Atención' : 'Normal'
 
 				return (
 					<div className="space-y-6">
-						{/* Resumen */}
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 								Análisis de Glicemia
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Promedio General</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bgAvg ? `${bgAvg.toFixed(1)} mg/dL` : 'N/A'}
-									</p>
-									<div className="mt-2">
-										{getTrend(bgAvg, 'avgBloodGlucose')}
-									</div>
+							<div
+								className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+									bgStatus === 'Normal'
+										? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+										: bgStatus === 'Atención'
+											? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+								}`}
+							>
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+								<span
+									className={`font-semibold ${
+										bgStatus === 'Normal'
+											? 'text-green-700 dark:text-green-300'
+											: bgStatus === 'Atención'
+												? 'text-amber-700 dark:text-amber-300'
+												: 'text-gray-500 dark:text-gray-400'
+									}`}
+								>
+									{bgStatus}
+								</span>
+								{bgTotal > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+										{bgTotal} mediciones
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-6 mb-0">
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Promedio</span>
+									<span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+										{bgAvg ? `${bgAvg.toFixed(1)} mg/dL` : '—'}
+									</span>
+									{getTrend(bgAvg, 'avgBloodGlucose')}
 								</div>
-								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Normales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{bgRanges.normal}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{bgNormalPct}% del total
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Normales</span>
+									<span className="text-lg font-semibold text-green-600 dark:text-green-400">{bgRanges.normal}</span>
+									<span className="text-xs text-gray-500 dark:text-gray-400">({bgNormalPct}%)</span>
 								</div>
-								<div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Valores Anormales</p>
-									<p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-										{hyperglycemiaCount + hypoglycemiaCount}
-									</p>
-									<p className="text-xs text-red-600 dark:text-red-400 mt-1">
-										⚠️ Requiere atención
-									</p>
+								<div className="flex items-baseline gap-2">
+									<span className="text-xs text-gray-500 dark:text-gray-400">Anormales</span>
+									<span className="text-lg font-semibold text-amber-600 dark:text-amber-400">{bgAbnormal}</span>
 								</div>
 							</div>
+						</div>
 
-							{/* Distribución detallada */}
+						{trends && trends.length > 0 && (
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+									Tendencia de Glicemia
+								</h3>
+								<ResponsiveContainer width="100%" height={300}>
+									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="date" />
+										<YAxis />
+										<Tooltip />
+										<Line type="monotone" dataKey="avgBloodGlucose" stroke="#a855f7" strokeWidth={2} name="Promedio (mg/dL)" />
+										<Line type="monotone" dataKey={() => 70} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
+										<Line type="monotone" dataKey={() => 140} stroke="#eab308" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						)}
+
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+								Distribución por Rangos
+							</h4>
 							<div className="space-y-4">
-								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Distribución por Rangos
-								</h4>
 								{[
 									{ label: `Hipoglicemia (< 70 mg/dL)`, value: bgRanges.low, color: '#ef4444' },
 									{ label: 'Normal (70-140 mg/dL)', value: bgRanges.normal, color: '#22c55e' },
@@ -896,26 +1008,6 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 								})}
 							</div>
 						</div>
-
-						{/* Gráfica de tendencia */}
-						{trends && trends.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-									Tendencia de Glicemia
-								</h3>
-								<ResponsiveContainer width="100%" height={300}>
-									<LineChart data={trends.map(t => ({ ...t, date: format(new Date(t.date), 'dd/MM') }))}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="date" />
-										<YAxis />
-										<Tooltip />
-										<Line type="monotone" dataKey="avgBloodGlucose" stroke="#a855f7" strokeWidth={2} name="Promedio (mg/dL)" />
-										<Line type="monotone" dataKey={() => 70} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Inferior" />
-										<Line type="monotone" dataKey={() => 140} stroke="#eab308" strokeDasharray="5 5" strokeWidth={1} name="Límite Normal Superior" />
-									</LineChart>
-								</ResponsiveContainer>
-							</div>
-						)}
 					</div>
 				)
 
@@ -941,167 +1033,125 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 
 				const COLORS = ['#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6']
 
+				const renderHabitSection = (
+					title: string,
+					iconColor: string,
+					data: { name: string; value: number }[],
+				) => {
+					if (data.length === 0) return null
+					const total = data.reduce((sum, d) => sum + d.value, 0)
+					const topItem = [...data].sort((a, b) => b.value - a.value)[0]
+					const status = total === 0 ? 'Sin datos' : 'Con datos'
+
+					return (
+						<div key={title} className="space-y-6">
+							{/* Análisis */}
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+									<Activity className={`h-5 w-5 ${iconColor}`} />
+									Análisis de {title}
+								</h3>
+								<div
+									className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${
+										status === 'Con datos'
+											? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+											: 'bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
+									}`}
+								>
+									<span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+									<span
+										className={`font-semibold ${
+											status === 'Con datos'
+												? 'text-green-700 dark:text-green-300'
+												: 'text-gray-500 dark:text-gray-400'
+										}`}
+									>
+										{status}
+									</span>
+									{total > 0 && (
+										<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+											{total} registros
+										</span>
+									)}
+								</div>
+								<div className="flex flex-wrap gap-6 mb-0">
+									<div className="flex items-baseline gap-2">
+										<span className="text-xs text-gray-500 dark:text-gray-400">Total</span>
+										<span className="text-lg font-bold text-gray-900 dark:text-gray-100">{total}</span>
+									</div>
+									{topItem && (
+										<div className="flex items-baseline gap-2">
+											<span className="text-xs text-gray-500 dark:text-gray-400">Más frecuente</span>
+											<span className="text-lg font-semibold text-green-600 dark:text-green-400">{topItem.name}</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">({topItem.value})</span>
+										</div>
+									)}
+								</div>
+							</div>
+
+							{/* Gráfico */}
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+									Distribución
+								</h4>
+								<ResponsiveContainer width="100%" height={250}>
+									<PieChart>
+										<Pie
+											data={data}
+											cx="50%"
+											cy="50%"
+											labelLine={false}
+											label={false}
+											outerRadius={90}
+											fill="#8884d8"
+											dataKey="value"
+										>
+											{data.map((entry, index) => (
+												<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+											))}
+										</Pie>
+										<Tooltip />
+									</PieChart>
+								</ResponsiveContainer>
+							</div>
+
+							{/* Distribución por Rangos */}
+							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+								<h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+									Distribución por Categorías
+								</h4>
+								<div className="space-y-4">
+									{data.map((item, index) => {
+										const percentage = total > 0 ? (item.value / total) * 100 : 0
+										return (
+											<div key={item.name} className="space-y-2">
+												<div className="flex justify-between text-sm">
+													<span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+													<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
+												</div>
+												<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+													<div
+														className="h-3 rounded-full transition-all duration-300"
+														style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+													/>
+												</div>
+											</div>
+										)
+									})}
+								</div>
+							</div>
+						</div>
+					)
+				}
+
 				return (
-					<div className="space-y-6">
-						{/* Tabaco */}
-						{tabacoData.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-									<Activity className="h-5 w-5 text-red-500" />
-									Distribución de Tabaco
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<ResponsiveContainer width="100%" height={250}>
-											<PieChart>
-												<Pie
-													data={tabacoData}
-													cx="50%"
-													cy="50%"
-													labelLine={false}
-													label={false}
-													outerRadius={90}
-													fill="#8884d8"
-													dataKey="value"
-												>
-													{tabacoData.map((entry, index) => (
-														<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-													))}
-												</Pie>
-												<Tooltip />
-											</PieChart>
-										</ResponsiveContainer>
-									</div>
-									<div className="space-y-3">
-										{tabacoData.map((item, index) => {
-											const total = tabacoData.reduce((sum, d) => sum + d.value, 0)
-											const percentage = total > 0 ? (item.value / total) * 100 : 0
-											return (
-												<div key={item.name} className="space-y-1">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-700 dark:text-gray-300">{item.name}</span>
-														<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
-													</div>
-													<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-														<div
-															className="h-2 rounded-full transition-all duration-300"
-															style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
-														/>
-													</div>
-												</div>
-											)
-										})}
-									</div>
-								</div>
-							</div>
+					<div className="space-y-8">
+						{renderHabitSection('Tabaco', 'text-red-500', tabacoData)}
+						{renderHabitSection('Café', 'text-amber-500', cafeData)}
+						{renderHabitSection('Alcohol', 'text-purple-500', alcoholData)}
+						{tabacoData.length === 0 && cafeData.length === 0 && alcoholData.length === 0 && (
+							<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">Sin datos de hábitos en el período seleccionado.</p>
 						)}
-
-						{/* Café */}
-						{cafeData.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-									<Activity className="h-5 w-5 text-amber-500" />
-									Distribución de Café
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<ResponsiveContainer width="100%" height={250}>
-											<PieChart>
-												<Pie
-													data={cafeData}
-													cx="50%"
-													cy="50%"
-													labelLine={false}
-													label={false}
-													outerRadius={90}
-													fill="#8884d8"
-													dataKey="value"
-												>
-													{cafeData.map((entry, index) => (
-														<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-													))}
-												</Pie>
-												<Tooltip />
-											</PieChart>
-										</ResponsiveContainer>
-									</div>
-									<div className="space-y-3">
-										{cafeData.map((item, index) => {
-											const total = cafeData.reduce((sum, d) => sum + d.value, 0)
-											const percentage = total > 0 ? (item.value / total) * 100 : 0
-											return (
-												<div key={item.name} className="space-y-1">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-700 dark:text-gray-300">{item.name}</span>
-														<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
-													</div>
-													<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-														<div
-															className="h-2 rounded-full transition-all duration-300"
-															style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
-														/>
-													</div>
-												</div>
-											)
-										})}
-									</div>
-								</div>
-							</div>
-						)}
-
-						{/* Alcohol */}
-						{alcoholData.length > 0 && (
-							<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-									<Activity className="h-5 w-5 text-purple-500" />
-									Distribución de Alcohol
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<ResponsiveContainer width="100%" height={250}>
-											<PieChart>
-												<Pie
-													data={alcoholData}
-													cx="50%"
-													cy="50%"
-													labelLine={false}
-													label={false}
-													outerRadius={90}
-													fill="#8884d8"
-													dataKey="value"
-												>
-													{alcoholData.map((entry, index) => (
-														<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-													))}
-												</Pie>
-												<Tooltip />
-											</PieChart>
-										</ResponsiveContainer>
-									</div>
-									<div className="space-y-3">
-										{alcoholData.map((item, index) => {
-											const total = alcoholData.reduce((sum, d) => sum + d.value, 0)
-											const percentage = total > 0 ? (item.value / total) * 100 : 0
-											return (
-												<div key={item.name} className="space-y-1">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-700 dark:text-gray-300">{item.name}</span>
-														<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
-													</div>
-													<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-														<div
-															className="h-2 rounded-full transition-all duration-300"
-															style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
-														/>
-													</div>
-												</div>
-											)
-										})}
-									</div>
-								</div>
-							</div>
-						)}
-
 					</div>
 				)
 

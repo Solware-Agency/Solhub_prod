@@ -88,15 +88,9 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({
 
         {(dateRange?.from || dateRange?.to) && (
           <span className='inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-sm rounded-full'>
-            Rango:{' '}
             {dateRange?.from && dateRange?.to
-              ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(
-                  dateRange.to,
-                  'dd/MM/yyyy',
-                )}`
-              : dateRange?.from
-              ? `Desde ${format(dateRange.from, 'dd/MM/yyyy')}`
-              : `Hasta ${format(dateRange.to!, 'dd/MM/yyyy')}`}
+              ? `Rango: ${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
+              : format((dateRange?.from ?? dateRange?.to)!, 'dd/MM/yyyy')}
           </span>
         )}
 

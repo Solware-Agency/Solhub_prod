@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Input } from '@shared/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { cn } from '@shared/lib/cn'
 import { Loader2, Search, User, Building2 } from 'lucide-react'
 import { searchAsegurados, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
@@ -135,43 +136,48 @@ export const AseguradoSearchAutocomplete = ({
 	const getIcon = (tipo?: string | null) =>
 		tipo === 'Persona jurídica' ? <Building2 className="w-4 h-4 text-slate-500" /> : <User className="w-4 h-4 text-slate-500" />
 
+	const isOpen = showSuggestions && results.length > 0
+
 	return (
 		<div className={cn('relative w-full', className)}>
-			<div className="relative">
-				<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-50" />
-				<Input
-					type="text"
-					value={inputValue}
-					onChange={(e) => {
-						setInputValue(e.target.value)
-						onSearchChange?.(e.target.value)
-					}}
-					onFocus={() => {
-						if (results.length > 0) {
-							setShowSuggestions(true)
-						}
-					}}
-					onBlur={() => {
-						setTimeout(() => {
-							const activeElement = document.activeElement
-							const suggestionsElement = suggestionsRef.current
-							if (!suggestionsElement?.contains(activeElement)) {
-								setShowSuggestions(false)
-							}
-						}, 200)
-					}}
-					onKeyDown={handleKeyDown}
-					placeholder={placeholder}
-					disabled={disabled}
-					className="pl-9"
-				/>
-				{isLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />}
-			</div>
-
-			{showSuggestions && results.length > 0 && (
-				<div
-					ref={suggestionsRef}
-					className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+			<Popover open={isOpen} onOpenChange={(open) => { if (!open) setShowSuggestions(false) }}>
+				<PopoverTrigger asChild>
+					<div ref={suggestionsRef} className="relative w-full">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+						<Input
+							type="text"
+							value={inputValue}
+							onChange={(e) => {
+								setInputValue(e.target.value)
+								onSearchChange?.(e.target.value)
+							}}
+							onFocus={() => {
+								if (results.length > 0) {
+									setShowSuggestions(true)
+								}
+							}}
+							onBlur={() => {
+								setTimeout(() => {
+									const activeElement = document.activeElement
+									const suggestionsElement = suggestionsRef.current
+									if (!suggestionsElement?.contains(activeElement)) {
+										setShowSuggestions(false)
+									}
+								}, 200)
+							}}
+							onKeyDown={handleKeyDown}
+							placeholder={placeholder}
+							disabled={disabled}
+							className="pl-9"
+						/>
+						{isLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />}
+					</div>
+				</PopoverTrigger>
+				<PopoverContent
+					className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg rounded-lg"
+					align="start"
+					sideOffset={4}
+					onOpenAutoFocus={(e) => e.preventDefault()}
 				>
 					{results.map((asegurado, idx) => (
 						<div
@@ -180,7 +186,10 @@ export const AseguradoSearchAutocomplete = ({
 								'flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
 								selectedIndex === idx && 'bg-gray-100 dark:bg-gray-700',
 							)}
-							onClick={() => handleSelect(asegurado)}
+							onMouseDown={(e) => {
+								e.preventDefault()
+								handleSelect(asegurado)
+							}}
 						>
 							{getIcon(asegurado.tipo_asegurado)}
 							<div className="flex-1 min-w-0">
@@ -192,8 +201,8 @@ export const AseguradoSearchAutocomplete = ({
 							<span className="text-xs text-muted-foreground">{asegurado.tipo_asegurado}</span>
 						</div>
 					))}
-				</div>
-			)}
+				</PopoverContent>
+			</Popover>
 
 			{error && <div className="mt-1 text-sm text-red-500">{error}</div>}
 		</div>

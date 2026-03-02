@@ -58,10 +58,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 	},
 })
 
-// Verificar conexión con medical_records_clean tras aplicar políticas RLS
+// Verificar conexión con medical_records_clean tras aplicar políticas RLS (no en call center, no usa esa tabla)
 setTimeout(async () => {
+	if (typeof window !== 'undefined' && window.location.pathname.includes('/call-center')) return
 	const { data: { session } } = await supabase.auth.getSession()
-	
 	if (session) {
 		supabase
 			.from('medical_records_clean')

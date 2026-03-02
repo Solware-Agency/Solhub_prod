@@ -6,7 +6,7 @@ import { Button } from '@shared/components/ui/button'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useToast } from '@shared/hooks/use-toast'
-import type { Asegurado, AseguradoUpdate } from '@services/supabase/aseguradoras/asegurados-service'
+import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { updateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
 
 interface EditAseguradoModalProps {
@@ -34,25 +34,46 @@ const CardSection = ({
 	</div>
 )
 
+const parseDocumentId = (documentId: string): { tipo: 'V' | 'J'; numero: string } => {
+	const trimmed = (documentId ?? '').trim()
+	if (trimmed.startsWith('V-')) {
+		return { tipo: 'V', numero: trimmed.slice(2).replace(/\D/g, '') }
+	}
+	if (trimmed.startsWith('J-')) {
+		return { tipo: 'J', numero: trimmed.slice(2).replace(/\D/g, '') }
+	}
+	return { tipo: 'V', numero: trimmed.replace(/\D/g, '') }
+}
+
+const buildDocumentId = (tipo: 'V' | 'J', numero: string): string => {
+	const n = numero.replace(/\D/g, '')
+	if (!n) return ''
+	if (tipo === 'J' && n.length === 9) return `J-${n.slice(0, 8)}-${n.slice(8)}`
+	return `${tipo}-${n}`
+}
+
 export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditAseguradoModalProps) => {
 	const { toast } = useToast()
 	const [isLoading, setIsLoading] = useState(false)
-	const [form, setForm] = useState<AseguradoUpdate>({
+	const [form, setForm] = useState({
 		full_name: '',
-		document_id: '',
+		document_tipo: 'V' as 'V' | 'J',
+		document_numero: '',
 		phone: '',
 		email: '',
 		address: '',
 		notes: '',
-		tipo_asegurado: 'Persona natural',
+		tipo_asegurado: 'Persona natural' as 'Persona natural' | 'Persona jurídica',
 	})
 
 	useEffect(() => {
 		if (asegurado) {
+			const { tipo, numero } = parseDocumentId(asegurado.document_id)
 			setForm({
 				full_name: asegurado.full_name,
-				document_id: asegurado.document_id,
-				phone: asegurado.phone ?? '',
+				document_tipo: tipo,
+				document_numero: numero,
+				phone: (asegurado.phone ?? '').replace(/\D/g, ''),
 				email: asegurado.email ?? '',
 				address: asegurado.address ?? '',
 				notes: asegurado.notes ?? '',
@@ -61,24 +82,42 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 		}
 	}, [asegurado, isOpen])
 
-	const isValidEmail = (value: string): boolean =>
-		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value ?? '').trim())
+	const isValidEmailChar = (char: string) => /[a-zA-Z0-9@._+-]/.test(char)
+	const isValidEmail = (value: string): boolean => {
+		const t = (value ?? '').trim()
+		if (!t) return true
+		if (!t.includes('@')) return false
+		return /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(t)
+	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!asegurado) return
 		const email = (form.email ?? '').trim()
+		if (email && !form.email?.includes('@')) {
+			toast({ title: 'Email debe contener @', variant: 'destructive' })
+			return
+		}
 		if (email && !isValidEmail(form.email ?? '')) {
-			toast({
-				title: 'Email inválido',
-				description: 'Use un formato válido (ej: nombre@dominio.com)',
-				variant: 'destructive',
-			})
+			toast({ title: 'Email con formato inválido', variant: 'destructive' })
+			return
+		}
+		if (!form.document_numero?.trim()) {
+			toast({ title: 'Documento es obligatorio', variant: 'destructive' })
 			return
 		}
 		setIsLoading(true)
 		try {
-			const updated = await updateAsegurado(asegurado.id, form)
+			const document_id = buildDocumentId(form.document_tipo, form.document_numero)
+			const updated = await updateAsegurado(asegurado.id, {
+				full_name: form.full_name,
+				document_id,
+				phone: form.phone,
+				email: form.email || null,
+				address: form.address || null,
+				notes: form.notes || null,
+				tipo_asegurado: form.tipo_asegurado,
+			})
 			toast({ title: 'Asegurado actualizado' })
 			onSave?.(updated)
 			onClose()
@@ -170,11 +209,32 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 											</div>
 											<div className="space-y-2 sm:col-span-2">
 												<Label>Documento</Label>
-												<Input
-													value={form.document_id}
-													onChange={(e) => setForm((prev) => ({ ...prev, document_id: e.target.value }))}
-													required
-												/>
+												<div className="flex gap-2">
+													<Select
+														value={form.document_tipo}
+														onValueChange={(value) => setForm((prev) => ({ ...prev, document_tipo: value as 'V' | 'J' }))}
+													>
+														<SelectTrigger className="w-16 shrink-0">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="V">V</SelectItem>
+															<SelectItem value="J">J</SelectItem>
+														</SelectContent>
+													</Select>
+													<Input
+														placeholder={form.document_tipo === 'J' ? '12345678-9' : '12345678'}
+														value={form.document_numero}
+														onChange={(e) => {
+															const onlyNumbers = e.target.value.replace(/\D/g, '')
+															setForm((prev) => ({ ...prev, document_numero: onlyNumbers }))
+														}}
+														inputMode="numeric"
+														maxLength={form.document_tipo === 'J' ? 9 : 15}
+														className="flex-1"
+														required
+													/>
+												</div>
 											</div>
 										</div>
 									</CardSection>
@@ -185,7 +245,11 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 												<Label>Teléfono</Label>
 												<Input
 													value={form.phone}
-													onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+													onChange={(e) => {
+														const onlyNumbers = e.target.value.replace(/\D/g, '')
+														setForm((prev) => ({ ...prev, phone: onlyNumbers }))
+													}}
+													inputMode="numeric"
 												/>
 											</div>
 											<div className="space-y-2">
@@ -193,7 +257,10 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 												<Input
 													type="email"
 													value={form.email ?? ''}
-													onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value || null }))}
+													onChange={(e) => {
+														const filtered = [...e.target.value].filter((c) => isValidEmailChar(c)).join('')
+														setForm((prev) => ({ ...prev, email: filtered || null }))
+													}}
 												/>
 											</div>
 										</div>

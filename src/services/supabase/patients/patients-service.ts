@@ -54,6 +54,8 @@ export interface Patient {
 	created_at: string | null
 	updated_at: string | null
 	version: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 export interface PatientInsert {
@@ -68,6 +70,8 @@ export interface PatientInsert {
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 export interface PatientUpdate {
@@ -82,6 +86,8 @@ export interface PatientUpdate {
 	created_at?: string | null
 	updated_at?: string | null
 	version?: number | null
+	is_active?: boolean
+	deactivated_at?: string | null
 }
 
 // =====================================================================
@@ -623,15 +629,19 @@ const logPatientChanges = async (patientId: string, oldData: Patient, newData: P
 	}
 }
 
+/** Máximo de IDs a enviar en un solo .in() para evitar URL demasiado larga (400 Bad Request) */
+const MAX_IDS_IN_QUERY = 80
+
 /**
  * Obtener todos los pacientes con paginación - MULTI-TENANT
  * SOLO muestra pacientes del laboratorio del usuario autenticado
  */
+/** branchFilter: string para una sede, string[] para variantes (ej. SPT: ['Paseo Hatillo','Paseo El Hatillo']) */
 export const getPatients = async (
 	page = 1,
 	limit = 50,
 	searchTerm?: string,
-	branchFilter?: string,
+	branchFilter?: string | string[],
 	sortField: string = 'created_at',
 	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
@@ -641,26 +651,23 @@ export const getPatients = async (
 		// Si hay término de búsqueda, usar función optimizada primero
 		if (searchTerm && searchTerm.trim().length >= 2) {
 			try {
-				// Usar búsqueda optimizada con pg_trgm
-				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 1000) // Límite alto para obtener todos los relevantes
+				// Usar búsqueda optimizada con pg_trgm (límite razonable para no sobrecargar)
+				const optimizedResults = await searchPatientsOptimized(searchTerm.trim(), 500)
 
 				if (optimizedResults && optimizedResults.length > 0) {
-					// IDs en orden de relevancia (exactos, luego primer nombre = término, ts_rank, nombre)
+					// IDs en orden de relevancia
 					let orderedIds = optimizedResults.map((p) => p.id)
-
-					let query = supabase
-						.from('patients')
-						.select('*', { count: 'exact' })
-						.eq('laboratory_id', laboratoryId)
-						.in('id', orderedIds)
 
 					// Aplicar filtro de branch si existe
 					if (branchFilter && branchFilter !== 'all') {
-						const { data: casesData, error: casesError } = await supabase
+						const branchList = Array.isArray(branchFilter) ? branchFilter : [branchFilter]
+						const casesQuery = supabase
 							.from('medical_records_clean')
 							.select('patient_id')
 							.eq('laboratory_id', laboratoryId)
-							.eq('branch', branchFilter)
+						const { data: casesData, error: casesError } = branchList.length === 1
+							? await casesQuery.eq('branch', branchList[0])
+							: await casesQuery.in('branch', branchList)
 
 						if (casesError) {
 							console.error('Error obteniendo casos por branch:', casesError)
@@ -668,19 +675,7 @@ export const getPatients = async (
 							const uniquePatientIds = [...new Set(casesData.map((c) => c.patient_id).filter(Boolean))]
 
 							if (uniquePatientIds.length > 0) {
-								const filteredIds = orderedIds.filter((id) => uniquePatientIds.includes(id))
-								if (filteredIds.length > 0) {
-									query = query.in('id', filteredIds)
-									orderedIds = filteredIds
-								} else {
-									return {
-										data: [],
-										count: 0,
-										page,
-										limit,
-										totalPages: 0,
-									}
-								}
+								orderedIds = orderedIds.filter((id) => uniquePatientIds.includes(id))
 							} else {
 								return {
 									data: [],
@@ -693,26 +688,52 @@ export const getPatients = async (
 						}
 					}
 
-					// Con búsqueda: respetar orden por relevancia (no reordenar por sortField)
-					const { data: allData, error, count } = await query.range(0, orderedIds.length - 1)
+					if (orderedIds.length === 0) {
+						return {
+							data: [],
+							count: 0,
+							page,
+							limit,
+							totalPages: 0,
+						}
+					}
+
+					// Solo pedir los IDs de la página actual para evitar URL demasiado larga (400 Bad Request)
+					const from = (page - 1) * limit
+					const pageIds = orderedIds.slice(from, from + limit)
+
+					if (pageIds.length === 0) {
+						return {
+							data: [],
+							count: orderedIds.length,
+							page,
+							limit,
+							totalPages: Math.ceil(orderedIds.length / limit),
+						}
+					}
+
+					const { data: pageData, error } = await supabase
+						.from('patients')
+						.select('*')
+						.eq('laboratory_id', laboratoryId)
+						.eq('is_active', true)
+						.in('id', pageIds)
 
 					if (error) {
 						throw error
 					}
 
-					const byRelevanceOrder = (allData || []).sort(
-						(a: any, b: any) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id),
+					// Ordenar por relevancia (orden en pageIds)
+					const byRelevanceOrder = (pageData || []).sort(
+						(a: any, b: any) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id),
 					)
-					const from = (page - 1) * limit
-					const to = from + limit
-					const paginatedData = byRelevanceOrder.slice(from, to)
 
 					return {
-						data: paginatedData.map((p: any) => normalizePatientCedula(p)),
-						count: count ?? byRelevanceOrder.length,
+						data: byRelevanceOrder.map((p: any) => normalizePatientCedula(p)),
+						count: orderedIds.length,
 						page,
 						limit,
-						totalPages: Math.ceil((count ?? byRelevanceOrder.length) / limit),
+						totalPages: Math.ceil(orderedIds.length / limit),
 					}
 				}
 			} catch (optimizedError) {
@@ -722,7 +743,11 @@ export const getPatients = async (
 		}
 
 		// MÉTODO TRADICIONAL (fallback o cuando no hay searchTerm)
-		let query = supabase.from('patients').select('*', { count: 'exact' }).eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+		let query = supabase
+			.from('patients')
+			.select('*', { count: 'exact' })
+			.eq('laboratory_id', laboratoryId)
+			.eq('is_active', true) // Solo pacientes activos (soft delete)
 
 		// Filtro de búsqueda tradicional (solo si no se usó la optimizada)
 		if (searchTerm) {
@@ -730,14 +755,15 @@ export const getPatients = async (
 		}
 
 		// Si hay filtro de branch, necesitamos obtener los patient_ids de medical_records_clean
-		// que coincidan con esa branch, y luego filtrar pacientes
 		if (branchFilter && branchFilter !== 'all') {
-			// Primero obtenemos los patient_ids únicos de medical_records_clean con esa branch
-			const { data: casesData, error: casesError } = await supabase
+			const branchList = Array.isArray(branchFilter) ? branchFilter : [branchFilter]
+			const casesQuery = supabase
 				.from('medical_records_clean')
 				.select('patient_id')
 				.eq('laboratory_id', laboratoryId)
-				.eq('branch', branchFilter)
+			const { data: casesData, error: casesError } = branchList.length === 1
+				? await casesQuery.eq('branch', branchList[0])
+				: await casesQuery.in('branch', branchList)
 
 			if (casesError) {
 				console.error('Error obteniendo casos por branch:', casesError)
@@ -747,10 +773,7 @@ export const getPatients = async (
 					...new Set(casesData.map((c) => c.patient_id).filter((id): id is string => id !== null)),
 				]
 
-				if (uniquePatientIds.length > 0) {
-					query = query.in('id', uniquePatientIds)
-				} else {
-					// No hay pacientes en esa branch, retornar vacío
+				if (uniquePatientIds.length === 0) {
 					return {
 						data: [],
 						count: 0,
@@ -759,6 +782,84 @@ export const getPatients = async (
 						totalPages: 0,
 					}
 				}
+
+				// Si hay demasiados IDs, la URL del .in() puede superar el límite (400). Fetch por lotes.
+				if (uniquePatientIds.length > MAX_IDS_IN_QUERY) {
+					const chunks: string[][] = []
+					for (let i = 0; i < uniquePatientIds.length; i += MAX_IDS_IN_QUERY) {
+						chunks.push(uniquePatientIds.slice(i, i + MAX_IDS_IN_QUERY))
+					}
+					const batchResults = await Promise.all(
+						chunks.map((chunk) =>
+							supabase
+								.from('patients')
+								.select('*')
+								.eq('laboratory_id', laboratoryId)
+								.eq('is_active', true)
+								.in('id', chunk),
+						),
+					)
+					const byId = new Map<string, any>()
+					for (const res of batchResults) {
+						if (res.data) for (const row of res.data) byId.set(row.id, row)
+					}
+					const allPatients = uniquePatientIds.map((id) => byId.get(id)).filter(Boolean)
+
+					const extractAgeValue = (edad: string | null | undefined): number => {
+						if (!edad || String(edad).trim() === '') return -1
+						const edadStr = String(edad).trim().toUpperCase()
+						const match = edadStr.match(/(\d+)/)
+						if (!match) return -1
+						const number = parseInt(match[1], 10)
+						if (isNaN(number)) return -1
+						if (edadStr.includes('AÑO') || edadStr.includes('AÑOS')) return number * 365
+						if (edadStr.includes('MES') || edadStr.includes('MESES')) return number * 30
+						if (
+							edadStr.includes('DÍA') ||
+							edadStr.includes('DÍAS') ||
+							edadStr.includes('DIA') ||
+							edadStr.includes('DIAS')
+						)
+							return number
+						return number * 365
+					}
+
+					const cmp = (a: any, b: any): number => {
+						if (sortField === 'edad') {
+							const aV = extractAgeValue(a.edad)
+							const bV = extractAgeValue(b.edad)
+							if (aV === -1 && bV === -1) return 0
+							if (aV === -1) return 1
+							if (bV === -1) return -1
+							return sortDirection === 'asc' ? aV - bV : bV - aV
+						}
+						const aVal = a[sortField]
+						const bVal = b[sortField]
+						if (aVal == null && bVal == null) return 0
+						if (aVal == null) return 1
+						if (bVal == null) return -1
+						if (typeof aVal === 'string' && typeof bVal === 'string') {
+							return sortDirection === 'asc'
+								? aVal.localeCompare(bVal)
+								: bVal.localeCompare(aVal)
+						}
+						const order = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+						return sortDirection === 'asc' ? order : -order
+					}
+					allPatients.sort(cmp)
+					const from = (page - 1) * limit
+					const to = from + limit
+					const pageData = allPatients.slice(from, to).map((p: any) => normalizePatientCedula(p))
+					return {
+						data: pageData,
+						count: allPatients.length,
+						page,
+						limit,
+						totalPages: Math.ceil(allPatients.length / limit),
+					}
+				}
+
+				query = query.in('id', uniquePatientIds)
 			}
 		}
 
@@ -856,42 +957,70 @@ export const getPatients = async (
 }
 
 /**
- * Obtener conteo de pacientes por branch (sede/sucursal)
- * Cuenta pacientes únicos que tienen casos en cada branch
+ * Resultado del conteo de pacientes por sede
  */
-export const getPatientsCountByBranch = async (): Promise<Record<string, number>> => {
+export interface PatientsCountByBranchResult {
+	/** Conteo por sede (solo pacientes activos con casos en esa sede) */
+	byBranch: Record<string, number>
+	/** Total de pacientes activos únicos con al menos un caso en alguna sede */
+	totalUnique: number
+}
+
+/**
+ * Obtener conteo de pacientes por branch (sede/sucursal)
+ * Usa RPC con SECURITY DEFINER para evitar que RLS devuelva 0 filas incorrectamente.
+ * Fallback a query directa si la RPC no existe (ej. migración pendiente).
+ */
+export const getPatientsCountByBranch = async (): Promise<PatientsCountByBranchResult> => {
 	try {
+		// Intentar RPC primero (bypassa RLS, evita el bug de conteo 0)
+		const { data: rpcData, error: rpcError } = await supabase.rpc('get_patients_count_by_branch')
+
+		if (!rpcError && rpcData && typeof rpcData === 'object') {
+			const byBranch = (rpcData as { byBranch?: Record<string, number> }).byBranch ?? {}
+			const totalUnique = Number((rpcData as { totalUnique?: number }).totalUnique ?? 0)
+			return { byBranch, totalUnique }
+		}
+
+		// Fallback: query directa (puede devolver 0 por RLS en algunos roles)
 		const laboratoryId = await getUserLaboratoryId()
 
-		// Obtener todos los casos del laboratorio con su branch y patient_id
 		const { data, error } = await supabase
 			.from('medical_records_clean')
 			.select('branch, patient_id')
 			.eq('laboratory_id', laboratoryId)
 			.not('branch', 'is', null)
 
-		if (error) {
-			throw error
-		}
+		if (error) throw error
 
-		// Agrupar pacientes únicos por branch
 		const countMap: Record<string, Set<string>> = {}
+		const allPatientIds = new Set<string>()
 		data?.forEach((record) => {
 			if (record.branch && record.patient_id) {
-				if (!countMap[record.branch]) {
-					countMap[record.branch] = new Set()
-				}
+				if (!countMap[record.branch]) countMap[record.branch] = new Set()
 				countMap[record.branch].add(record.patient_id)
+				allPatientIds.add(record.patient_id)
 			}
 		})
 
-		// Convertir Sets a conteos
-		const result: Record<string, number> = {}
-		Object.entries(countMap).forEach(([branch, patientIds]) => {
-			result[branch] = patientIds.size
-		})
+		let activePatientIds = new Set<string>()
+		if (allPatientIds.size > 0) {
+			const { data: activePatients } = await supabase
+				.from('patients')
+				.select('id')
+				.eq('laboratory_id', laboratoryId)
+				.eq('is_active', true)
+				.in('id', [...allPatientIds])
+			activePatientIds = new Set((activePatients || []).map((p) => p.id))
+		}
 
-		return result
+		const byBranch: Record<string, number> = {}
+		Object.entries(countMap).forEach(([branch, patientIds]) => {
+			byBranch[branch] = [...patientIds].filter((id) => activePatientIds.has(id)).length
+		})
+		const totalUnique = [...allPatientIds].filter((id) => activePatientIds.has(id)).length
+
+		return { byBranch, totalUnique }
 	} catch (error) {
 		console.error('Error obteniendo conteo de pacientes por branch:', error)
 		throw error
@@ -962,7 +1091,8 @@ export const searchPatients = async (searchTerm: string, limit = 10) => {
 		const { data, error } = await supabase
 			.from('patients')
 			.select('id, cedula, nombre, telefono, gender')
-			.eq('laboratory_id', laboratoryId) // FILTRO MULTI-TENANT
+			.eq('laboratory_id', laboratoryId)
+			.eq('is_active', true)
 			.or(`cedula.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`)
 			.limit(limit)
 			.order('nombre')
@@ -1186,6 +1316,78 @@ export const consolidateDuplicatePatients = async (
 	} catch (error) {
 		console.error('Error consolidando pacientes duplicados:', error)
 		throw error
+	}
+}
+
+/**
+ * Activar o desactivar paciente (soft delete) - MULTI-TENANT
+ * No elimina datos; solo oculta el paciente de listados cuando active = false
+ * Registra en change_logs la desactivación/activación (quién y cuándo)
+ */
+export const setPatientActive = async (patientId: string, active: boolean): Promise<void> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const updateData: { is_active: boolean; updated_at: string; deactivated_at?: string | null } = {
+		is_active: active,
+		updated_at: new Date().toISOString(),
+	}
+	if (!active) {
+		updateData.deactivated_at = new Date().toISOString()
+	} else {
+		updateData.deactivated_at = null
+	}
+	const { data, error } = await supabase
+		.from('patients')
+		.update(updateData as any)
+		.eq('id', patientId)
+		.eq('laboratory_id', laboratoryId)
+		.select('id')
+		.single()
+
+	if (error) {
+		throw error
+	}
+	if (!data) {
+		throw new PatientError('Paciente no encontrado o no pertenece al laboratorio', 'PATIENT_NOT_FOUND')
+	}
+
+	// Auditoría: registrar en change_logs (quién y cuándo activó/desactivó)
+	try {
+		const {
+			data: { user },
+		} = await supabase.auth.getUser()
+		if (!user) return
+
+		const { data: profile } = await supabase
+			.from('profiles')
+			.select('display_name, email')
+			.eq('id', user.id)
+			.single()
+
+		const userEmail = profile?.email ?? user.email ?? 'unknown'
+		const userDisplayName = profile?.display_name ?? 'Usuario'
+		const changedAt = new Date().toISOString()
+
+		const { error: logError } = await supabase.from('change_logs').insert({
+			patient_id: patientId,
+			laboratory_id: laboratoryId,
+			entity_type: 'patient',
+			field_name: 'is_active',
+			field_label: 'Estado (activo/inactivo)',
+			old_value: active ? 'Eliminado' : 'Activo',
+			new_value: active ? 'Activo' : 'Eliminado',
+			user_id: user.id,
+			user_email: userEmail,
+			user_display_name: userDisplayName,
+			changed_at: changedAt,
+			change_session_id: generateChangeSessionId(),
+		})
+
+		if (logError) {
+			console.error('Error registrando en change_logs la activación/desactivación del paciente:', logError)
+		}
+	} catch (err) {
+		console.error('Error en auditoría setPatientActive:', err)
+		// No lanzar para no romper el flujo
 	}
 }
 

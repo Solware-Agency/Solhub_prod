@@ -44,18 +44,25 @@ export const createFormSchema = (
 	// examType: Opcional, pero validado condicionalmente con consulta
 	const examTypeSchema = z.string().optional().or(z.literal(''))
 
+	// Marihorgen: sin restricción de caracteres (nombres de hospitales tienen comillas, puntos, etc.)
+	const originRegex = isMarihorgen
+		? /^[\s\S]*$/
+		: /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]+$/
+	const originRegexOptional = isMarihorgen
+		? /^[\s\S]*$/
+		: /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/
 	const originSchema = originRequired
 		? z
 			.string()
 			.min(1, 'El origen es requerido')
 			.regex(
-				/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]+$/,
+				originRegex,
 				'Procedencia solo debe contener letras, números y espacios',
 			)
 		: z
 			.string()
 			.regex(
-				/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/,
+				originRegexOptional,
 				'Procedencia solo debe contener letras, números y espacios',
 			)
 			.optional()

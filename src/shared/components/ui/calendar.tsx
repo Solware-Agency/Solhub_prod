@@ -8,9 +8,12 @@ import { buttonVariants } from '@shared/components/ui/button'
 // Ensure the calendar is properly contained and doesn't overflow
 import './calendar-styles.css'
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+	/** Si true, permite seleccionar fechas futuras (por defecto false para compatibilidad) */
+	allowFutureDates?: boolean
+}
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, allowFutureDates = false, ...props }: CalendarProps) {
 	const [showYearPicker, setShowYearPicker] = React.useState(false)
 	// Use month from props if controlled, otherwise maintain internal state
 	const [internalMonth, setInternalMonth] = React.useState(props.defaultMonth || new Date())
@@ -28,7 +31,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 	const currentMonthNum = new Date().getMonth()
 	const currentDay = new Date().getDate()
 	const startYear = 1900 // Allow selection from 1900
-	const endYear = currentYear // No permitir años futuros
+	const endYear = allowFutureDates ? currentYear + 15 : currentYear
 
 	// Verificar si hay una función disabled para saber si debemos restringir fechas futuras
 	const hasDisabledProp = !!props.disabled
@@ -42,14 +45,14 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 	}
 
 	const handleYearSelect = (year: number) => {
-		// Si el año es futuro, no permitir seleccionarlo
-		if (year > currentYear) {
+		// Si el año es futuro y no se permiten fechas futuras, no permitir seleccionarlo
+		if (!allowFutureDates && year > currentYear) {
 			return
 		}
 		
-		// Si el año es el actual, asegurarse de que el mes no sea futuro
+		// Si el año es el actual y no se permiten futuras, asegurarse de que el mes no sea futuro
 		let month = currentMonth.getMonth()
-		if (year === currentYear && month > currentMonthNum) {
+		if (!allowFutureDates && year === currentYear && month > currentMonthNum) {
 			month = currentMonthNum
 		}
 		
@@ -91,8 +94,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 			return
 		}
 		
-		// Si el mes siguiente es futuro, no permitir avanzar
-		if (nextMonth > today) {
+		// Si el mes siguiente es futuro y no se permiten fechas futuras, no permitir avanzar
+		if (!allowFutureDates && nextMonth > today) {
 			return
 		}
 		
@@ -157,7 +160,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 					{years.map((year) => {
 						const isFutureYear = year > currentYear
 						const isFutureMonth = year === currentYear && currentMonth.getMonth() > currentMonthNum
-						const isDisabled = isFutureYear || (hasDisabledProp && isFutureMonth)
+						const isDisabled =
+							(!allowFutureDates && isFutureYear) || (hasDisabledProp && isFutureMonth && !allowFutureDates)
 						
 						return (
 							<button
@@ -208,8 +212,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 		if (hasDisabledProp) {
 			isNextMonthDisabled = isDateDisabled(nextMonth)
 		}
-		// También deshabilitar si el mes siguiente es futuro
-		if (nextMonth > today) {
+		// También deshabilitar si el mes siguiente es futuro (solo cuando no se permiten fechas futuras)
+		if (!allowFutureDates && nextMonth > today) {
 			isNextMonthDisabled = true
 		}
 		

@@ -1,6 +1,7 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getAllChangeLogs } from '@/services/legacy/supabase-service'
 import { supabase } from '@/services/supabase/config/config'
+import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { Button } from '@shared/components/ui/button'
 import { Calendar as CalendarComponent } from '@shared/components/ui/calendar'
 import { Card } from '@shared/components/ui/card'
@@ -9,11 +10,26 @@ import { Input } from '@shared/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AlertCircle, ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Edit, Eye, FileText, Filter, History, Mail, MailX, RefreshCw, Trash2 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import {
+	AlertCircle,
+	ArrowUpDown,
+	Calendar,
+	ChevronLeft,
+	ChevronRight,
+	Edit,
+	Eye,
+	FileText,
+	Filter,
+	History,
+	Mail,
+	MailX,
+	RefreshCw,
+	Trash2,
+} from 'lucide-react'
+import React, { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 
@@ -30,7 +46,6 @@ type GroupedChangeLog = {
 
 const ChangelogTable: React.FC = () => {
 	const { toast } = useToast()
-	const queryClient = useQueryClient()
 
 	// Función para traducir nombres de campos en inglés a español
 	const translateFieldLabel = (fieldName: string, fieldLabel: string): string => {
@@ -72,143 +87,44 @@ const ChangelogTable: React.FC = () => {
 			return { text, isDeletedCase: false }
 		}
 
-		let raw = log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'
+		const raw = log.medical_records_clean?.code || log.deleted_record_info || 'Caso eliminado'
 		// Evitar truncamiento: si deleted_record_info es "CODE - Nombre tipo", mostrar solo el código
 		const displayText = raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw
 		const isDeletedCase = raw === 'Caso eliminado'
 		return { text: displayText, isDeletedCase }
 	}
 
-	useUserProfile()
+	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
 
-	// Realtime subscription for change logs
-	useEffect(() => {
-		let channel: ReturnType<typeof supabase.channel> | null = null
-
-		// Esperar un poco antes de suscribirse para asegurar que la conexión esté lista
-		const timeoutId = setTimeout(async () => {
-			try {
-				// Obtener laboratory_id del usuario para filtrar cambios
-				const {
-					data: { user },
-				} = await supabase.auth.getUser()
-				if (!user) {
-					console.warn('⚠️ [ChangelogTable] Usuario no autenticado, omitiendo suscripción realtime')
-					return
-				}
-
-				const { data: profile } = await supabase
-					.from('profiles')
-					.select('laboratory_id')
-					.eq('id', user.id)
-				.single() as { data: { laboratory_id?: string } | null; error: any | null }
-
-			if (!profile?.laboratory_id) {
-				console.warn('⚠️ [ChangelogTable] Usuario sin laboratory_id, omitiendo suscripción realtime')
-				return
-			}
-
-			console.log('📡 [ChangelogTable] Configurando suscripción realtime para change_logs...')
-
-				channel = supabase
-					.channel('realtime-changelog', {
-						config: {
-							broadcast: { self: true },
-						},
-					})
-					.on(
-						'postgres_changes',
-						{
-							event: '*', // INSERT | UPDATE | DELETE
-							schema: 'public',
-							table: 'change_logs',
-							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
-						},
-						(payload) => {
-							console.log('🔄 [ChangelogTable] Cambio detectado en change_logs:', {
-								event: payload.eventType,
-								table: payload.table,
-								new: payload.new,
-								old: payload.old,
-							})
-
-							// Invalidar queries para forzar refetch
-							queryClient.invalidateQueries({
-								queryKey: ['change-logs'],
-								exact: false, // Invalidar todas las variaciones (diferentes páginas)
-							})
-
-							console.log('✅ [ChangelogTable] Queries invalidadas, refetch automático')
-						},
-					)
-					.on(
-						'postgres_changes',
-						{
-							event: '*', // INSERT | UPDATE | DELETE
-							schema: 'public',
-							table: 'email_send_logs',
-							filter: `laboratory_id=eq.${profile?.laboratory_id}`, // 🔐 FILTRAR POR LABORATORY_ID
-						},
-						(payload) => {
-							console.log('📧 [ChangelogTable] Cambio detectado en email_send_logs:', {
-								event: payload.eventType,
-								table: payload.table,
-								new: payload.new,
-							})
-
-							// Invalidar queries para forzar refetch
-							queryClient.invalidateQueries({
-								queryKey: ['change-logs'],
-								exact: false,
-							})
-
-							console.log('✅ [ChangelogTable] Queries invalidadas (email logs), refetch automático')
-						},
-					)
-					.subscribe((status) => {
-						console.log('📡 [ChangelogTable] Estado del canal realtime:', status)
-						if (status === 'SUBSCRIBED') {
-							console.log('✅ [ChangelogTable] Suscripción realtime exitosa')
-						} else if (status === 'CHANNEL_ERROR') {
-							console.error('❌ [ChangelogTable] Error en canal realtime')
-						} else if (status === 'CLOSED') {
-							console.warn('⚠️ [ChangelogTable] Canal realtime cerrado')
-						} else if (status === 'TIMED_OUT') {
-							console.warn('⏱️ [ChangelogTable] Canal realtime timeout')
-						}
-					})
-			} catch (error) {
-				console.error('❌ [ChangelogTable] Error configurando suscripción realtime:', error)
-			}
-		}, 1000) // Esperar 1 segundo para asegurar que la conexión esté lista
-
-		return () => {
-			clearTimeout(timeoutId)
-			if (channel) {
-				console.log('🧹 [ChangelogTable] Limpiando suscripción realtime')
-				supabase.removeChannel(channel)
-			}
-		}
-	}, [queryClient])
+	const labId = profile?.laboratory_id
+	useRealtimeInvalidate('change_logs', ['change-logs'], {
+		filter: labId ? `laboratory_id=eq.${labId}` : undefined,
+		enabled: !!labId,
+		delayMs: 1000,
+	})
+	useRealtimeInvalidate('email_send_logs', ['change-logs'], {
+		filter: labId ? `laboratory_id=eq.${labId}` : undefined,
+		enabled: !!labId,
+		delayMs: 1000,
+	})
 
 	const [searchTerm, setSearchTerm] = useState('')
 	const [actionFilter, setActionFilter] = useState<string>('all')
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-	const [tempRange, setTempRange] = useState<DateRange | undefined>(undefined)
 	const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 	const [page, setPage] = useState(0)
-	const [rowsPerPage, setRowsPerPage] = useState(20)
+	const [rowsPerPage] = useState(20)
 	const [isDeleting, setIsDeleting] = useState<string | null>(null)
 	const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
 	const [logToDelete, setLogToDelete] = useState<string | null>(null)
 	const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
-	// Resetear página cuando cambian los filtros de fecha
+	// Resetear página cuando cambian los filtros de fecha o la búsqueda
 	React.useEffect(() => {
 		setPage(0)
-	}, [dateRange])
+	}, [dateRange, searchTerm])
 
 	// Check if user is owner (only owners can delete logs)
 
@@ -219,49 +135,37 @@ const ChangelogTable: React.FC = () => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ['change-logs', page, rowsPerPage, dateRange],
+		queryKey: ['change-logs', page, rowsPerPage, dateRange, searchTerm.trim()],
 		queryFn: () => {
-			const filters: { dateFrom?: string; dateTo?: string } = {};
-			
-			// Convertir dateRange a formato YYYY-MM-DD para el filtro del servidor
+			const filters: { dateFrom?: string; dateTo?: string; search?: string } = {}
+			const formatYmd = (d: Date) => {
+				const y = d.getFullYear()
+				const m = String(d.getMonth() + 1).padStart(2, '0')
+				const day = String(d.getDate()).padStart(2, '0')
+				return `${y}-${m}-${day}`
+			}
+
+			// Si solo hay from (una fecha), filtrar solo ese día; si hay from y to, filtrar el rango
 			if (dateRange?.from) {
-				const year = dateRange.from.getFullYear();
-				const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
-				const day = String(dateRange.from.getDate()).padStart(2, '0');
-				filters.dateFrom = `${year}-${month}-${day}`;
+				filters.dateFrom = formatYmd(dateRange.from)
+				filters.dateTo = dateRange.to ? formatYmd(dateRange.to) : filters.dateFrom
 			}
-			
-			if (dateRange?.to) {
-				const year = dateRange.to.getFullYear();
-				const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
-				const day = String(dateRange.to.getDate()).padStart(2, '0');
-				filters.dateTo = `${year}-${month}-${day}`;
+
+			// Búsqueda en servidor para que filtre en todos los resultados, no solo en la página actual
+			if (searchTerm.trim()) {
+				filters.search = searchTerm.trim()
 			}
-			
-			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters);
+
+			return getAllChangeLogs(rowsPerPage, page * rowsPerPage, filters)
 		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	})
 
-	// Filter logs based on search term and action type
-	// NOTA: El filtro de fecha ahora se aplica en el servidor antes de la paginación
+	// Filtro por tipo de acción (búsqueda y fecha ya se aplican en el servidor)
 	const filteredLogs = React.useMemo(() => {
 		if (!logsData?.data) return []
 
 		return logsData.data.filter((log: ChangeLogData) => {
-			// Search filter - updated for new structure
-			const matchesSearch =
-				(log.user_display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				log.field_label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.medical_records_clean?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.patients?.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.patients?.cedula || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.deleted_record_info || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.old_value || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(log.new_value || '').toLowerCase().includes(searchTerm.toLowerCase())
-
-			// Action type filter
 			let matchesAction = true
 			if (actionFilter === 'created') {
 				matchesAction = log.field_name === 'created_record'
@@ -270,11 +174,9 @@ const ChangelogTable: React.FC = () => {
 			} else if (actionFilter === 'edited') {
 				matchesAction = log.field_name !== 'created_record' && log.field_name !== 'deleted_record'
 			}
-
-			// El filtro de fecha ya se aplicó en el servidor, no es necesario filtrar aquí
-			return matchesSearch && matchesAction
+			return matchesAction
 		})
-	}, [logsData?.data, searchTerm, actionFilter])
+	}, [logsData?.data, actionFilter])
 
 	// Agrupar logs por change_session_id (fallback inteligente para data vieja)
 	const groupedLogs = React.useMemo(() => {
@@ -295,10 +197,8 @@ const ChangelogTable: React.FC = () => {
 				const entityId = log.patient_id || log.medical_record_id || 'unknown'
 				const changedAtDate = new Date(log.changed_at)
 				// Redondear a segundo para agrupar cambios en la misma ventana de tiempo (±1 segundo)
-				const roundedTime = new Date(
-					Math.floor(changedAtDate.getTime() / 1000) * 1000
-				).toISOString()
-				
+				const roundedTime = new Date(Math.floor(changedAtDate.getTime() / 1000) * 1000).toISOString()
+
 				sessionId = `${log.user_id}-${log.entity_type}-${entityId}-${roundedTime}`
 			}
 
@@ -318,7 +218,7 @@ const ChangelogTable: React.FC = () => {
 					.map(([sessionId, changes]) => ({
 						sessionId,
 						count: changes.length,
-						fields: changes.map(c => c.field_name),
+						fields: changes.map((c) => c.field_name),
 					})),
 			})
 		}
@@ -338,11 +238,7 @@ const ChangelogTable: React.FC = () => {
 					changeCount: sortedChanges.length,
 				} as GroupedChangeLog
 			})
-			.sort(
-				(a, b) =>
-					new Date(b.firstChange.changed_at).getTime() -
-					new Date(a.firstChange.changed_at).getTime(),
-			)
+			.sort((a, b) => new Date(b.firstChange.changed_at).getTime() - new Date(a.firstChange.changed_at).getTime())
 	}, [filteredLogs])
 
 	// Función para abrir modal de detalles
@@ -366,45 +262,44 @@ const ChangelogTable: React.FC = () => {
 
 		setIsDeleting(logToDelete)
 		try {
-      // 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Usuario no autenticado');
-      }
+			// 🔐 MULTI-TENANT: Obtener laboratory_id del usuario actual
+			const {
+				data: { user },
+			} = await supabase.auth.getUser()
+			if (!user) {
+				throw new Error('Usuario no autenticado')
+			}
 
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('laboratory_id')
-        .eq('id', user.id)
-			.single() as { data: { laboratory_id?: string } | null; error: any | null };
+			const { data: userProfile, error: profileError } = (await supabase
+				.from('profiles')
+				.select('laboratory_id')
+				.eq('id', user.id)
+				.single()) as { data: { laboratory_id?: string } | null; error: any | null }
 
-      if (profileError || !userProfile?.laboratory_id) {
-        throw new Error('Usuario no tiene laboratorio asignado');
-      }
+			if (profileError || !userProfile?.laboratory_id) {
+				throw new Error('Usuario no tiene laboratorio asignado')
+			}
 
-      // 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
-      const { error } = await supabase
-        .from('change_logs')
-        .delete()
-        .eq('id', logToDelete)
-        .eq('laboratory_id', userProfile.laboratory_id!); // 🔐 VALIDACIÓN MULTI-TENANT
+			// 🔐 MULTI-TENANT: Validar laboratory_id antes de eliminar
+			const { error } = await supabase
+				.from('change_logs')
+				.delete()
+				.eq('id', logToDelete)
+				.eq('laboratory_id', userProfile.laboratory_id!) // 🔐 VALIDACIÓN MULTI-TENANT
 
-      if (error) {
-        throw error;
-      }
+			if (error) {
+				throw error
+			}
 
-      toast({
-        title: '✅ Registro eliminado',
-        description:
-          'El registro del historial ha sido eliminado exitosamente.',
-        className: 'bg-green-100 border-green-400 text-green-800',
-      });
+			toast({
+				title: '✅ Registro eliminado',
+				description: 'El registro del historial ha sido eliminado exitosamente.',
+				className: 'bg-green-100 border-green-400 text-green-800',
+			})
 
-      // Refresh data
-      refetch();
-    } catch (error) {
+			// Refresh data
+			refetch()
+		} catch (error) {
 			console.error('Error deleting change log:', error)
 			toast({
 				title: '❌ Error al eliminar',
@@ -448,15 +343,13 @@ const ChangelogTable: React.FC = () => {
 			const isError = log.deleted_record_info && log.deleted_record_info.trim() !== ''
 			return {
 				text: isError ? 'Email (Error)' : 'Email Enviado',
-				icon: isError 
-					? <MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-					: <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
-				bgColor: isError 
-					? 'bg-orange-100 dark:bg-orange-900/30'
-					: 'bg-purple-100 dark:bg-purple-900/30',
-				textColor: isError
-					? 'text-orange-800 dark:text-orange-300'
-					: 'text-purple-800 dark:text-purple-300',
+				icon: isError ? (
+					<MailX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+				) : (
+					<Mail className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+				),
+				bgColor: isError ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-purple-100 dark:bg-purple-900/30',
+				textColor: isError ? 'text-orange-800 dark:text-orange-300' : 'text-purple-800 dark:text-purple-300',
 			}
 		} else {
 			return {
@@ -497,11 +390,11 @@ const ChangelogTable: React.FC = () => {
 				</div>
 			</div>
 
-			{/* Filters */}
+			{/* Filters - desktop: todo en una línea; móvil: búsqueda arriba, filtros abajo en una línea */}
 			<Card className="mb-6 p-4">
-				<div className="flex flex-col sm:flex-row gap-4">
+				<div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
 					{/* Search */}
-					<div className="flex-1 relative">
+					<div className="flex-1 min-w-0">
 						<Input
 							type="text"
 							placeholder="Buscar por usuario, caso, acción..."
@@ -510,54 +403,60 @@ const ChangelogTable: React.FC = () => {
 						/>
 					</div>
 
-					{/* Action Type Filter */}
-					<div className="flex items-center gap-2">
-						<Filter className="w-4 h-4 text-gray-400" />
-						<div className="w-40">
-							<CustomDropdown
-								value={actionFilter}
-								onChange={(v) => setActionFilter(v)}
-								placeholder="Tipo de acción"
-								options={[
-									{ value: 'all', label: 'Todas las acciones' },
-									{ value: 'created', label: 'Creaciones' },
-									{ value: 'edited', label: 'Ediciones' },
-									{ value: 'deleted', label: 'Eliminaciones' },
-								]}
-							/>
+					{/* Tipo de acción + Rango fechas + Limpiar */}
+					<div className="flex flex-wrap items-center gap-2 shrink-0">
+						{/* Action Type Filter */}
+						<div className="flex items-center gap-2">
+							<Filter className="w-4 h-4 text-gray-400 shrink-0" />
+							<div className="w-40">
+								<CustomDropdown
+									value={actionFilter}
+									onChange={(v) => setActionFilter(v)}
+									placeholder="Tipo de acción"
+									options={[
+										{ value: 'all', label: 'Todas' },
+										{ value: 'created', label: 'Creaciones' },
+										{ value: 'edited', label: 'Ediciones' },
+										{ value: 'deleted', label: 'Eliminaciones' },
+									]}
+								/>
+							</div>
 						</div>
-					</div>
 
-					{/* Date Range Filter */}
-					<div className="flex items-center gap-2">
-						<Popover open={isDatePickerOpen} onOpenChange={(open) => {
-					setIsDatePickerOpen(open)
-					if (open) {
-						setTempRange(undefined)
-					}
-				}}>
+						{/* Date Range Filter - responsive: "Rango" + icon en móvil; texto completo en desktop */}
+						<Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
 							<PopoverTrigger asChild>
-								<Button variant="outline" className="flex items-center gap-2">
-									<Calendar className="w-4 h-4 text-gray-400" />
-									{dateRange?.from && dateRange?.to
-										? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', {
-												locale: es,
-										  })}`
-										: dateRange?.from
-										? `Desde ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })}`
-										: 'Filtrar por rango de fechas'}
+								<Button variant="outline" className="flex items-center gap-2 shrink-0">
+									<Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+									<span className="sm:hidden">
+										{dateRange?.from
+											? dateRange.from.toDateString() === dateRange.to?.toDateString() || !dateRange?.to
+												? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+												: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', { locale: es })}`
+											: 'Rango'}
+									</span>
+									<span className="hidden sm:inline">
+										{dateRange?.from
+											? dateRange.from.toDateString() === dateRange.to?.toDateString() || !dateRange?.to
+												? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
+												: `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(
+														dateRange.to!,
+														'dd/MM/yyyy',
+														{ locale: es },
+													)}`
+											: 'Filtrar por rango de fechas'}
+									</span>
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0">
 								<CalendarComponent
 									mode="range"
-								selected={tempRange}
-								onSelect={(range) => {
-									setTempRange(range)
-									if (range?.from && range?.to) {
-										setDateRange(range)
-										setIsDatePickerOpen(false)
-										setTempRange(undefined)
+									selected={dateRange}
+									onSelect={(range) => {
+										setDateRange(range ?? undefined)
+										// Cerrar solo cuando hay rango completo (segundo click), no al elegir la primera fecha
+										if (range?.from && range?.to) {
+											setIsDatePickerOpen(false)
 										}
 									}}
 									initialFocus
@@ -568,14 +467,14 @@ const ChangelogTable: React.FC = () => {
 								/>
 							</PopoverContent>
 						</Popover>
-					</div>
 
-					{/* Clear Filters */}
-					{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
-						<Button variant="ghost" onClick={clearFilters} className="text-sm">
-							Limpiar filtros
-						</Button>
-					)}
+						{/* Clear Filters */}
+						{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
+							<Button variant="ghost" onClick={clearFilters} className="text-sm shrink-0">
+								Limpiar filtros
+							</Button>
+						)}
+					</div>
 				</div>
 			</Card>
 
@@ -635,9 +534,8 @@ const ChangelogTable: React.FC = () => {
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-												{groupedLogs.map((group: GroupedChangeLog) => {
-													const log = group.firstChange
-
+										{groupedLogs.map((group: GroupedChangeLog) => {
+											const log = group.firstChange
 
 											return (
 												<tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-none">
@@ -653,12 +551,12 @@ const ChangelogTable: React.FC = () => {
 
 													{/* User */}
 													<td className="px-4 py-4">
-														<span 
+														<span
 															className="text-sm"
-															style={{ 
-																color: log.user_display_name 
-																	? (laboratory?.branding?.primaryColor || undefined)
-																	: undefined 
+															style={{
+																color: log.user_display_name
+																	? laboratory?.branding?.primaryColor || undefined
+																	: undefined,
 															}}
 														>
 															{log.user_display_name || log.user_email}
@@ -679,7 +577,8 @@ const ChangelogTable: React.FC = () => {
 																		</span>
 																	)}
 																</>
-															) : (() => {
+															) : (
+																(() => {
 																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
 																	return (
 																		<span
@@ -692,7 +591,8 @@ const ChangelogTable: React.FC = () => {
 																			{text}
 																		</span>
 																	)
-																})()}
+																})()
+															)}
 														</div>
 													</td>
 
@@ -705,55 +605,71 @@ const ChangelogTable: React.FC = () => {
 																</span>
 															) : log.field_name === 'deleted_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																	Eliminación del registro: {(() => {
-																			const value = log.old_value || '';
+																	Eliminación del registro:{' '}
+																	{(() => {
+																		const value = log.old_value || ''
 																		if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																			return value.substring(0, 50) + '...';
+																			return value.substring(0, 50) + '...'
 																		}
-																		return value;
+																		return value
 																	})()}
 																</span>
-																) : group.changeCount === 1 ? (
-																	// Si solo hay un cambio, mostrar resumen simple
+															) : group.changeCount === 1 ? (
+																// Si solo hay un cambio, mostrar resumen simple
 																<div className="text-sm wrap-break-word">
 																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
 																	</p>
 																	<div className="flex flex-col gap-1">
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
-																			<span className="line-through">Antes: {(() => {
-																						const value = log.old_value || '(vacío)';
-																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																					return value.substring(0, 50) + '...';
-																				}
-																				return value;
-																			})()}</span>
+																			<span className="line-through">
+																				Antes:{' '}
+																				{(() => {
+																					const value = log.old_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
-																			<span>Ahora: {(() => {
-																						const value = log.new_value || '(vacío)';
-																				if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																					return value.substring(0, 50) + '...';
-																				}
-																				return value;
-																			})()}</span>
+																			<span>
+																				Ahora:{' '}
+																				{(() => {
+																					const value = log.new_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
 																		</div>
 																	</div>
 																</div>
-																	) : (
-																		// Si hay múltiples cambios, mostrar resumen agrupado
-																		<div className="text-sm">
-																			<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-																				{group.changeCount} {group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
-																			</p>
-																			<p className="text-xs text-gray-500 dark:text-gray-400">
-																				{group.changes
-																					.slice(0, 3)
-																					.map((c) => translateFieldLabel(c.field_name, c.field_label))
-																					.join(', ')}
-																				{group.changeCount > 3 && '...'}
-																			</p>
-																		</div>
+															) : (
+																// Si hay múltiples cambios, mostrar resumen agrupado
+																<div className="text-sm">
+																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+																		{group.changeCount}{' '}
+																		{group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400">
+																		{group.changes
+																			.slice(0, 3)
+																			.map((c) => translateFieldLabel(c.field_name, c.field_label))
+																			.join(', ')}
+																		{group.changeCount > 3 && '...'}
+																	</p>
+																</div>
 															)}
 														</div>
 													</td>
@@ -782,8 +698,8 @@ const ChangelogTable: React.FC = () => {
 							{/* Mobile view - Card layout */}
 							<div className="lg:hidden">
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3">
-											{groupedLogs.map((group: GroupedChangeLog) => {
-												const log = group.firstChange
+									{groupedLogs.map((group: GroupedChangeLog) => {
+										const log = group.firstChange
 										const actionInfo = getActionTypeInfo(log)
 										const logDate = format(new Date(log.changed_at), 'dd/MM/yyyy', { locale: es })
 										const logTime = format(new Date(log.changed_at), 'HH:mm:ss', { locale: es })
@@ -799,6 +715,30 @@ const ChangelogTable: React.FC = () => {
 														<span className="text-xs font-medium">{logDate}</span>
 														<span className="text-xs text-gray-500">{logTime}</span>
 													</div>
+													<div className="flex flex-col gap-1">
+														{log.entity_type === 'patient' ? (
+															<>
+																<span className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold">
+																	{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
+																</span>
+															</>
+														) : (
+															(() => {
+																const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																return (
+																	<span
+																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																			isDeletedCase
+																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																		}`}
+																	>
+																		{text}
+																	</span>
+																)
+															})()
+														)}
+													</div>
 													<div
 														className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${actionInfo.bgColor} ${actionInfo.textColor}`}
 													>
@@ -812,99 +752,82 @@ const ChangelogTable: React.FC = () => {
 													<span className="text-xs text-gray-900 dark:text-gray-100 truncate">{log.user_email}</span>
 												</div>
 
-												{/* Entity (Case/Patient) */}
-												<div className="mb-2">
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{log.entity_type === 'patient' ? 'Paciente:' : 'Caso:'}
-													</span>
-													<div className="flex flex-col gap-1">
-														{log.entity_type === 'patient' ? (
-															<>
-																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																	{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
-																</span>
-																{log.patients?.cedula && (
-																	<span className="text-xs text-gray-500 dark:text-gray-400">
-																		Cédula: {log.patients.cedula}
-																	</span>
-																)}
-															</>
-														) : (() => {
-																const { text, isDeletedCase } = getCaseEntityDisplay(log)
-																return (
-																	<span
-																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
-																			isDeletedCase
-																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-																		}`}
-																	>
-																		{text}
-																	</span>
-																)
-															})()}
-													</div>
-												</div>
-
 												{/* Resumen */}
-												<div className="border-t border-gray-100 dark:border-gray-700 pt-2">
-													<span className="text-xs text-gray-500 dark:text-gray-400">Resumen:</span>
-													<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
-														{log.field_name === 'created_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																Creación de nuevo registro médico
-															</span>
-														) : log.field_name === 'deleted_record' ? (
-															<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																Eliminación del registro: {log.old_value}
-															</span>
+												<div className="border-t border-gray-100 dark:border-gray-700 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+													<div>
+														<span className="text-xs text-gray-500 dark:text-gray-400">Resumen:</span>
+														<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
+															{log.field_name === 'created_record' ? (
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
+																	Creación de nuevo registro médico
+																</span>
+															) : log.field_name === 'deleted_record' ? (
+																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
+																	Eliminación del registro: {log.old_value}
+																</span>
 															) : group.changeCount === 1 ? (
-															<div className="text-sm flex flex-col gap-1">
-																<p className="font-medium text-gray-900 dark:text-gray-100">
-																	{translateFieldLabel(log.field_name, log.field_label)}
-																</p>
-																<div className="flex flex-col gap-1 wrap-break-word">
-																	<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
-																		<span className="line-through">Antes: {(() => {
-																					const value = log.old_value || '(vacío)';
-																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																				return value.substring(0, 50) + '...';
-																			}
-																			return value;
-																		})()}</span>
-																	</div>
-																	<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
-																		<span>Ahora: {(() => {
-																					const value = log.new_value || '(vacío)';
-																			if (typeof value === 'string' && value.startsWith('http') && value.length > 50) {
-																				return value.substring(0, 50) + '...';
-																			}
-																			return value;
-																		})()}</span>
+																<div className="text-sm flex flex-col gap-1">
+																	<p className="font-medium text-gray-900 dark:text-gray-100">
+																		{translateFieldLabel(log.field_name, log.field_label)}
+																	</p>
+																	<div className="flex flex-col gap-1 wrap-break-word">
+																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
+																			<span className="line-through">
+																				Antes:{' '}
+																				{(() => {
+																					const value = log.old_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
+																		</div>
+																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
+																			<span>
+																				Ahora:{' '}
+																				{(() => {
+																					const value = log.new_value || '(vacío)'
+																					if (
+																						typeof value === 'string' &&
+																						value.startsWith('http') &&
+																						value.length > 50
+																					) {
+																						return value.substring(0, 50) + '...'
+																					}
+																					return value
+																				})()}
+																			</span>
+																		</div>
 																	</div>
 																</div>
-															</div>
-																) : (
-																	<div className="text-sm">
-																		<p className="font-medium text-gray-900 dark:text-gray-100">
-																			{group.changeCount} {group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
-																		</p>
-																		<p className="text-xs text-gray-500 dark:text-gray-400">
-																			{group.changes
-																				.slice(0, 3)
-																				.map((c) => translateFieldLabel(c.field_name, c.field_label))
-																				.join(', ')}
-																			{group.changeCount > 3 && '...'}
-																		</p>
-																	</div>
-														)}
+															) : (
+																<div className="text-sm">
+																	<p className="font-medium text-gray-900 dark:text-gray-100">
+																		{group.changeCount}{' '}
+																		{group.changeCount === 1 ? 'campo modificado' : 'campos modificados'}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400">
+																		{group.changes
+																			.slice(0, 3)
+																			.map((c) => translateFieldLabel(c.field_name, c.field_label))
+																			.join(', ')}
+																		{group.changeCount > 3 && '...'}
+																	</p>
+																</div>
+															)}
+														</div>
 													</div>
 													{log.field_name !== 'created_record' && log.field_name !== 'deleted_record' && (
 														<Button
 															variant="outline"
 															size="sm"
 															onClick={() => handleViewDetails(group.sessionId)}
-															className="mt-2 w-full flex items-center justify-center gap-2"
+															className="mt-2 w-full flex items-center justify-center gap-2 text-xs"
 														>
 															<Eye className="w-4 h-4" />
 															Ver Detalles
@@ -923,17 +846,27 @@ const ChangelogTable: React.FC = () => {
 				{/* Pagination */}
 				{!isLoading && groupedLogs.length > 0 && (
 					<div className="flex items-center justify-start gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-						<Button variant="outline" size="icon" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} aria-label="Página anterior">
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => setPage(Math.max(0, page - 1))}
+							disabled={page === 0}
+							aria-label="Página anterior"
+						>
 							<ChevronLeft className="h-4 w-4" />
 						</Button>
-						<span className="text-sm font-medium min-w-[4rem] text-center">
+						<span className="text-sm font-medium min-w-16 text-center">
 							{page + 1}/{logsData?.totalCount ? Math.ceil(logsData.totalCount / rowsPerPage) : 1}
 						</span>
-						<Button 
-							variant="outline" 
-							size="icon" 
-							onClick={() => setPage(page + 1)} 
-							disabled={!logsData?.data || logsData.data.length < rowsPerPage || (logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)}
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => setPage(page + 1)}
+							disabled={
+								!logsData?.data ||
+								logsData.data.length < rowsPerPage ||
+								(logsData?.totalCount ? page + 1 >= Math.ceil(logsData.totalCount / rowsPerPage) : false)
+							}
 							aria-label="Página siguiente"
 						>
 							<ChevronRight className="h-4 w-4" />

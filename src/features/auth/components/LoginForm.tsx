@@ -87,8 +87,8 @@ function LoginForm() {
             // Cerrar canal para evitar duplicados
             try {
               supabase.removeChannel(channel);
-            } catch {
-              console.error('Error closing channel:', error);
+            } catch (err) {
+              console.error('Error closing channel:', err);
             }
             // Reintenta login inmediatamente
             const { user } = await signIn(email, password);

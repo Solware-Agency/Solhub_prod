@@ -23,10 +23,13 @@ const DialogOverlay = React.forwardRef<
     React.useEffect(() => {
       radixDialogOverlayCount += 1
       document.body.classList.add('has-overlay-open')
+      const previousOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
       return () => {
         radixDialogOverlayCount = Math.max(0, radixDialogOverlayCount - 1)
         if (radixDialogOverlayCount === 0) {
           document.body.classList.remove('has-overlay-open')
+          document.body.style.overflow = previousOverflow
         }
       }
     }, [])

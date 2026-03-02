@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, FileText } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { format } from 'date-fns'
+import { format, addMonths } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import { getAseguradoras, type Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { findAseguradoById, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
@@ -64,7 +64,7 @@ const PolizasPage = () => {
 		ramo: '',
 		suma_asegurada: '',
 		modalidad_pago: 'Mensual' as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
-		estatus_poliza: 'Activa' as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+		estatus_poliza: 'Activa' as 'Activa' | 'Anulada',
 		estatus_pago: 'Pendiente' as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
 		fecha_inicio: '',
 		fecha_vencimiento: '',
@@ -213,7 +213,7 @@ const PolizasPage = () => {
 			ramo: poliza.ramo ?? '',
 			suma_asegurada: poliza.suma_asegurada != null ? String(poliza.suma_asegurada) : '',
 			modalidad_pago: poliza.modalidad_pago,
-			estatus_poliza: poliza.estatus_poliza,
+			estatus_poliza: (poliza.estatus_poliza === 'Anulada' ? 'Anulada' : 'Activa') as 'Activa' | 'Anulada',
 			estatus_pago: (poliza.estatus_pago ?? 'Pendiente') as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
 			fecha_inicio: poliza.fecha_inicio?.slice(0, 10) ?? '',
 			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
@@ -244,7 +244,72 @@ const PolizasPage = () => {
 		setPanelOpen(true)
 	}
 
+	/** Validación unificada por paso. Devuelve los campos obligatorios faltantes agrupados por sección. */
+	const getValidationErrors = (): { step: string; fields: string[] }[] => {
+		const errors: { step: string; fields: string[] }[] = []
+
+		// Paso 1: Asegurado (solo al crear)
+		if (!editingPoliza && !form.asegurado_id?.trim()) {
+			errors.push({ step: 'Asegurado', fields: ['Seleccione un asegurado'] })
+		}
+
+		// Paso 2: Datos póliza
+		const part2: string[] = []
+		if (!form.aseguradora_id?.trim()) part2.push('Aseguradora')
+		if (!form.agente_nombre?.trim()) part2.push('Agente / Productor')
+		if (!form.numero_poliza?.trim()) part2.push('Número de póliza')
+		if (!form.ramo?.trim()) part2.push('Ramo')
+		if (!form.suma_asegurada?.trim()) part2.push('Suma asegurada')
+		if (part2.length > 0) errors.push({ step: 'Datos póliza', fields: part2 })
+
+		// Paso 3: Fechas (requeridos por backend)
+		const fechas: string[] = []
+		if (!form.fecha_inicio?.trim()) fechas.push('Fecha de emisión')
+		if (!form.fecha_vencimiento?.trim()) fechas.push('Fecha vencimiento')
+		if (fechas.length > 0) errors.push({ step: 'Fechas', fields: fechas })
+
+		return errors
+	}
+
+	/** Validación solo del paso actual (para botón Siguiente) */
+	const getValidationErrorsForStep = (stepIndex: number): string[] => {
+		if (stepIndex === 0) {
+			if (!editingPoliza && !form.asegurado_id?.trim()) return ['Seleccione un asegurado']
+			return []
+		}
+		if (stepIndex === 1) {
+			const err: string[] = []
+			if (!form.aseguradora_id?.trim()) err.push('Aseguradora')
+			if (!form.agente_nombre?.trim()) err.push('Agente / Productor')
+			if (!form.numero_poliza?.trim()) err.push('Número de póliza')
+			if (!form.ramo?.trim()) err.push('Ramo')
+			if (!form.suma_asegurada?.trim()) err.push('Suma asegurada')
+			return err
+		}
+		if (stepIndex === 2) {
+			const err: string[] = []
+			if (!form.fecha_inicio?.trim()) err.push('Fecha de emisión')
+			if (!form.fecha_vencimiento?.trim()) err.push('Fecha vencimiento')
+			return err
+		}
+		return []
+	}
+
+	const showValidationToast = (errors: { step: string; fields: string[] }[]) => {
+		const description = errors.map((e) => `En ${e.step}: ${e.fields.join(', ')}`).join('. ')
+		toast({
+			title: 'Complete los campos obligatorios',
+			description,
+			variant: 'destructive',
+		})
+	}
+
 	const handleSave = async () => {
+		const allErrors = getValidationErrors()
+		if (allErrors.length > 0) {
+			showValidationToast(allErrors)
+			return
+		}
 		if (!editingPoliza) {
 			setSaving(true)
 			try {
@@ -375,7 +440,7 @@ const PolizasPage = () => {
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Aseguradora</Label>
+							<Label>Aseguradora <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.aseguradora_id}
 								onValueChange={(value) => setForm((prev) => ({ ...prev, aseguradora_id: value }))}
@@ -393,22 +458,22 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Agente / Productor</Label>
+							<Label>Agente / Productor <span className="text-destructive">*</span></Label>
 							<Input value={form.agente_nombre} onChange={(e) => setForm((prev) => ({ ...prev, agente_nombre: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Número de póliza</Label>
+							<Label>Número de póliza <span className="text-destructive">*</span></Label>
 							<Input
 								value={form.numero_poliza}
 								onChange={(e) => setForm((prev) => ({ ...prev, numero_poliza: e.target.value }))}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Ramo</Label>
+							<Label>Ramo <span className="text-destructive">*</span></Label>
 							<Input value={form.ramo} onChange={(e) => setForm((prev) => ({ ...prev, ramo: e.target.value }))} />
 						</div>
 						<div className="space-y-2">
-							<Label>Suma asegurada</Label>
+							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
 							<Input
 								type="number"
 								value={form.suma_asegurada}
@@ -416,15 +481,28 @@ const PolizasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Modalidad de pago</Label>
+							<Label>Modalidad de pago <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.modalidad_pago}
-								onValueChange={(value) =>
-									setForm((prev) => ({
-										...prev,
-										modalidad_pago: value as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
-									}))
-								}
+								onValueChange={(value) => {
+									const modalidad = value as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
+									const months =
+										modalidad === 'Mensual' ? 1 : modalidad === 'Trimestral' ? 3 : modalidad === 'Semestral' ? 6 : 12
+									setForm((prev) => {
+										const baseDate = prev.fecha_inicio ? new Date(prev.fecha_inicio + 'T12:00:00') : null
+										const proxStr =
+											baseDate && !isNaN(baseDate.getTime())
+												? format(addMonths(baseDate, months), 'yyyy-MM-dd')
+												: prev.fecha_prox_vencimiento
+										const dia = proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento
+										return {
+											...prev,
+											modalidad_pago: modalidad,
+											fecha_prox_vencimiento: proxStr,
+											dia_vencimiento: dia,
+										}
+									})
+								}}
 							>
 								<SelectTrigger>
 									<SelectValue />
@@ -438,13 +516,13 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus póliza</Label>
+							<Label>Estatus póliza <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.estatus_poliza}
 								onValueChange={(value) =>
 									setForm((prev) => ({
 										...prev,
-										estatus_poliza: value as 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida',
+										estatus_poliza: value as 'Activa' | 'Anulada',
 									}))
 								}
 							>
@@ -453,14 +531,12 @@ const PolizasPage = () => {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="Activa">Activa</SelectItem>
-									<SelectItem value="En emisión">En emisión</SelectItem>
-									<SelectItem value="Renovación pendiente">Renovación pendiente</SelectItem>
-									<SelectItem value="Vencida">Vencida</SelectItem>
+									<SelectItem value="Anulada">Anulada</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus pago</Label>
+							<Label>Estatus pago <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.estatus_pago}
 								onValueChange={(value) =>
@@ -474,10 +550,8 @@ const PolizasPage = () => {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="Pagado">Pagado</SelectItem>
-									<SelectItem value="Parcial">Parcial</SelectItem>
 									<SelectItem value="Pendiente">Pendiente</SelectItem>
-									<SelectItem value="En mora">En mora</SelectItem>
+									<SelectItem value="Pagado">Pagado</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -487,7 +561,7 @@ const PolizasPage = () => {
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha inicio</Label>
+							<Label>Fecha de emisión <span className="text-destructive">*</span></Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -505,19 +579,35 @@ const PolizasPage = () => {
 									<Calendar
 										mode="single"
 										selected={parseIsoDate(form.fecha_inicio)}
-										onSelect={(date) =>
+										onSelect={(date) => {
+											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+											const months =
+												form.modalidad_pago === 'Mensual'
+													? 1
+													: form.modalidad_pago === 'Trimestral'
+														? 3
+														: form.modalidad_pago === 'Semestral'
+															? 6
+															: 12
+											const proxStr =
+												fechaStr && date
+													? format(addMonths(date, months), 'yyyy-MM-dd')
+													: ''
 											setForm((prev) => ({
 												...prev,
-												fecha_inicio: date ? format(date, 'yyyy-MM-dd') : '',
+												fecha_inicio: fechaStr,
+												fecha_prox_vencimiento: proxStr,
+												dia_vencimiento: proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento,
 											}))
-										}
+										}}
+										allowFutureDates
 										initialFocus
 									/>
 								</PopoverContent>
 							</Popover>
 						</div>
 						<div className="space-y-2">
-							<Label>Fecha vencimiento</Label>
+							<Label>Fecha vencimiento <span className="text-destructive">*</span></Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -535,82 +625,47 @@ const PolizasPage = () => {
 									<Calendar
 										mode="single"
 										selected={parseIsoDate(form.fecha_vencimiento)}
-										onSelect={(date) =>
+										onSelect={(date) => {
+											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+											// fecha_prox_vencimiento = fecha_emisión + periodo; si no hay emisión, usar vencimiento
+											const baseDate = form.fecha_inicio ? new Date(form.fecha_inicio + 'T12:00:00') : date
+											const months =
+												form.modalidad_pago === 'Mensual'
+													? 1
+													: form.modalidad_pago === 'Trimestral'
+														? 3
+														: form.modalidad_pago === 'Semestral'
+															? 6
+															: 12
+											const proxDate =
+												baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : date
+											const proxStr = proxDate ? format(proxDate, 'yyyy-MM-dd') : fechaStr
 											setForm((prev) => ({
 												...prev,
-												fecha_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
+												fecha_vencimiento: fechaStr,
+												dia_vencimiento: proxDate ? String(proxDate.getDate()) : '',
+												fecha_prox_vencimiento: proxStr,
 											}))
-										}
+										}}
+										allowFutureDates
 										initialFocus
 									/>
 								</PopoverContent>
 							</Popover>
 						</div>
 						<div className="space-y-2">
-							<Label>Día de vencimiento</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.dia_vencimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.dia_vencimiento ? `Día ${form.dia_vencimiento}` : 'Seleccionar día'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={
-											form.dia_vencimiento
-												? new Date(new Date().getFullYear(), new Date().getMonth(), Number(form.dia_vencimiento))
-												: undefined
-										}
-										onSelect={(date) =>
-											setForm((prev) => ({
-												...prev,
-												dia_vencimiento: date ? String(date.getDate()) : '',
-											}))
-										}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<Label className="text-muted-foreground">Día de vencimiento</Label>
+							<div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+								{form.dia_vencimiento ? `Día ${form.dia_vencimiento}` : ''}
+							</div>
 						</div>
 						<div className="space-y-2">
-							<Label>Fecha próximo vencimiento</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.fecha_prox_vencimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.fecha_prox_vencimiento
-											? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
-											: 'Fecha'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={parseIsoDate(form.fecha_prox_vencimiento)}
-										onSelect={(date) =>
-											setForm((prev) => ({
-												...prev,
-												fecha_prox_vencimiento: date ? format(date, 'yyyy-MM-dd') : '',
-											}))
-										}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<Label className="text-muted-foreground">Fecha próximo vencimiento</Label>
+							<div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+								{form.fecha_prox_vencimiento
+									? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
+									: ''}
+							</div>
 						</div>
 					</div>
 				)
@@ -822,16 +877,17 @@ const PolizasPage = () => {
 					<DialogHeader className="shrink-0">
 						<DialogTitle className="text-base sm:text-lg">{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
 					</DialogHeader>
-					<div className="flex md:hidden items-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 overflow-x-auto pb-1">
+					<div className="flex md:hidden items-center justify-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 pb-1">
 						{STEPS.map((label, idx) => (
 							<span
 								key={label}
 								className={cn(
-									'shrink-0 px-2 py-1 rounded-md',
+									'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
 									idx === step ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground',
 								)}
+								title={label}
 							>
-								{idx + 1}. {label}
+								{idx + 1}
 							</span>
 						))}
 					</div>
@@ -846,19 +902,37 @@ const PolizasPage = () => {
 					<div className="overflow-y-auto min-h-0 py-1 flex-1">
 						{stepContent()}
 					</div>
-					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex-col-reverse sm:flex-row flex-wrap justify-end gap-2">
+					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-wrap justify-end gap-2">
 						{step > 0 && (
-							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} className="w-full sm:w-auto order-3 sm:order-none">
+							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} size="sm" className="shrink-0">
 								Anterior
 							</Button>
 						)}
-						<Button variant="outline" onClick={() => setOpenModal(false)} className="w-full sm:w-auto">
+						<Button variant="outline" onClick={() => setOpenModal(false)} size="sm" className="shrink-0">
 							Cancelar
 						</Button>
 						{step < STEPS.length - 1 ? (
-							<Button onClick={() => setStep((prev) => prev + 1)} className="w-full sm:w-auto">Siguiente</Button>
+							<Button
+								onClick={() => {
+									const stepErrors = getValidationErrorsForStep(step)
+									if (stepErrors.length > 0) {
+										const stepName = STEPS[step]
+										toast({
+											title: 'Campos obligatorios',
+											description: `En ${stepName}: ${stepErrors.join(', ')}`,
+											variant: 'destructive',
+										})
+										return
+									}
+									setStep((prev) => prev + 1)
+								}}
+								size="sm"
+								className="shrink-0"
+							>
+								Siguiente
+							</Button>
 						) : (
-							<Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+							<Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
 								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
 							</Button>
 						)}

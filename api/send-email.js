@@ -371,7 +371,21 @@ export default async function handler(req, res) {
 
     // Enviar el email usando Resend
     console.log("📤 Enviando email con Resend...");
+    console.log("📧 Email data:", JSON.stringify(emailData, null, 2));
     const data = await resend.emails.send(emailData);
+
+    console.log("✅ Respuesta completa de Resend:", JSON.stringify(data, null, 2));
+    
+    // Verificar si hubo error en la respuesta
+    if (data.error) {
+      console.error("❌ Resend retornó un error:", data.error);
+      return res.status(500).json({
+        success: false,
+        error: "Error de Resend",
+        details: data.error.message || data.error,
+        provider: "Resend"
+      });
+    }
 
     console.log("✅ Email enviado exitosamente con Resend:", data.id);
 
@@ -379,7 +393,8 @@ export default async function handler(req, res) {
       success: true,
       message: "Email enviado exitosamente",
       messageId: data.id,
-      provider: "Resend"
+      provider: "Resend",
+      debug: data
     });
 
   } catch (error) {

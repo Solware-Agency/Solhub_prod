@@ -142,6 +142,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
     laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
   const isSptAutoApprove = isSpt && (isMedicoTratante || isOwner);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [templateLocked, setTemplateLocked] = useState(false);
 
   const isCitoAdmin =
     profile?.role === 'residente' && case_?.exam_type === 'Citología';
@@ -316,6 +317,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
 
     return 0;
   };
+
+  // Reset templateLocked al abrir un caso sin documento (Marihorgen)
+  useEffect(() => {
+    if (!case_?.googledocs_url) {
+      setTemplateLocked(false);
+    }
+  }, [case_?.id, case_?.googledocs_url]);
 
   // Sincronizar estado inicial al abrir el modal
   useEffect(() => {
@@ -619,6 +627,10 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
           variant: 'destructive',
         });
         return;
+      }
+
+      if (isMarihorgen) {
+        setTemplateLocked(true);
       }
 
       const requestBody: Record<string, string | null> = {
@@ -1411,6 +1423,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({
                       <Select
                         value={selectedTemplateId || undefined}
                         onValueChange={setSelectedTemplateId}
+                        disabled={!!docUrl || templateLocked}
                       >
                         <SelectTrigger className='mt-1'>
                           <SelectValue placeholder='Seleccionar' />

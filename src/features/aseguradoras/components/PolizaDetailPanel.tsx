@@ -88,7 +88,6 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 			isOpen={isOpen}
 			onClose={onClose}
 			title={poliza.numero_poliza}
-			subtitle={`${poliza.asegurado?.full_name || 'Asegurado'} · ${poliza.aseguradora?.nombre || 'Aseguradora'}`}
 		>
 			<div className="space-y-4">
 				<div className="flex flex-wrap items-center gap-2">
@@ -180,7 +179,7 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 				<InfoSection title="Fechas" icon={CalendarDays}>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
-							<p className="text-xs text-gray-500">Fecha inicio</p>
+							<p className="text-xs text-gray-500">Fecha de emisión</p>
 							<p className="text-sm font-medium">{formatDate(poliza.fecha_inicio)}</p>
 						</div>
 						<div>
@@ -192,7 +191,7 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 							<p className="text-sm font-medium">{poliza.dia_vencimiento ?? 'Sin día'}</p>
 						</div>
 						<div>
-							<p className="text-xs text-gray-500">Próximo vencimiento</p>
+							<p className="text-xs text-gray-500">Próximo pago</p>
 							<p className="text-sm font-medium">{formatDate(poliza.fecha_prox_vencimiento)}</p>
 						</div>
 					</div>

@@ -196,6 +196,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [selectedCaseForTriaje, setSelectedCaseForTriaje] =
       useState<UnifiedMedicalRecord | null>(null);
     const [isTriajeModalOpen, setIsTriajeModalOpen] = useState(false);
+    const [triajeOpenKey, setTriajeOpenKey] = useState(0);
     const [showPdfReadyOnly, setShowPdfReadyOnly] = useState(false);
     const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
     const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
@@ -434,19 +435,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           } else if (citologyNegativeFilter) {
             currentFilters.citoStatus = 'negativo';
           }
-          if (dateRange?.from) {
-            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-            const year = dateRange.from.getFullYear();
-            const month = String(dateRange.from.getMonth() + 1).padStart(2, '0');
-            const day = String(dateRange.from.getDate()).padStart(2, '0');
-            currentFilters.dateFrom = `${year}-${month}-${day}`;
-          }
-          if (dateRange?.to) {
-            // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-            const year = dateRange.to.getFullYear();
-            const month = String(dateRange.to.getMonth() + 1).padStart(2, '0');
-            const day = String(dateRange.to.getDate()).padStart(2, '0');
-            currentFilters.dateTo = `${year}-${month}-${day}`;
+          if (dateRange?.from || dateRange?.to) {
+            const formatYmd = (d: Date) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            };
+            const fromStr = dateRange.from ? formatYmd(dateRange.from) : null;
+            const toStr = dateRange.to ? formatYmd(dateRange.to) : null;
+            currentFilters.dateFrom = fromStr ?? toStr ?? undefined;
+            currentFilters.dateTo = toStr ?? fromStr ?? undefined;
           }
 
           // Agregar el nuevo sort
@@ -653,19 +652,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         } else if (tempCitologyNegativeFilter) {
           serverFilters.citoStatus = 'negativo';
         }
-        if (tempDateRange?.from) {
-          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-          const year = tempDateRange.from.getFullYear();
-          const month = String(tempDateRange.from.getMonth() + 1).padStart(2, '0');
-          const day = String(tempDateRange.from.getDate()).padStart(2, '0');
-          serverFilters.dateFrom = `${year}-${month}-${day}`;
-        }
-        if (tempDateRange?.to) {
-          // Convertir a formato YYYY-MM-DD para coincidir con el formato del campo 'date' en la DB
-          const year = tempDateRange.to.getFullYear();
-          const month = String(tempDateRange.to.getMonth() + 1).padStart(2, '0');
-          const day = String(tempDateRange.to.getDate()).padStart(2, '0');
-          serverFilters.dateTo = `${year}-${month}-${day}`;
+        if (tempDateRange?.from || tempDateRange?.to) {
+          const formatYmd = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          };
+          const fromStr = tempDateRange.from ? formatYmd(tempDateRange.from) : null;
+          const toStr = tempDateRange.to ? formatYmd(tempDateRange.to) : null;
+          serverFilters.dateFrom = fromStr ?? toStr ?? undefined;
+          serverFilters.dateTo = toStr ?? fromStr ?? undefined;
         }
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
@@ -779,6 +776,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
     const handleTriaje = useCallback((case_: UnifiedMedicalRecord) => {
       setSelectedCaseForTriaje(case_);
+      setTriajeOpenKey((k) => k + 1);
       setIsTriajeModalOpen(true);
     }, []);
 
@@ -827,14 +825,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       } else if (citologyNegativeFilter) {
         serverFilters.citoStatus = 'negativo';
       }
-      if (dateRange?.from) {
-        serverFilters.dateFrom = dateRange.from.toISOString();
-      }
-      if (dateRange?.to) {
-        // Siempre ajustar dateTo al final del día (23:59:59.999)
-        // para incluir todos los registros del último día del rango
-        const endOfDay = new Date(dateRange.to);
-        endOfDay.setHours(23, 59, 59, 999);
+      if (dateRange?.from || dateRange?.to) {
+        const d = dateRange.from ?? dateRange.to!;
+        const dTo = dateRange.to ?? dateRange.from!;
+        serverFilters.dateFrom = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+        const endOfDay = new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999);
         serverFilters.dateTo = endOfDay.toISOString();
       }
       if (emailSentStatusFilter !== 'all') {
@@ -1016,21 +1011,19 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           }
 
           if (createdDateStr) {
-            // Check if date is within range
-            if (dateRange.from && dateRange.to) {
-              // Both from and to dates selected - check if within range
-              const fromStr = formatLocalYmd(dateRange.from);
-              const toStr = formatLocalYmd(dateRange.to);
-              matchesDate =
-                createdDateStr >= fromStr && createdDateStr <= toStr;
-            } else if (dateRange.from) {
-              // Only from date selected - check if date is >= from
-              const fromStr = formatLocalYmd(dateRange.from);
-              matchesDate = createdDateStr >= fromStr;
-            } else if (dateRange.to) {
-              // Only to date selected - check if date is <= to
-              const toStr = formatLocalYmd(dateRange.to);
-              matchesDate = createdDateStr <= toStr;
+            const fromStr = dateRange.from ? formatLocalYmd(dateRange.from) : null;
+            const toStr = dateRange.to ? formatLocalYmd(dateRange.to) : null;
+            // Una sola fecha seleccionada → solo casos de ese día. Dos fechas → rango.
+            if (fromStr && toStr) {
+              if (fromStr === toStr) {
+                matchesDate = createdDateStr === fromStr;
+              } else {
+                matchesDate = createdDateStr >= fromStr && createdDateStr <= toStr;
+              }
+            } else if (fromStr) {
+              matchesDate = createdDateStr === fromStr;
+            } else if (toStr) {
+              matchesDate = createdDateStr === toStr;
             }
           } else {
             matchesDate = false;
@@ -1620,6 +1613,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           <TriajeModal
             case_={selectedCaseForTriaje}
             isOpen={isTriajeModalOpen}
+            openKey={triajeOpenKey}
             onClose={() => {
               setIsTriajeModalOpen(false);
               setSelectedCaseForTriaje(null);
@@ -1713,9 +1707,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             // totalFilteredCases={pagination?.totalItems}
           />
         </div>
-        <div className='bg-white dark:bg-background rounded-xl min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700'>
+        <div className='bg-white dark:bg-background rounded-xl min-h-0 md:min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col'>
           {/* Search and Filter Controls */}
-          <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
+          <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 shrink-0'>
             <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
               {/* Search Row */}
               <div className='flex-1 w-full md:w-auto'>
@@ -1822,10 +1816,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
           </div>
 
-          {/* Unified Cards View - Responsive for all screen sizes */}
-          <div className='overflow-hidden'>
+          {/* Unified Cards View - se adapta al tamaño de pantalla */}
+          <div className='flex-1 min-h-0 flex flex-col overflow-hidden'>
             {/* Sort filters header */}
-            <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3'>
+            <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0'>
               <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
                 <button
                   onClick={() => handleSort('code')}
@@ -1870,7 +1864,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             </div>
 
             {/* Cards grid - responsive */}
-            <div className='max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] overflow-y-auto p-3 sm:p-4'>
+            <div className='flex-1 min-h-0 overflow-y-auto p-3 sm:p-4'>
               {isLoading ? (
                 <div className='flex items-center justify-center py-12'>
                   <div className='flex items-center gap-3'>
@@ -1939,6 +1933,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         <TriajeModal
           case_={selectedCaseForTriaje}
           isOpen={isTriajeModalOpen}
+          openKey={triajeOpenKey}
           onClose={() => {
             setIsTriajeModalOpen(false);
             setSelectedCaseForTriaje(null);

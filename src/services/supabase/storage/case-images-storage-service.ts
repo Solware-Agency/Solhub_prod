@@ -3,7 +3,7 @@ import type { PostgrestError } from '@supabase/supabase-js'
 
 /**
  * Servicio para subir imágenes de casos en Supabase Storage (bucket case-images)
- * Roles: imagenologia, owner, prueba, call_center en SPT
+ * En SPT todos los roles pueden subir imágenes en detalles del caso.
  */
 
 const BUCKET_NAME = 'case-images'

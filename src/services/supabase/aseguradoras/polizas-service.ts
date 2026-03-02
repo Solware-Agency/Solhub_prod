@@ -30,7 +30,7 @@ export interface Poliza {
 	ramo: string
 	suma_asegurada: number | null
 	modalidad_pago: 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
-	estatus_poliza: 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida'
+	estatus_poliza: 'Activa' | 'Anulada' | 'En emisión' | 'Renovación pendiente' | 'Vencida'
 	estatus_pago: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora' | null
 	estatus: 'activa' | 'por_vencer' | 'vencida' | null
 	fecha_inicio: string
@@ -71,7 +71,7 @@ export interface PolizaInsert {
 	ramo: string
 	suma_asegurada?: number | null
 	modalidad_pago: 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
-	estatus_poliza: 'Activa' | 'En emisión' | 'Renovación pendiente' | 'Vencida'
+	estatus_poliza: 'Activa' | 'Anulada' | 'En emisión' | 'Renovación pendiente' | 'Vencida'
 	estatus_pago?: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora' | null
 	estatus?: 'activa' | 'por_vencer' | 'vencida' | null
 	fecha_inicio: string

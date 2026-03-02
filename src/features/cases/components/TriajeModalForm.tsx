@@ -52,6 +52,7 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { useToast } from '@shared/hooks/use-toast';
 import {
   getTriageByCase,
+  getLatestTriageRecord,
   createTriageRecord,
   updateTriageRecord,
   getSmokingRiskCategory,
@@ -628,6 +629,38 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     refetchOnMount: 'always',
   });
 
+  // Último triaje del paciente (para prellenar antecedentes e info adicional en triaje nuevo)
+  const { data: latestTriageByPatient } = useQuery({
+    queryKey: ['latest-triage-by-patient', case_?.patient_id],
+    queryFn: async () => {
+      if (!case_?.patient_id) return null;
+      return await getLatestTriageRecord(case_.patient_id);
+    },
+    enabled:
+      !!case_?.patient_id &&
+      !isLoadingTriage &&
+      existingTriage === null,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo)
+  useEffect(() => {
+    if (!existingTriage && latestTriageByPatient) {
+      const prev = latestTriageByPatient;
+      setFormData((f) => ({
+        ...f,
+        antecedentesPersonales: prev.personal_background || '',
+        antecedentesFamiliares: prev.family_history || '',
+        antecedentesQuirurgicos: prev.antecedentes_quirurgicos || '',
+        antecedentesSexuales: (prev as { antecedentes_sexuales?: string | null }).antecedentes_sexuales || '',
+        lugarNacimiento: prev.lugar_de_nacimiento || '',
+        telefonoEmergencia: prev.telefono_emergencia || '',
+        parentesco: (prev as { parentesco?: string | null }).parentesco || '',
+        personaQuienLlama: (prev as { persona_quien_llama?: string | null }).persona_quien_llama || '',
+      }));
+    }
+  }, [existingTriage, latestTriageByPatient]);
+
   // Calcular IMC automáticamente cuando cambian peso o talla
   useEffect(() => {
     const peso = parseFloat(formData.peso);
@@ -828,10 +861,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     isEnfermero,
   ]);
 
-  // Si forceEditMode está activo, forzar el modo de edición
+  // Si forceEditMode está activo, forzar el modo de edición.
+  // Si forceEditMode se desactiva (ej. al cerrar el modal), salir del modo edición.
   useEffect(() => {
     if (forceEditMode && existingTriage) {
       setIsEditing(true);
+    } else if (!forceEditMode) {
+      setIsEditing(false);
     }
   }, [forceEditMode, existingTriage]);
 
@@ -1196,91 +1232,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     persona_quien_llama: formData.personaQuienLlama || null,
     ...buildVitalSignsData(),
   });
-
-  const lastDraftPayloadRef = React.useRef<string>('');
-  const draftRecordIdRef = React.useRef<string | null>(null);
-  const draftSavingRef = React.useRef(false);
-  const saveDraft = useCallback(async () => {
-    if (!case_?.id || !case_?.patient_id) return;
-    if (loading) return;
-    if (!hasAnyData()) return;
-    if (triageComplete && !isEditing) return;
-    if (draftSavingRef.current) return;
-
-    try {
-      draftSavingRef.current = true;
-      if (isEnfermero) {
-        const payload = { ...buildVitalSignsData(), is_draft: true };
-        const payloadHash = JSON.stringify(payload);
-        if (payloadHash === lastDraftPayloadRef.current) return;
-
-        // Si estamos editando un triaje existente, SIEMPRE usar su ID (sea draft o completo)
-        const targetId = existingTriage?.id || draftRecordIdRef.current;
-        if (targetId) {
-          await updateTriageRecord(targetId, payload);
-        } else {
-          const created = await createTriageRecord({
-            patient_id: case_.patient_id,
-            case_id: case_.id,
-            ...payload,
-          });
-          draftRecordIdRef.current = created.id;
-          await refetchTriage();
-        }
-        lastDraftPayloadRef.current = payloadHash;
-      } else {
-        const payload = { ...buildFullTriageData(), is_draft: true };
-        const payloadHash = JSON.stringify(payload);
-        if (payloadHash === lastDraftPayloadRef.current) return;
-
-        // Si estamos editando un triaje existente, SIEMPRE usar su ID (sea draft o completo)
-        const targetId = existingTriage?.id || draftRecordIdRef.current;
-        if (targetId) {
-          await updateTriageRecord(targetId, payload);
-        } else {
-          const created = await createTriageRecord({
-            patient_id: case_.patient_id,
-            case_id: case_.id,
-            ...payload,
-          });
-          draftRecordIdRef.current = created.id;
-          await refetchTriage();
-        }
-        lastDraftPayloadRef.current = payloadHash;
-      }
-    } catch (draftError) {
-      console.warn('Error guardando borrador de triaje:', draftError);
-    } finally {
-      draftSavingRef.current = false;
-    }
-  }, [
-    case_,
-    existingTriage,
-    hasAnyData,
-    isEditing,
-    isEnfermero,
-    loading,
-    refetchTriage,
-    triageComplete,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      void saveDraft();
-    };
-  }, [saveDraft]);
-
-  useEffect(() => {
-    if (!hasAnyData()) return;
-    if (triageComplete && !isEditing) return;
-    if (loading) return;
-
-    const timer = setTimeout(() => {
-      void saveDraft();
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [formData, hasAnyData, isEditing, loading, saveDraft, triageComplete]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

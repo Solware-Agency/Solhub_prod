@@ -39,6 +39,27 @@ Función `lazyRetry()` que:
 - Maneja errores globalmente
 - Preserva el Suspense loading spinner
 
+### 4. Evento vite:preloadError (Vite nativo)
+**Archivo:** `src/main.tsx`
+
+- Escucha el evento `vite:preloadError` de Vite
+- Recarga la página inmediatamente cuando falla un import dinámico
+- Se ejecuta antes del ErrorBoundary, evitando retries innecesarios
+- Solo activo en producción
+
+### 5. Cache-Control en index.html
+**Archivo:** `vercel.json`
+
+- `Cache-Control: no-cache, must-revalidate` en todas las rutas HTML
+- Excluye `/assets/` y `/api/` (se cachean con hash de contenido)
+- Evita que el navegador sirva HTML obsoleto con URLs de chunks eliminados
+
+### 6. Estrategia manualChunks
+**Archivo:** `vite.config.ts`
+
+- Separa vendors estables en chunks independientes: React, Supabase, Recharts, TanStack Query, React Router
+- Los vendors cambian menos que el código de la app, reduciendo 404s tras deploys
+
 ## Beneficios
 
 ✅ **Auto-recuperación**: Reintenta cargar chunks automáticamente

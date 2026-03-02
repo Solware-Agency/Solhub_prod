@@ -20,7 +20,15 @@ interface CaseCardProps {
 	userRole?: string
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReactions, onTriaje, canRequest, userRole }) => {
+const CaseCard: React.FC<CaseCardProps> = ({
+	case_,
+	onView,
+	onGenerate,
+	onReactions,
+	onTriaje,
+	canRequest,
+	userRole,
+}) => {
 	const { laboratory } = useLaboratory()
 	const isSpt = laboratory?.slug === 'spt'
 	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
@@ -50,9 +58,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 
 	// Marihorgen + Inmunohistoquímica: mostrar código de exhibición; Marihorgen + Animal y resto: código interno
 	const displayCode =
-		isMarihorgen && case_.exam_type === 'Inmunohistoquímica'
-			? (case_.owner_display_code ?? '')
-			: (case_.code ?? '')
+		isMarihorgen && case_.exam_type === 'Inmunohistoquímica' ? (case_.owner_display_code ?? '') : (case_.code ?? '')
 	const showCodeBadge =
 		isMarihorgen && (case_.exam_type === 'Inmunohistoquímica' || !!case_.code || isAnimal) ? true : !!case_.code
 
@@ -63,26 +69,22 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 		}
 		return format(new Date(normalized), 'dd/MM/yyyy')
 	}
-	
+
 	const handleCardClick = (e: React.MouseEvent) => {
 		// Evitar que el click se propague si se hace clic en el menú de acciones
-		if ((e.target as HTMLElement).closest('[role="button"]') || 
-		    (e.target as HTMLElement).closest('.absolute')) {
+		if ((e.target as HTMLElement).closest('[role="button"]') || (e.target as HTMLElement).closest('.absolute')) {
 			return
 		}
 		onView(case_)
 	}
-	
+
 	return (
-		<div 
+		<div
 			className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
 			onClick={handleCardClick}
 		>
 			{/* Menú de tres puntos en la esquina superior derecha */}
-			<div 
-				className="absolute top-2 right-2 z-10"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
 				<CaseActionsPopover
 					case_={case_}
 					onGenerate={onGenerate}
@@ -148,7 +150,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 			<div className="grid grid-cols-1 gap-1.5 mb-1.5">
 				<div>
 					<div className="flex items-center gap-2">
-						<User className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+						<User className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
 						<div className="min-w-0">
 							<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{case_.nombre}</p>
 						</div>
@@ -157,8 +159,18 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 
 				<div className="flex items-end gap-2 flex-wrap">
 					<div className="flex-1 min-w-0">
-						<p className="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
-						<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+						{case_.exam_type && (
+							<>
+								<p className="text-xs text-gray-500 dark:text-gray-400">Tipo de examen</p>
+								<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.exam_type}</p>
+							</>
+						)}
+						{!case_.exam_type && (
+							<>
+								<p className="text-xs text-gray-500 dark:text-gray-400">Tipo de consulta</p>
+								<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{case_.consulta}</p>
+							</>
+						)}
 					</div>
 					<div className="flex flex-col items-end gap-1">
 						{case_.created_at && (
@@ -166,11 +178,9 @@ const CaseCard: React.FC<CaseCardProps> = ({ case_, onView, onGenerate, onReacti
 								{format(new Date(case_.created_at), 'dd/MM/yyyy')}
 							</span>
 						)}
-						{case_.fecha_entrega && (
-							<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-								{formatBadgeDate(case_.fecha_entrega)}
+							<span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 ${!case_.fecha_entrega ? 'invisible' : 'visible'}`}>
+								{case_.fecha_entrega ? formatBadgeDate(case_.fecha_entrega) : 'Cargando...'}
 							</span>
-						)}
 					</div>
 				</div>
 			</div>

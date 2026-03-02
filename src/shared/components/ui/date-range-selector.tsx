@@ -28,14 +28,14 @@ interface DateRangeSelectorProps {
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, className, compact, children }) => {
 	const [isDayOpen, setIsDayOpen] = useState(false)
 	const [isRangeOpen, setIsRangeOpen] = useState(false)
-	
+
 	// Estados internos independientes para cada modo
 	const [selectedDay, setSelectedDay] = useState<Date>(startOfDay(new Date()))
 	const [selectedRange, setSelectedRange] = useState<{ from: Date; to: Date }>({
 		from: startOfMonth(new Date()),
 		to: endOfMonth(new Date()),
 	})
-	
+
 	// Estado temporal para el rango mientras se está seleccionando
 	const [tempRange, setTempRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined)
 
@@ -75,7 +75,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 	const handleCustomDateChange = (range: { from?: Date; to?: Date } | undefined) => {
 		// Actualizar el rango temporal mientras se selecciona
 		setTempRange(range)
-		
+
 		// Solo guardar y aplicar cuando se hayan seleccionado ambas fechas
 		if (range?.from && range?.to) {
 			const newRange = {
@@ -93,7 +93,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 			setTempRange(undefined)
 		}
 	}
-	
+
 	// Resetear el rango temporal cuando se abre el popover
 	const handleRangePopoverChange = (open: boolean) => {
 		setIsRangeOpen(open)
@@ -177,7 +177,13 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 					<PopoverTrigger asChild>
 						<Button variant="ghost" size="sm" className={cn(getModeButtonClass('day'), 'flex items-center gap-2')}>
 							<Calendar className="h-4 w-4" />
-							Día
+							{value.mode === 'day' ? (
+								<span>
+									Día: <span className="font-medium">{getDisplayText()}</span>
+								</span>
+							) : (
+								'Día'
+							)}
 							<ChevronDown className="h-3 w-3" />
 						</Button>
 					</PopoverTrigger>
@@ -201,7 +207,13 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 					<PopoverTrigger asChild>
 						<Button variant="ghost" size="sm" className={cn(getModeButtonClass('range'), 'flex items-center gap-2')}>
 							<Calendar className="h-4 w-4" />
-							Rango
+							{value.mode === 'range' ? (
+								<span>
+									Rango: <span className="font-medium">{getDisplayText()}</span>
+								</span>
+							) : (
+								'Rango'
+							)}
 							<ChevronDown className="h-3 w-3" />
 						</Button>
 					</PopoverTrigger>
@@ -222,24 +234,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 				</Popover>
 				{compact && children}
 			</div>
-
-			{!compact && (
-				<div className="text-sm text-muted-foreground text-center">
-					{value.mode === 'range' ? (
-						<span>
-							Rango: <span className="font-medium">{getDisplayText()}</span>
-						</span>
-					) : value.mode === 'day' ? (
-						<span>
-							Día: <span className="font-medium">{getDisplayText()}</span>
-						</span>
-					) : (
-						<span>
-							Mostrando: <span className="font-medium">{getDisplayText()}</span>
-						</span>
-					)}
-				</div>
-			)}
 		</div>
 	)
 }
