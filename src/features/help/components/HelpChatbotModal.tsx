@@ -26,7 +26,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   useEffect(() => {
     if (isOpen && profile?.role) {
       const decisionTree = getBotDecisionTree(profile.role as UserRole)
-      setMessages([decisionTree.initialMessage])
+      setMessages([decisionTree.initial])
     }
   }, [isOpen, profile?.role])
 

@@ -224,7 +224,6 @@ export const roleDefinitions: Record<string, RoleDefinition> = {
     ]
   }
 }
-}
 
 // ============================================
 // PREGUNTAS FRECUENTES UNIVERSALES (30)
@@ -383,7 +382,8 @@ export const universalFAQs: Array<{ question: string; answer: string; category: 
 // ============================================
 
 export const getBotDecisionTree = (userRole: UserRole) => {
-  const roleInfo = roleDefinitions[userRole] || roleDefinitions.employee
+  // Future use: personalize message based on role
+  // const roleInfo = roleDefinitions[userRole] || roleDefinitions.employee
 
   return {
     initial: {
@@ -551,7 +551,7 @@ export const handleBotResponse = (
   
   // Detectar "Volver al menú"
   if (userInput === "🏠 Volver al menú") {
-    return getBotDecisionTree(userRole).initialMessage
+    return getBotDecisionTree(userRole).initial
   }
   
   // Detectar "Otra pregunta"
@@ -579,7 +579,7 @@ export const handleBotResponse = (
 export const handleOptionClick = (
   option: string,
   currentMessagesLength: number,
-  userRole: UserRole
+  _userRole: UserRole // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Message | null => {
   // Crear mensaje del usuario con la opción seleccionada
   return {
