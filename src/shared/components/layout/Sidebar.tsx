@@ -22,6 +22,7 @@ import {
   DollarSign,
   Phone,
   List,
+  MessageCircleQuestion,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -1278,6 +1279,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
             )}
           </FeatureGuard>
+
+          {/* Centro de Ayuda - Disponible para todos los roles */}
+          <NavItem
+            to='/help'
+            icon={<MessageCircleQuestion className='stroke-2 size-5 shrink-0' />}
+            label='Ayuda'
+            showFullContent={showFullContent}
+            onClick={onClose}
+          />
         </div>
       </div>
 

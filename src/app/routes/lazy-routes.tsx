@@ -165,6 +165,12 @@ export const StandaloneChatPage = lazy(() =>
     'StandaloneChatPage'
   )
 )
+export const HelpPage = lazy(() => 
+  lazyRetry(
+    () => import('@features/help/pages/HelpPage').then((module) => ({ default: module.HelpPage })),
+    'HelpPage'
+  )
+)
 export const TriageAnalyticsPage = lazy(() => 
   lazyRetry(
     () => import('@features/stats/components/TriageAnalyticsPage').then(module => ({ default: module.TriageAnalyticsPage })),

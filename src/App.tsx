@@ -26,6 +26,7 @@ import {
   CasesPage,
   PrivateRoute,
   StandaloneChatPage,
+  HelpPage,
   AseguradorasHomePage,
 } from '@app/routes/lazy-routes';
 import { imagenologiaRoutes, laboratorioRoutes, aseguradorasRoutes } from '@app/routes/route-config';
@@ -527,6 +528,16 @@ function App() {
                       >
                         <StandaloneChatPage />
                       </FeatureRoute>
+                    </PrivateRoute>
+                  }
+                />
+
+                {/* Help Center Route - Available to all authenticated users */}
+                <Route
+                  path='/help'
+                  element={
+                    <PrivateRoute requiredRole={['owner', 'employee', 'coordinador', 'residente', 'enfermero', 'medico_tratante', 'imagenologia', 'laboratorio', 'citotecno', 'patologo', 'call_center', 'prueba']}>
+                      <HelpPage />
                     </PrivateRoute>
                   }
                 />
