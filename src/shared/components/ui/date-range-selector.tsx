@@ -208,9 +208,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ value, onChange, 
 						<Button variant="ghost" size="sm" className={cn(getModeButtonClass('range'), 'flex items-center gap-2')}>
 							<Calendar className="h-4 w-4" />
 							{value.mode === 'range' ? (
-								<span>
-									Rango: <span className="font-medium">{getDisplayText()}</span>
-								</span>
+								<span className="font-medium">{getDisplayText()}</span>
 							) : (
 								'Rango'
 							)}

@@ -1,7 +1,9 @@
 import React, { useState, Suspense } from 'react'
 import {
 	Users,
+	UserCircle2,
 	DollarSign,
+	ClipboardList,
 	CheckCircle2,
 	ArrowUpRight,
 	AlertTriangle,
@@ -126,7 +128,13 @@ const StatsPage: React.FC = () => {
 								: `${isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}`
 						}
 						description={undefined}
-						icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
+						icon={
+							isSpt ? (
+								<ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
+							) : (
+								<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
+							)
+						}
 						onClick={() => handleStatCardClick(isSpt ? 'totalCases' : 'totalRevenue')}
 						statType={isSpt ? 'totalCases' : 'totalRevenue'}
 						isSelected={(isSpt ? selectedStat === 'totalCases' : selectedStat === 'totalRevenue') && isDetailPanelOpen}
@@ -162,7 +170,7 @@ const StatsPage: React.FC = () => {
 									? `${stats.casesByReceptionist.length} recepcionistas`
 									: undefined
 							}
-							icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />}
+							icon={<UserCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600 dark:text-violet-400" />}
 							onClick={() => handleStatCardClick('casesByReceptionist')}
 							statType="casesByReceptionist"
 							isSelected={selectedStat === 'casesByReceptionist' && isDetailPanelOpen}

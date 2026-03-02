@@ -7,7 +7,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
 import DateRangeSelector, { type DateRange } from '@shared/components/ui/date-range-selector'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import * as XLSX from 'xlsx'
@@ -33,6 +33,10 @@ function downloadExcel(registros: CallCenterRegistro[]) {
 
 const CallCenterRegistrosPage: React.FC = () => {
 	const { laboratory } = useLaboratory()
+
+	type SortColumn = 'nombre' | 'motivo' | 'atendido_por' | 'sede' | null
+	const [sortBy, setSortBy] = useState<SortColumn>(null)
+	const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
 	const [registros, setRegistros] = useState<CallCenterRegistro[]>([])
 	const [loading, setLoading] = useState(true)
@@ -60,6 +64,39 @@ const CallCenterRegistrosPage: React.FC = () => {
 		const d = new Date(r.created_at)
 		return d >= dateRange.start && d <= dateRange.end
 	})
+
+	const handleSort = (column: NonNullable<SortColumn>) => {
+		if (sortBy === column) {
+			setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+		} else {
+			setSortBy(column)
+			setSortDir('asc')
+		}
+	}
+
+	const getSortValue = (r: CallCenterRegistro, column: NonNullable<SortColumn>): string => {
+		switch (column) {
+			case 'nombre':
+				return (r.nombre_apellido ?? '').toLowerCase()
+			case 'motivo':
+				return (r.motivo_llamada ?? '').toLowerCase()
+			case 'atendido_por':
+				return (r.atendido_por ?? '').toLowerCase()
+			case 'sede':
+				return (r.referido_sede ?? '').toLowerCase()
+			default:
+				return ''
+		}
+	}
+
+	const registrosOrdenados = [...registrosFiltrados].sort((a, b) => {
+		if (!sortBy) return 0
+		const va = getSortValue(a, sortBy)
+		const vb = getSortValue(b, sortBy)
+		const cmp = va.localeCompare(vb, 'es')
+		return sortDir === 'asc' ? cmp : -cmp
+	})
+
 	const registrosToExport = registrosFiltrados
 
 	if (!laboratory?.id) {
@@ -79,7 +116,8 @@ const CallCenterRegistrosPage: React.FC = () => {
 				</div>
 				<div className="flex flex-wrap items-start gap-2">
 					<DateRangeSelector value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
-					<div className="flex flex-wrap rounded-lg border border-input bg-background p-1 gap-1 cursor-pointer">
+					{/* Desktop: botón descargar en la barra superior */}
+					<div className="hidden sm:flex flex-wrap rounded-lg border border-input bg-background p-1 gap-1 cursor-pointer">
 						<Button
 							variant="ghost"
 							size="sm"
@@ -95,8 +133,21 @@ const CallCenterRegistrosPage: React.FC = () => {
 			</div>
 
 			<Card>
-				<CardHeader>
-					<CardTitle>Listado de llamadas</CardTitle>
+				<CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+					<CardTitle className="mb-0">Listado de llamadas</CardTitle>
+					{/* Responsive: botón descargar en la misma línea que el título */}
+					<div className="flex sm:hidden rounded-lg border border-input bg-background p-1">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => downloadExcel(registrosToExport)}
+							disabled={registrosToExport.length === 0}
+							title="Descargar Excel"
+							className="px-3 py-2 text-sm font-medium transition-colors"
+						>
+							<Download className="h-4 w-4" />
+						</Button>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (
@@ -113,17 +164,89 @@ const CallCenterRegistrosPage: React.FC = () => {
 								<thead>
 									<tr className="border-b">
 										<th className="text-left py-2 px-2 font-medium">Fecha</th>
-										<th className="text-left py-2 px-2 font-medium">Nombre</th>
+										<th className="text-left py-2 px-2 font-medium">
+											<button
+												type="button"
+												onClick={() => handleSort('nombre')}
+												className="inline-flex items-center gap-1 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 rounded px-1 -ml-1"
+												title="Ordenar por nombre (alfabético)"
+											>
+												Nombre
+												{sortBy === 'nombre' ? (
+													sortDir === 'asc' ? (
+														<ArrowUp className="h-3.5 w-3.5" />
+													) : (
+														<ArrowDown className="h-3.5 w-3.5" />
+													)
+												) : (
+													<ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+												)}
+											</button>
+										</th>
 										<th className="text-left py-2 px-2 font-medium">Tel 1</th>
 										<th className="text-left py-2 px-2 font-medium">Tel 2</th>
-										<th className="text-left py-2 px-2 font-medium">Motivo</th>
+										<th className="text-left py-2 px-2 font-medium">
+											<button
+												type="button"
+												onClick={() => handleSort('motivo')}
+												className="inline-flex items-center gap-1 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 rounded px-1 -ml-1"
+												title="Ordenar por motivo (alfabético)"
+											>
+												Motivo
+												{sortBy === 'motivo' ? (
+													sortDir === 'asc' ? (
+														<ArrowUp className="h-3.5 w-3.5" />
+													) : (
+														<ArrowDown className="h-3.5 w-3.5" />
+													)
+												) : (
+													<ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+												)}
+											</button>
+										</th>
 										<th className="text-left py-2 px-2 font-medium">Observaciones</th>
-										<th className="text-left py-2 px-2 font-medium">Sede</th>
-										<th className="text-left py-2 px-2 font-medium">Atendido por</th>
+										<th className="text-left py-2 px-2 font-medium">
+											<button
+												type="button"
+												onClick={() => handleSort('sede')}
+												className="inline-flex items-center gap-1 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 rounded px-1 -ml-1"
+												title="Ordenar por sede (alfabético)"
+											>
+												Sede
+												{sortBy === 'sede' ? (
+													sortDir === 'asc' ? (
+														<ArrowUp className="h-3.5 w-3.5" />
+													) : (
+														<ArrowDown className="h-3.5 w-3.5" />
+													)
+												) : (
+													<ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+												)}
+											</button>
+										</th>
+										<th className="text-left py-2 px-2 font-medium">
+											<button
+												type="button"
+												onClick={() => handleSort('atendido_por')}
+												className="inline-flex items-center gap-1 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 rounded px-1 -ml-1"
+												title="Ordenar por atendido por (alfabético)"
+											>
+												Atendido por
+												{sortBy === 'atendido_por' ? (
+													sortDir === 'asc' ? (
+														<ArrowUp className="h-3.5 w-3.5" />
+													) : (
+														<ArrowDown className="h-3.5 w-3.5" />
+													)
+												) : (
+													<ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+												)}
+											</button>
+										</th>
 									</tr>
 								</thead>
 								<tbody>
-									{registrosFiltrados.map((r) => (
+									{registrosOrdenados.map((r) => (
 										<tr key={r.id} className="border-b hover:bg-muted/50">
 											<td className="py-2 px-2 whitespace-nowrap">
 												{format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es })}

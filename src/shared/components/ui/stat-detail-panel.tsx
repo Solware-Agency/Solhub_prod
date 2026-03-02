@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, Stethoscope, MapPin } from 'lucide-react'
+import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, Stethoscope, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
 import { Button } from '@shared/components/ui/button'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
@@ -55,6 +55,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 }) => {
 	useBodyScrollLock(isOpen)
 	useGlobalOverlayOpen(isOpen)
+	const [receptionistSort, setReceptionistSort] = useState<'top' | 'alpha'>('top')
+	const [doctorSort, setDoctorSort] = useState<'top' | 'alpha'>('top')
+	const [examTypeSort, setExamTypeSort] = useState<'top' | 'alpha'>('top')
 	// formatCurrency is now imported from number-utils
 
 	const getStatTitle = () => {
@@ -1171,7 +1174,12 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 					</div>
 				)
 
-			case 'doctorRevenue':
+			case 'doctorRevenue': {
+				const rawDoctors = stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []
+				const sortedDoctors =
+					doctorSort === 'alpha'
+						? [...rawDoctors].sort((a: any, b: any) => (a.doctor || '').localeCompare(b.doctor || '', 'es'))
+						: [...rawDoctors].sort((a: any, b: any) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
@@ -1188,15 +1196,12 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{(stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []) &&
-											[...(stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? [])]
-												.sort((a: any, b: any) => (isSpt ? b.cases - a.cases : b.revenue - a.revenue))
-												.map((doctor: any, index: number) => {
+										{sortedDoctors.length > 0 &&
+											sortedDoctors.map((doctor: any, index: number) => {
 													const totalVal = isSpt ? (stats.totalCases || 0) : (stats.totalRevenue || stats.monthlyRevenue || 0)
 													const doctorVal = isSpt ? doctor.cases : doctor.revenue
 													const percentageOfTotal = totalVal > 0 ? (doctorVal / totalVal) * 100 : 0
-													const allDoctors = stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []
-													const maxVal = allDoctors.length ? Math.max(...allDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))) : 0
+													const maxVal = sortedDoctors.length ? Math.max(...sortedDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))) : 0
 													const barPercentage = maxVal > 0 ? (doctorVal / maxVal) * 100 : 0
 
 													return (
@@ -1276,15 +1281,20 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 					</div>
 				)
+			}
 
 			case 'casesByReceptionist': {
-				const data = stats.casesByReceptionist || []
+				const raw = stats.casesByReceptionist || []
+				const data =
+					receptionistSort === 'alpha'
+						? [...raw].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'es'))
+						: [...raw].sort((a: any, b: any) => (b.cases || 0) - (a.cases || 0))
 				const maxCases = Math.max(...data.map((item: any) => item.cases || 0), 1)
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-								Top recepcionistas
+								{receptionistSort === 'top' ? 'Top recepcionistas' : 'Recepcionistas (A-Z)'}
 							</h3>
 							{data.length === 0 ? (
 								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos</p>
@@ -1544,19 +1554,23 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				)
 			}
 
-			case 'examTypes':
+			case 'examTypes': {
+				const rawExamTypes = stats.revenueByExamType || []
+				const sortedExamTypes =
+					examTypeSort === 'alpha'
+						? [...rawExamTypes].sort((a: any, b: any) => (a.examType || '').localeCompare(b.examType || '', 'es'))
+						: [...rawExamTypes].sort((a: any, b: any) =>
+								isSpt ? (b.count || 0) - (a.count || 0) : (b.revenue || 0) - (a.revenue || 0)
+							)
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<div className="space-y-4">
-								{stats.revenueByExamType &&
-									[...(stats.revenueByExamType || [])]
-										.sort((a: any, b: any) => (a.examType || '').localeCompare(b.examType || '', 'es'))
-										.map((exam: any, index: number) => {
+								{sortedExamTypes.map((exam: any, index: number) => {
 										const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-purple-500']
 										const totalVal = isSpt
-											? stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.count, 0)
-											: stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+											? rawExamTypes.reduce((sum: number, e: any) => sum + e.count, 0)
+											: rawExamTypes.reduce((sum: number, e: any) => sum + e.revenue, 0)
 										const percentage = totalVal > 0
 											? (isSpt ? exam.count / totalVal : exam.revenue / totalVal) * 100
 											: 0
@@ -1598,20 +1612,18 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{stats.revenueByExamType &&
-											stats.revenueByExamType
-												.slice()
-												.sort((a: any, b: any) => b.count - a.count)
-												.map((exam: any, index: number) => {
+										{sortedExamTypes.map((exam: any, index: number) => {
 													const totalVal = isSpt
-														? stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.count, 0)
-														: stats.revenueByExamType.reduce((sum: number, e: any) => sum + e.revenue, 0)
+														? rawExamTypes.reduce((sum: number, e: any) => sum + e.count, 0)
+														: rawExamTypes.reduce((sum: number, e: any) => sum + e.revenue, 0)
 													const percentage = totalVal > 0
 														? (isSpt ? exam.count / totalVal : exam.revenue / totalVal) * 100
 														: 0
-													const maxVal = isSpt
-														? Math.max(...stats.revenueByExamType.map((e: any) => e.count))
-														: Math.max(...stats.revenueByExamType.map((e: any) => e.revenue))
+													const maxVal = rawExamTypes.length
+														? (isSpt
+															? Math.max(...rawExamTypes.map((e: any) => e.count || 0))
+															: Math.max(...rawExamTypes.map((e: any) => e.revenue || 0)))
+														: 0
 													const barPercentage = maxVal > 0
 														? (isSpt ? exam.count / maxVal : exam.revenue / maxVal) * 100
 														: 0
@@ -1688,6 +1700,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						</div>
 					</div>
 				)
+			}
 
 			default:
 				return (
@@ -1724,15 +1737,107 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						{/* Header */}
 						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">
 							<div className="flex items-center justify-between">
-								<div>
-									<h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{getStatTitle()}</h2>
+								<div className="flex-1 min-w-0">
+									<div className="flex flex-wrap items-center gap-2">
+										<h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{getStatTitle()}</h2>
+										{statType === 'casesByReceptionist' && (
+											<div className="flex rounded-lg border border-input bg-muted/30 overflow-hidden">
+												<button
+													type="button"
+													onClick={() => setReceptionistSort('top')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														receptionistSort === 'top'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar por cantidad (top)"
+												>
+													<ArrowDownNarrowWide className="w-4 h-4" />
+													Top
+												</button>
+												<button
+													type="button"
+													onClick={() => setReceptionistSort('alpha')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														receptionistSort === 'alpha'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar alfabéticamente"
+												>
+													<ArrowDownAZ className="w-4 h-4" />
+													A-Z
+												</button>
+											</div>
+										)}
+										{statType === 'doctorRevenue' && (
+											<div className="flex rounded-lg border border-input bg-muted/30 overflow-hidden">
+												<button
+													type="button"
+													onClick={() => setDoctorSort('top')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														doctorSort === 'top'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar por cantidad (top)"
+												>
+													<ArrowDownNarrowWide className="w-4 h-4" />
+													Top
+												</button>
+												<button
+													type="button"
+													onClick={() => setDoctorSort('alpha')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														doctorSort === 'alpha'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar alfabéticamente"
+												>
+													<ArrowDownAZ className="w-4 h-4" />
+													A-Z
+												</button>
+											</div>
+										)}
+										{statType === 'examTypes' && (
+											<div className="flex rounded-lg border border-input bg-muted/30 overflow-hidden">
+												<button
+													type="button"
+													onClick={() => setExamTypeSort('top')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														examTypeSort === 'top'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar por cantidad (top)"
+												>
+													<ArrowDownNarrowWide className="w-4 h-4" />
+													Top
+												</button>
+												<button
+													type="button"
+													onClick={() => setExamTypeSort('alpha')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														examTypeSort === 'alpha'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar alfabéticamente"
+												>
+													<ArrowDownAZ className="w-4 h-4" />
+													A-Z
+												</button>
+											</div>
+										)}
+									</div>
 									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
 										{selectedMonth && `Datos para ${format(selectedMonth, 'MMMM yyyy', { locale: es })}`}
 									</p>
 								</div>
 								<button
 									onClick={onClose}
-									className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none"
+									className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none shrink-0"
 								>
 									<X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
 								</button>

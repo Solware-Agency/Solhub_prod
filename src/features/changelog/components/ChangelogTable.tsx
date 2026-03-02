@@ -1,5 +1,6 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getAllChangeLogs } from '@/services/legacy/supabase-service'
+import { getCaseByIdWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { supabase } from '@/services/supabase/config/config'
 import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { Button } from '@shared/components/ui/button'
@@ -31,6 +32,8 @@ import {
 } from 'lucide-react'
 import React, { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
+import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal'
+import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 
 // Type for the actual data returned from the query - updated for new structure
@@ -120,6 +123,8 @@ const ChangelogTable: React.FC = () => {
 	const [logToDelete, setLogToDelete] = useState<string | null>(null)
 	const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+	const [selectedCaseForView, setSelectedCaseForView] = useState<MedicalCaseWithPatient | null>(null)
+	const [isLoadingCase, setIsLoadingCase] = useState(false)
 
 	// Resetear página cuando cambian los filtros de fecha o la búsqueda
 	React.useEffect(() => {
@@ -245,6 +250,42 @@ const ChangelogTable: React.FC = () => {
 	const handleViewDetails = (sessionId: string) => {
 		setSelectedSessionId(sessionId)
 		setIsDetailsModalOpen(true)
+	}
+
+	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso y no eliminado)
+	const handleOpenCaseDetail = async (log: ChangeLogData) => {
+		const isCaseEntity = log.entity_type === 'medical_record' || log.entity_type === 'medical_case'
+		if (!isCaseEntity) return
+		const { isDeletedCase } = getCaseEntityDisplay(log)
+		if (isDeletedCase || !log.medical_record_id) {
+			toast({
+				title: 'Caso no disponible',
+				description: 'No se puede abrir un caso eliminado.',
+				variant: 'destructive',
+			})
+			return
+		}
+		setIsLoadingCase(true)
+		try {
+			const caseData = await getCaseByIdWithPatient(log.medical_record_id)
+			if (caseData) {
+				setSelectedCaseForView(caseData)
+			} else {
+				toast({
+					title: 'Caso no encontrado',
+					description: 'No se pudo cargar el caso.',
+					variant: 'destructive',
+				})
+			}
+		} catch {
+			toast({
+				title: 'Error',
+				description: 'No se pudo cargar el caso. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsLoadingCase(false)
+		}
 	}
 
 	// Obtener cambios del grupo seleccionado
@@ -580,16 +621,32 @@ const ChangelogTable: React.FC = () => {
 															) : (
 																(() => {
 																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																	const canOpenCase = (log.entity_type === 'medical_record' || log.entity_type === 'medical_case') && !isDeletedCase && !!log.medical_record_id
 																	return (
-																		<span
-																			className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
-																				isDeletedCase
-																					? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-																					: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-																			}`}
-																		>
-																			{text}
-																		</span>
+																		canOpenCase ? (
+																			<button
+																				type="button"
+																				onClick={(e) => {
+																					e.stopPropagation()
+																					handleOpenCaseDetail(log)
+																				}}
+																				disabled={isLoadingCase}
+																				className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300`}
+																				title="Ver detalles del caso"
+																			>
+																				{text}
+																			</button>
+																		) : (
+																			<span
+																				className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																					isDeletedCase
+																						? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																						: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																				}`}
+																			>
+																				{text}
+																			</span>
+																		)
 																	)
 																})()
 															)}
@@ -725,16 +782,32 @@ const ChangelogTable: React.FC = () => {
 														) : (
 															(() => {
 																const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																const canOpenCase = (log.entity_type === 'medical_record' || log.entity_type === 'medical_case') && !isDeletedCase && !!log.medical_record_id
 																return (
-																	<span
-																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
-																			isDeletedCase
-																				? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-																				: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-																		}`}
-																	>
-																		{text}
-																	</span>
+																	canOpenCase ? (
+																		<button
+																			type="button"
+																			onClick={(e) => {
+																				e.stopPropagation()
+																				handleOpenCaseDetail(log)
+																			}}
+																			disabled={isLoadingCase}
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																			title="Ver detalles del caso"
+																		>
+																			{text}
+																		</button>
+																	) : (
+																		<span
+																			className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit ${
+																				isDeletedCase
+																					? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+																					: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+																			}`}
+																		>
+																			{text}
+																		</span>
+																	)
 																)
 															})()
 														)}
@@ -916,6 +989,20 @@ const ChangelogTable: React.FC = () => {
 					setSelectedSessionId(null)
 				}}
 				changes={selectedGroupChanges}
+			/>
+
+			{/* Modal de detalles del caso (al hacer clic en código en Entidad) */}
+			<UnifiedCaseModal
+				case_={selectedCaseForView}
+				isOpen={!!selectedCaseForView}
+				onClose={() => setSelectedCaseForView(null)}
+				onCloseComplete={() => setSelectedCaseForView(null)}
+				onSave={() => refetch()}
+				onDelete={() => {
+					setSelectedCaseForView(null)
+					refetch()
+				}}
+				onCaseSelect={(case_) => setSelectedCaseForView(case_)}
 			/>
 		</div>
 	)

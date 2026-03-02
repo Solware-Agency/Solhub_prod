@@ -89,6 +89,7 @@ export const dashboardRoutes: RouteConfig[] = [
   },
   {
     path: 'waiting-room',
+    feature: 'hasWaitingRoom',
     component: WaitingRoomPage,
   },
   {
@@ -142,6 +143,11 @@ export const employeeRoutes: RouteConfig[] = [
     path: 'triage-analytics',
     feature: 'hasTriaje',
     component: TriageAnalyticsPage,
+  },
+  {
+    path: 'waiting-room',
+    feature: 'hasWaitingRoom',
+    component: WaitingRoomPage,
   },
   {
     path: 'error-test',
@@ -415,6 +421,7 @@ export const pruebaRoutes: RouteConfig[] = [
   },
   {
     path: 'waiting-room',
+    feature: 'hasWaitingRoom',
     component: WaitingRoomPage,
   },
   {

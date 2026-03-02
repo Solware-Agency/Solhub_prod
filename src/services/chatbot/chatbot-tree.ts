@@ -383,14 +383,15 @@ export const getBotDecisionTree = (userRole: UserRole) => {
   return {
     initial: {
       id: 0,
-      text: `¡Hola! Soy tu asistente de SolHub\n\nEstoy aquí para ayudarte con información sobre tu rol y el sistema.\n\n¿En qué puedo ayudarte hoy?`,
+      text: `¡Hola! Soy tu asistente Solwy\n\nEstoy aquí para ayudarte con información sobre tu rol y el sistema.\n\n¿En qué puedo ayudarte hoy?`,
       isBot: true,
       timestamp: new Date(),
       options: [
         "¿Qué puedo hacer?",
         "¿Qué NO puedo hacer?",
         "Mis módulos específicos",
-        "Preguntas frecuentes"
+        "Preguntas frecuentes",
+        "Reportar una falla"
       ]
     }
   }

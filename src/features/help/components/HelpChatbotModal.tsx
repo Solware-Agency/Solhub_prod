@@ -48,8 +48,26 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
     onClose()
   }
 
+  const WHATSAPP_REPORT_NUMBER = '584129974533'
+  const OPTION_REPORTAR_FALLA = 'Reportar una falla'
+
   const handleOptionButtonClick = (option: string) => {
     if (!profile?.role) return
+
+    if (option === OPTION_REPORTAR_FALLA) {
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, text: option, isBot: false, timestamp: new Date() },
+        {
+          id: prev.length + 2,
+          text: 'Redirigiendo a WhatsApp para reportar la falla...',
+          isBot: true,
+          timestamp: new Date(),
+        },
+      ])
+      window.open(`https://wa.me/${WHATSAPP_REPORT_NUMBER}`, '_blank', 'noopener,noreferrer')
+      return
+    }
 
     // Agregar mensaje del usuario
     const userMessage = handleOptionClick(option, messages.length, profile.role as UserRole)
@@ -65,20 +83,31 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   const handleSendMessage = () => {
     if (!inputValue.trim() || !profile?.role) return
 
-    // Agregar mensaje del usuario
+    const text = inputValue.trim()
+    setInputValue('')
+
     const userMessage: Message = {
       id: messages.length + 1,
-      text: inputValue,
+      text,
       isBot: false,
       timestamp: new Date()
     }
+
+    if (text === OPTION_REPORTAR_FALLA) {
+      const botReply: Message = {
+        id: messages.length + 2,
+        text: 'Redirigiendo a WhatsApp para reportar la falla...',
+        isBot: true,
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, userMessage, botReply])
+      window.open(`https://wa.me/${WHATSAPP_REPORT_NUMBER}`, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     setMessages(prev => [...prev, userMessage])
-
-    // Obtener y agregar respuesta del bot
-    const botMessage = handleBotResponse(inputValue, messages.length, profile.role as UserRole)
+    const botMessage = handleBotResponse(text, messages.length, profile.role as UserRole)
     setMessages(prev => [...prev, botMessage])
-
-    setInputValue('')
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -123,7 +152,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                       Centro de Ayuda
                     </h2>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                      Tu asistente SolHub
+                      Tu asistente Solwy
                     </p>
                   </div>
                 </div>
@@ -144,7 +173,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                   className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    className={`max-w-[80%] min-w-0 rounded-2xl px-4 py-3 ${
                       message.isBot
                         ? 'bg-card border border-border/50 text-foreground'
                         : 'bg-labPrimary text-white'
@@ -166,16 +195,16 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
 
                     {/* Option Buttons */}
                     {message.options && message.options.length > 0 && (
-                      <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex flex-col gap-2 mt-3 min-w-0">
                         {message.options.map((option, idx) => (
                           <Button
                             key={idx}
                             onClick={() => handleOptionButtonClick(option)}
-                            className="w-full justify-start text-left bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
+                            className="w-full justify-start text-left whitespace-normal break-words hyphens-auto py-2.5 bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
                             variant="outline"
                             size="sm"
                           >
-                            {option}
+                            <span className="text-left break-words">{option}</span>
                           </Button>
                         ))}
                       </div>
@@ -210,9 +239,6 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                   <Send className="w-5 h-5" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Usa las opciones del menú para una navegación más rápida
-              </p>
             </div>
           </motion.div>
         </>
