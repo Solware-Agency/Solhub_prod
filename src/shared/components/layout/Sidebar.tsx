@@ -1286,7 +1286,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Centro de Ayuda - Modal disponible para todos los roles con la feature habilitada */}
           <FeatureGuard feature='hasChatbot'>
             <div
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 setIsHelpModalOpen(true);
                 if (isMobile && onClose) onClose();
               }}
