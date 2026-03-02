@@ -1288,7 +1288,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div
               onClick={() => {
                 setIsHelpModalOpen(true);
-                if (isMobile) onClose();
+                if (isMobile && onClose) onClose();
               }}
               title={!showFullContent ? 'Ayuda' : undefined}
               className='flex items-center gap-2 cursor-pointer hover:text-primary py-2 px-1 rounded-md transition-none'
