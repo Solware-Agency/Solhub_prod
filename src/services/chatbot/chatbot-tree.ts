@@ -369,11 +369,6 @@ export const universalFAQs: Array<{ question: string; answer: string; category: 
     category: 'Reportes y Estadísticas',
     question: '¿Qué información contiene el PDF final que recibe el paciente?',
     answer: 'El informe incluye los datos demográficos del paciente, el motivo de consulta, los hallazgos clínicos o de laboratorio, las conclusiones del médico tratante, y la firma digital del profesional que validó el estudio.'
-  },
-  {
-    category: 'Roles Específicos',
-    question: '¿Qué diferencia hay entre Citotecnólogo y Patólogo en SolHub?',
-    answer: 'El Citotecnólogo está especializado en análisis de muestras citológicas (Pap, líquidos, etc.) y solo puede ver casos clasificados como Citología. El Patólogo se enfoca en biopsias y estudios histopatológicos, con acceso únicamente a casos de Biopsia. Ambos tienen restricciones similares para evitar confusiones operativas.'
   }
 ]
 
