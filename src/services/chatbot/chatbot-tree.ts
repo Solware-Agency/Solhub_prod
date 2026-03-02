@@ -388,14 +388,14 @@ export const getBotDecisionTree = (userRole: UserRole) => {
   return {
     initial: {
       id: 0,
-      text: `¡Hola! Soy tu asistente de SolHub 🏥\n\nEstoy aquí para ayudarte con información sobre tu rol y el sistema.\n\n¿En qué puedo ayudarte hoy?`,
+      text: `¡Hola! Soy tu asistente de SolHub\n\nEstoy aquí para ayudarte con información sobre tu rol y el sistema.\n\n¿En qué puedo ayudarte hoy?`,
       isBot: true,
       timestamp: new Date(),
       options: [
-        "📋 ¿Qué puedo hacer?",
-        "🚫 ¿Qué NO puedo hacer?",
-        "🎯 Mis módulos específicos",
-        "❓ Preguntas frecuentes"
+        "¿Qué puedo hacer?",
+        "¿Qué NO puedo hacer?",
+        "Mis módulos específicos",
+        "Preguntas frecuentes"
       ]
     }
   }
@@ -422,7 +422,7 @@ const formatPermissions = (userRole: UserRole): string => {
   const role = roleDefinitions[userRole]
   if (!role) return "No se encontró información para tu rol."
   
-  let message = `✅ **Como ${userRole}, PUEDES:**\n\n`
+  let message = `**Como ${userRole}, PUEDES:**\n\n`
   role.permissions.forEach((permission, index) => {
     message += `${index + 1}. ${permission}\n`
   })
@@ -435,10 +435,10 @@ const formatRestrictions = (userRole: UserRole): string => {
   if (!role) return "No se encontró información para tu rol."
   
   if (role.restrictions.length === 0) {
-    return `🎉 **Como ${userRole}, ¡NO tienes restricciones!**\n\nTienes acceso completo a todas las funcionalidades del sistema.`
+    return `**Como ${userRole}, ¡NO tienes restricciones!**\n\nTienes acceso completo a todas las funcionalidades del sistema.`
   }
   
-  let message = `🚫 **Como ${userRole}, NO PUEDES:**\n\n`
+  let message = `**Como ${userRole}, NO PUEDES:**\n\n`
   role.restrictions.forEach((restriction, index) => {
     message += `${index + 1}. ${restriction}\n`
   })
@@ -451,10 +451,10 @@ const formatModules = (userRole: UserRole): string => {
   if (!role) return "No se encontró información para tu rol."
   
   if (role.modules.length === 0) {
-    return `ℹ️ **Como ${userRole}, no tienes módulos específicos asignados.**\n\nTienes acceso a los módulos generales del sistema.`
+    return `**Como ${userRole}, no tienes módulos específicos asignados.**\n\nTienes acceso a los módulos generales del sistema.`
   }
   
-  let message = `🎯 **Tus módulos específicos como ${userRole}:**\n\n`
+  let message = `**Tus módulos específicos como ${userRole}:**\n\n`
   role.modules.forEach((module, index) => {
     message += `${index + 1}. ${module}\n`
   })
@@ -471,50 +471,51 @@ export const handleBotResponse = (
   const timestamp = new Date()
   
   // Detectar opción del menú principal
-  if (userInput === "📋 ¿Qué puedo hacer?") {
+  if (userInput === "¿Qué puedo hacer?") {
     return {
       id: baseId,
       text: formatPermissions(userRole),
       isBot: true,
       timestamp,
-      options: ["🏠 Volver al menú", "❓ Preguntas frecuentes"]
+      options: ["Volver al menú", "Preguntas frecuentes"]
     }
   }
   
-  if (userInput === "🚫 ¿Qué NO puedo hacer?") {
+  if (userInput === "¿Qué NO puedo hacer?") {
     return {
       id: baseId,
       text: formatRestrictions(userRole),
       isBot: true,
       timestamp,
-      options: ["🏠 Volver al menú", "❓ Preguntas frecuentes"]
+      options: ["Volver al menú", "Preguntas frecuentes"]
     }
   }
   
-  if (userInput === "🎯 Mis módulos específicos") {
+  if (userInput === "Mis módulos específicos") {
     return {
       id: baseId,
       text: formatModules(userRole),
       isBot: true,
       timestamp,
-      options: ["🏠 Volver al menú", "❓ Preguntas frecuentes"]
+      options: ["Volver al menú", "Preguntas frecuentes"]
     }
   }
   
-  if (userInput === "❓ Preguntas frecuentes") {
+  if (userInput === "Preguntas frecuentes") {
     const categories = getFAQCategories()
     return {
       id: baseId,
-      text: "📚 **Selecciona una categoría:**\n\nElige el tema sobre el que necesitas ayuda:",
+      text: "**Selecciona una categoría:**\n\nElige el tema sobre el que necesitas ayuda:",
       isBot: true,
       timestamp,
-      options: [...categories.map(cat => `📂 ${cat}`), "🏠 Volver al menú"]
+      options: [...categories, "Volver al menú"]
     }
   }
   
   // Detectar selección de categoría
-  if (userInput.startsWith("📂 ")) {
-    const category = userInput.replace("📂 ", "")
+  const selectedCategory = universalFAQs.find(faq => faq.category === userInput)
+  if (selectedCategory) {
+    const category = userInput
     const questions = getQuestionsForCategory(category)
     
     if (questions.length === 0) {
@@ -523,19 +524,19 @@ export const handleBotResponse = (
         text: "No se encontraron preguntas para esta categoría.",
         isBot: true,
         timestamp,
-        options: ["❓ Preguntas frecuentes", "🏠 Volver al menú"]
+        options: ["Preguntas frecuentes", "Volver al menú"]
       }
     }
     
     return {
       id: baseId,
-      text: `📑 **${category}**\n\nSelecciona una pregunta:`,
+      text: `**${category}**\n\nSelecciona una pregunta:`,
       isBot: true,
       timestamp,
       options: [
         ...questions.map(q => q.question),
-        "❓ Preguntas frecuentes",
-        "🏠 Volver al menú"
+        "Preguntas frecuentes",
+        "Volver al menú"
       ]
     }
   }
@@ -548,24 +549,24 @@ export const handleBotResponse = (
       text: `**${selectedFAQ.question}**\n\n${selectedFAQ.answer}`,
       isBot: true,
       timestamp,
-      options: ["❓ Otra pregunta", "🏠 Volver al menú"]
+      options: ["Otra pregunta", "Volver al menú"]
     }
   }
   
   // Detectar "Volver al menú"
-  if (userInput === "🏠 Volver al menú") {
+  if (userInput === "Volver al menú") {
     return getBotDecisionTree(userRole).initial
   }
   
   // Detectar "Otra pregunta"
-  if (userInput === "❓ Otra pregunta") {
+  if (userInput === "Otra pregunta") {
     const categories = getFAQCategories()
     return {
       id: baseId,
-      text: "📚 **Selecciona una categoría:**\n\nElige el tema sobre el que necesitas ayuda:",
+      text: "**Selecciona una categoría:**\n\nElige el tema sobre el que necesitas ayuda:",
       isBot: true,
       timestamp,
-      options: [...categories.map(cat => `📂 ${cat}`), "🏠 Volver al menú"]
+      options: [...categories, "Volver al menú"]
     }
   }
   
@@ -575,7 +576,7 @@ export const handleBotResponse = (
     text: "Lo siento, no entendí tu mensaje. Por favor, usa las opciones del menú.",
     isBot: true,
     timestamp,
-    options: ["🏠 Volver al menú"]
+    options: ["Volver al menú"]
   }
 }
 
