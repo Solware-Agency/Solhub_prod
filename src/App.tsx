@@ -537,7 +537,12 @@ function App() {
                   path='/help'
                   element={
                     <PrivateRoute requiredRole={['owner', 'employee', 'coordinador', 'residente', 'enfermero', 'medico_tratante', 'imagenologia', 'laboratorio', 'citotecno', 'patologo', 'call_center', 'prueba']}>
-                      <HelpPage />
+                      <FeatureRoute
+                        feature='hasChatbot'
+                        fallbackPath='/dashboard/home'
+                      >
+                        <HelpPage />
+                      </FeatureRoute>
                     </PrivateRoute>
                   }
                 />

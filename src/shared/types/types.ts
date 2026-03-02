@@ -782,6 +782,7 @@ export interface MedicalRecord {
 
 export interface LaboratoryFeatures {
   hasChatAI: boolean
+  hasChatbot: boolean
   hasStats: boolean
   hasForm: boolean
   hasCaseGenerator: boolean

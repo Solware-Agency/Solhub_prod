@@ -1280,14 +1280,16 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </FeatureGuard>
 
-          {/* Centro de Ayuda - Disponible para todos los roles */}
-          <NavItem
-            to='/help'
-            icon={<MessageCircleQuestion className='stroke-2 size-5 shrink-0' />}
-            label='Ayuda'
-            showFullContent={showFullContent}
-            onClick={onClose}
-          />
+          {/* Centro de Ayuda - Disponible para todos los roles con la feature habilitada */}
+          <FeatureGuard feature='hasChatbot'>
+            <NavItem
+              to='/help'
+              icon={<MessageCircleQuestion className='stroke-2 size-5 shrink-0' />}
+              label='Ayuda'
+              showFullContent={showFullContent}
+              onClick={onClose}
+            />
+          </FeatureGuard>
         </div>
       </div>
 
