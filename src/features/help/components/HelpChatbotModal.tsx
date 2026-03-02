@@ -22,10 +22,15 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  console.log('🟢 HelpChatbotModal render - isOpen:', isOpen, 'profile:', profile?.role)
+
   // Inicializar chat con mensaje de bienvenida cuando se abre el modal
   useEffect(() => {
+    console.log('🟢 useEffect triggered - isOpen:', isOpen, 'profile.role:', profile?.role)
     if (isOpen && profile?.role) {
+      console.log('🟢 Initializing chat with role:', profile.role)
       const decisionTree = getBotDecisionTree(profile.role as UserRole)
+      console.log('🟢 Decision tree:', decisionTree)
       setMessages([decisionTree.initial])
     }
   }, [isOpen, profile?.role])
@@ -83,6 +88,8 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   }
 
   if (!profile) return null
+
+  console.log('🟢 Rendering Dialog component with isOpen:', isOpen)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
