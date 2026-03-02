@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
 import { 
@@ -26,6 +27,8 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   
   useBodyScrollLock(isOpen)
   useGlobalOverlayOpen(isOpen)
+
+  console.log('🟢 HelpChatbotModal - isOpen:', isOpen, 'profile:', profile)
 
   // Inicializar chat con mensaje de bienvenida cuando se abre el modal
   useEffect(() => {
@@ -89,7 +92,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
 
   if (!profile) return null
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -218,4 +221,6 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
       )}
     </AnimatePresence>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }
