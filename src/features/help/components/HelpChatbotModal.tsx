@@ -217,3 +217,5 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
         </>
       )}
     </AnimatePresence>
+  )
+}
