@@ -8,6 +8,7 @@ import { Menu } from 'lucide-react'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import ChatButton from '@features/ChatAI/components/ChatButton'
 import { FeatureGuard } from '@shared/components/FeatureGuard'
+import { HelpChatbotModal } from '@features/help/components/HelpChatbotModal'
 
 const Layout: React.FC = () => {
 	const { isDark, toggleDarkMode } = useDarkMode()
@@ -16,6 +17,7 @@ const Layout: React.FC = () => {
 	const [sidebarOpen, setSidebarOpen] = useState(false)
 	const [sidebarExpanded, setSidebarExpanded] = useState(false) // New state for hover expansion
 	const [hasOverlayOpen, setHasOverlayOpen] = useState(false)
+	const [isHelpModalOpen, setIsHelpModalOpen] = useState(false)
 
 	// Verificar si hay un overlay abierto (modal, etc.)
 	useEffect(() => {
@@ -108,6 +110,7 @@ const Layout: React.FC = () => {
 						isMobile={sidebarOpen}
 						isDark={isDark}
 						toggleDarkMode={toggleDarkMode}
+						onOpenHelpModal={() => setIsHelpModalOpen(true)}
 					/>
 				</div>
 			)}
@@ -133,6 +136,12 @@ const Layout: React.FC = () => {
 			<FeatureGuard feature='hasChatAI'>
 				<ChatButton />
 			</FeatureGuard>
+
+			{/* Modal de Ayuda (Centro de Ayuda) - renderizado en Layout para que siempre abra */}
+			<HelpChatbotModal
+				isOpen={isHelpModalOpen}
+				onClose={() => setIsHelpModalOpen(false)}
+			/>
 		</div>
 	)
 }

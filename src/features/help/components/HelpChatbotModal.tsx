@@ -9,7 +9,8 @@ import {
   type Message,
   type UserRole 
 } from '@services/chatbot/chatbot-tree'
-import { HelpCircle, Send, X } from 'lucide-react'
+import { Send, X } from 'lucide-react'
+import EyeTrackingComponent from '@features/dashboard/components/RobotTraking'
 import { Button } from '@shared/components/ui/button'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
@@ -117,8 +118,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
     }
   }
 
-  if (!profile) return null
-
+  // Render modal when isOpen even if profile is still loading (so the modal opens and shows loading)
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
@@ -144,8 +144,8 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
             <div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-labPrimary to-labPrimary/80 flex items-center justify-center shadow-lg shadow-labPrimary/20">
-                    <HelpCircle className="w-5 h-5 text-white" />
+                  <div className="flex items-center justify-center overflow-hidden">
+                    <EyeTrackingComponent headOnly className="w-12 h-12 min-w-12 min-h-12 [&_.cls-1]:fill-labPrimary [&_.cls-2]:fill-labPrimary [&_.cls-8]:fill-labPrimary [&_.cls-11]:fill-labPrimary [&_.cls-5]:fill-labPrimary [&_.cls-14]:fill-labPrimary [&_.cls-9]:fill-labPrimary [&_.cls-12]:fill-labPrimary [&_.cls-3]:fill-labPrimary/90 [&_.cls-10]:fill-labPrimary/80 [&_.cls-13]:fill-labPrimary/90 [&_.cls-4]:fill-labPrimary/70 [&_.cls-7]:fill-labPrimary" />
                   </div>
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -167,6 +167,12 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
+              {!profile ? (
+                <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                  Cargando...
+                </div>
+              ) : (
+              <>
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -218,9 +224,12 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                 </div>
               ))}
               <div ref={messagesEndRef} />
+              </>
+              )}
             </div>
 
-            {/* Input Area */}
+            {/* Input Area - only when profile is loaded */}
+            {profile && (
             <div className="sticky bottom-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-t border-input p-3 sm:p-4">
               <div className="flex gap-2 items-end">
                 <input
@@ -240,6 +249,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                 </Button>
               </div>
             </div>
+            )}
           </motion.div>
         </>
       )}
