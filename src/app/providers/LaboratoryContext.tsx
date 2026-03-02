@@ -80,8 +80,13 @@ export function LaboratoryProvider({
 
       setLaboratory(lab as unknown as Laboratory);
 
-      // Aplicar favicon si existe en el branding
+      // DEBUG: Log features
       const labData = lab as unknown as Laboratory;
+      console.log('🏥 Laboratory loaded:', labData?.name, '(', labData?.slug, ')');
+      console.log('🎯 Features:', labData?.features);
+      console.log('💬 hasChatbot:', labData?.features?.hasChatbot);
+
+      // Aplicar favicon si existe en el branding
       console.log('🔍 Laboratory branding data:', labData?.branding);
       
       // Prioridad: favicon > logo

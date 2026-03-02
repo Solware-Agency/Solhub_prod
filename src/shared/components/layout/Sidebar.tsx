@@ -31,6 +31,7 @@ import { useUserProfile } from '@shared/hooks/useUserProfile';
 import { cn } from '@shared/lib/cn';
 import SolHubIcon from '@shared/components/icons/SolHubIcon';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
+import { HelpChatbotModal } from '@features/help/components/HelpChatbotModal';
 
 interface NavItemProps {
   to: string;
@@ -306,6 +307,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     clinical: false,
     reports: false,
   });
+
+  const [isHelpModalOpen, setIsHelpModalOpen] = React.useState(false);
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups((prev) => {
@@ -1280,15 +1283,27 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </FeatureGuard>
 
-          {/* Centro de Ayuda - Disponible para todos los roles con la feature habilitada */}
+          {/* Centro de Ayuda - Modal disponible para todos los roles con la feature habilitada */}
           <FeatureGuard feature='hasChatbot'>
-            <NavItem
-              to='/help'
-              icon={<MessageCircleQuestion className='stroke-2 size-5 shrink-0' />}
-              label='Ayuda'
-              showFullContent={showFullContent}
-              onClick={onClose}
-            />
+            <div
+              onClick={() => {
+                setIsHelpModalOpen(true);
+                if (isMobile) onClose();
+              }}
+              title={!showFullContent ? 'Ayuda' : undefined}
+              className='flex items-center gap-2 cursor-pointer hover:text-primary py-2 px-1 rounded-md transition-none'
+            >
+              <MessageCircleQuestion className='stroke-2 size-5 shrink-0' />
+              <p
+                className={`text-sm whitespace-nowrap transition-none ${
+                  showFullContent
+                    ? 'opacity-100 w-auto'
+                    : 'opacity-0 w-0 overflow-hidden'
+                }`}
+              >
+                Ayuda
+              </p>
+            </div>
           </FeatureGuard>
         </div>
       </div>
@@ -1443,6 +1458,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Modal de Ayuda */}
+      <HelpChatbotModal 
+        isOpen={isHelpModalOpen} 
+        onClose={() => setIsHelpModalOpen(false)} 
+      />
     </aside>
   );
 };
