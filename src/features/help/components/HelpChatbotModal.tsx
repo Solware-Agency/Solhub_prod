@@ -28,8 +28,6 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
   useBodyScrollLock(isOpen)
   useGlobalOverlayOpen(isOpen)
 
-  console.log('🟢 HelpChatbotModal - isOpen:', isOpen, 'profile:', profile)
-
   // Inicializar chat con mensaje de bienvenida cuando se abre el modal
   useEffect(() => {
     if (isOpen && profile?.role) {

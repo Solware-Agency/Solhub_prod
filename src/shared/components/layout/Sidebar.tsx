@@ -310,10 +310,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const [isHelpModalOpen, setIsHelpModalOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    console.log('🔴 isHelpModalOpen cambió a:', isHelpModalOpen);
-  }, [isHelpModalOpen]);
-
   const toggleGroup = (groupName: string) => {
     setExpandedGroups((prev) => {
       // En modo mobile, cerrar todos los demás grupos antes de abrir el actual
@@ -1291,13 +1287,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           <FeatureGuard feature='hasChatbot'>
             <div
               onClick={(e) => {
-                console.log('🔵 HELP BUTTON CLICKED - antes de setIsHelpModalOpen');
                 e.preventDefault();
                 e.stopPropagation();
                 setIsHelpModalOpen(true);
-                console.log('🔵 setIsHelpModalOpen(true) ejecutado');
                 if (isMobile && onClose) {
-                  console.log('🔵 Cerrando sidebar mobile');
                   onClose();
                 }
               }}
@@ -1471,13 +1464,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Modal de Ayuda */}
-      {console.log('🔴 Renderizando HelpChatbotModal con isOpen:', isHelpModalOpen)}
       <HelpChatbotModal 
         isOpen={isHelpModalOpen} 
-        onClose={() => {
-          console.log('🔴 onClose llamado - cerrando modal');
-          setIsHelpModalOpen(false);
-        }} 
+        onClose={() => setIsHelpModalOpen(false)} 
       />
     </aside>
   );
