@@ -511,8 +511,14 @@ const ChangelogTable: React.FC = () => {
 
 						{/* Clear Filters */}
 						{(searchTerm || actionFilter !== 'all' || dateRange?.from || dateRange?.to) && (
-							<Button variant="ghost" onClick={clearFilters} className="text-sm shrink-0">
-								Limpiar filtros
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={clearFilters}
+								className="shrink-0 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive"
+							>
+								<Trash2 className="w-4 h-4 mr-1.5" />
+								Limpiar
 							</Button>
 						)}
 					</div>

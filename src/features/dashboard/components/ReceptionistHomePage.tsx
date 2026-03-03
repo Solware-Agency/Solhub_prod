@@ -135,8 +135,8 @@ const getAvailableButtonsForRole = (role: UserRole | undefined, isSpt?: boolean,
 		})
 	}
 
-	// Sala de Espera: employee y coordinador cuando el lab tiene la feature
-	if ((role === 'employee' || role === 'coordinador') && hasWaitingRoom && routes.waitingRoom) {
+	// Sala de Espera: solo rol prueba (no listo para employee/coordinador)
+	if (role === 'prueba' && hasWaitingRoom && routes.waitingRoom) {
 		buttons.push({
 			title: 'Sala de Espera',
 			icon: LayoutGrid,

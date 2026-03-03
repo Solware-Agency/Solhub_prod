@@ -101,6 +101,8 @@ interface TriajeModalFormProps {
   showOnlyVitalSigns?: boolean;
   userRole?: string;
   forceEditMode?: boolean;
+  /** Solo lectura: cualquier rol puede ver la historia cuando está hecha; si no está hecha se muestra mensaje. */
+  readOnly?: boolean;
 }
 
 // Componente para mostrar información de la historia clínica existente
@@ -571,6 +573,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   showOnlyVitalSigns = false,
   userRole,
   forceEditMode = false,
+  readOnly = false,
 }) => {
   const isEnfermero = userRole === 'enfermero';
   const isMedico = userRole === 'medico_tratante' || userRole === 'medicowner';
@@ -1525,6 +1528,27 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             Cargando información de historia clínica...
           </span>
         </div>
+      </div>
+    );
+  }
+
+  // Modo solo lectura (cualquier rol puede ver cuando la historia está hecha)
+  if (readOnly) {
+    if (existingTriage && triageComplete) {
+      return (
+        <div className='p-4'>
+          <TriageInfoDisplay
+            record={existingTriage}
+            onClose={onClose}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className='p-6 text-center'>
+        <p className='text-gray-600 dark:text-gray-400'>
+          No hay historia clínica registrada. No tienes permiso para crearla.
+        </p>
       </div>
     );
   }

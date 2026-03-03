@@ -273,7 +273,7 @@ export const ServiceSection = memo(
                   <FormControl>
                     <AutocompleteInput
                       fieldName='treatingDoctor'
-                      placeholder='Nombre del Médico'
+                      placeholder={isLM ? 'Código o nombre del médico' : 'Nombre del Médico'}
                       iconRight={
                         <Stethoscope className='h-4 w-4 text-muted-foreground' />
                       }
@@ -281,7 +281,11 @@ export const ServiceSection = memo(
                       {...field}
                       onChange={(e) => {
                         const { value } = e.target;
-                        if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+                        // Marihorgen: permitir números para buscar por código (A1, V10, etc.)
+                        const re = isLM
+                          ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/
+                          : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/;
+                        if (re.test(value)) {
                           field.onChange(e);
                         }
                       }}

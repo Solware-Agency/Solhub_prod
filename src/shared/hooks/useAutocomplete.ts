@@ -44,6 +44,61 @@ const MARIHORGEN_TREATING_DOCTORS = [
 	'EVELYN RICHARDS',
 ]
 
+/** Mapeo código → médico. Solo Marihorgen, campo Médico Tratante (estructura de costos). */
+const MARIHORGEN_DOCTOR_CODES: Record<string, string> = {
+	A1: 'CARLOS MORA',
+	A2: 'CARLOS MORA',
+	A3: 'CARLOS MORA',
+	B1: 'JAQUELINE BELLO',
+	B2: 'JAQUELINE BELLO',
+	C1: 'DANIEL LORETO',
+	D1: 'MANUELIS LOPEZ',
+	E1: 'JESÚS CARRILLO',
+	E2: 'JESÚS CARRILLO',
+	E3: 'JESÚS CARRILLO',
+	F1: 'FERNANDO JIMÉNEZ',
+	F2: 'FERNANDO JIMÉNEZ',
+	G1: 'JESÚS VERA',
+	G2: 'JESÚS VERA',
+	H1: 'JOSÉ MIGUEL MARIN',
+	H2: 'JOSÉ MIGUEL MARIN',
+	J1: 'JENIREE CORONADO',
+	J2: 'JENIREE CORONADO',
+	K1: 'GARWIN CALLES',
+	L1: 'ISABEL GARCIA FLEURY',
+	M1: 'ELBA SERRANO',
+	M2: 'ELBA SERRANO',
+	N1: 'MARÍA JOSÉ TAPIA',
+	N2: 'MARÍA JOSÉ TAPIA',
+	N3: 'MARÍA JOSÉ TAPIA',
+	O1: 'JAYKEL BAJANCHI',
+	P1: 'NAELVI AZÓCAR',
+	P2: 'JESÚS CARRASCO',
+	P3: 'JESÚS CARRASCO',
+	Q1: 'RICHARD NODA',
+	Q2: 'RICHARD NODA',
+	Q3: 'RICHARD NODA',
+	Q4: 'NELSON DELLAN',
+	Q5: 'GABRIELA DELLAN',
+	T1: 'ANA LUTMARY CAMPOS',
+	T2: 'JOSÉ SUAREZ',
+	T3: 'VITELIO PATIÑO',
+	V1: 'GERKA TREMONT',
+	V2: 'GERKA TREMONT',
+	V3: 'MARGALIT MIZRACHI',
+	V4: 'ROBERTO PENOTT',
+	V5: 'MAYKOL TERAN',
+	V6: 'TERESA PIÑERO',
+	V7: 'MARIA EUGENIA PEREZ',
+	V8: 'GLORIA COLMENARES',
+	V9: 'TIBISAY SARAVIA',
+	V10: 'DEYSI MENDOZA',
+	V11: 'ANDRÉS RODRÍGUEZ',
+	V12: 'ANDRÉS RODRÍGUEZ',
+	W1: 'JUAN MANUITT',
+	W2: 'EVELYN RICHARDS',
+}
+
 const MARIHORGEN_ORIGINS = [
 	'OPIOLID',
 	'CLÍNICA VIRGEN DEL VALLE',
@@ -417,6 +472,38 @@ export const useAutocomplete = (fieldName: string) => {
 				}
 			}
 
+			// Marihorgen + Médico Tratante: buscar por código (A1, V10, etc.) y mostrar nombre del médico
+			if (fieldName === 'treatingDoctor' && isMarihorgenLabRef.current && searchTerm.trim()) {
+				const normalizedSearch = normalizeForSearch(searchTerm.trim())
+				const seen = new Set<string>()
+				const codeMatches: AutocompleteOption[] = []
+				for (const [code, doctorName] of Object.entries(MARIHORGEN_DOCTOR_CODES)) {
+					const normalizedCode = normalizeForSearch(code)
+					if (
+						normalizedCode.includes(normalizedSearch) ||
+						normalizedCode === normalizedSearch
+					) {
+						if (!seen.has(doctorName)) {
+							seen.add(doctorName)
+							codeMatches.push({ value: doctorName, count: 1 })
+						}
+					}
+				}
+				if (codeMatches.length > 0) {
+					return codeMatches
+						.sort((a, b) => {
+							const aCode = Object.entries(MARIHORGEN_DOCTOR_CODES).find(([, n]) => n === a.value)?.[0] ?? ''
+							const bCode = Object.entries(MARIHORGEN_DOCTOR_CODES).find(([, n]) => n === b.value)?.[0] ?? ''
+							const aExact = normalizeForSearch(aCode) === normalizedSearch
+							const bExact = normalizeForSearch(bCode) === normalizedSearch
+							if (aExact && !bExact) return -1
+							if (!aExact && bExact) return 1
+							return aCode.localeCompare(bCode)
+						})
+						.slice(0, 8)
+				}
+			}
+
 			const filtered = allFieldValues.filter((item) => {
 				// Para el campo idNumber, buscar tanto en el formato completo como solo en el número
 				if (fieldName === 'idNumber') {
@@ -462,6 +549,18 @@ export const useAutocomplete = (fieldName: string) => {
 							)
 							const bFromCode = Object.entries(MARIHORGEN_ORIGIN_CODES).some(
 								([code, name]) => name === b.value && normalizeForSearch(code) === normalizedSearch
+							)
+							if (aFromCode && !bFromCode) return -1
+							if (!aFromCode && bFromCode) return 1
+						}
+						// Marihorgen + Médico Tratante: priorizar coincidencia por código
+						if (fieldName === 'treatingDoctor' && isMarihorgenLabRef.current) {
+							const normalizedSearch = normalizeForSearch(searchTerm)
+							const aFromCode = Object.entries(MARIHORGEN_DOCTOR_CODES).some(
+								([code, name]) => name === a.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
+							)
+							const bFromCode = Object.entries(MARIHORGEN_DOCTOR_CODES).some(
+								([code, name]) => name === b.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
 							)
 							if (aFromCode && !bFromCode) return -1
 							if (!aFromCode && bFromCode) return 1

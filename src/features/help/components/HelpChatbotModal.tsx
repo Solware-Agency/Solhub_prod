@@ -147,14 +147,9 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                   <div className="flex items-center justify-center overflow-hidden">
                     <EyeTrackingComponent headOnly className="w-12 h-12 min-w-12 min-h-12 [&_.cls-1]:fill-labPrimary [&_.cls-2]:fill-labPrimary [&_.cls-8]:fill-labPrimary [&_.cls-11]:fill-labPrimary [&_.cls-5]:fill-labPrimary [&_.cls-14]:fill-labPrimary [&_.cls-9]:fill-labPrimary [&_.cls-12]:fill-labPrimary [&_.cls-3]:fill-labPrimary/90 [&_.cls-10]:fill-labPrimary/80 [&_.cls-13]:fill-labPrimary/90 [&_.cls-4]:fill-labPrimary/70 [&_.cls-7]:fill-labPrimary" />
                   </div>
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      Centro de Ayuda
-                    </h2>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                      Tu asistente Solwy
-                    </p>
-                  </div>
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    Solwy
+                  </h2>
                 </div>
                 <button
                   onClick={onClose}

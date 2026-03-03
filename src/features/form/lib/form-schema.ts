@@ -157,14 +157,14 @@ export const createFormSchema = (
 				.string()
 				.min(1, 'El doctor tratante es requerido')
 				.regex(
-					/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
-					'Médico tratante solo debe contener letras y espacios',
+					isMarihorgen ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
+					isMarihorgen ? 'Médico tratante: código o nombre' : 'Médico tratante solo debe contener letras y espacios',
 				)
 			: z
 				.string()
 				.regex(
-					/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
-					'Médico tratante solo debe contener letras y espacios',
+					isMarihorgen ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/,
+					isMarihorgen ? 'Médico tratante: código o nombre' : 'Médico tratante solo debe contener letras y espacios',
 				)
 				.optional()
 				.or(z.literal('')),

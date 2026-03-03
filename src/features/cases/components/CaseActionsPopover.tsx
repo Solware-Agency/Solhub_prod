@@ -35,12 +35,6 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
     return userRole === 'medico_tratante' || userRole === 'owner' || userRole === 'prueba';
   }, [isSpt, userRole]);
 
-  const canShowTriaje = useMemo(() => {
-    if (!isSpt) return true; // Para otros labs, usar FeatureGuard normal
-    // Para SPT: medico_tratante, enfermero, owner y prueba pueden hacer historia clínica
-    return userRole === 'medico_tratante' || userRole === 'enfermero' || userRole === 'owner' || userRole === 'prueba';
-  }, [isSpt, userRole]);
-
   // Función helper para cerrar el popover después de ejecutar una acción
   const handleAction = (action: () => void) => {
     action();
@@ -90,7 +84,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
           </button>
         )}
 
-        {canShowTriaje && onTriaje && (
+        {onTriaje && (
           <FeatureGuard feature='hasTriaje'>
             <button
               onClick={() => handleAction(() => onTriaje(case_))}

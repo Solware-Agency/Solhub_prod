@@ -611,7 +611,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/dashboard/sample-costs'
                   icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
-                  label='Estructura de costos'
+                  label='Costos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -635,15 +635,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <FeatureGuard feature='hasWaitingRoom'>
-                <NavItem
-                  to='/dashboard/waiting-room'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Sala de Espera'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </FeatureGuard>
+              {/* Sala de Espera: solo rol prueba (no listo para otros) */}
+              {isPrueba && (
+                <FeatureGuard feature='hasWaitingRoom'>
+                  <NavItem
+                    to='/dashboard/waiting-room'
+                    icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                    label='Sala de Espera'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              )}
             </>
           )}
 
@@ -765,15 +768,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              <FeatureGuard feature='hasWaitingRoom'>
-                <NavItem
-                  to='/employee/waiting-room'
-                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
-                  label='Sala de Espera'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </FeatureGuard>
+              {/* Sala de Espera: solo rol prueba (no listo para employee/coordinador) */}
             </>
           )}
 
@@ -1253,7 +1248,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/prueba/sample-costs'
                   icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
-                  label='Estructura de costos'
+                  label='Costos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
