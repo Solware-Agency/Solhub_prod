@@ -92,28 +92,32 @@ const Layout: React.FC = () => {
 				)}
 			</AnimatePresence>
 
-			{/* Sidebar - Now overlays content instead of pushing it */}
-			{!isFullscreenMode && (
-				<div
-					className={`fixed top-0 left-0 h-screen z-50 transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
-						sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-					} ${
-						// On desktop: collapsed by default (w-16), expanded on hover (w-56)
-						sidebarExpanded ? 'lg:w-56' : 'lg:w-16'
-					}`}
-					onMouseEnter={handleSidebarMouseEnter}
-					onMouseLeave={handleSidebarMouseLeave}
-				>
-					<Sidebar
-						onClose={() => setSidebarOpen(false)}
-						isExpanded={sidebarExpanded}
-						isMobile={sidebarOpen}
-						isDark={isDark}
-						toggleDarkMode={toggleDarkMode}
-						onOpenHelpModal={() => setIsHelpModalOpen(true)}
-					/>
-				</div>
-			)}
+			{/* Sidebar - En desktop siempre visible (no se oculta con modales); en mobile se oculta cuando hay fullscreen */}
+			<div
+				className={`fixed top-0 left-0 h-screen z-50 transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
+					sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+				} ${
+					// On desktop: collapsed by default (w-16), expanded on hover (w-56)
+					sidebarExpanded ? 'lg:w-56' : 'lg:w-16'
+				} ${
+					// En mobile: ocultar cuando hay modal/panel fullscreen. En desktop (lg:) nunca ocultar.
+					isFullscreenMode ? 'max-lg:hidden' : ''
+				} ${
+					// Cuando hay overlay abierto (solo desktop): sidebar visible pero no interactuable
+					hasOverlayOpen ? 'pointer-events-none' : ''
+				}`}
+				onMouseEnter={handleSidebarMouseEnter}
+				onMouseLeave={handleSidebarMouseLeave}
+			>
+				<Sidebar
+					onClose={() => setSidebarOpen(false)}
+					isExpanded={sidebarExpanded}
+					isMobile={sidebarOpen}
+					isDark={isDark}
+					toggleDarkMode={toggleDarkMode}
+					onOpenHelpModal={() => setIsHelpModalOpen(true)}
+				/>
+			</div>
 
 			{/* Mobile menu button - hidden in fullscreen mode and when overlay is open */}
 			{!isFullscreenMode && !hasOverlayOpen && (
