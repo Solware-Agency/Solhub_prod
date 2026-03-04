@@ -44,6 +44,8 @@ type ExtendedDatabase = Database & {
           telefono_emergencia: string | null;
           parentesco: string | null;
           persona_quien_llama: string | null;
+          alergias: string | null;
+          observaciones: string | null;
           is_draft: boolean | null;
           created_by: string | null;
           created_at: string;
@@ -81,6 +83,8 @@ type ExtendedDatabase = Database & {
           telefono_emergencia?: string | null;
           parentesco?: string | null;
           persona_quien_llama?: string | null;
+          alergias?: string | null;
+          observaciones?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -118,6 +122,8 @@ type ExtendedDatabase = Database & {
           telefono_emergencia?: string | null;
           parentesco?: string | null;
           persona_quien_llama?: string | null;
+          alergias?: string | null;
+          observaciones?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -166,6 +172,8 @@ export interface TriageRecord {
   telefono_emergencia: string | null;
   parentesco: string | null;
   persona_quien_llama: string | null;
+  alergias: string | null;
+  observaciones: string | null;
   is_draft: boolean | null;
   created_by: string | null;
   created_at: string | null;
@@ -204,6 +212,8 @@ export interface TriageRecordInsert {
   telefono_emergencia?: string | null;
   parentesco?: string | null;
   persona_quien_llama?: string | null;
+  alergias?: string | null;
+  observaciones?: string | null;
   is_draft?: boolean | null;
   created_by?: string | null;
 }

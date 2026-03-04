@@ -1,6 +1,6 @@
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getAllChangeLogs } from '@/services/legacy/supabase-service'
-import { getCaseByIdWithPatient } from '@/services/supabase/cases/medical-cases-service'
+import { getCaseByIdWithPatient, findCaseByCode } from '@/services/supabase/cases/medical-cases-service'
 import { supabase } from '@/services/supabase/config/config'
 import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { Button } from '@shared/components/ui/button'
@@ -33,7 +33,9 @@ import {
 import React, { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal'
+import PatientHistoryModal from '@features/patients/components/PatientHistoryModal'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
+import type { Patient } from '@/services/supabase/patients/patients-service'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 
 // Type for the actual data returned from the query - updated for new structure
@@ -125,6 +127,8 @@ const ChangelogTable: React.FC = () => {
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 	const [selectedCaseForView, setSelectedCaseForView] = useState<MedicalCaseWithPatient | null>(null)
 	const [isLoadingCase, setIsLoadingCase] = useState(false)
+	const [selectedPatientForView, setSelectedPatientForView] = useState<Patient | null>(null)
+	const [isLoadingPatient, setIsLoadingPatient] = useState(false)
 
 	// Resetear página cuando cambian los filtros de fecha o la búsqueda
 	React.useEffect(() => {
@@ -254,10 +258,9 @@ const ChangelogTable: React.FC = () => {
 
 	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso y no eliminado)
 	const handleOpenCaseDetail = async (log: ChangeLogData) => {
-		const isCaseEntity = log.entity_type === 'medical_record' || log.entity_type === 'medical_case'
-		if (!isCaseEntity) return
-		const { isDeletedCase } = getCaseEntityDisplay(log)
-		if (isDeletedCase || !log.medical_record_id) {
+		if (log.entity_type === 'patient') return
+		const { text: caseCode, isDeletedCase } = getCaseEntityDisplay(log)
+		if (isDeletedCase) {
 			toast({
 				title: 'Caso no disponible',
 				description: 'No se puede abrir un caso eliminado.',
@@ -265,9 +268,25 @@ const ChangelogTable: React.FC = () => {
 			})
 			return
 		}
+		const canOpenById = !!log.medical_record_id
+		const canOpenByCode = caseCode && caseCode !== 'Caso eliminado' && caseCode !== 'Nuevo registro'
+		if (!canOpenById && !canOpenByCode) {
+			toast({
+				title: 'Caso no disponible',
+				description: 'No hay suficiente información para abrir este caso.',
+				variant: 'destructive',
+			})
+			return
+		}
 		setIsLoadingCase(true)
 		try {
-			const caseData = await getCaseByIdWithPatient(log.medical_record_id)
+			let caseData: MedicalCaseWithPatient | null = null
+			if (canOpenById) {
+				caseData = await getCaseByIdWithPatient(log.medical_record_id)
+			}
+			if (!caseData && canOpenByCode) {
+				caseData = await findCaseByCode(caseCode)
+			}
 			if (caseData) {
 				setSelectedCaseForView(caseData)
 			} else {
@@ -285,6 +304,45 @@ const ChangelogTable: React.FC = () => {
 			})
 		} finally {
 			setIsLoadingCase(false)
+		}
+	}
+
+	// Abrir modal de información del paciente al hacer clic en el nombre (solo si es paciente y no eliminado)
+	const handleOpenPatientDetail = async (log: ChangeLogData) => {
+		if (log.entity_type !== 'patient' || !log.patient_id) return
+		if (!log.patients) {
+			toast({
+				title: 'Paciente no disponible',
+				description: 'No se puede abrir un paciente eliminado.',
+				variant: 'destructive',
+			})
+			return
+		}
+		setIsLoadingPatient(true)
+		try {
+			const { data: patient, error } = await supabase
+				.from('patients')
+				.select('*')
+				.eq('id', log.patient_id)
+				.single()
+			if (error) throw error
+			if (patient) {
+				setSelectedPatientForView(patient as Patient)
+			} else {
+				toast({
+					title: 'Paciente no encontrado',
+					description: 'No se pudo cargar el paciente.',
+					variant: 'destructive',
+				})
+			}
+		} catch {
+			toast({
+				title: 'Error',
+				description: 'No se pudo cargar el paciente. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsLoadingPatient(false)
 		}
 	}
 
@@ -615,19 +673,30 @@ const ChangelogTable: React.FC = () => {
 														<div className="flex flex-col">
 															{log.entity_type === 'patient' ? (
 																<>
-																	<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																		{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
-																	</span>
-																	{log.patients?.cedula && (
-																		<span className="text-xs text-gray-500 dark:text-gray-400">
-																			Cédula: {log.patients.cedula}
+																	{log.patient_id && log.patients ? (
+																		<button
+																			type="button"
+																			onClick={(e) => {
+																				e.stopPropagation()
+																				handleOpenPatientDetail(log)
+																			}}
+																			disabled={isLoadingPatient}
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+																			title="Ver información del paciente"
+																		>
+																			{log.patients.nombre}
+																		</button>
+																	) : (
+																		<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+																			{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
 																		</span>
 																	)}
 																</>
 															) : (
 																(() => {
 																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
-																	const canOpenCase = (log.entity_type === 'medical_record' || log.entity_type === 'medical_case') && !isDeletedCase && !!log.medical_record_id
+																	const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
+																	const canOpenCase = log.entity_type !== 'patient' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																	return (
 																		canOpenCase ? (
 																			<button
@@ -781,14 +850,30 @@ const ChangelogTable: React.FC = () => {
 													<div className="flex flex-col gap-1">
 														{log.entity_type === 'patient' ? (
 															<>
-																<span className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold">
-																	{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
-																</span>
+																{log.patient_id && log.patients ? (
+																	<button
+																		type="button"
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			handleOpenPatientDetail(log)
+																		}}
+																		disabled={isLoadingPatient}
+																		className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold text-left w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 underline decoration-teal-500 decoration-1 underline-offset-1"
+																		title="Ver información del paciente"
+																	>
+																		{log.patients.nombre}
+																	</button>
+																) : (
+																	<span className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold">
+																		{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
+																	</span>
+																)}
 															</>
 														) : (
 															(() => {
 																const { text, isDeletedCase } = getCaseEntityDisplay(log)
-																const canOpenCase = (log.entity_type === 'medical_record' || log.entity_type === 'medical_case') && !isDeletedCase && !!log.medical_record_id
+																const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
+																const canOpenCase = log.entity_type !== 'patient' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																return (
 																	canOpenCase ? (
 																		<button
@@ -1009,6 +1094,13 @@ const ChangelogTable: React.FC = () => {
 					refetch()
 				}}
 				onCaseSelect={(case_) => setSelectedCaseForView(case_)}
+			/>
+
+			{/* Modal de información del paciente (al hacer clic en nombre en Entidad) */}
+			<PatientHistoryModal
+				patient={selectedPatientForView}
+				isOpen={!!selectedPatientForView}
+				onClose={() => setSelectedPatientForView(null)}
 			/>
 		</div>
 	)

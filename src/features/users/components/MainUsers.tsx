@@ -1109,14 +1109,6 @@ const MainUsers: React.FC = () => {
 
 										<div >
 
-											{/* Email */}
-											<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-												<Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-												<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
-													{user.email}
-												</p>
-											</div>
-
 											{/* Display Name */}
 											{user.display_name && (
 												<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
@@ -1126,6 +1118,24 @@ const MainUsers: React.FC = () => {
 													</p>
 												</div>
 											)}
+
+											{/* Teléfono */}
+											{user.phone && (
+												<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+													<Phone className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+													<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
+														{formatPhoneForDisplay(user.phone)}
+													</p>
+												</div>
+											)}
+
+											{/* Email */}
+											<div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+												<Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+												<p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
+													{user.email}
+												</p>
+											</div>
 
 											{/* Fecha de registro */}
 											<div className="flex items-center text gap-1.5 sm:gap-2 mb-2 sm:mb-3">
