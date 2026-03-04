@@ -287,11 +287,21 @@ function RegisterForm() {
         console.error('Registration error:', signUpError);
 
         const msg = signUpError.message || '';
+        const errorCode = (signUpError as { code?: string }).code;
         if (msg.includes('User already registered')) {
           // Este viene DIRECTO del hook before-user-created
           setError('Ya existe una cuenta con este correo electrónico.');
         } else if (msg.includes('Password should be at least')) {
           setError('La contraseña es muy débil.');
+        } else if (
+          errorCode === 'weak_password' ||
+          msg.includes('easy to guess') ||
+          msg.includes('pwned') ||
+          msg.includes('known to be weak')
+        ) {
+          setError(
+            'Esta contraseña no es segura: ha aparecido en filtraciones de datos o es muy fácil de adivinar. Elige otra contraseña más segura.',
+          );
         } else if (
           msg.includes('Unable to validate email address') ||
           msg.includes('Invalid email')
@@ -384,6 +394,14 @@ function RegisterForm() {
       ) {
         setError(
           'Error temporal del servicio de email. Por favor, contacta al administrador o intenta de nuevo más tarde.',
+        );
+      } else if (
+        msg.includes('easy to guess') ||
+        msg.includes('pwned') ||
+        msg.includes('known to be weak')
+      ) {
+        setError(
+          'Esta contraseña no es segura: ha aparecido en filtraciones de datos o es muy fácil de adivinar. Elige otra contraseña más segura.',
         );
       } else {
         setError('Error al crear la cuenta. Inténtalo de nuevo.');
