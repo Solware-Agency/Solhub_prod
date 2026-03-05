@@ -5,6 +5,9 @@ import type { Database } from '@shared/types/types'
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+/** URL de la Edge Function send-email (Supabase). Usar en lugar de /api/send-email. */
+export const SEND_EMAIL_FUNCTION_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/send-email` : ''
+
 // Verificar que las variables estén definidas
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 	console.error('❌ Variables de Supabase no configuradas correctamente')
@@ -61,7 +64,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Verificar conexión con medical_records_clean tras aplicar políticas RLS (no en call center, no usa esa tabla)
 setTimeout(async () => {
 	if (typeof window !== 'undefined' && window.location.pathname.includes('/call-center')) return
-	const { data: { session } } = await supabase.auth.getSession()
+	const {
+		data: { session },
+	} = await supabase.auth.getSession()
 	if (session) {
 		supabase
 			.from('medical_records_clean')

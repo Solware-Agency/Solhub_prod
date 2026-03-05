@@ -20,7 +20,7 @@ import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/services/supabase/config/config'
+import { supabase, SEND_EMAIL_FUNCTION_URL } from '@/services/supabase/config/config'
 import { getCasesByPatientIdWithInfo } from '@/services/supabase/cases/medical-cases-service'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
@@ -834,12 +834,15 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 								? [(caseItem as any).image_url]
 								: []
 
-					// Enviar email usando send-email.js
-					const response = await fetch('/api/send-email', {
+					// Enviar email vía Supabase Edge Function send-email
+					const {
+						data: { session },
+					} = await supabase.auth.getSession()
+					const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+					if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
+					const response = await fetch(SEND_EMAIL_FUNCTION_URL, {
 						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
+						headers,
 						body: JSON.stringify({
 							patientEmail: emails.to,
 							patientName: patient?.nombre,
@@ -1423,7 +1426,6 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 													) : (
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 															{filteredCases.map((caseItem: MedicalCaseWithPatient, index: number) => (
-																
 																<div
 																	key={caseItem.id || caseItem.code || `case-${index}`}
 																	onClick={(e) => {
@@ -1440,12 +1442,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																	<div className="space-y-3 mb-3">
 																		{/* Checkbox y Estado de Pago */}
 																		<div className="flex items-center gap-2">
-																				<Checkbox
-																					checked={selectedCases.has(caseItem.id)}
-																					onCheckedChange={() => toggleCaseSelection(caseItem.id)}
-																					disabled={isDownloadingMultiple || isGeneratingPDF || isSaving}
-																					className={`mr-1 ${caseItem.doc_aprobado === 'aprobado' ? 'visible' : 'invisible'}`}
-																				/>
+																			<Checkbox
+																				checked={selectedCases.has(caseItem.id)}
+																				onCheckedChange={() => toggleCaseSelection(caseItem.id)}
+																				disabled={isDownloadingMultiple || isGeneratingPDF || isSaving}
+																				className={`mr-1 ${caseItem.doc_aprobado === 'aprobado' ? 'visible' : 'invisible'}`}
+																			/>
 																		</div>
 
 																		{/* Código, Fecha y Sede en la misma línea */}
@@ -1906,8 +1908,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 					<AlertDialogHeader>
 						<AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
 						<AlertDialogDescription>
-							El paciente &quot;{patientToDelete?.nombre}&quot; se ocultará de la lista. Los datos se conservan en el sistema
-							y los casos asociados no se modifican.
+							El paciente &quot;{patientToDelete?.nombre}&quot; se ocultará de la lista. Los datos se conservan en el
+							sistema y los casos asociados no se modifican.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
