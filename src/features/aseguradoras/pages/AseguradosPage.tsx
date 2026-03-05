@@ -12,8 +12,12 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { Calendar } from '@shared/components/ui/calendar'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { cn } from '@shared/lib/cn'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
@@ -38,6 +42,7 @@ const AseguradosPage = () => {
 		document_numero: '',
 		phone: '',
 		email: '',
+		fecha_nacimiento: '' as string,
 		address: '',
 		notes: '',
 		tipo_asegurado: 'Persona natural' as 'Persona natural' | 'Persona jurídica',
@@ -77,6 +82,7 @@ const AseguradosPage = () => {
 			document_numero: '',
 			phone: '',
 			email: '',
+			fecha_nacimiento: '',
 			address: '',
 			notes: '',
 			tipo_asegurado: 'Persona natural',
@@ -100,6 +106,8 @@ const AseguradosPage = () => {
 		if (!t.includes('@')) return false
 		return /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(t)
 	}
+
+	const parseIsoDate = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
 
 	const buildDocumentId = (): string => {
 		const n = form.document_numero.replace(/\D/g, '')
@@ -144,6 +152,7 @@ const AseguradosPage = () => {
 				document_id: buildDocumentId(),
 				phone: form.phone,
 				email: form.email,
+				fecha_nacimiento: form.fecha_nacimiento?.trim() || null,
 				address: form.address,
 				notes: form.notes,
 				tipo_asegurado: form.tipo_asegurado,
@@ -203,6 +212,7 @@ const AseguradosPage = () => {
 											Documento: row.document_id,
 											Teléfono: row.phone,
 											Email: row.email ?? '',
+											'Fecha nac.': row.fecha_nacimiento ?? '',
 											Tipo: row.tipo_asegurado,
 										})),
 									)
@@ -269,7 +279,7 @@ const AseguradosPage = () => {
 					</DialogHeader>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto min-h-0 py-1">
 						<div className="space-y-2">
-							<Label>Tipo de asegurado <span className="text-destructive">*</span></Label>
+							<Label>Tipo de persona <span className="text-destructive">*</span></Label>
 							<Select
 								value={form.tipo_asegurado}
 								onValueChange={(value) =>
@@ -280,8 +290,8 @@ const AseguradosPage = () => {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="Persona natural">Persona natural</SelectItem>
-									<SelectItem value="Persona jurídica">Persona jurídica</SelectItem>
+									<SelectItem value="Persona natural">Natural</SelectItem>
+									<SelectItem value="Persona jurídica">Jurídico</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -344,6 +354,36 @@ const AseguradosPage = () => {
 									setForm((prev) => ({ ...prev, email: filtered }))
 								}}
 							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Fecha de nacimiento</Label>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className={cn(
+											'w-full justify-start text-left font-normal',
+											!form.fecha_nacimiento && 'text-muted-foreground',
+										)}
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{form.fecha_nacimiento
+											? format(parseIsoDate(form.fecha_nacimiento)!, 'dd/MM/yyyy')
+											: 'Fecha'}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0">
+									<Calendar
+										mode="single"
+										selected={parseIsoDate(form.fecha_nacimiento)}
+										onSelect={(date) => {
+											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+											setForm((prev) => ({ ...prev, fecha_nacimiento: fechaStr }))
+										}}
+										initialFocus
+									/>
+								</PopoverContent>
+							</Popover>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Dirección <span className="text-destructive">*</span></Label>

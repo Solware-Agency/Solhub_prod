@@ -259,6 +259,12 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 												<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
 												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.email || 'Sin email'}</p>
 											</div>
+											{asegurado.fecha_nacimiento && (
+												<div>
+													<p className="text-xs text-gray-500 dark:text-gray-400">Fecha de nacimiento</p>
+													<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.fecha_nacimiento}</p>
+												</div>
+											)}
 										</div>
 									</InfoSection>
 

@@ -9,6 +9,7 @@ import {
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import type { DateRange } from 'react-day-picker';
 import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
 
 // Tipo unificado que incluye todos los campos necesarios para compatibilidad
 type UnifiedMedicalRecord = MedicalCaseWithPatient;
@@ -26,7 +27,6 @@ import CaseCard from './CaseCard';
 import TriajeModal from './TriajeModal';
 import Pagination from './Pagination';
 import FiltersModal from './FiltersModal';
-import ActiveFiltersDisplay from './ActiveFiltersDisplay';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useLaboratory } from '@/app/providers/LaboratoryContext';
 
@@ -1345,25 +1345,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       return (
         <>
           <div className='fixed inset-0 z-999999 bg-white dark:bg-background h-screen flex flex-col overflow-hidden'>
-            <div className='px-3 sm:px-6'>
-              <ActiveFiltersDisplay
-                statusFilter={statusFilter}
-                branchFilter={branchFilter}
-                dateRange={dateRange}
-                showPdfReadyOnly={showPdfReadyOnly}
-                selectedDoctors={selectedDoctors}
-                selectedOrigins={selectedOrigins}
-                citologyPositiveFilter={citologyPositiveFilter}
-                citologyNegativeFilter={citologyNegativeFilter}
-                pendingCasesFilter={pendingCasesFilter}
-                pdfStatusFilter={pdfStatusFilter}
-                examTypeFilter={examTypeFilter}
-                consultaFilter={consultaFilter}
-                documentStatusFilter={documentStatusFilter}
-                emailSentStatusFilter={emailSentStatusFilter}
-                // totalFilteredCases={pagination?.totalItems}
-              />
-            </div>
             {/* Fixed Header with Controls */}
             <div className='shrink-0 p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-background'>
               <div className='flex flex-col md:flex-row md:items-center gap-2 sm:gap-4'>
@@ -1500,6 +1481,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                 {/* Sort filters header */}
                 <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0'>
                   <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
+                    <Badge variant='secondary' className='text-xs sm:text-sm font-medium' aria-live='polite'>
+                      {pagination?.totalItems ?? filteredAndSortedCases.filtered.length} caso{(pagination?.totalItems ?? filteredAndSortedCases.filtered.length) !== 1 ? 's' : ''}
+                    </Badge>
                     <button
                       onClick={() => handleSort('code')}
                       className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
@@ -1688,25 +1672,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 
     return (
       <>
-        <div className='px-3 sm:px-6'>
-          <ActiveFiltersDisplay
-            statusFilter={statusFilter}
-            branchFilter={branchFilter}
-            dateRange={dateRange}
-            showPdfReadyOnly={showPdfReadyOnly}
-            selectedDoctors={selectedDoctors}
-            selectedOrigins={selectedOrigins}
-            citologyPositiveFilter={citologyPositiveFilter}
-            citologyNegativeFilter={citologyNegativeFilter}
-            pendingCasesFilter={pendingCasesFilter}
-            pdfStatusFilter={pdfStatusFilter}
-            examTypeFilter={examTypeFilter}
-            consultaFilter={consultaFilter}
-            documentStatusFilter={documentStatusFilter}
-            emailSentStatusFilter={emailSentStatusFilter}
-            // totalFilteredCases={pagination?.totalItems}
-          />
-        </div>
         <div className='bg-white dark:bg-background rounded-xl min-h-0 md:min-h-[80vh] h-full overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col'>
           {/* Search and Filter Controls */}
           <div className='p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700 shrink-0'>
@@ -1821,6 +1786,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             {/* Sort filters header */}
             <div className='bg-gray-50/50 dark:bg-background/50 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6 py-3 shrink-0'>
               <div className='flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4'>
+                <Badge variant='secondary' className='text-xs sm:text-sm font-medium' aria-live='polite'>
+                  {pagination?.totalItems ?? filteredAndSortedCases.filtered.length} caso{(pagination?.totalItems ?? filteredAndSortedCases.filtered.length) !== 1 ? 's' : ''}
+                </Badge>
                 <button
                   onClick={() => handleSort('code')}
                   className='flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors'

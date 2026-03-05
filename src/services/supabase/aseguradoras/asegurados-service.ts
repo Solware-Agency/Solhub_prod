@@ -9,6 +9,7 @@ export interface Asegurado {
 	document_id: string
 	phone: string
 	email: string | null
+	fecha_nacimiento: string | null
 	address: string | null
 	notes: string | null
 	tipo_asegurado: 'Persona natural' | 'Persona jurídica'
@@ -22,6 +23,7 @@ export interface AseguradoInsert {
 	document_id: string
 	phone: string
 	email?: string | null
+	fecha_nacimiento?: string | null
 	address?: string | null
 	notes?: string | null
 	tipo_asegurado: 'Persona natural' | 'Persona jurídica'
@@ -32,6 +34,7 @@ export interface AseguradoUpdate {
 	document_id?: string
 	phone?: string
 	email?: string | null
+	fecha_nacimiento?: string | null
 	address?: string | null
 	notes?: string | null
 	tipo_asegurado?: 'Persona natural' | 'Persona jurídica'

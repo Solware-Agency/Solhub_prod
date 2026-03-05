@@ -1,11 +1,15 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeftFromLine, Save, User, Phone, MapPin, FileText } from 'lucide-react'
+import { ArrowLeftFromLine, Save, User, Phone, MapPin, FileText, CalendarIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { Calendar } from '@shared/components/ui/calendar'
 import { useToast } from '@shared/hooks/use-toast'
+import { format } from 'date-fns'
+import { cn } from '@shared/lib/cn'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { updateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
 
@@ -61,6 +65,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 		document_numero: '',
 		phone: '',
 		email: '',
+		fecha_nacimiento: '' as string,
 		address: '',
 		notes: '',
 		tipo_asegurado: 'Persona natural' as 'Persona natural' | 'Persona jurídica',
@@ -75,6 +80,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 				document_numero: numero,
 				phone: (asegurado.phone ?? '').replace(/\D/g, ''),
 				email: asegurado.email ?? '',
+				fecha_nacimiento: asegurado.fecha_nacimiento ?? '',
 				address: asegurado.address ?? '',
 				notes: asegurado.notes ?? '',
 				tipo_asegurado: asegurado.tipo_asegurado,
@@ -114,6 +120,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 				document_id,
 				phone: form.phone,
 				email: form.email || null,
+				fecha_nacimiento: form.fecha_nacimiento?.trim() || null,
 				address: form.address || null,
 				notes: form.notes || null,
 				tipo_asegurado: form.tipo_asegurado,
@@ -180,7 +187,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 									<CardSection title="Información del asegurado" icon={User}>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 											<div className="space-y-2">
-												<Label>Tipo de asegurado</Label>
+												<Label>Tipo de persona</Label>
 												<Select
 													value={form.tipo_asegurado}
 													onValueChange={(value) =>
@@ -194,8 +201,8 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="Persona natural">Persona natural</SelectItem>
-														<SelectItem value="Persona jurídica">Persona jurídica</SelectItem>
+														<SelectItem value="Persona natural">Natural</SelectItem>
+														<SelectItem value="Persona jurídica">Jurídico</SelectItem>
 													</SelectContent>
 												</Select>
 											</div>
@@ -262,6 +269,36 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 														setForm((prev) => ({ ...prev, email: filtered || null }))
 													}}
 												/>
+											</div>
+											<div className="space-y-2">
+												<Label>Fecha de nacimiento</Label>
+												<Popover>
+													<PopoverTrigger asChild>
+														<Button
+															variant="outline"
+															className={cn(
+																'w-full justify-start text-left font-normal',
+																!form.fecha_nacimiento && 'text-muted-foreground',
+															)}
+														>
+															<CalendarIcon className="mr-2 h-4 w-4" />
+															{form.fecha_nacimiento
+																? format(new Date(form.fecha_nacimiento + 'T00:00:00'), 'dd/MM/yyyy')
+																: 'Fecha'}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-0">
+														<Calendar
+															mode="single"
+															selected={form.fecha_nacimiento ? new Date(form.fecha_nacimiento + 'T00:00:00') : undefined}
+															onSelect={(date) => {
+																const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+																setForm((prev) => ({ ...prev, fecha_nacimiento: fechaStr }))
+															}}
+															initialFocus
+														/>
+													</PopoverContent>
+												</Popover>
 											</div>
 										</div>
 									</CardSection>
