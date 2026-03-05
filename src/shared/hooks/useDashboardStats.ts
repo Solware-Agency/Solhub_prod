@@ -81,6 +81,8 @@ export interface DashboardStats {
 	allTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
 	totalCases: number
+	/** Total de bloques (bloques_biopsia) del período */
+	totalBlocks: number
 	totalCasesWithPathologist?: number
 	totalCasesWithCitotecno?: number
 	casesByReceptionist: Array<{ id: string; name: string; cases: number }>
