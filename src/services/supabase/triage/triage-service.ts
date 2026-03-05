@@ -516,41 +516,28 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
     return;
   }
 
-  const missingFields: string[] = [];
-  
-  // Validar datos antropométricos obligatorios
-  if (!data.height_cm || data.height_cm <= 0) {
-    missingFields.push('Talla');
+  // Signos vitales y antropométricos son opcionales en backend (la obligatoriedad por rol se aplica en frontend).
+  // Solo validar rangos cuando los valores están presentes.
+
+  if (data.oxygen_saturation != null && (data.oxygen_saturation < 0 || data.oxygen_saturation > 100)) {
+    throw new Error('La saturación de oxígeno (SpO₂) debe estar entre 0 y 100.');
   }
-  if (!data.weight_kg || data.weight_kg <= 0) {
-    missingFields.push('Peso');
-  }
-  
-  // Validar signos vitales obligatorios
-  // FC (Frecuencia Cardíaca) - No es obligatorio
-  // FR (Frecuencia Respiratoria) - No es obligatorio
-  // Temperatura - No es obligatorio
-  // Glicemia - No es obligatorio
-  if (data.oxygen_saturation === null || data.oxygen_saturation === undefined || data.oxygen_saturation < 0 || data.oxygen_saturation > 100) {
-    missingFields.push('SpO₂ (Saturación de Oxígeno)');
-  }
-  // Temperatura - No es obligatorio
-  
-  // Validar presión arterial (puede ser string o number)
-  const bloodPressureValue = typeof data.blood_pressure === 'string' 
+
+  const bloodPressureValue = typeof data.blood_pressure === 'string'
     ? parseBloodPressure(data.blood_pressure)
     : data.blood_pressure;
-  // Si es string (formato "123/123"), se considera válido
-  // Si es number, debe ser mayor a 0
-  if (bloodPressureValue === null || 
-      (typeof bloodPressureValue === 'number' && bloodPressureValue <= 0)) {
-    missingFields.push('Presión Arterial');
+  if (bloodPressureValue !== null && bloodPressureValue !== undefined &&
+      typeof bloodPressureValue === 'number' && bloodPressureValue <= 0) {
+    throw new Error('La presión arterial debe ser un valor válido.');
   }
-  
-  if (missingFields.length > 0) {
-    throw new Error(`Debe completar todos los signos vitales. Faltantes: ${missingFields.join(', ')}`);
+
+  if (data.height_cm != null && data.height_cm <= 0) {
+    throw new Error('La talla debe ser un valor positivo.');
   }
-  
+  if (data.weight_kg != null && data.weight_kg <= 0) {
+    throw new Error('El peso debe ser un valor positivo.');
+  }
+
   // Validar que el IMC calculado esté en rango válido (10-60, según check en BD)
   if (data.height_cm && data.weight_kg && data.height_cm > 0 && data.weight_kg > 0) {
     const calculatedBMI = calculateBMI(data.height_cm, data.weight_kg);

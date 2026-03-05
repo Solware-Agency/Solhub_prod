@@ -668,7 +668,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo)
+  // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo).
+  // Campos recordados: antecedentes, lugar/contacto de emergencia, alergias y observaciones.
   useEffect(() => {
     if (!existingTriage && latestTriageByPatient) {
       const prev = latestTriageByPatient;
@@ -1058,49 +1059,40 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     return { isValid: true, errorMessage: '' };
   };
 
-  // Función para validar que todos los signos vitales obligatorios estén completos
+  // Función para validar que todos los signos vitales obligatorios estén completos.
+  // Para médicos los signos vitales son opcionales; para enfermería siguen siendo obligatorios.
   const validateRequiredVitalSigns = (): { isValid: boolean; errorMessage: string } => {
+    if (isMedico) {
+      return { isValid: true, errorMessage: '' };
+    }
+
     const missingFields: string[] = [];
-    
-    // Helper para verificar si un campo tiene valor válido
     const hasValue = (value: string | undefined | null): boolean => {
       return value !== null && value !== undefined && value.trim().length > 0;
     };
-    
-    // Verificar cada signo vital obligatorio
-    // FC (Frecuencia Cardíaca) - No es obligatorio
-    // FR (Frecuencia Respiratoria) - No es obligatorio
-    // Temperatura - No es obligatorio
-    // Glicemia - No es obligatorio
 
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('SpO₂ (Saturación de Oxígeno)');
     }
-
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('P.A. (Presión Arterial)');
     }
-    
     if (!hasValue(formData.peso)) {
       missingFields.push('Peso');
     }
-    
     if (!hasValue(formData.talla)) {
       missingFields.push('Talla');
     }
-    
-    // Si faltan campos, retornar mensaje específico
+
     if (missingFields.length > 0) {
-      const fieldsText = missingFields.length === 1 
+      const fieldsText = missingFields.length === 1
         ? missingFields[0]
         : missingFields.slice(0, -1).join(', ') + ' y ' + missingFields[missingFields.length - 1];
-        
       return {
         isValid: false,
-        errorMessage: `Es obligatorio completar todos los campos requeridos. Falta(n): ${fieldsText}.`
+        errorMessage: `Es obligatorio completar todos los campos requeridos. Falta(n): ${fieldsText}.`,
       };
     }
-    
     return { isValid: true, errorMessage: '' };
   };
 
@@ -1138,7 +1130,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return { isValid: true, errorMessage: '' };
     }
 
-    // Si es médico, necesita signos vitales Y datos clínicos
+    // Si es médico: solo se exige al menos un dato clínico; los signos vitales son opcionales
     if (isMedico) {
       const hasClinicalData =
         hasValue(formData.motivoConsulta) ||
@@ -1149,29 +1141,15 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasValue(formData.examenFisico) ||
         hasValue(formData.tabaco) ||
         hasValue(formData.cafe) ||
-        hasValue(formData.alcohol);
-
-      if (!hasVitalSigns && !hasClinicalData) {
-        return {
-          isValid: false,
-          errorMessage:
-            'Debe ingresar los signos vitales completos y al menos un dato clínico para registrar en el sistema.',
-        };
-      }
-
-      if (!hasVitalSigns) {
-        return {
-          isValid: false,
-          errorMessage:
-            'Debe ingresar los signos vitales completos para registrar en el sistema.',
-        };
-      }
+        hasValue(formData.alcohol) ||
+        hasValue(formData.alergias) ||
+        hasValue(formData.observaciones);
 
       if (!hasClinicalData) {
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un dato clínico (motivo de consulta, antecedentes, examen físico, etc.) para poder guardar.',
+            'Debe ingresar al menos un dato clínico (motivo de consulta, antecedentes, alergias, examen físico, etc.) para poder guardar.',
         };
       }
 
@@ -1744,7 +1722,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       Observaciones o comentarios adicionales
                     </label>
                     <Textarea
-                      placeholder='Observaciones o comentarios adicionales (opcional)'
+                      placeholder='Observaciones adicionales'
                       value={formData.observaciones}
                       onChange={(e) =>
                         handleInputChange('observaciones', e.target.value)
@@ -1875,7 +1853,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       Alergias
                     </label>
                     <Textarea
-                      placeholder='Alergias conocidas (opcional)'
+                      placeholder='Ej: Ninguna, penicilina, etc.'
                       value={formData.alergias}
                       onChange={(e) =>
                         handleInputChange('alergias', e.target.value)

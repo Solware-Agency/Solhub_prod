@@ -1296,7 +1296,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </FeatureGuard>
 
-          {/* Centro de Ayuda - Modal disponible para todos los roles con la feature habilitada */}
+          {/* Centro de Ayuda (Solwy) - feature hasChatbot en dashboard */}
           <FeatureGuard feature='hasChatbot'>
             <button
               type='button'
@@ -1309,7 +1309,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }
               }}
               title={!showFullContent ? 'Ayuda' : undefined}
-              className='flex items-center gap-2 cursor-pointer hover:text-primary py-2 px-1 rounded-md transition-none w-full text-left bg-transparent border-0'
+              className='flex items-center gap-2 cursor-pointer w-full py-2 px-1 rounded-md transition-none text-left bg-transparent border-0 hover:text-labPrimary'
             >
               <MessageCircleQuestion className='stroke-2 size-5 shrink-0' />
               <p

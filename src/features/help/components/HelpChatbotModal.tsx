@@ -196,16 +196,16 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
 
                     {/* Option Buttons */}
                     {message.options && message.options.length > 0 && (
-                      <div className="flex flex-col gap-2 mt-3 min-w-0">
+                      <div className="flex flex-col gap-2.5 mt-3 min-w-0">
                         {message.options.map((option, idx) => (
                           <Button
                             key={idx}
                             onClick={() => handleOptionButtonClick(option)}
-                            className="w-full justify-start text-left whitespace-normal break-words hyphens-auto py-2.5 bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
+                            className="w-full justify-start text-left whitespace-normal break-words hyphens-auto min-h-[3.25rem] py-3 px-4 leading-relaxed text-[0.9375rem] bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
                             variant="outline"
                             size="sm"
                           >
-                            <span className="text-left break-words">{option}</span>
+                            <span className="text-left break-words leading-relaxed">{option}</span>
                           </Button>
                         ))}
                       </div>

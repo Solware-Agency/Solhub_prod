@@ -137,15 +137,17 @@ const Layout: React.FC = () => {
 					</div>
 				</div>
 			</main>
-			<FeatureGuard feature='hasChatAI'>
-				<ChatButton />
+		<FeatureGuard feature='hasChatAI'>
+			<ChatButton />
 			</FeatureGuard>
 
-			{/* Modal de Ayuda (Centro de Ayuda) - renderizado en Layout para que siempre abra */}
-			<HelpChatbotModal
-				isOpen={isHelpModalOpen}
-				onClose={() => setIsHelpModalOpen(false)}
-			/>
+			{/* Modal de Ayuda / Solwy (chatbot) - feature hasChatbot en dashboard */}
+			<FeatureGuard feature='hasChatbot'>
+				<HelpChatbotModal
+					isOpen={isHelpModalOpen}
+					onClose={() => setIsHelpModalOpen(false)}
+				/>
+			</FeatureGuard>
 		</div>
 	)
 }

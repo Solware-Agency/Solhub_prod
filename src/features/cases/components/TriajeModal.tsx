@@ -148,16 +148,28 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     retry: 1,
   });
 
-  // Triaje "hecho" = existe, no es borrador y tiene campos obligatorios (cualquier rol puede verlo)
+  // Triaje "hecho" = existe, no es borrador y tiene signos vitales completos O al menos un dato clínico (p. ej. médico sin signos vitales)
+  const hasVitalSigns =
+    !!(
+      existingTriage?.oxygen_saturation != null &&
+      existingTriage?.blood_pressure &&
+      existingTriage?.height_cm &&
+      existingTriage?.weight_kg
+    );
+  const hasClinicalData =
+    !!(
+      existingTriage?.reason ||
+      existingTriage?.personal_background ||
+      existingTriage?.family_history ||
+      (existingTriage as { alergias?: string | null })?.alergias ||
+      (existingTriage as { observaciones?: string | null })?.observaciones ||
+      existingTriage?.examen_fisico ||
+      existingTriage?.diagnostico
+    );
   const isTriajeHecho =
     !!existingTriage &&
     !existingTriage.is_draft &&
-    !!(
-      existingTriage.oxygen_saturation &&
-      existingTriage.blood_pressure &&
-      existingTriage.height_cm &&
-      existingTriage.weight_kg
-    );
+    (hasVitalSigns || hasClinicalData);
 
   // Reset forceEditMode when modal closes (para que al reabrir muestre vista, no edición)
   React.useEffect(() => {
