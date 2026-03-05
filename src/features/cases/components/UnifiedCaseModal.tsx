@@ -921,6 +921,38 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					}
 				}
 
+				// Si cambió total_amount o exchange_rate, recalcular remaining y payment_status
+				// para que el estado de pago quede consistente (ej. si antes no había total y ahora sí)
+				if (financialChanges.total_amount !== undefined || financialChanges.exchange_rate !== undefined) {
+					const totalForCalc =
+						(financialChanges.total_amount ?? editedCase.total_amount ?? currentCase.total_amount) || 0
+					const rateForCalc =
+						(financialChanges.exchange_rate ?? editedCase.exchange_rate ?? currentCase.exchange_rate) ??
+						undefined
+					const paymentMethodsForRecalc: PaymentMethod[] = []
+					for (let i = 1; i <= 4; i++) {
+						const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
+						const amount = currentCase[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number
+						const reference = currentCase[`payment_reference_${i}` as keyof MedicalCaseWithPatient] as string
+						if (method && amount) {
+							paymentMethodsForRecalc.push({
+								method,
+								amount,
+								reference: reference || '',
+							})
+						}
+					}
+					if (paymentMethodsForRecalc.length > 0 && totalForCalc) {
+						const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
+							paymentMethodsForRecalc,
+							totalForCalc,
+							rateForCalc,
+						)
+						financialChanges.remaining = Math.max(0, missingAmount ?? 0)
+						financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
+					}
+				}
+
 				// Actualizar métodos de pago si hay cambios
 				const currentPaymentMethods: PaymentMethod[] = []
 				for (let i = 1; i <= 4; i++) {
