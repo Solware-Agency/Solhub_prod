@@ -483,15 +483,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </div>
-              <div className='py-1'>
-                <NavItem
-                  to='/aseguradoras/documentos'
-                  icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
-                  label='Documentos'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
           {isOwner && !isInntegras && (

@@ -1,6 +1,34 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
 
+const MAX_DOCUMENTOS_POLIZA = 3
+
+export interface DocumentoPoliza {
+	url: string
+	name: string
+}
+
+function normalizeDocumentosPoliza(row: Record<string, unknown>): DocumentoPoliza[] {
+	const raw = row.documentos_poliza
+	if (Array.isArray(raw) && raw.length > 0) {
+		const out: DocumentoPoliza[] = []
+		for (const item of raw.slice(0, MAX_DOCUMENTOS_POLIZA)) {
+			if (item && typeof item === 'object' && typeof (item as any).url === 'string') {
+				out.push({
+					url: (item as any).url,
+					name: typeof (item as any).name === 'string' ? (item as any).name : 'Documento',
+				})
+			}
+		}
+		return out
+	}
+	const pdfUrl = row.pdf_url
+	if (typeof pdfUrl === 'string' && pdfUrl.trim()) {
+		return [{ url: pdfUrl.trim(), name: 'Documento póliza' }]
+	}
+	return []
+}
+
 const getDateOnly = (value?: string | null) => (value ? new Date(`${value}T00:00:00`) : null)
 
 const isPastDue = (value?: string | null, today = new Date()) => {
@@ -54,6 +82,7 @@ export interface Poliza {
 	fecha_pago_ultimo: string | null
 	fecha_pago_ultimo_backup: string | null
 	pdf_url: string | null
+	documentos_poliza: DocumentoPoliza[]
 	notas: string | null
 	activo: boolean
 	created_at: string | null
@@ -85,6 +114,7 @@ export interface PolizaInsert {
 	dias_frecuencia_post?: number | null
 	dias_recordatorio?: number | null
 	pdf_url?: string | null
+	documentos_poliza?: DocumentoPoliza[]
 	notas?: string | null
 }
 
@@ -141,14 +171,10 @@ export const getPolizas = async (
 		}
 	}
 
-	const normalized = (data || []).map((row) =>
-		overdueIds.includes(row.id)
-			? {
-					...row,
-					estatus_pago: 'En mora',
-				}
-			: row,
-	)
+	const normalized = (data || []).map((row) => {
+		const base = overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row
+		return { ...base, documentos_poliza: normalizeDocumentosPoliza(base as Record<string, unknown>) }
+	})
 
 	return {
 		data: normalized as Poliza[],
@@ -185,10 +211,10 @@ export const getPolizasByAseguradoId = async (aseguradoId: string): Promise<Poli
 			.eq('laboratory_id', laboratoryId)
 	}
 
-	const normalized = (data || []).map((row) =>
-		overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row,
-	)
-
+	const normalized = (data || []).map((row) => {
+		const base = overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row
+		return { ...base, documentos_poliza: normalizeDocumentosPoliza(base as Record<string, unknown>) }
+	})
 	return normalized as Poliza[]
 }
 
@@ -218,10 +244,10 @@ export const getPolizasByAseguradoraId = async (aseguradoraId: string): Promise<
 			.eq('laboratory_id', laboratoryId)
 	}
 
-	const normalized = (data || []).map((row) =>
-		overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row,
-	)
-
+	const normalized = (data || []).map((row) => {
+		const base = overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' } : row
+		return { ...base, documentos_poliza: normalizeDocumentosPoliza(base as Record<string, unknown>) }
+	})
 	return normalized as Poliza[]
 }
 
@@ -264,7 +290,10 @@ export const getPolizasByEstado = async (estado: PolizaEstadoFilter): Promise<Po
 			.in('id', overdueIds)
 			.eq('laboratory_id', laboratoryId)
 	}
-	return list.map((row) => (overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' as const } : row))
+	return list.map((row) => {
+		const base = overdueIds.includes(row.id) ? { ...row, estatus_pago: 'En mora' as const } : row
+		return { ...base, documentos_poliza: normalizeDocumentosPoliza(base as Record<string, unknown>) }
+	})
 }
 
 export const getPolizaById = async (id: string): Promise<Poliza | null> => {
@@ -296,7 +325,7 @@ export const getPolizaById = async (id: string): Promise<Poliza | null> => {
 		}
 	}
 
-	return poliza
+	return { ...poliza, documentos_poliza: normalizeDocumentosPoliza(poliza as Record<string, unknown>) } as Poliza
 }
 
 export const createPoliza = async (payload: PolizaInsert): Promise<Poliza> => {
@@ -316,7 +345,7 @@ export const createPoliza = async (payload: PolizaInsert): Promise<Poliza> => {
 		.single()
 
 	if (error) throw error
-	return data as Poliza
+	return { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
 }
 
 export const updatePoliza = async (id: string, payload: PolizaUpdate): Promise<Poliza> => {
@@ -330,7 +359,7 @@ export const updatePoliza = async (id: string, payload: PolizaUpdate): Promise<P
 		.single()
 
 	if (error) throw error
-	return data as Poliza
+	return { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
 }
 
 /** Soft delete: marca póliza como inactiva; deja de mostrarse en listados pero se conserva en BD */

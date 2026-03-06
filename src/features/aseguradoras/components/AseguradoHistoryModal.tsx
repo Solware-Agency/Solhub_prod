@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, User, FileText, MapPin, Phone, Edit, Send, Trash2 } from 'lucide-react'
+import { X, User, FileText, Edit, Send, Trash2, Paperclip, ExternalLink } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { deactivateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
@@ -235,47 +235,67 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 									</button>
 								</div>
 
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-									<InfoSection title="Información del asegurado" icon={User}>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<InfoSection title="Datos del asegurado" icon={User}>
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Nombre</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.full_name}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Documento</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.document_id}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.phone || 'Sin teléfono'}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.email || 'Sin email'}</p>
+										</div>
+										{asegurado.fecha_nacimiento && (
 											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Nombre</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.full_name}</p>
+												<p className="text-xs text-gray-500 dark:text-gray-400">Fecha de nacimiento</p>
+												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.fecha_nacimiento}</p>
+											</div>
+										)}
+										<div className="space-y-4">
+											<div>
+												<p className="text-xs text-gray-500 dark:text-gray-400">Dirección</p>
+												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.address || 'Sin dirección'}</p>
 											</div>
 											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Documento</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.document_id}</p>
+												<p className="text-xs text-gray-500 dark:text-gray-400">Notas internas</p>
+												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.notes || 'Sin notas'}</p>
 											</div>
 										</div>
-									</InfoSection>
-
-									<InfoSection title="Contacto" icon={Phone}>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.phone || 'Sin teléfono'}</p>
-											</div>
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.email || 'Sin email'}</p>
-											</div>
-											{asegurado.fecha_nacimiento && (
-												<div>
-													<p className="text-xs text-gray-500 dark:text-gray-400">Fecha de nacimiento</p>
-													<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.fecha_nacimiento}</p>
-												</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+												<Paperclip className="w-3.5 h-3.5" />
+												Documentos adjuntos
+											</p>
+											{asegurado.attachments?.length > 0 ? (
+												<ul className="space-y-2">
+													{asegurado.attachments.slice(0, 3).map((att, i) => (
+														<li key={i}>
+															<a
+																href={att.url}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+															>
+																<ExternalLink className="w-4 h-4 shrink-0" />
+																<span className="truncate">{att.name || `Documento ${i + 1}`}</span>
+															</a>
+														</li>
+													))}
+												</ul>
+											) : (
+												<p className="text-sm text-gray-500 dark:text-gray-400">No hay documentos adjuntos. Puedes agregarlos al editar el asegurado.</p>
 											)}
 										</div>
-									</InfoSection>
-
-									<InfoSection title="Dirección" icon={MapPin}>
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.address || 'Sin dirección'}</p>
-									</InfoSection>
-
-									<InfoSection title="Notas internas" icon={FileText}>
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{asegurado.notes || 'Sin notas'}</p>
-									</InfoSection>
-								</div>
+									</div>
+								</InfoSection>
 							</div>
 
 							{/* Pólizas - below */}

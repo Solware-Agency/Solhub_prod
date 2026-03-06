@@ -14,8 +14,9 @@ import {
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
 import { DollarSign, Download, Search, ChevronLeft, ChevronRight, Bell, FileText, CalendarDays, Upload, X } from 'lucide-react'
-import { getPolizas, updatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
+import { getPolizas, getPolizaById, updatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
 import { createPagoPoliza, getPagosPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
+import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
 import { uploadReciboPago, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 
@@ -52,6 +53,8 @@ const PagosPage = () => {
 	const [itemsPerPage, setItemsPerPage] = useState(4)
 	const [openModal, setOpenModal] = useState(false)
 	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
+	const [polizaPanelOpen, setPolizaPanelOpen] = useState(false)
+	const [selectedPolizaForPanel, setSelectedPolizaForPanel] = useState<Poliza | null>(null)
 	const [form, setForm] = useState({
 		fecha_pago: '',
 		monto: '',
@@ -358,7 +361,20 @@ const PagosPage = () => {
 								{registerPageData.map((poliza) => (
 								<div
 									key={poliza.id}
-									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 flex flex-col gap-2"
+									role="button"
+									tabIndex={0}
+									onClick={() => {
+										setSelectedPolizaForPanel(poliza)
+										setPolizaPanelOpen(true)
+									}}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault()
+											setSelectedPolizaForPanel(poliza)
+											setPolizaPanelOpen(true)
+										}
+									}}
+									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 flex flex-col gap-2 cursor-pointer"
 								>
 									<div className="flex flex-wrap gap-1.5 mb-1.5">
 										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">
@@ -378,7 +394,14 @@ const PagosPage = () => {
 										<p className="text-xs text-gray-500 dark:text-gray-400">Asegurado</p>
 										<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{poliza.asegurado?.full_name || 'Asegurado'}</p>
 									</div>
-									<Button size="sm" onClick={() => openPagoModal(poliza)} className="mt-auto">
+									<Button
+										size="sm"
+										onClick={(e) => {
+											e.stopPropagation()
+											openPagoModal(poliza)
+										}}
+										className="mt-auto"
+									>
 										<DollarSign className="w-4 h-4 mr-2" />
 										Marcar como pagado
 									</Button>
@@ -449,7 +472,43 @@ const PagosPage = () => {
 								{pageData.map((pago) => (
 								<div
 									key={pago.id}
-									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200"
+									role="button"
+									tabIndex={0}
+									onClick={async () => {
+										const found = polizas.find((p) => p.id === pago.poliza_id)
+										if (found) {
+											setSelectedPolizaForPanel(found)
+											setPolizaPanelOpen(true)
+											return
+										}
+										const pol = await getPolizaById(pago.poliza_id)
+										if (pol) {
+											setSelectedPolizaForPanel(pol)
+											setPolizaPanelOpen(true)
+										} else {
+											toast({ title: 'No se encontró la póliza', variant: 'destructive' })
+										}
+									}}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault()
+											const found = polizas.find((p) => p.id === pago.poliza_id)
+											if (found) {
+												setSelectedPolizaForPanel(found)
+												setPolizaPanelOpen(true)
+											} else {
+												getPolizaById(pago.poliza_id).then((pol) => {
+													if (pol) {
+														setSelectedPolizaForPanel(pol)
+														setPolizaPanelOpen(true)
+													} else {
+														toast({ title: 'No se encontró la póliza', variant: 'destructive' })
+													}
+												})
+											}
+										}
+									}}
+									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
 								>
 									<div className="flex flex-wrap gap-1.5 mb-1.5">
 										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
@@ -743,6 +802,15 @@ const PagosPage = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			<PolizaDetailPanel
+				poliza={selectedPolizaForPanel}
+				isOpen={polizaPanelOpen}
+				onClose={() => {
+					setPolizaPanelOpen(false)
+					setSelectedPolizaForPanel(null)
+				}}
+			/>
 		</div>
 	)
 }

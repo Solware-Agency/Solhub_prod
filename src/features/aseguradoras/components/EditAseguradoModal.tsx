@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeftFromLine, Save, User, Phone, MapPin, FileText, CalendarIcon } from 'lucide-react'
+import { ArrowLeftFromLine, Save, User, CalendarIcon, Paperclip, Plus, X, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
@@ -10,8 +10,13 @@ import { Calendar } from '@shared/components/ui/calendar'
 import { useToast } from '@shared/hooks/use-toast'
 import { format } from 'date-fns'
 import { cn } from '@shared/lib/cn'
-import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import type { Asegurado, AseguradoAttachment } from '@services/supabase/aseguradoras/asegurados-service'
 import { updateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import {
+	uploadAseguradoAttachment,
+	validateReciboFile,
+	MAX_ASEGURADO_ATTACHMENTS,
+} from '@services/supabase/storage/pagos-poliza-recibos-service'
 
 interface EditAseguradoModalProps {
 	isOpen: boolean
@@ -70,6 +75,9 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 		notes: '',
 		tipo_asegurado: 'Persona natural' as 'Persona natural' | 'Persona jurídica',
 	})
+	const [existingAttachments, setExistingAttachments] = useState<AseguradoAttachment[]>([])
+	const [removedAttachmentIndices, setRemovedAttachmentIndices] = useState<Set<number>>(new Set())
+	const [newAttachmentFiles, setNewAttachmentFiles] = useState<File[]>([])
 
 	useEffect(() => {
 		if (asegurado) {
@@ -85,8 +93,36 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 				notes: asegurado.notes ?? '',
 				tipo_asegurado: asegurado.tipo_asegurado,
 			})
+			setExistingAttachments(asegurado.attachments ?? [])
+			setRemovedAttachmentIndices(new Set())
+			setNewAttachmentFiles([])
 		}
 	}, [asegurado, isOpen])
+
+	const keptExistingCount = existingAttachments.length - removedAttachmentIndices.size
+	const totalAttachmentsCount = keptExistingCount + newAttachmentFiles.length
+	const canAddMore = totalAttachmentsCount < MAX_ASEGURADO_ATTACHMENTS
+
+	const handleNewAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? [])
+		const valid: File[] = []
+		for (const file of files) {
+			if (totalAttachmentsCount + valid.length >= MAX_ASEGURADO_ATTACHMENTS) break
+			const v = validateReciboFile(file)
+			if (v.valid) valid.push(file)
+			else toast({ title: v.error, variant: 'destructive' })
+		}
+		setNewAttachmentFiles((prev) => [...prev, ...valid].slice(0, MAX_ASEGURADO_ATTACHMENTS - keptExistingCount))
+		e.target.value = ''
+	}
+
+	const removeExistingAttachment = (index: number) => {
+		setRemovedAttachmentIndices((prev) => new Set([...prev, index]))
+	}
+
+	const removeNewAttachment = (index: number) => {
+		setNewAttachmentFiles((prev) => prev.filter((_, i) => i !== index))
+	}
 
 	const isValidEmailChar = (char: string) => /[a-zA-Z0-9@._+-]/.test(char)
 	const isValidEmail = (value: string): boolean => {
@@ -115,6 +151,17 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 		setIsLoading(true)
 		try {
 			const document_id = buildDocumentId(form.document_tipo, form.document_numero)
+			const keptExisting = existingAttachments.filter((_, i) => !removedAttachmentIndices.has(i))
+			const attachments: AseguradoAttachment[] = [...keptExisting]
+			for (const file of newAttachmentFiles) {
+				const { data, error } = await uploadAseguradoAttachment(file, asegurado.id)
+				if (error) {
+					toast({ title: `Error al subir ${file.name}`, description: error.message, variant: 'destructive' })
+				} else if (data) {
+					attachments.push({ url: data.url, name: data.name })
+				}
+			}
+			const finalAttachments = attachments.slice(0, MAX_ASEGURADO_ATTACHMENTS)
 			const updated = await updateAsegurado(asegurado.id, {
 				full_name: form.full_name,
 				document_id,
@@ -124,6 +171,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 				address: form.address || null,
 				notes: form.notes || null,
 				tipo_asegurado: form.tipo_asegurado,
+				attachments: finalAttachments,
 			})
 			toast({ title: 'Asegurado actualizado' })
 			onSave?.(updated)
@@ -183,8 +231,8 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 							</div>
 
 							<form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
-								<div className="flex-1 overflow-y-auto p-4 space-y-4">
-									<CardSection title="Información del asegurado" icon={User}>
+								<div className="flex-1 overflow-y-auto p-4">
+									<CardSection title="Datos del asegurado" icon={User}>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 											<div className="space-y-2">
 												<Label>Tipo de persona</Label>
@@ -214,7 +262,7 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 													required
 												/>
 											</div>
-											<div className="space-y-2 sm:col-span-2">
+											<div className="space-y-2">
 												<Label>Documento</Label>
 												<div className="flex gap-2">
 													<Select
@@ -243,22 +291,6 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 													/>
 												</div>
 											</div>
-										</div>
-									</CardSection>
-
-									<CardSection title="Contacto" icon={Phone}>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label>Teléfono</Label>
-												<Input
-													value={form.phone}
-													onChange={(e) => {
-														const onlyNumbers = e.target.value.replace(/\D/g, '')
-														setForm((prev) => ({ ...prev, phone: onlyNumbers }))
-													}}
-													inputMode="numeric"
-												/>
-											</div>
 											<div className="space-y-2">
 												<Label>Email</Label>
 												<Input
@@ -268,6 +300,17 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 														const filtered = [...e.target.value].filter((c) => isValidEmailChar(c)).join('')
 														setForm((prev) => ({ ...prev, email: filtered || null }))
 													}}
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label>Teléfono</Label>
+												<Input
+													value={form.phone}
+													onChange={(e) => {
+														const onlyNumbers = e.target.value.replace(/\D/g, '')
+														setForm((prev) => ({ ...prev, phone: onlyNumbers }))
+													}}
+													inputMode="numeric"
 												/>
 											</div>
 											<div className="space-y-2">
@@ -300,26 +343,85 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 													</PopoverContent>
 												</Popover>
 											</div>
-										</div>
-									</CardSection>
-
-									<CardSection title="Dirección" icon={MapPin}>
-										<div className="space-y-2">
-											<Label>Dirección</Label>
-											<Input
-												value={form.address ?? ''}
-												onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value || null }))}
-											/>
-										</div>
-									</CardSection>
-
-									<CardSection title="Notas internas" icon={FileText}>
-										<div className="space-y-2">
-											<Label>Notas</Label>
-											<Input
-												value={form.notes ?? ''}
-												onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value || null }))}
-											/>
+											<div className="space-y-4">
+												<div className="space-y-2">
+													<Label>Dirección</Label>
+													<Input
+														value={form.address ?? ''}
+														onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value || null }))}
+													/>
+												</div>
+												<div className="space-y-2">
+													<Label>Notas internas</Label>
+													<Input
+														value={form.notes ?? ''}
+														onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value || null }))}
+													/>
+												</div>
+											</div>
+											<div>
+												<Label className="flex items-center gap-1.5 mb-2">
+													<Paperclip className="w-4 h-4" />
+													Documentos adjuntos (máx. {MAX_ASEGURADO_ATTACHMENTS})
+												</Label>
+												<p className="text-xs text-muted-foreground mb-2">PDF, JPG o PNG. Máximo 10 MB por archivo.</p>
+												{existingAttachments.some((_, i) => !removedAttachmentIndices.has(i)) && (
+													<ul className="space-y-1.5 mb-2">
+														{existingAttachments.map((att, i) =>
+															removedAttachmentIndices.has(i) ? null : (
+																<li key={i} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded bg-muted/50">
+																	<a
+																		href={att.url}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="inline-flex items-center gap-2 truncate text-blue-600 dark:text-blue-400 hover:underline"
+																	>
+																		<ExternalLink className="w-4 h-4 shrink-0" />
+																		<span className="truncate">{att.name || `Documento ${i + 1}`}</span>
+																	</a>
+																	<button
+																		type="button"
+																		onClick={() => removeExistingAttachment(i)}
+																		className="p-1 rounded hover:bg-destructive/20 text-destructive shrink-0"
+																		aria-label="Quitar adjunto"
+																	>
+																		<X className="w-4 h-4" />
+																	</button>
+																</li>
+															),
+														)}
+													</ul>
+												)}
+												{canAddMore && (
+													<label className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/50 cursor-pointer text-sm">
+														<Plus className="w-4 h-4" />
+														Agregar archivo
+														<input
+															type="file"
+															accept=".pdf,image/jpeg,image/jpg,image/png"
+															className="sr-only"
+															onChange={handleNewAttachmentChange}
+														/>
+													</label>
+												)}
+												{newAttachmentFiles.length > 0 && (
+													<ul className="space-y-1.5 mt-2">
+														{newAttachmentFiles.map((file, i) => (
+															<li key={`new-${i}`} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded bg-muted/50">
+																<span className="truncate">{file.name}</span>
+																<button
+																	type="button"
+																	onClick={() => removeNewAttachment(i)}
+																	className="p-1 rounded hover:bg-destructive/20 text-destructive shrink-0"
+																	aria-label="Quitar archivo"
+																>
+																	<X className="w-4 h-4" />
+																</button>
+															</li>
+														))}
+													</ul>
+												)}
+											</div>
 										</div>
 									</CardSection>
 								</div>

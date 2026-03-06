@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { Calendar } from '@shared/components/ui/calendar'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Paperclip, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@shared/lib/cn'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -23,8 +23,14 @@ import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
 	createAsegurado,
 	getAsegurados,
+	updateAsegurado,
 	type Asegurado,
 } from '@services/supabase/aseguradoras/asegurados-service'
+import {
+	uploadAseguradoAttachment,
+	validateReciboFile,
+	MAX_ASEGURADO_ATTACHMENTS,
+} from '@services/supabase/storage/pagos-poliza-recibos-service'
 import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 
 const AseguradosPage = () => {
@@ -47,6 +53,7 @@ const AseguradosPage = () => {
 		notes: '',
 		tipo_asegurado: 'Persona natural' as 'Persona natural' | 'Persona jurídica',
 	})
+	const [attachmentFiles, setAttachmentFiles] = useState<File[]>([])
 	const [saving, setSaving] = useState(false)
 
 	const { data, isLoading, error } = useQuery({
@@ -87,6 +94,7 @@ const AseguradosPage = () => {
 			notes: '',
 			tipo_asegurado: 'Persona natural',
 		})
+		setAttachmentFiles([])
 	}
 
 	const openNewModal = () => {
@@ -135,6 +143,26 @@ const AseguradosPage = () => {
 		return err
 	}
 
+	const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? [])
+		const valid: File[] = []
+		for (const file of files) {
+			if (valid.length >= MAX_ASEGURADO_ATTACHMENTS) break
+			const v = validateReciboFile(file)
+			if (v.valid) valid.push(file)
+			else toast({ title: v.error, variant: 'destructive' })
+		}
+		setAttachmentFiles((prev) => {
+			const next = [...prev, ...valid].slice(0, MAX_ASEGURADO_ATTACHMENTS)
+			return next
+		})
+		e.target.value = ''
+	}
+
+	const removeAttachment = (index: number) => {
+		setAttachmentFiles((prev) => prev.filter((_, i) => i !== index))
+	}
+
 	const handleSave = async () => {
 		const errors = getValidationErrors()
 		if (errors.length > 0) {
@@ -145,9 +173,16 @@ const AseguradosPage = () => {
 			})
 			return
 		}
+		if (attachmentFiles.length > MAX_ASEGURADO_ATTACHMENTS) {
+			toast({
+				title: `Máximo ${MAX_ASEGURADO_ATTACHMENTS} archivos`,
+				variant: 'destructive',
+			})
+			return
+		}
 		setSaving(true)
 		try {
-			await createAsegurado({
+			const newAsegurado = await createAsegurado({
 				full_name: form.full_name,
 				document_id: buildDocumentId(),
 				phone: form.phone,
@@ -157,6 +192,18 @@ const AseguradosPage = () => {
 				notes: form.notes,
 				tipo_asegurado: form.tipo_asegurado,
 			})
+			const attachments: { url: string; name: string }[] = []
+			for (const file of attachmentFiles.slice(0, MAX_ASEGURADO_ATTACHMENTS)) {
+				const { data, error } = await uploadAseguradoAttachment(file, newAsegurado.id)
+				if (error) {
+					toast({ title: `Error al subir ${file.name}`, description: error.message, variant: 'destructive' })
+				} else if (data) {
+					attachments.push({ url: data.url, name: data.name })
+				}
+			}
+			if (attachments.length > 0) {
+				await updateAsegurado(newAsegurado.id, { attachments })
+			}
 			toast({ title: 'Asegurado creado' })
 			queryClient.invalidateQueries({ queryKey: ['asegurados'] })
 			setOpenModal(false)
@@ -400,6 +447,43 @@ const AseguradosPage = () => {
 								value={form.notes}
 								onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
 							/>
+						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label className="flex items-center gap-2">
+								<Paperclip className="w-4 h-4" />
+								Documentos adjuntos (máx. {MAX_ASEGURADO_ATTACHMENTS})
+							</Label>
+							<p className="text-xs text-muted-foreground">PDF, JPG o PNG. Máximo 10 MB por archivo.</p>
+							{attachmentFiles.length < MAX_ASEGURADO_ATTACHMENTS && (
+								<label className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/50 cursor-pointer text-sm">
+									<Plus className="w-4 h-4" />
+									Seleccionar archivos
+									<input
+										type="file"
+										accept=".pdf,image/jpeg,image/jpg,image/png"
+										multiple
+										className="sr-only"
+										onChange={handleAttachmentChange}
+									/>
+								</label>
+							)}
+							{attachmentFiles.length > 0 && (
+								<ul className="space-y-1.5 mt-2">
+									{attachmentFiles.map((file, i) => (
+										<li key={i} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded bg-muted/50">
+											<span className="truncate">{file.name}</span>
+											<button
+												type="button"
+												onClick={() => removeAttachment(i)}
+												className="p-1 rounded hover:bg-destructive/20 text-destructive shrink-0"
+												aria-label="Quitar archivo"
+											>
+												<X className="w-4 h-4" />
+											</button>
+										</li>
+									))}
+								</ul>
+							)}
 						</div>
 					</div>
 					<DialogFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">

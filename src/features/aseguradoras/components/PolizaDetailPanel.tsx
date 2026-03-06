@@ -1,10 +1,11 @@
 import React, { useCallback, useState } from 'react'
 import { format } from 'date-fns'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { SideDetailPanel } from './SideDetailPanel'
 import { deactivatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
+import { getPagosByPoliza, type PagoPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
 import { useToast } from '@shared/hooks/use-toast'
-import { CalendarDays, Edit, FileText, ShieldCheck, Trash2, User } from 'lucide-react'
+import { CalendarDays, Edit, FileText, ShieldCheck, Trash2, User, Paperclip, ExternalLink, DollarSign } from 'lucide-react'
 
 interface PolizaDetailPanelProps {
 	poliza: Poliza | null
@@ -28,6 +29,13 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
 	const [isDeleting, setIsDeleting] = useState(false)
+
+	const { data: pagos = [], isLoading: loadingPagos } = useQuery({
+		queryKey: ['pagos-by-poliza', poliza?.id],
+		queryFn: () => (poliza?.id ? getPagosByPoliza(poliza.id) : []),
+		enabled: isOpen && !!poliza?.id,
+		staleTime: 1000 * 60 * 2,
+	})
 
 	const handleEliminarPoliza = useCallback(async () => {
 		if (!poliza?.id) return
@@ -197,13 +205,66 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 					</div>
 				</InfoSection>
 
-				<InfoSection title="Documento póliza" icon={FileText}>
-					{poliza.pdf_url ? (
-						<a className="text-sm text-primary underline" href={poliza.pdf_url} target="_blank" rel="noreferrer">
-							Ver PDF
-						</a>
+				<InfoSection title="Documentos de póliza" icon={Paperclip}>
+					{poliza.documentos_poliza?.length > 0 ? (
+						<ul className="space-y-2">
+							{poliza.documentos_poliza.slice(0, 3).map((doc, i) => (
+								<li key={i}>
+									<a
+										href={doc.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+									>
+										<ExternalLink className="w-4 h-4 shrink-0" />
+										<span className="truncate">{doc.name || `Documento ${i + 1}`}</span>
+									</a>
+								</li>
+							))}
+						</ul>
 					) : (
-						<p className="text-sm font-medium">Sin documento</p>
+						<p className="text-sm text-muted-foreground">No hay documentos adjuntos.</p>
+					)}
+				</InfoSection>
+
+				<InfoSection title="Pagos registrados" icon={DollarSign}>
+					{loadingPagos && <p className="text-sm text-muted-foreground">Cargando pagos...</p>}
+					{!loadingPagos && pagos.length === 0 && (
+						<p className="text-sm text-muted-foreground">No hay pagos registrados para esta póliza.</p>
+					)}
+					{!loadingPagos && pagos.length > 0 && (
+						<ul className="space-y-3">
+							{(pagos as PagoPoliza[]).map((pago) => (
+								<li
+									key={pago.id}
+									className="flex flex-wrap items-center justify-between gap-2 py-2 px-3 rounded-lg bg-muted/40 border border-border/50"
+								>
+									<div className="min-w-0 flex-1">
+										<p className="text-sm font-medium text-foreground">
+											{formatDate(pago.fecha_pago)} · {typeof pago.monto === 'number' ? pago.monto.toLocaleString('es-VE') : pago.monto}
+										</p>
+										{(pago.metodo_pago || pago.banco || pago.referencia) && (
+											<p className="text-xs text-muted-foreground mt-0.5">
+												{[pago.metodo_pago, pago.banco, pago.referencia].filter(Boolean).join(' · ')}
+											</p>
+										)}
+									</div>
+									{pago.documento_pago_url ? (
+										<a
+											href={pago.documento_pago_url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline shrink-0"
+										>
+											<ExternalLink className="w-4 h-4" />
+											Factura / Recibo
+										</a>
+									) : (
+										<span className="text-xs text-muted-foreground shrink-0">Sin factura</span>
+									)}
+								</li>
+							))}
+						</ul>
 					)}
 				</InfoSection>
 
