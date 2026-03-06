@@ -605,9 +605,14 @@ export const getCasesWithPatientInfo = async (
       console.log('🔍 [DEBUG] Término de búsqueda:', cleanSearchTerm);
       const escapedSearchTerm = cleanSearchTerm.replace(/[%_\\]/g, '\\$&');
 
-      // Hacer búsquedas separadas por cada campo con filtro multi-tenant
-      const searchPromises = [
-        // Búsqueda por código
+      // ESTRATEGIA DE BÚSQUEDA EN 2 PASOS:
+      // 1. Buscar en campos directos de medical_records_clean (code, treating_doctor)
+      // 2. Buscar en patients (nombre, cedula), obtener IDs, luego buscar casos
+
+      const searchPromises = [];
+
+      // Query 1: Búsqueda en campos directos (code, treating_doctor)
+      searchPromises.push(
         supabase
           .from('medical_records_clean')
           .select(
@@ -625,11 +630,27 @@ export const getCasesWithPatientInfo = async (
           )
           .eq('laboratory_id', profile.laboratory_id)
           .eq('patients.is_active', true)
-          .ilike('code', `%${escapedSearchTerm}%`)
+          .or(`code.ilike.%${escapedSearchTerm}%,treating_doctor.ilike.%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
+      );
 
-        // Búsqueda por médico tratante
-        supabase
+      // Query 2: Primero buscar pacientes, luego sus casos
+      const patientSearchPromise = (async () => {
+        // Buscar pacientes por nombre o cédula
+        const { data: matchingPatients } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('laboratory_id', profile.laboratory_id)
+          .eq('is_active', true)
+          .or(`nombre.ilike.%${escapedSearchTerm}%,cedula.ilike.%${escapedSearchTerm}%`);
+
+        if (!matchingPatients || matchingPatients.length === 0) {
+          return { data: [], error: null };
+        }
+
+        // Obtener casos de esos pacientes
+        const patientIds = matchingPatients.map((p) => p.id);
+        return await supabase
           .from('medical_records_clean')
           .select(
             `
@@ -646,57 +667,29 @@ export const getCasesWithPatientInfo = async (
           )
           .eq('laboratory_id', profile.laboratory_id)
           .eq('patients.is_active', true)
-          .ilike('treating_doctor', `%${escapedSearchTerm}%`)
-          .order('created_at', { ascending: false }),
+          .in('patient_id', patientIds)
+          .order('created_at', { ascending: false });
+      })();
 
-        // Búsqueda por nombre del paciente
-        supabase
-          .from('medical_records_clean')
-          .select(
-            `
-						*,
-						patients!inner(
-							cedula,
-							nombre,
-							edad,
-							telefono,
-							email
-						)
-					`,
-            { count: 'exact' },
-          )
-          .eq('laboratory_id', profile.laboratory_id)
-          .eq('patients.is_active', true)
-          .ilike('patients.nombre', `%${escapedSearchTerm}%`)
-          .order('created_at', { ascending: false }),
+      searchPromises.push(patientSearchPromise);
 
-        // Búsqueda por cédula del paciente
-        supabase
-          .from('medical_records_clean')
-          .select(
-            `
-						*,
-						patients!inner(
-							cedula,
-							nombre,
-							edad,
-							telefono,
-							email
-						)
-					`,
-            { count: 'exact' },
-          )
-          .eq('laboratory_id', profile.laboratory_id)
-          .eq('patients.is_active', true)
-          .ilike('patients.cedula', `%${escapedSearchTerm}%`)
-          .order('created_at', { ascending: false }),
-      ];
+      // Ejecutar ambas búsquedas en paralelo
+      const results = await Promise.allSettled(searchPromises);
 
-      // Ejecutar todas las búsquedas en paralelo
-      const results = await Promise.all(searchPromises);
+      // Combinar resultados exitosos
+      const allResults = results
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .flatMap((result) => result.value.data || []);
 
-      // Combinar y deduplicar resultados
-      const allResults = results.flatMap((result) => result.data || []);
+      // Log de búsquedas fallidas para debugging
+      const failedSearches = results.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected',
+      );
+      if (failedSearches.length > 0) {
+        console.warn('⚠️ Algunas búsquedas fallaron:', failedSearches.map((f) => f.reason));
+      }
+
+      // Deduplicar resultados por ID
       const uniqueResults = new Map();
 
       for (const item of allResults) {
