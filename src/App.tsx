@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@shared/components/ui/toaster';
 import { DateRangeProvider } from '@app/providers/DateRangeContext';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
@@ -539,6 +540,7 @@ function App() {
         </div>
       </BrowserRouter>
     </QueryClientProvider>
+    <Analytics />
     </ErrorBoundary>
   );
 }
