@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION process_payment_overdue_and_inactive()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   overdue_updated integer;
