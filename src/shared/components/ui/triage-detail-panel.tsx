@@ -21,6 +21,8 @@ export type TriageStatType =
 interface TriageDetailPanelProps {
 	isOpen: boolean
 	onClose: () => void
+	/** Llamado cuando termina la animación de cierre (para permitir desmontar después de la salida) */
+	onExited?: () => void
 	statType: TriageStatType
 	stats: any
 	trends?: any[]
@@ -31,6 +33,7 @@ interface TriageDetailPanelProps {
 const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 	isOpen,
 	onClose,
+	onExited,
 	statType,
 	stats,
 	trends = [],
@@ -1167,7 +1170,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 	}
 
 	return (
-		<AnimatePresence>
+		<AnimatePresence onExitComplete={onExited}>
 			{isOpen && (
 				<>
 					{/* Backdrop */}

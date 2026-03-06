@@ -91,7 +91,7 @@ const Layout: React.FC = () => {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						className="fixed top-0 right-0 bottom-0 left-64 bg-black/30 backdrop-blur-sm z-40 lg:hidden transition-all duration-300 ease-in-out"
+						className="fixed top-0 right-0 bottom-0 left-64 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
 						onClick={() => setSidebarOpen(false)}
 					/>
 				)}
