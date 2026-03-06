@@ -82,8 +82,6 @@ interface FiltersModalProps {
   onDocumentStatusFilterChange: (value: string) => void;
   emailSentStatusFilter: string;
   onEmailSentStatusFilterChange: (value: string) => void;
-  triageStatusFilter: string;
-  onTriageStatusFilterChange: (value: string) => void;
   // Opciones para los dropdowns
   statusOptions: Array<{ value: string; label: string }>;
   branchOptions: Array<{ value: string; label: string }>;
@@ -125,8 +123,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   onDocumentStatusFilterChange,
   emailSentStatusFilter,
   onEmailSentStatusFilterChange,
-  triageStatusFilter,
-  onTriageStatusFilterChange,
   statusOptions,
   branchOptions,
   cases,
@@ -205,8 +201,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     examTypeFilter !== 'all' ||
     consultaFilter !== 'all' ||
     documentStatusFilter !== 'all' ||
-    emailSentStatusFilter !== 'all' ||
-    triageStatusFilter !== 'all';
+    emailSentStatusFilter !== 'all';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -235,7 +230,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 consultaFilter !== 'all' ? 1 : 0,
                 documentStatusFilter !== 'all' ? 1 : 0,
                 emailSentStatusFilter !== 'all' ? 1 : 0,
-                triageStatusFilter !== 'all' ? 1 : 0,
               ].reduce((a, b) => a + b, 0)}
             </span>
           )}
@@ -422,22 +416,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   />
                 </div>
               )}
-            </div>
-
-            {/* New Filters Row 3: Triage Status */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={[
-                    { value: 'pendiente', label: 'Pendiente por Triaje' },
-                    { value: 'completo', label: 'Triaje Completado' },
-                  ]}
-                  value={triageStatusFilter}
-                  placeholder='Estatus de Triaje'
-                  onChange={onTriageStatusFilterChange}
-                  data-testid='triage-status-filter'
-                />
-              </div>
             </div>
 
             {/* SPT: Columna izq (Email + Sede) y columna der (Médico) independientes - no se empujan */}
@@ -726,21 +704,6 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       <button
                         onClick={() => onEmailSentStatusFilterChange('all')}
                         className='ml-1 hover:text-teal-600 dark:hover:text-teal-200'
-                      >
-                        <X className='w-3 h-3' />
-                      </button>
-                    </span>
-                  )}
-
-                  {triageStatusFilter !== 'all' && (
-                    <span className='inline-flex items-center gap-1 px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-sm rounded-full'>
-                      Triaje:{' '}
-                      {triageStatusFilter === 'pendiente'
-                        ? 'Pendiente'
-                        : 'Completado'}
-                      <button
-                        onClick={() => onTriageStatusFilterChange('all')}
-                        className='ml-1 hover:text-pink-600 dark:hover:text-pink-200'
                       >
                         <X className='w-3 h-3' />
                       </button>

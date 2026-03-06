@@ -577,7 +577,6 @@ export const getCasesWithPatientInfo = async (
     doctorFilter?: string[];
     originFilter?: string[];
     emailSentStatus?: boolean;
-    triageStatus?: 'pendiente' | 'completo';
     sortField?: string;
     sortDirection?: 'asc' | 'desc';
   },
@@ -811,29 +810,6 @@ export const getCasesWithPatientInfo = async (
         });
       }
 
-      // Filtro por estatus de triaje
-      if (filters?.triageStatus) {
-        // Obtener todos los case_ids que tienen triaje
-        const { data: triageData } = await supabase
-          .from('triaje_records')
-          .select('case_id')
-          .in('case_id', combinedResults.map((item: any) => item.id));
-
-        const caseIdsWithTriage = new Set(
-          triageData?.map((t) => t.case_id) || [],
-        );
-
-        combinedResults = combinedResults.filter((item: any) => {
-          const hasTriage = caseIdsWithTriage.has(item.id);
-          if (filters.triageStatus === 'pendiente') {
-            return !hasTriage; // Solo casos SIN triaje
-          } else if (filters.triageStatus === 'completo') {
-            return hasTriage; // Solo casos CON triaje
-          }
-          return true;
-        });
-      }
-
       // Filtrar por rol de usuario
       if (filters?.userRole === 'residente') {
         combinedResults = combinedResults.filter(
@@ -1023,23 +999,21 @@ export const getCasesWithPatientInfo = async (
     // Campos que pertenecen a la tabla relacionada 'patients'
     const relatedFields = ['nombre', 'cedula'];
     const isRelatedField = relatedFields.includes(sortField);
-    
-    // Si hay filtro de triaje, necesitamos obtener todos los datos primero
-    const needsAllData = isRelatedField || filters?.triageStatus;
 
     let data: any[] = [];
     let count = 0;
     let error: any = null;
 
-    if (needsAllData) {
-      // Obtener todos los datos para filtrar/ordenar en el cliente
+    if (isRelatedField) {
+      // Si el campo de ordenamiento es de la tabla relacionada,
+      // necesitamos obtener todos los datos, ordenarlos en el cliente y luego paginar
       const { data: allData, error: allError, count: totalCount } = await query;
 
       if (allError) {
         error = allError;
       } else {
-        // Transformar los datos primero
-        let transformed = (allData || []).map((item: any) => ({
+        // Transformar los datos primero para tener acceso a los campos aplanados
+        const transformedAll = (allData || []).map((item: any) => ({
           ...item,
           cedula: item.patients?.cedula || '',
           nombre: item.patients?.nombre || '',
@@ -1049,58 +1023,31 @@ export const getCasesWithPatientInfo = async (
           version: item.version || null,
         })) as MedicalCaseWithPatient[];
 
-        // Aplicar filtro de triaje si es necesario
-        if (filters?.triageStatus) {
-          const allCaseIds = transformed.map((item) => item.id);
-          if (allCaseIds.length > 0) {
-            const { data: triageData } = await supabase
-              .from('triaje_records')
-              .select('case_id')
-              .in('case_id', allCaseIds);
+        // Ordenar en el cliente
+        transformedAll.sort((a: any, b: any) => {
+          let aValue = a[sortField];
+          let bValue = b[sortField];
 
-            const caseIdsWithTriage = new Set(
-              triageData?.map((t) => t.case_id) || [],
-            );
+          // Manejar valores null/undefined
+          if (aValue === null || aValue === undefined) aValue = '';
+          if (bValue === null || bValue === undefined) bValue = '';
 
-            transformed = transformed.filter((item) => {
-              const hasTriage = caseIdsWithTriage.has(item.id);
-              if (filters.triageStatus === 'pendiente') {
-                return !hasTriage; // Solo casos SIN triaje
-              } else if (filters.triageStatus === 'completo') {
-                return hasTriage; // Solo casos CON triaje
-              }
-              return true;
-            });
+          // Convertir a minúsculas si son strings
+          if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+          if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+          if (ascending) {
+            return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+          } else {
+            return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
           }
-        }
+        });
 
-        // Ordenar en el cliente si es necesario
-        if (isRelatedField) {
-          transformed.sort((a: any, b: any) => {
-            let aValue = a[sortField];
-            let bValue = b[sortField];
-
-            // Manejar valores null/undefined
-            if (aValue === null || aValue === undefined) aValue = '';
-            if (bValue === null || bValue === undefined) bValue = '';
-
-            // Convertir a minúsculas si son strings
-            if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-            if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
-            if (ascending) {
-              return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-            } else {
-              return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
-            }
-          });
-        }
-
-        // Aplicar paginación después de filtrar y ordenar
-        count = transformed.length;
+        // Aplicar paginación después del ordenamiento
+        count = totalCount || 0;
         const from = (page - 1) * limit;
         const to = from + limit;
-        data = transformed.slice(from, to);
+        data = transformedAll.slice(from, to);
       }
     } else {
       // Si el campo es de la tabla principal, ordenar en Supabase
@@ -1120,7 +1067,7 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Transformar los datos (solo si no se transformaron antes)
-    const transformedData = needsAllData
+    const transformedData = isRelatedField
       ? (data as MedicalCaseWithPatient[])
       : ((data || []).map((item: any) => ({
           ...item,

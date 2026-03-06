@@ -25,7 +25,6 @@ const CasesPage: React.FC = () => {
     dateFrom?: string;
     dateTo?: string;
     emailSentStatus?: boolean;
-    triageStatus?: 'pendiente' | 'completo';
     sortField?: string;
     sortDirection?: 'asc' | 'desc';
   }>({});
