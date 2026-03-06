@@ -21,7 +21,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { updatePatient, findPatientById } from '@services/supabase/patients/patients-service'
 import { updateIdentification, getIdentificacionesByPatient } from '@services/supabase/patients/identificaciones-service'
 import { useToast } from '@shared/hooks/use-toast'
@@ -376,7 +375,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
 										<span className="truncate">
 											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
 										</span>
