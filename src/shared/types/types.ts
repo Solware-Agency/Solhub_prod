@@ -852,6 +852,9 @@ export interface LaboratoryConfig {
   descuentoDiscountPercent?: number  // Ej: 10 = 10% de descuento (precio descuento = taquilla * 0.9)
 }
 
+/** Estado de pago del laboratorio: al día o en ventana de 24h tras vencimiento */
+export type LaboratoryPaymentStatus = 'current' | 'overdue'
+
 export interface Laboratory {
   id: string
   slug: string
@@ -870,6 +873,11 @@ export interface Laboratory {
   favicon?: string | null
   primaryColor?: string
   secondaryColor?: string
+  // Campos de pago y recordatorios
+  next_payment_date?: string | null
+  payment_frequency?: string | null
+  billing_amount?: number | null
+  payment_status?: LaboratoryPaymentStatus | null
 }
 
 // =====================================================================
