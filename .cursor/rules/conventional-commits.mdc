@@ -13,7 +13,21 @@ Al generar mensajes de commit (o al sugerir comandos git commit), **siempre** us
 - **alcance** (opcional): módulo o área afectada (ej: `auth`, `cases`, `patients`, `ui`).
 - **descripción**: en minúsculas, imperativo, sin punto final. Máximo ~50 caracteres en la primera línea.
 
+**Cuándo usar cada tipo:**
+
+- `feat`: nueva funcionalidad o capacidad para el usuario.
+- `fix`: corrección de un bug.
+- `docs`: solo cambios en documentación (README, comentarios, etc.).
+- `style`: formato, espacios, comillas; no cambia la lógica.
+- `refactor`: cambio de código que no arregla un bug ni añade feature.
+- `test`: añadir o cambiar tests.
+- `chore`: tareas de mantenimiento (deps, config, scripts).
+- `perf`: mejoras de rendimiento.
+- `ci`: cambios en CI/CD (GitHub Actions, etc.).
+- `build`: cambios en build o dependencias de build.
+
 Ejemplos válidos:
+
 - `feat(cases): agregar validación de códigos en registro`
 - `fix(auth): corregir redirección tras login`
 - `docs(readme): actualizar instrucciones de instalación`
