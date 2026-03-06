@@ -263,6 +263,12 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 			>
 				<DialogHeader>
 					<DialogTitle>Editar Paciente</DialogTitle>
+					<p className="text-sm text-muted-foreground font-normal mt-1">
+						Editando a: <strong>{nombre || responsable.nombre}</strong>
+						{cedulaTipo && cedulaNumero && (
+							<> — Cédula en ficha: <strong>{cedulaTipo}-{cedulaNumero}</strong></>
+						)}
+					</p>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4 px-2 overflow-y-auto max-h-[calc(90vh-180px)]">
@@ -305,6 +311,9 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Cédula *</Label>
+							<p className="text-xs text-muted-foreground">
+								El tipo y número deben coincidir con la cédula de este paciente en su ficha.
+							</p>
 							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
 								<div className="col-span-2 sm:col-span-1 min-w-[60px]">
 									<FormDropdown
