@@ -24,6 +24,10 @@ Panel para superadmin/administradores de plataforma donde:
 | `renewal_day_of_month` | integer (1-31) | Día del mes de renovación (ej. 10 = siempre el 10) |
 | `config` | jsonb | Incluye `defaultExchangeRate` (tasa USD → Bs) para mostrar montos en Bs |
 
+## Opción B: Día de renovación obligatorio
+
+Se exige **siempre** un día de renovación. Al crear o editar un laboratorio, `renewal_day_of_month` es **obligatorio** (valor entre 1 y 31); no se permite `NULL`. Así "Marcar como pagado" puede calcular siempre la próxima fecha con la regla del día X sin casos especiales.
+
 ## Regla al marcar "Pagado"
 
 - Si el cliente paga por adelantado (ej. hoy 5, renovación día 10): se considera que pagó el período actual y la **próxima** fecha de pago debe ser el **próximo día de renovación** (ej. 10 del mes siguiente).
@@ -59,15 +63,24 @@ Efecto en Solhub_prod: el cliente deja de recibir avisos para el vencimiento del
 - El dashboard admin (este otro proyecto) es quien lista todos los labs y tiene el botón "Marcar como pagado" y la edición de fechas/montos/día de renovación.
 - Ambos proyectos deben usar la misma lógica para calcular `next_payment_date` al marcar pagado (próximo día de renovación).
 
-## Ejemplo de cálculo en SQL (próximo día X del mes)
+## Cálculo de próxima fecha y caso "último día del mes"
+
+Si `renewal_day_of_month` es **mayor** que los días del mes destino, se usa el **último día de ese mes**. Ejemplos:
+
+- Día 31 y mes tiene 30 días (abril, junio, etc.) → fecha = día 30 de ese mes.
+- Día 30 o 31 y febrero → fecha = 28 o 29 de febrero (año bisiesto).
+
+En **Solhub_prod** está implementada la función de base de datos `get_next_payment_date(renewal_day_of_month, from_date)` que hace este cálculo. El dashboard admin puede:
+
+- Llamarla por RPC: `select get_next_payment_date(renewal_day_of_month, current_date) from laboratories where id = :lab_id`, o
+- Replicar la misma lógica en su código usando "próximo mes + día = LEAST(renewal_day, último_día_del_mes)".
+
+## Uso de la función en este proyecto (Solhub_prod)
 
 ```sql
--- renewal_day = 10, desde hoy obtener el próximo 10 (si "pagó este mes", usar mes siguiente)
--- Ejemplo: hoy 5 de marzo → next = 10 de abril
-SELECT (date_trunc('month', current_date) + interval '1 month')::date + (renewal_day_of_month - 1) * interval '1 day'
-  AS next_payment_date
-FROM laboratories WHERE id = :lab_id;
--- Ajustar si renewal_day_of_month puede ser mayor que los días del mes (ej. 31).
+-- Obtener la próxima fecha de pago para un lab (desde hoy; respeta 28/29/30/31 días)
+SELECT get_next_payment_date(l.renewal_day_of_month, current_date) AS next_payment_date
+FROM laboratories l WHERE l.id = :lab_id;
 ```
 
-Alternativa: si el cliente paga “hoy”, considerar que la próxima obligación es siempre el día de renovación del **mes siguiente** (o del período siguiente si es weekly/yearly).
+La función devuelve `NULL` si `renewal_day_of_month` es `NULL` (con Opción B no debería darse).
