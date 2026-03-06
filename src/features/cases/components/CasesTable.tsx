@@ -88,6 +88,7 @@ type ServerFilters = {
   dateFrom?: string;
   dateTo?: string;
   emailSentStatus?: boolean;
+  triageStatus?: 'pendiente' | 'completo';
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
   userRole?:
@@ -185,6 +186,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [emailSentStatusFilter, setEmailSentStatusFilter] =
       useState<string>('all');
     const [consultaFilter, setConsultaFilter] = useState<string>('all');
+    const [triageStatusFilter, setTriageStatusFilter] = useState<string>('all');
     const [sortField, setSortField] = useState<SortField>('created_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedCaseForGenerate, setSelectedCaseForGenerate] =
@@ -238,6 +240,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [tempDocumentStatusFilter, setTempDocumentStatusFilter] =
       useState<string>('all');
     const [tempConsultaFilter, setTempConsultaFilter] = useState<string>('all');
+    const [tempTriageStatusFilter, setTempTriageStatusFilter] = useState<string>('all');
 
     // Paginación local (solo se usa si no hay paginación del servidor)
     const [localCurrentPage, setLocalCurrentPage] = useState(1);
@@ -347,6 +350,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         setTempConsultaFilter(consultaFilter);
         setTempDocumentStatusFilter(documentStatusFilter);
         setTempEmailSentStatusFilter(emailSentStatusFilter);
+        setTempTriageStatusFilter(triageStatusFilter);
       }
     }, [
       isFiltersModalOpen,
@@ -364,6 +368,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       consultaFilter,
       documentStatusFilter,
       emailSentStatusFilter,
+      triageStatusFilter,
     ]);
 
     // Determine if user can edit, delete, or generate cases based on role
@@ -567,6 +572,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setDocumentStatusFilter('all');
       setConsultaFilter('all');
       setEmailSentStatusFilter('all');
+      setTriageStatusFilter('all');
       // También limpiar los filtros temporales
       setTempStatusFilter('all');
       setTempBranchFilter([]);
@@ -583,6 +589,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempDocumentStatusFilter('all');
       setTempConsultaFilter('all');
       setTempEmailSentStatusFilter('all');
+      setTempTriageStatusFilter('all');
       // Si tenemos paginación del servidor, limpiar filtros del servidor también
       // pero mantener el orden actual
       if (pagination && onFiltersChange) {
@@ -610,6 +617,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setDocumentStatusFilter(tempDocumentStatusFilter);
       setConsultaFilter(tempConsultaFilter);
       setEmailSentStatusFilter(tempEmailSentStatusFilter);
+      setTriageStatusFilter(tempTriageStatusFilter);
       // Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
       if (pagination && onFiltersChange) {
         const serverFilters: ServerFilters = {};
@@ -667,6 +675,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
         }
+        if (tempTriageStatusFilter !== 'all') {
+          serverFilters.triageStatus = tempTriageStatusFilter as 'pendiente' | 'completo';
+        }
 
         // Mantener el orden actual
         serverFilters.sortField = sortField;
@@ -689,6 +700,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempConsultaFilter,
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
+      tempTriageStatusFilter,
       pagination,
       onFiltersChange,
       sortField,
@@ -760,6 +772,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       },
       [],
     );
+    
+    const handleTempTriageStatusFilterChange = useCallback(
+      (value: string) => {
+        setTempTriageStatusFilter(value);
+      },
+      [],
+    );
+
     const handleCaseSelect = useCallback(
       (case_: UnifiedMedicalRecord) => {
         // If onCaseSelect prop is provided, use it (for external selection)
@@ -1422,6 +1442,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     onEmailSentStatusFilterChange={
                       handleTempEmailSentStatusFilterChange
                     }
+                    triageStatusFilter={tempTriageStatusFilter}
+                    onTriageStatusFilterChange={handleTempTriageStatusFilterChange}
                     statusOptions={statusOptions}
                     branchOptions={branchOptions}
                     cases={cases}
@@ -1738,6 +1760,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onEmailSentStatusFilterChange={
                     handleTempEmailSentStatusFilterChange
                   }
+                  triageStatusFilter={tempTriageStatusFilter}
+                  onTriageStatusFilterChange={handleTempTriageStatusFilterChange}
                   statusOptions={statusOptions}
                   branchOptions={branchOptions}
                   cases={cases}

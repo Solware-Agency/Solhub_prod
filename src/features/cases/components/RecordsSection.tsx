@@ -24,6 +24,7 @@ interface RecordsSectionProps {
 		originFilter?: string[]
 		dateFrom?: string
 		dateTo?: string
+		triageStatus?: 'pendiente' | 'completo'
 	}) => void
 	pagination?: {
 		currentPage: number
