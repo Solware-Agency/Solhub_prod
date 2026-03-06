@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { AlertTriangle, Calendar, AlertCircle } from 'lucide-react'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { useExchangeRate } from '@shared/hooks/useExchangeRate'
+import { useExchangeRateEuro } from '@shared/hooks/useExchangeRateEuro'
 import { convertUSDtoVES } from '@shared/utils/number-utils'
 import {
   Dialog,
@@ -46,7 +46,7 @@ function getTodayInTimezone(timezone: string): string {
 export function PaymentReminderBanner() {
   const { laboratory } = useLaboratory()
   const { profile } = useUserProfile()
-  const { data: rateBcv, isLoading: isLoadingRate } = useExchangeRate()
+  const { data: rateEuro, isLoading: isLoadingRate } = useExchangeRateEuro()
   const [open, setOpen] = useState(false)
   const [dismissedToday, setDismissedToday] = useState(false)
 
@@ -58,7 +58,7 @@ export function PaymentReminderBanner() {
   const status = laboratory.status
   const billingAmount = laboratory.billing_amount ?? null
   const configRate = (laboratory.config as { defaultExchangeRate?: number })?.defaultExchangeRate ?? 0
-  const exchangeRate = rateBcv && rateBcv > 0 ? rateBcv : configRate
+  const exchangeRate = rateEuro && rateEuro > 0 ? rateEuro : configRate
   const amountVES = billingAmount != null && exchangeRate > 0 ? convertUSDtoVES(billingAmount, exchangeRate) : null
 
   const reminder = useMemo(() => {
@@ -218,7 +218,7 @@ export function PaymentReminderBanner() {
                 {amountVES != null && exchangeRate > 0 && (
                   <span className="ml-2 text-base font-normal text-muted-foreground">
                     · {amountVES.toLocaleString('es')} Bs
-                    {isLoadingRate ? ' (cargando tasa…)' : ` (tasa BCV ${exchangeRate.toLocaleString('es')} Bs/USD)`}
+                    {isLoadingRate ? ' (cargando tasa…)' : ` (tasa BCV euro ${exchangeRate.toLocaleString('es')} Bs/EUR)`}
                   </span>
                 )}
               </p>

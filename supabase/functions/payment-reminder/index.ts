@@ -37,7 +37,7 @@ function getReminderSubject(type: ReminderType): string {
   }
 }
 
-const BCV_RATE_URL = "https://ve.dolarapi.com/v1/dolares/oficial";
+const BCV_RATE_URL = "https://ve.dolarapi.com/v1/euros/oficial";
 const DEFAULT_TZ = "America/Caracas";
 
 function getTodayInTimezone(tz: string): string {
@@ -74,8 +74,8 @@ function formatAmountLine(billingAmount: number | null, exchangeRate: number | n
   const usd = billingAmount.toLocaleString("es");
   if (exchangeRate == null || exchangeRate <= 0) return `\nMonto a pagar: ${usd} USD`;
   const ves = (billingAmount * exchangeRate).toLocaleString("es");
-  const rateLabel = isBcv ? "tasa BCV" : "tasa";
-  return `\nMonto a pagar: ${usd} USD (${ves} Bs, ${rateLabel} ${exchangeRate.toLocaleString("es")} Bs/USD).`;
+  const rateLabel = isBcv ? "tasa BCV (euro)" : "tasa";
+  return `\nMonto a pagar: ${usd} USD (${ves} Bs, ${rateLabel} ${exchangeRate.toLocaleString("es")} Bs/EUR).`;
 }
 
 function getReminderMessage(
