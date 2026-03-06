@@ -19,12 +19,13 @@ const Layout: React.FC = () => {
 	const [sidebarOpen, setSidebarOpen] = useState(false)
 	const [sidebarExpanded, setSidebarExpanded] = useState(false) // New state for hover expansion
 	const [hasOverlayOpen, setHasOverlayOpen] = useState(false)
+	const [hasModalOrDialogOpen, setHasModalOrDialogOpen] = useState(false) // Solo modal/dialog (no el sidebar)
 	const [isHelpModalOpen, setIsHelpModalOpen] = useState(false)
 
 	// Verificar si hay un overlay abierto (modal, etc.)
 	useEffect(() => {
 		const checkOverlay = () => {
-			// Verificar clase has-overlay-open
+			// Verificar clase has-overlay-open (para ocultar hamburguesa: sidebar o modal)
 			const hasOverlayClass = document.body.classList.contains('has-overlay-open')
 			
 			// Verificar si hay algún Dialog de Radix abierto
@@ -36,6 +37,8 @@ const Layout: React.FC = () => {
 			                      document.querySelector('[class*="z-\\[99999999999999999\\]"]') !== null
 			
 			setHasOverlayOpen(hasOverlayClass || hasRadixDialog || hasCaseModal)
+			// Solo modal/dialog: así el sidebar sigue recibiendo clics cuando solo está abierto el sidebar
+			setHasModalOrDialogOpen(hasRadixDialog || hasCaseModal)
 		}
 		
 		// Verificar inicialmente
@@ -81,14 +84,14 @@ const Layout: React.FC = () => {
 
 	return (
 		<div className="min-h-screen bg-white dark:bg-background">
-			{/* Mobile overlay */}
+			{/* Mobile overlay: solo cubre el área a la derecha del sidebar para no bloquear clics en los grupos */}
 			<AnimatePresence>
 				{sidebarOpen && (
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden transition-all duration-300 ease-in-out"
+						className="fixed top-0 right-0 bottom-0 left-64 bg-black/30 backdrop-blur-sm z-40 lg:hidden transition-all duration-300 ease-in-out"
 						onClick={() => setSidebarOpen(false)}
 					/>
 				)}
@@ -102,11 +105,14 @@ const Layout: React.FC = () => {
 					// On desktop: collapsed by default (w-16), expanded on hover (w-56)
 					sidebarExpanded ? 'lg:w-56' : 'lg:w-16'
 				} ${
+					// En mobile con sidebar abierto: ancho fijo para que el overlay no cubra esta zona
+					sidebarOpen ? 'max-lg:w-64' : ''
+				} ${
 					// En mobile: ocultar cuando hay modal/panel fullscreen. En desktop (lg:) nunca ocultar.
 					isFullscreenMode ? 'max-lg:hidden' : ''
 				} ${
-					// Cuando hay overlay abierto (solo desktop): sidebar visible pero no interactuable
-					hasOverlayOpen ? 'pointer-events-none' : ''
+					// Solo deshabilitar clics en el sidebar cuando hay un modal/dialog abierto (no cuando solo está abierto el sidebar)
+					hasModalOrDialogOpen ? 'pointer-events-none' : ''
 				}`}
 				onMouseEnter={handleSidebarMouseEnter}
 				onMouseLeave={handleSidebarMouseLeave}
@@ -125,7 +131,7 @@ const Layout: React.FC = () => {
 			{!isFullscreenMode && !hasOverlayOpen && (
 				<button
 					onClick={toggleSidebar}
-					className="mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-20"
+					className="mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-20 cursor-pointer"
 				>
 					<Menu className="h-5 w-5 text-gray-600 dark:text-gray-400 " />
 				</button>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -210,7 +211,15 @@ const NavGroup: React.FC<NavGroupProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       <div
-        className={`flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none ${
+        role='button'
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        className={`flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none touch-manipulation ${
           isExpanded || isChildActive
             ? 'text-labPrimary'
             : 'hover:text-labPrimary'
@@ -278,7 +287,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   // For mobile, always show full sidebar. For desktop, use isExpanded state
   const showFullContent = isMobile || isExpanded;
   const navigate = useNavigate();
-  const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
