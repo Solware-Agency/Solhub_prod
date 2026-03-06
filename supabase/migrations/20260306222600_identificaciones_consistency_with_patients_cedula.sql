@@ -10,6 +10,7 @@
 CREATE OR REPLACE FUNCTION check_identificacion_patient_cedula_consistency()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 DECLARE
   p_cedula TEXT;
@@ -21,7 +22,7 @@ BEGIN
   END IF;
 
   SELECT cedula INTO p_cedula
-  FROM patients
+  FROM public.patients
   WHERE id = NEW.paciente_id
   LIMIT 1;
 
