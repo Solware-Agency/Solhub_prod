@@ -37,16 +37,56 @@ function getReminderSubject(type: ReminderType): string {
   }
 }
 
+const BCV_RATE_URL = "https://ve.dolarapi.com/v1/dolares/oficial";
+const DEFAULT_TZ = "America/Caracas";
+
+function getTodayInTimezone(tz: string): string {
+  try {
+    return new Date().toLocaleDateString("en-CA", { timeZone: tz });
+  } catch {
+    return new Date().toLocaleDateString("en-CA", { timeZone: DEFAULT_TZ });
+  }
+}
+
+function addCalendarDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+async function fetchBcvRate(): Promise<number | null> {
+  try {
+    const res = await fetch(BCV_RATE_URL);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { promedio?: number };
+    const rate = data?.promedio;
+    return typeof rate === "number" && rate > 0 ? rate : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatAmountLine(billingAmount: number | null, exchangeRate: number | null, isBcv = false): string {
+  if (billingAmount == null) return "";
+  const usd = billingAmount.toLocaleString("es");
+  if (exchangeRate == null || exchangeRate <= 0) return `\nMonto a pagar: ${usd} USD`;
+  const ves = (billingAmount * exchangeRate).toLocaleString("es");
+  const rateLabel = isBcv ? "tasa BCV" : "tasa";
+  return `\nMonto a pagar: ${usd} USD (${ves} Bs, ${rateLabel} ${exchangeRate.toLocaleString("es")} Bs/USD).`;
+}
+
 function getReminderMessage(
   type: ReminderType,
   labName: string,
   nextPaymentDate: string,
-  billingAmount: number | null
+  billingAmount: number | null,
+  exchangeRate: number | null,
+  isBcvRate: boolean
 ): string {
-  const amountStr =
-    billingAmount != null
-      ? `\nMonto a pagar: ${billingAmount.toLocaleString("es")}`
-      : "";
+  const amountStr = formatAmountLine(billingAmount, exchangeRate, isBcvRate);
   switch (type) {
     case "15_days":
       return `Le recordamos que la próxima fecha de pago de su laboratorio **${labName}** es el **${nextPaymentDate}** (en 15 días).${amountStr}\n\nPor favor, realice el pago a tiempo para mantener su servicio activo.`;
@@ -109,26 +149,9 @@ Deno.serve(async (req: Request) => {
 
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
-  // Fecha de hoy en UTC (YYYY-MM-DD) para comparar con next_payment_date
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const todayStr = today.toISOString().slice(0, 10);
-
-  const in15 = new Date(today);
-  in15.setUTCDate(in15.getUTCDate() + 15);
-  const in15Str = in15.toISOString().slice(0, 10);
-
-  const in7 = new Date(today);
-  in7.setUTCDate(in7.getUTCDate() + 7);
-  const in7Str = in7.toISOString().slice(0, 10);
-
-  const in1 = new Date(today);
-  in1.setUTCDate(in1.getUTCDate() + 1);
-  const in1Str = in1.toISOString().slice(0, 10);
-
   const { data: labs } = await sb
     .from("laboratories")
-    .select("id, name, next_payment_date, billing_amount, status")
+    .select("id, name, next_payment_date, billing_amount, status, config")
     .not("next_payment_date", "is", null)
     .eq("status", "active");
 
@@ -138,6 +161,8 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  const rateBcv = await fetchBcvRate();
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
@@ -160,11 +185,18 @@ Deno.serve(async (req: Request) => {
     const nextDate = next ? next.slice(0, 10) : null;
     if (!nextDate) continue;
 
+    const labConfig = (lab as { config?: { timezone?: string; defaultExchangeRate?: number } }).config;
+    const tz = labConfig?.timezone ?? DEFAULT_TZ;
+    const todayInTz = getTodayInTimezone(tz);
+    const in15Str = addCalendarDays(todayInTz, 15);
+    const in7Str = addCalendarDays(todayInTz, 7);
+    const in1Str = addCalendarDays(todayInTz, 1);
+
     let type: ReminderType | null = null;
     if (nextDate === in15Str) type = "15_days";
     else if (nextDate === in7Str) type = "7_days";
     else if (nextDate === in1Str) type = "1_day";
-    else if (nextDate === todayStr) type = "due_today";
+    else if (nextDate === todayInTz) type = "due_today";
 
     if (!type) continue;
 
@@ -185,12 +217,17 @@ Deno.serve(async (req: Request) => {
       continue;
     }
 
+    const configRate = labConfig?.defaultExchangeRate ?? null;
+    const exchangeRate = rateBcv && rateBcv > 0 ? rateBcv : configRate;
+    const isBcvRate = rateBcv != null && rateBcv > 0;
     const subject = getReminderSubject(type);
     const message = getReminderMessage(
       type,
       labName,
       nextDate,
-      (lab as { billing_amount: number | null }).billing_amount ?? null
+      (lab as { billing_amount: number | null }).billing_amount ?? null,
+      exchangeRate,
+      isBcvRate
     );
     const messagePlain = message.replace(/\*\*([^*]+)\*\*/g, "$1");
     const fullSubject = `${labName} – ${subject}`;

@@ -878,6 +878,8 @@ export interface Laboratory {
   payment_frequency?: string | null
   billing_amount?: number | null
   payment_status?: LaboratoryPaymentStatus | null
+  /** Día del mes de renovación (1-31). Ej: 10 = siempre el 10. */
+  renewal_day_of_month?: number | null
 }
 
 // =====================================================================
