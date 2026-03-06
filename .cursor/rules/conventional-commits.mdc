@@ -1,0 +1,23 @@
+---
+description: Usar Conventional Commits en todos los mensajes de commit generados por la IA
+alwaysApply: true
+---
+
+# Conventional Commits
+
+Al generar mensajes de commit (o al sugerir comandos git commit), **siempre** usa el formato:
+
+**tipo(alcance): descripción corta**
+
+- **tipo** (obligatorio): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`.
+- **alcance** (opcional): módulo o área afectada (ej: `auth`, `cases`, `patients`, `ui`).
+- **descripción**: en minúsculas, imperativo, sin punto final. Máximo ~50 caracteres en la primera línea.
+
+Ejemplos válidos:
+- `feat(cases): agregar validación de códigos en registro`
+- `fix(auth): corregir redirección tras login`
+- `docs(readme): actualizar instrucciones de instalación`
+- `refactor(patients): extraer hook usePatientSearch`
+- `chore(deps): actualizar dependencias`
+
+No uses mensajes genéricos como "Update files" o "Fix bug". Siempre tipo + alcance (si aplica) + descripción clara.
