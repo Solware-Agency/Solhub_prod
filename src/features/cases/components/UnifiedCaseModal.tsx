@@ -259,6 +259,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const { user } = useAuth()
 		const { laboratory } = useLaboratory()
 		const isSpt = laboratory?.slug === 'spt'
+		const isConspat = laboratory?.slug === 'conspat'
 		const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 		const isOwner = profile?.role === 'owner'
 		const moduleConfig = useModuleConfig('registrationForm')
@@ -1067,8 +1068,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de imágenes (images_urls) - en SPT todos los roles pueden guardar
-				if (imagesChanged && isSpt) {
+				// Guardar URLs de imágenes (images_urls) - SPT y Conspat: todos los roles pueden guardar
+				if (imagesChanged && (isSpt || isConspat)) {
 					const { error: imageUrlsError } = await supabase
 						.from('medical_records_clean')
 						.update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
@@ -2521,16 +2522,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								{!isMarihorgen && (
 									<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-											Imágenes (Imagenología):
+											{isConspat ? 'Imágenes:' : 'Imágenes (Imagenología):'}
 										</span>
 										<div className="w-full">
 											<MultipleImageUrls
 												images={imageUrls}
 												onChange={setImageUrls}
 												maxImages={10}
-												isEditing={isSpt && isEditing}
+												isEditing={isSpt && isEditing || isConspat && isEditing}
 												onUploadFile={
-													isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined
+													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined) ||
+													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
 												}
 												isUploading={isUploadingImages}
 											/>
