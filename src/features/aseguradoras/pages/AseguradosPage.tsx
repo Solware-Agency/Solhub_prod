@@ -139,7 +139,6 @@ const AseguradosPage = () => {
 			err.push('Email con formato inválido')
 		}
 		if (!form.address?.trim()) err.push('Dirección')
-		if (!form.notes?.trim()) err.push('Notas internas')
 		return err
 	}
 
@@ -441,7 +440,7 @@ const AseguradosPage = () => {
 							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Notas internas <span className="text-destructive">*</span></Label>
+							<Label>Notas internas</Label>
 							<Input
 								placeholder="Contacto preferente, horario de atención"
 								value={form.notes}

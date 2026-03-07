@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, FileText, Paperclip, ExternalLink } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, Paperclip, ExternalLink } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { format, addMonths } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
