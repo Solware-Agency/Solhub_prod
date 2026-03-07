@@ -1911,12 +1911,15 @@ const logMedicalCaseChanges = async (
 };
 
 /**
- * Buscar casos médicos por código
+ * Buscar casos médicos por código (solo del laboratorio del usuario).
+ * Usa .maybeSingle() para evitar 406 cuando no hay filas (RLS o código de otro lab).
  */
 export const findCaseByCode = async (
   code: string,
 ): Promise<MedicalCaseWithPatient | null> => {
   try {
+    const laboratoryId = await getUserLaboratoryId();
+
     const { data, error } = await supabase
       .from('medical_records_clean')
       .select(
@@ -1934,13 +1937,14 @@ export const findCaseByCode = async (
 			`,
       )
       .eq('code', code)
-      .single();
+      .eq('laboratory_id', laboratoryId)
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
       throw error;
+    }
+    if (!data) {
+      return null;
     }
 
     // Transformar los datos para que coincidan con la interfaz
