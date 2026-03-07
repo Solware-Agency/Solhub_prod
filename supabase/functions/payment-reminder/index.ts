@@ -1,5 +1,5 @@
 // Supabase Edge Function: payment-reminder
-// Envía recordatorios de pago a owners: 15 días, 7 días, 1 día antes y "vence hoy".
+// Envía recordatorios de pago a owners: 15 días, 7 días, 1 día antes, "vence hoy" y "servicio desactivado" (pasadas 24h).
 // Usa Resend directamente (no llama a send-email). Invocar por cron (pg_cron + pg_net) o manualmente.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -20,7 +20,7 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-type ReminderType = "15_days" | "7_days" | "1_day" | "due_today";
+type ReminderType = "15_days" | "7_days" | "1_day" | "due_today" | "deactivated";
 
 function getReminderSubject(type: ReminderType): string {
   switch (type) {
@@ -32,6 +32,8 @@ function getReminderSubject(type: ReminderType): string {
       return "Recordatorio de pago – mañana vence";
     case "due_today":
       return "Recordatorio de pago – vence hoy";
+    case "deactivated":
+      return "Su laboratorio ha sido desactivado por falta de pago";
     default:
       return "Recordatorio de pago";
   }
@@ -86,6 +88,9 @@ function getReminderMessage(
   exchangeRate: number | null,
   isBcvRate: boolean
 ): string {
+  if (type === "deactivated") {
+    return `Le informamos que el servicio de su laboratorio **${labName}** ha sido **desactivado** por no haber regularizado el pago dentro del plazo de 24 horas tras la fecha de vencimiento (${nextPaymentDate}).\n\nNadie del laboratorio puede usar el sistema hasta que se reactive el servicio. Para reactivar, contacte a soporte o realice el pago correspondiente.`;
+  }
   const amountStr = formatAmountLine(billingAmount, exchangeRate, isBcvRate);
   switch (type) {
     case "15_days":
@@ -149,21 +154,6 @@ Deno.serve(async (req: Request) => {
 
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data: labs } = await sb
-    .from("laboratories")
-    .select("id, name, next_payment_date, billing_amount, status, config")
-    .not("next_payment_date", "is", null)
-    .eq("status", "active");
-
-  if (!labs || labs.length === 0) {
-    return new Response(
-      JSON.stringify({ success: true, sent: 0, message: "No hay laboratorios con próxima fecha de pago" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const rateBcv = await fetchBcvRate();
-
   const resendKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
   const fromName = Deno.env.get("RESEND_FROM_NAME") || "Solhub";
@@ -180,7 +170,24 @@ Deno.serve(async (req: Request) => {
   const resend = new Resend(resendKey);
   const results: { labId: string; labName: string; type: ReminderType; emailsSent: number }[] = [];
 
-  for (const lab of labs) {
+  // Hoy en UTC (YYYY-MM-DD) y fecha de vencimiento "hace 2 días" para detectar labs recién inactivados
+  const now = new Date();
+  const todayUtc = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+  const twoDaysAgo = new Date(now);
+  twoDaysAgo.setUTCDate(twoDaysAgo.getUTCDate() - 2);
+  const twoDaysAgoStr = `${twoDaysAgo.getUTCFullYear()}-${String(twoDaysAgo.getUTCMonth() + 1).padStart(2, "0")}-${String(twoDaysAgo.getUTCDate()).padStart(2, "0")}`;
+
+  const rateBcv = await fetchBcvRate();
+
+  // 1) Recordatorios para labs ACTIVOS (15, 7, 1 día, vence hoy)
+  const { data: labs } = await sb
+    .from("laboratories")
+    .select("id, name, next_payment_date, billing_amount, status, config")
+    .not("next_payment_date", "is", null)
+    .eq("status", "active");
+
+  if (labs && labs.length > 0) {
+    for (const lab of labs) {
     const next = (lab as { next_payment_date: string }).next_payment_date;
     const nextDate = next ? next.slice(0, 10) : null;
     if (!nextDate) continue;
@@ -259,6 +266,56 @@ Deno.serve(async (req: Request) => {
       type,
       emailsSent,
     });
+    }
+  }
+
+  // 2) Correo "servicio desactivado" para labs INACTIVOS cuya fecha de vencimiento fue hace 2 días (recién inactivados por el cron)
+  const { data: inactiveLabs } = await sb
+    .from("laboratories")
+    .select("id, name, next_payment_date")
+    .eq("status", "inactive")
+    .eq("next_payment_date", twoDaysAgoStr);
+
+  if (inactiveLabs && inactiveLabs.length > 0) {
+    const subjectDeactivated = getReminderSubject("deactivated");
+    for (const lab of inactiveLabs) {
+      const labName = (lab as { name: string }).name;
+      const nextDate = (lab as { next_payment_date: string }).next_payment_date?.slice(0, 10) ?? twoDaysAgoStr;
+      const message = getReminderMessage("deactivated", labName, nextDate, null, null, false);
+      const messagePlain = message.replace(/\*\*([^*]+)\*\*/g, "$1");
+      const fullSubject = `${labName} – ${subjectDeactivated}`;
+
+      const { data: owners } = await sb
+        .from("profiles")
+        .select("id, email, display_name")
+        .eq("laboratory_id", lab.id)
+        .eq("role", "owner");
+
+      let emailsSent = 0;
+      if (owners && owners.length > 0) {
+        for (const owner of owners) {
+          const email = (owner as { email?: string }).email;
+          if (!email || !email.trim()) continue;
+          const ownerName = (owner as { display_name?: string }).display_name || labName;
+          const html = buildReminderHtml(ownerName, subjectDeactivated, messagePlain, labName);
+          try {
+            const { data, error } = await resend.emails.send({
+              from: `${fromName} <${fromEmail}>`,
+              to: [email.trim()],
+              subject: fullSubject,
+              html,
+            });
+            if (!error && data?.id) emailsSent += 1;
+          } catch (_e) {}
+        }
+      }
+      results.push({
+        labId: lab.id,
+        labName,
+        type: "deactivated",
+        emailsSent,
+      });
+    }
   }
 
   const totalSent = results.reduce((s, r) => s + r.emailsSent, 0);

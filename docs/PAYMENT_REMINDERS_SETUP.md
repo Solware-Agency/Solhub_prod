@@ -3,7 +3,7 @@
 ## Resumen
 
 - **Tabla `laboratories`**: se añadieron `next_payment_date`, `payment_frequency`, `billing_amount`, `payment_status`.
-- **Recordatorios por email**: la Edge Function **payment-reminder** envía los correos **ella misma** con Resend (no usa `send-email`). Ventanas: 15 días, 7 días, 1 día antes y **el día que vence** (“vence hoy”).
+- **Recordatorios por email**: la Edge Function **payment-reminder** envía los correos **ella misma** con Resend (no usa `send-email`). Ventanas: 15 días, 7 días, 1 día antes, **el día que vence** (“vence hoy”) y **servicio desactivado** (cuando el lab pasa a inactivo tras las 24 h de gracia).
 - **Ventana de 24 h**: si no pagan el día del vencimiento, tienen 24 h en estado “retraso” (`payment_status = 'overdue'`); después el laboratorio pasa a `status = 'inactive'` y nadie puede usarlo.
 - **Banner en el sistema**: el owner ve un aviso grande según los días restantes o “en retraso”; si el lab está inactivo, se muestra pantalla de bloqueo.
 
