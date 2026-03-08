@@ -36,7 +36,7 @@ Todo en la **misma base de datos** (Supabase). Horarios en UTC; entre paréntesi
 - **Entrada:** POST (cron o prueba manual), body `{}`.
 - **Qué hace:**
   1. **Labs activos:** Lee labs con `status = 'active'` y `next_payment_date` no nula. Para cada uno, “hoy” = fecha en **config.timezone** (ej. America/Caracas). Compara `next_payment_date` con: hoy, hoy+1, hoy+7, hoy+15. Si coincide → envía correo a **todos los `role = 'owner'`** (15 días, 7 días, 1 día o **vence hoy**).
-  2. **Labs inactivos (recién desactivados):** Busca labs con `status = 'inactive'` y `next_payment_date = (hoy en UTC) - 2 días` (los que el cron acaba de inactivar). Envía a sus owners el correo **“Su laboratorio ha sido desactivado por falta de pago”** (asunto y texto distintos).
+  2. **Labs inactivos (recién desactivados):** Busca labs con `status = 'inactive'` y `next_payment_date = (hoy en UTC) - 2 días` (los que el cron acaba de inactivar). Envía a sus owners el correo **“Su servicio SolHub ha sido desactivado por falta de pago”** (asunto y texto distintos).
 - **Tipos de correo:** 15 días, 7 días, 1 día, **vence hoy**, **servicio desactivado** (pasadas las 24 h, lab ya inactive).
 - **Monto en el correo (solo recordatorios activos):** USD + Bs con **tasa euro** (API `euros/oficial`); si falla, `config.defaultExchangeRate`. El correo de desactivado no lleva monto.
 - **Remitente:** Resend (dominio verificado). Secrets: `RESEND_API_KEY`, opcional `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`.
@@ -104,7 +104,7 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 ### Situación G2: Mismo día 8, a las 04:00 Caracas (ejecución de payment-reminder)
 
 - **Estado:** Sigue **inactive**.  
-- **Correo:** Sí. La función detecta labs **inactive** con `next_payment_date = (hoy UTC) - 2` = 6 abr. Envía a los owners el correo **“Su laboratorio ha sido desactivado por falta de pago”** (servicio desactivado; asunto y texto distintos). Se envía **solo ese día** para esos labs.
+- **Correo:** Sí. La función detecta labs **inactive** con `next_payment_date = (hoy UTC) - 2` = 6 abr. Envía a los owners el correo **“Su servicio SolHub ha sido desactivado por falta de pago”** (servicio desactivado; asunto y texto distintos). Se envía **solo ese día** para esos labs.
 
 ### Situación H: “Marcar como pagado” (dashboard admin)
 

@@ -66,7 +66,7 @@ export function PaymentReminderBanner() {
       return {
         type: 'inactive' as const,
         title: 'Sistema desactivado temporalmente',
-        message: 'Tu laboratorio está inactivo por falta de pago. Contacta a soporte para reactivar el servicio.',
+        message: 'Tu servicio en SolHub está inactivo por falta de pago. Contacta a soporte para reactivar.',
         variant: 'destructive' as const,
       }
     }
@@ -82,7 +82,7 @@ export function PaymentReminderBanner() {
       return {
         type: 'overdue' as const,
         title: 'Pago en retraso',
-        message: 'Tu pago está en retraso. Tienes 24 horas para regularizar; después el laboratorio quedará inactivo.',
+        message: 'Tu pago está en retraso. Tienes 24 horas para regularizar; después tu servicio quedará inactivo.',
         variant: 'warning' as const,
       }
     }
