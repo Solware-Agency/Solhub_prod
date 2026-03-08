@@ -81,6 +81,8 @@ export interface DashboardStats {
 	allTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
 	totalCases: number
+	/** Total de bloques (bloques_biopsia) del período */
+	totalBlocks: number
 	totalCasesWithPathologist?: number
 	totalCasesWithCitotecno?: number
 	casesByReceptionist: Array<{ id: string; name: string; cases: number }>
@@ -147,10 +149,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const filterStart = startDate || startOfMonth(new Date())
 				const filterEnd = endDate || endOfMonth(new Date())
 
-				// Roles del laboratorio, slug y features para estadísticas por tipo de médico, SPT y call center
+				// Roles del laboratorio, slug, features y config (examTypes para mostrar todos los tipos en SPT)
 				const { data: labRow } = await supabase
 					.from('laboratories')
-					.select('available_roles, slug, features')
+					.select('available_roles, slug, features, config')
 					.eq('id', laboratoryId)
 					.single()
 				const availableRoles: string[] = Array.isArray(labRow?.available_roles) ? (labRow.available_roles as string[]) : []
@@ -519,14 +521,47 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					})
 				})
 
-				const revenueByExamType = Array.from(examTypeRevenue.entries())
-					.map(([, data]) => ({
-						examType: data.originalName, // Use original name for display
-						revenue: data.revenue,
-						count: data.count,
-					}))
-					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
-					.sort((a, b) => b.revenue - a.revenue)
+				// Para SPT: incluir todos los tipos de examen configurados en el laboratorio (aunque tengan 0 casos)
+				const configExamTypes: string[] = Array.isArray((labRow as any)?.config?.examTypes)
+					? ((labRow as any).config.examTypes as string[])
+					: []
+
+				let revenueByExamType: Array<{ examType: string; revenue: number; count: number }>
+				if (isSpt && configExamTypes.length > 0) {
+					const seenNormalized = new Set<string>()
+					revenueByExamType = []
+					for (const examType of configExamTypes) {
+						if (examType == null || String(examType).trim() === '') continue
+						const norm = normalizeExamType(examType)
+						seenNormalized.add(norm)
+						const data = examTypeRevenue.get(norm) || { revenue: 0, count: 0, originalName: examType }
+						revenueByExamType.push({
+							examType: data.originalName || examType,
+							revenue: data.revenue,
+							count: data.count,
+						})
+					}
+					// Añadir tipos que aparecen en datos pero no están en config (no perder datos)
+					for (const [norm, data] of examTypeRevenue.entries()) {
+						if (!seenNormalized.has(norm) && data.originalName != null && String(data.originalName).trim() !== '') {
+							revenueByExamType.push({
+								examType: data.originalName,
+								revenue: data.revenue,
+								count: data.count,
+							})
+						}
+					}
+					revenueByExamType.sort((a, b) => (isSpt ? b.count - a.count : b.revenue - a.revenue))
+				} else {
+					revenueByExamType = Array.from(examTypeRevenue.entries())
+						.map(([, data]) => ({
+							examType: data.originalName,
+							revenue: data.revenue,
+							count: data.count,
+						}))
+						.filter((item) => item.examType != null && String(item.examType).trim() !== '')
+						.sort((a, b) => b.revenue - a.revenue)
+				}
 
 				// Calculate sales trend by month for the selected year (independent of dateRange)
 				const currentYear = selectedYear || new Date().getFullYear()
@@ -601,27 +636,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					})
 				}
 
-				// Calculate top exam types by frequency (with normalization) - Use transformedFilteredRecords
-				const examTypeCounts = new Map<string, { count: number; revenue: number; originalName: string }>()
-				transformedFilteredRecords?.forEach((record) => {
-					const normalizedType = normalizeExamType(record.exam_type)
-					const current = examTypeCounts.get(normalizedType) || { count: 0, revenue: 0, originalName: record.exam_type }
-					examTypeCounts.set(normalizedType, {
-						count: current.count + 1,
-						revenue: current.revenue + (record.total_amount || 0),
-						originalName: current.originalName,
-					})
-				})
-
-				const topExamTypes = Array.from(examTypeCounts.entries())
-					.map(([, data]) => ({
-						examType: data.originalName,
-						count: data.count,
-						revenue: data.revenue,
-					}))
-					.filter((item) => item.examType != null && String(item.examType).trim() !== '')
+				// Top 5 tipos de examen: usar revenueByExamType ya calculado (para SPT incluye todos los configurados)
+				const topExamTypes = [...revenueByExamType]
 					.sort((a, b) => b.count - a.count)
-					.slice(0, 5) // Top 5
+					.slice(0, 5)
 
 				// Calculate top treating doctors - Use transformedFilteredRecords
 				const doctorStats = new Map<string, { cases: number; revenue: number }>()

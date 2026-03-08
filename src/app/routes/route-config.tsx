@@ -22,7 +22,6 @@ import {
   AseguradosPage,
   PolizasPage,
   PagosPage,
-  DocumentosPage,
   CompaniasPage,
 } from './lazy-routes';
 
@@ -89,6 +88,7 @@ export const dashboardRoutes: RouteConfig[] = [
   },
   {
     path: 'waiting-room',
+    feature: 'hasWaitingRoom',
     component: WaitingRoomPage,
   },
   {
@@ -142,6 +142,11 @@ export const employeeRoutes: RouteConfig[] = [
     path: 'triage-analytics',
     feature: 'hasTriaje',
     component: TriageAnalyticsPage,
+  },
+  {
+    path: 'waiting-room',
+    feature: 'hasWaitingRoom',
+    component: WaitingRoomPage,
   },
   {
     path: 'error-test',
@@ -415,6 +420,7 @@ export const pruebaRoutes: RouteConfig[] = [
   },
   {
     path: 'waiting-room',
+    feature: 'hasWaitingRoom',
     component: WaitingRoomPage,
   },
   {
@@ -454,11 +460,6 @@ export const aseguradorasRoutes: RouteConfig[] = [
     path: 'pagos',
     feature: 'hasAseguradoras',
     component: PagosPage,
-  },
-  {
-    path: 'documentos',
-    feature: 'hasAseguradoras',
-    component: DocumentosPage,
   },
   {
     path: 'companias',

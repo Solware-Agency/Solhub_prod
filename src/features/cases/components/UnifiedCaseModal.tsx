@@ -29,7 +29,7 @@ import { updateMedicalCase, deleteMedicalCase, findCaseByCode } from '@/services
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/services/supabase/config/config'
+import { supabase, SEND_EMAIL_FUNCTION_URL } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
@@ -215,20 +215,10 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(
 )
 
 // Wrapper estable para el portal: misma identidad en cada render para que AnimatePresence pueda ejecutar exit
-function CaseModalAnimatedShell({
-	isOpen,
-	children,
-}: {
-	isOpen: boolean
-	children: React.ReactNode
-}) {
+function CaseModalAnimatedShell({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) {
 	return (
 		<AnimatePresence mode="wait">
-			{isOpen && (
-				<React.Fragment key="unified-case-modal">
-					{children}
-				</React.Fragment>
-			)}
+			{isOpen && <React.Fragment key="unified-case-modal">{children}</React.Fragment>}
 		</AnimatePresence>
 	)
 }
@@ -244,16 +234,23 @@ function CaseModalPortalContent({
 }) {
 	return (
 		<>
-			<CaseModalAnimatedShell isOpen={isOpen}>
-				{overlayContent}
-			</CaseModalAnimatedShell>
+			<CaseModalAnimatedShell isOpen={isOpen}>{overlayContent}</CaseModalAnimatedShell>
 			{rest}
 		</>
 	)
 }
 
 const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
-	({ case_, isOpen, onClose, onCloseComplete, onSave, onDelete, isFullscreen = false, modalTitle = 'Detalles Del Caso' }) => {
+	({
+		case_,
+		isOpen,
+		onClose,
+		onCloseComplete,
+		onSave,
+		onDelete,
+		isFullscreen = false,
+		modalTitle = 'Detalles Del Caso',
+	}) => {
 		const exitingRef = React.useRef(false)
 		useBodyScrollLock(isOpen)
 		useGlobalOverlayOpen(isOpen)
@@ -262,6 +259,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const { user } = useAuth()
 		const { laboratory } = useLaboratory()
 		const isSpt = laboratory?.slug === 'spt'
+		const isConspat = laboratory?.slug === 'conspat'
 		const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 		const isOwner = profile?.role === 'owner'
 		const moduleConfig = useModuleConfig('registrationForm')
@@ -576,14 +574,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 				if (isEditing) {
 					// Initialize with current case data - separating patient and case data
-				setEditedCase({
-					// Patient data
+					setEditedCase({
+						// Patient data
 						nombre: currentCase.nombre,
 						cedula: currentCase.cedula,
 						telefono: currentCase.telefono,
 						patient_email: currentCase.patient_email,
 						edad: currentCase.edad,
-					// Case data
+						// Case data
 						exam_type: currentCase.exam_type,
 						treating_doctor: currentCase.treating_doctor,
 						origin: currentCase.origin,
@@ -594,7 +592,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						owner_display_code: (currentCase as any).owner_display_code ?? '',
 						bloques_biopsia: (currentCase as any).bloques_biopsia ?? null,
 						fecha_muestra: (currentCase as any).fecha_muestra ?? null,
-					// Financial data
+						// Financial data
 						total_amount: currentCase.total_amount,
 						exchange_rate: currentCase.exchange_rate,
 					})
@@ -725,11 +723,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				}
 				setIsUploadingImages(true)
 				try {
-					const { data, error } = await uploadCaseImage(
-						currentCase.id,
-						file,
-						profile.laboratory_id,
-					)
+					const { data, error } = await uploadCaseImage(currentCase.id, file, profile.laboratory_id)
 					if (error) {
 						toast({
 							title: '❌ Error al subir',
@@ -833,7 +827,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					...(isMarihorgen && currentCase.exam_type === 'Inmunohistoquímica' && isOwner
 						? ['owner_display_code' as const]
 						: []),
-					...(isMarihorgen ? ['bloques_biopsia', 'fecha_muestra', 'fecha_entrega'] as const : []),
+					...(isMarihorgen ? (['bloques_biopsia', 'fecha_muestra', 'fecha_entrega'] as const) : []),
 				]
 				const financialFields = ['total_amount', 'exchange_rate']
 
@@ -918,6 +912,37 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							oldValue,
 							newValue,
 						})
+					}
+				}
+
+				// Si cambió total_amount o exchange_rate, recalcular remaining y payment_status
+				// para que el estado de pago quede consistente (ej. si antes no había total y ahora sí)
+				if (financialChanges.total_amount !== undefined || financialChanges.exchange_rate !== undefined) {
+					const totalForCalc =
+						(financialChanges.total_amount ?? editedCase.total_amount ?? currentCase.total_amount) || 0
+					const rateForCalc =
+						financialChanges.exchange_rate ?? editedCase.exchange_rate ?? currentCase.exchange_rate ?? undefined
+					const paymentMethodsForRecalc: PaymentMethod[] = []
+					for (let i = 1; i <= 4; i++) {
+						const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
+						const amount = currentCase[`payment_amount_${i}` as keyof MedicalCaseWithPatient] as number
+						const reference = currentCase[`payment_reference_${i}` as keyof MedicalCaseWithPatient] as string
+						if (method && amount) {
+							paymentMethodsForRecalc.push({
+								method,
+								amount,
+								reference: reference || '',
+							})
+						}
+					}
+					if (paymentMethodsForRecalc.length > 0 && totalForCalc) {
+						const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
+							paymentMethodsForRecalc,
+							totalForCalc,
+							rateForCalc,
+						)
+						financialChanges.remaining = Math.max(0, missingAmount ?? 0)
+						financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
 					}
 				}
 
@@ -1043,8 +1068,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de imágenes (images_urls) - en SPT todos los roles pueden guardar
-				if (imagesChanged && isSpt) {
+				// Guardar URLs de imágenes (images_urls) - SPT y Conspat: todos los roles pueden guardar
+				if (imagesChanged && (isSpt || isConspat)) {
 					const { error: imageUrlsError } = await supabase
 						.from('medical_records_clean')
 						.update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
@@ -1146,7 +1171,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 			// Verificar que exista al menos uno de: PDF caso, PDF adjunto, o imágenes
 			const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url
-			const uploadedPdfUrlsCheck = Array.isArray((case_ as any)?.uploaded_pdf_urls) && (case_ as any).uploaded_pdf_urls.length > 0 ? (case_ as any).uploaded_pdf_urls : (case_ as any)?.uploaded_pdf_url ? [(case_ as any).uploaded_pdf_url] : []
+			const uploadedPdfUrlsCheck =
+				Array.isArray((case_ as any)?.uploaded_pdf_urls) && (case_ as any).uploaded_pdf_urls.length > 0
+					? (case_ as any).uploaded_pdf_urls
+					: (case_ as any)?.uploaded_pdf_url
+						? [(case_ as any).uploaded_pdf_url]
+						: []
 			const uploadedPdf = (case_ as any)?.uploaded_pdf_url || uploadedPdfUrlsCheck.length > 0
 			const images =
 				(case_ as any)?.images_urls && Array.isArray((case_ as any).images_urls)
@@ -1239,21 +1269,23 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							? [(currentCase as any).image_url]
 							: []
 
-				// Enviar email usando el endpoint (local en desarrollo, Vercel en producción)
-				const isDevelopment = import.meta.env.DEV
-				const apiUrl = isDevelopment ? 'http://localhost:3001/api/send-email' : '/api/send-email'
+				// Enviar email vía Supabase Edge Function send-email
+				const uploadedPdfUrlsForEmail: string[] =
+					Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
+						? (currentCase as any).uploaded_pdf_urls
+						: (currentCase as any)?.uploaded_pdf_url
+							? [(currentCase as any).uploaded_pdf_url]
+							: []
 
-				const uploadedPdfUrlsForEmail: string[] = Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
-					? (currentCase as any).uploaded_pdf_urls
-					: (currentCase as any)?.uploaded_pdf_url
-						? [(currentCase as any).uploaded_pdf_url]
-						: []
+				const {
+					data: { session },
+				} = await supabase.auth.getSession()
+				const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+				if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
 
-				const response = await fetch(apiUrl, {
+				const response = await fetch(SEND_EMAIL_FUNCTION_URL, {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
+					headers,
 					body: JSON.stringify({
 						patientEmail: emails.to,
 						patientName: case_?.nombre,
@@ -1379,11 +1411,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			// Create WhatsApp message with case information
 			// Para SPT, usar formato específico y adjuntar enlaces por orden si existen
 			const pdfUrl = (case_ as any)?.informe_qr || case_?.attachment_url
-			const uploadedPdfUrlsList: string[] = Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
-				? (currentCase as any).uploaded_pdf_urls
-				: (currentCase as any)?.uploaded_pdf_url
-					? [(currentCase as any).uploaded_pdf_url]
-					: []
+			const uploadedPdfUrlsList: string[] =
+				Array.isArray((currentCase as any)?.uploaded_pdf_urls) && (currentCase as any).uploaded_pdf_urls.length > 0
+					? (currentCase as any).uploaded_pdf_urls
+					: (currentCase as any)?.uploaded_pdf_url
+						? [(currentCase as any).uploaded_pdf_url]
+						: []
 			const caseImages =
 				(currentCase as any)?.images_urls &&
 				Array.isArray((currentCase as any).images_urls) &&
@@ -1666,203 +1699,200 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			<>
 				{/* Backdrop: solo fade */}
 				<motion.div
-								viewport={{ margin: '0px' }}
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								transition={{ duration: 0.2 }}
-								onClick={isEditing ? undefined : handleClose}
-								className={`fixed inset-0 bg-black/50 ${
-									isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
-								}`}
-							/>
+					viewport={{ margin: '0px' }}
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+					transition={{ duration: 0.2 }}
+					onClick={isEditing ? undefined : handleClose}
+					className={`fixed inset-0 bg-black/50 ${isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'}`}
+				/>
 
-							{/* Panel: solo slide desde la derecha */}
-							<motion.div
-								viewport={{ margin: '0px' }}
-								initial={{ x: '100%' }}
-								animate={{ x: 0 }}
-								exit={{ x: '100%' }}
-								transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-								onAnimationComplete={handleCloseComplete}
-								className={`fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] shadow-2xl ${
-									isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
-								} overflow-y-auto overflow-x-hidden rounded-lg border-l border-input`}
-							>
-								<div
-									className={`sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 ${
-										isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
-									} overflow-x-hidden max-w-full`}
+				{/* Panel: solo slide desde la derecha */}
+				<motion.div
+					viewport={{ margin: '0px' }}
+					initial={{ x: '100%' }}
+					animate={{ x: 0 }}
+					exit={{ x: '100%' }}
+					transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+					onAnimationComplete={handleCloseComplete}
+					className={`fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] shadow-2xl ${
+						isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
+					} overflow-y-auto overflow-x-hidden rounded-lg border-l border-input`}
+				>
+					<div
+						className={`sticky top-0 bg-white/50 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] border-b border-input p-3 sm:p-6 ${
+							isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
+						} overflow-x-hidden max-w-full`}
+					>
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+								<div className="flex-1 min-w-0">
+									<h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{modalTitle}</h2>
+								</div>
+							</div>
+							{/* Botón X (derecha) */}
+							<div className="flex items-center gap-2 shrink-0">
+								<button
+									onClick={handleClose}
+									className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none"
+									aria-label="Cerrar"
 								>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-											<div className="flex-1 min-w-0">
-												<h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{modalTitle}</h2>
-											</div>
-										</div>
-										{/* Botón X (derecha) */}
-										<div className="flex items-center gap-2 shrink-0">
-											<button
-												onClick={handleClose}
-												className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none"
-												aria-label="Cerrar"
-											>
-												<X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-											</button>
-										</div>
-									</div>
-									<div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden">
-										{isMarihorgen && caseData.exam_type === 'Inmunohistoquímica' ? (
-											isEditing && isOwner ? (
-												<Input
-													type="text"
-													inputMode="numeric"
-													maxLength={5}
-													placeholder="Código"
-													value={String(
-														editedCase.owner_display_code ?? (caseData as any).owner_display_code ?? '',
-													).slice(0, 5)}
-													onChange={(e) => {
-														const v = e.target.value.replace(/\D/g, '').slice(0, 5)
-														handleInputChange('owner_display_code', v)
-													}}
-													className="inline-flex h-7 w-20 px-1.5 sm:px-2 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700 shrink-0"
-												/>
-											) : (
-												<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-8 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 shrink-0">
-													{(caseData as any).owner_display_code ?? ''}
-												</span>
-											)
-										) : caseData.code ? (
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help shrink-0">
-														{caseData.code}
-													</span>
-												</TooltipTrigger>
-												<TooltipContent style={{ zIndex: 2147483647 }}>
-													{getCodeLegend(caseData.code, laboratory)}
-												</TooltipContent>
-											</Tooltip>
-										) : null}
-										{!notShow && !isSpt && (
-											<span
-												className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full shrink-0 ${getStatusColor(
-													caseData.payment_status,
-												)}`}
-											>
-												{caseData.payment_status}
-											</span>
+									<X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+								</button>
+							</div>
+						</div>
+						<div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden">
+							{isMarihorgen && caseData.exam_type === 'Inmunohistoquímica' ? (
+								isEditing && isOwner ? (
+									<Input
+										type="text"
+										inputMode="numeric"
+										maxLength={5}
+										placeholder="Código"
+										value={String(editedCase.owner_display_code ?? (caseData as any).owner_display_code ?? '').slice(
+											0,
+											5,
 										)}
-										{/* PDF download temporarily disabled in new structure */}
-									</div>
-									{/* Action Buttons */}
-									{!notShow && (
-										<div className="flex flex-wrap gap-2 mt-4 max-w-full overflow-x-hidden">
-											{isEditing ? (
+										onChange={(e) => {
+											const v = e.target.value.replace(/\D/g, '').slice(0, 5)
+											handleInputChange('owner_display_code', v)
+										}}
+										className="inline-flex h-7 w-20 px-1.5 sm:px-2 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700 shrink-0"
+									/>
+								) : (
+									<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-8 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 shrink-0">
+										{(caseData as any).owner_display_code ?? ''}
+									</span>
+								)
+							) : caseData.code ? (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help shrink-0">
+											{caseData.code}
+										</span>
+									</TooltipTrigger>
+									<TooltipContent style={{ zIndex: 2147483647 }}>
+										{getCodeLegend(caseData.code, laboratory)}
+									</TooltipContent>
+								</Tooltip>
+							) : null}
+							{!notShow && !isSpt && (
+								<span
+									className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full shrink-0 ${getStatusColor(
+										caseData.payment_status,
+									)}`}
+								>
+									{caseData.payment_status}
+								</span>
+							)}
+							{/* PDF download temporarily disabled in new structure */}
+						</div>
+						{/* Action Buttons */}
+						{!notShow && (
+							<div className="flex flex-wrap gap-2 mt-4 max-w-full overflow-x-hidden">
+								{isEditing ? (
+									<>
+										<button
+											onClick={handleSaveChanges}
+											disabled={isSaving}
+											title="Guarda todos los cambios realizados en el caso"
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer shrink-0"
+										>
+											{isSaving ? (
 												<>
-													<button
-														onClick={handleSaveChanges}
-														disabled={isSaving}
-														title="Guarda todos los cambios realizados en el caso"
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 cursor-pointer shrink-0"
-													>
-														{isSaving ? (
-															<>
-																<Loader2 className="w-4 h-4 animate-spin" />
-																Guardando...
-															</>
-														) : (
-															<>
-																<Save className="w-4 h-4" />
-																Guardar Cambios
-															</>
-														)}
-													</button>
-													<button
-														onClick={handleCancelEdit}
-														title="Cancela la edición y descarta todos los cambios"
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer shrink-0"
-														disabled={isSaving}
-													>
-														<XCircle className="w-4 h-4" />
-														Cancelar
-													</button>
+													<Loader2 className="w-4 h-4 animate-spin" />
+													Guardando...
 												</>
 											) : (
 												<>
+													<Save className="w-4 h-4" />
+													Guardar Cambios
+												</>
+											)}
+										</button>
+										<button
+											onClick={handleCancelEdit}
+											title="Cancela la edición y descarta todos los cambios"
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 cursor-pointer shrink-0"
+											disabled={isSaving}
+										>
+											<XCircle className="w-4 h-4" />
+											Cancelar
+										</button>
+									</>
+								) : (
+									<>
+										<button
+											onClick={handleEditClick}
+											title="Editar información del caso"
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 shrink-0"
+											aria-label="Editar caso"
+										>
+											<Edit className="w-4 h-4" />
+										</button>
+										<button
+											onClick={toggleChangelog}
+											title={isChangelogOpen ? 'Ocultar historial de acciones' : 'Ver historial de acciones del caso'}
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 shrink-0"
+											aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
+										>
+											<History className="w-4 h-4" />
+										</button>
+										<button
+											onClick={handleSendEmail}
+											disabled={isSaving || isUploadingPdf || isUploadingImages}
+											title={
+												isUploadingPdf || isUploadingImages
+													? 'Espera a que terminen de subirse los archivos...'
+													: 'Enviar informe por correo electrónico'
+											}
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+											aria-label="Enviar correo"
+										>
+											{isSaving || isUploadingPdf || isUploadingImages ? (
+												<Loader2 className="w-4 h-4 animate-spin" />
+											) : (
+												<Send className="w-4 h-4" />
+											)}
+										</button>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="inline-flex">
 													<button
-														onClick={handleEditClick}
-														title="Editar información del caso"
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 shrink-0"
-														aria-label="Editar caso"
-													>
-														<Edit className="w-4 h-4" />
-													</button>
-													<button
-														onClick={toggleChangelog}
+														onClick={handleDownloadInformeQR}
+														disabled={!(currentCase as any)?.informe_qr?.trim() || isDownloadingPDF}
 														title={
-															isChangelogOpen ? 'Ocultar historial de acciones' : 'Ver historial de acciones del caso'
+															(currentCase as any)?.informe_qr
+																? 'Descargar el informe PDF del caso'
+																: 'Este caso no tiene un PDF generado aún'
 														}
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800/40 transition-colors duration-200 shrink-0"
-														aria-label={isChangelogOpen ? 'Ocultar historial' : 'Ver historial'}
+														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+														aria-label="Descargar informe PDF"
 													>
-														<History className="w-4 h-4" />
-													</button>
-													<button
-														onClick={handleSendEmail}
-														disabled={isSaving || isUploadingPdf || isUploadingImages}
-														title={
-															isUploadingPdf || isUploadingImages
-																? 'Espera a que terminen de subirse los archivos...'
-																: 'Enviar informe por correo electrónico'
-														}
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-														aria-label="Enviar correo"
-													>
-														{isSaving || isUploadingPdf || isUploadingImages ? (
+														{isDownloadingPDF ? (
 															<Loader2 className="w-4 h-4 animate-spin" />
 														) : (
-															<Send className="w-4 h-4" />
+															<Download className="w-4 h-4" />
 														)}
 													</button>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<span className="inline-flex">
-																<button
-																	onClick={handleDownloadInformeQR}
-																	disabled={!((currentCase as any)?.informe_qr?.trim()) || isDownloadingPDF}
-																	title={
-																		(currentCase as any)?.informe_qr
-																			? 'Descargar el informe PDF del caso'
-																			: 'Este caso no tiene un PDF generado aún'
-																	}
-																	className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800/40 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-																	aria-label="Descargar informe PDF"
-																>
-																	{isDownloadingPDF ? (
-																		<Loader2 className="w-4 h-4 animate-spin" />
-																	) : (
-																		<Download className="w-4 h-4" />
-																	)}
-																</button>
-															</span>
-														</TooltipTrigger>
-														<TooltipContent style={{ zIndex: 2147483647 }}>
-															{(currentCase as any)?.informe_qr?.trim()
-																? 'Descargar el informe PDF del caso'
-																: 'Este caso no tiene un PDF generado aún'}
-														</TooltipContent>
-													</Tooltip>
-													<button
-														onClick={handleCall}
-														title="Llamar al paciente por teléfono"
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 shrink-0"
-														aria-label="Llamar"
-													>
-														<Phone className="w-4 h-4" />
-													</button>
-													{/* <button
+												</span>
+											</TooltipTrigger>
+											<TooltipContent style={{ zIndex: 2147483647 }}>
+												{(currentCase as any)?.informe_qr?.trim()
+													? 'Descargar el informe PDF del caso'
+													: 'Este caso no tiene un PDF generado aún'}
+											</TooltipContent>
+										</Tooltip>
+										<button
+											onClick={handleCall}
+											title="Llamar al paciente por teléfono"
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors duration-200 shrink-0"
+											aria-label="Llamar"
+										>
+											<Phone className="w-4 h-4" />
+										</button>
+										{/* <button
 														onClick={handleDownloadCase}
 														disabled={isSaving}
 														title="Descargar el PDF del informe del caso"
@@ -1871,52 +1901,50 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													>
 														{isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
 													</button> */}
-													<button
-														onClick={handleSendWhatsApp}
-														title="Enviar mensaje por WhatsApp al paciente"
-														className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 shrink-0"
-														aria-label="Enviar WhatsApp"
-													>
-														<WhatsAppIcon className="w-4 h-4" />
-													</button>
-												</>
-											)}
-										</div>
-									)}
-								</div>
+										<button
+											onClick={handleSendWhatsApp}
+											title="Enviar mensaje por WhatsApp al paciente"
+											className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors duration-200 shrink-0"
+											aria-label="Enviar WhatsApp"
+										>
+											<WhatsAppIcon className="w-4 h-4" />
+										</button>
+									</>
+								)}
+							</div>
+						)}
+					</div>
 
-								{/* Content */}
-								<div className="p-4 sm:p-6 space-y-6">
-									{/* Changelog Section */}
-									{isChangelogOpen && !isEditing && (
-										<InfoSection title="Historial de Acciones" icon={History}>
-											{isLoadingChangelogs ? (
-												<div className="flex items-center justify-center p-4">
-													<Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-													<span>Cargando historial...</span>
-												</div>
-											) : !changelogsData?.data || changelogsData.data.length === 0 ? (
-												<div className="text-center p-4">
-													<p className="text-gray-500 dark:text-gray-400">
-														No hay registros de cambios para este caso.
-													</p>
-												</div>
-											) : (
-												<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-80 overflow-y-auto overflow-x-hidden">
-													{changelogsData.data.map((log) => {
-														const actionInfo = getActionTypeInfo(log)
-														return (
-															<div
-																key={log.id}
-																className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors overflow-hidden min-w-0"
-															>
-																<div className="flex justify-between items-start mb-2 gap-2 min-w-0">
-																	<div
-																		className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full shrink-0 ${actionInfo.bgColor} ${actionInfo.textColor}`}
-																	>
-																		{actionInfo.icon}
-																		{/* Render EditPatientInfoModal outside the panel to avoid z-index issues - COMMENTED OUT (not needed) */}
-																		{/*
+					{/* Content */}
+					<div className="p-4 sm:p-6 space-y-6">
+						{/* Changelog Section */}
+						{isChangelogOpen && !isEditing && (
+							<InfoSection title="Historial de Acciones" icon={History}>
+								{isLoadingChangelogs ? (
+									<div className="flex items-center justify-center p-4">
+										<Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
+										<span>Cargando historial...</span>
+									</div>
+								) : !changelogsData?.data || changelogsData.data.length === 0 ? (
+									<div className="text-center p-4">
+										<p className="text-gray-500 dark:text-gray-400">No hay registros de cambios para este caso.</p>
+									</div>
+								) : (
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-80 overflow-y-auto overflow-x-hidden">
+										{changelogsData.data.map((log) => {
+											const actionInfo = getActionTypeInfo(log)
+											return (
+												<div
+													key={log.id}
+													className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors overflow-hidden min-w-0"
+												>
+													<div className="flex justify-between items-start mb-2 gap-2 min-w-0">
+														<div
+															className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full shrink-0 ${actionInfo.bgColor} ${actionInfo.textColor}`}
+														>
+															{actionInfo.icon}
+															{/* Render EditPatientInfoModal outside the panel to avoid z-index issues - COMMENTED OUT (not needed) */}
+															{/*
                     <EditPatientInfoModal
                       isOpen={isEditPatientModalOpen}
                       onClose={() => setIsEditPatientModalOpen(false)}
@@ -1928,1216 +1956,1195 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
                       }}
                     />
                     */}
-																		<span className="whitespace-nowrap">{actionInfo.text}</span>
-																	</div>
-																	<div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-																		{format(new Date(log.changed_at), 'dd/MM/yyyy HH:mm', { locale: es })}
-																	</div>
-																</div>
-																<div className="flex items-center gap-2 mb-2 min-w-0">
-																	<span className="text-sm wrap-break-words overflow-wrap-anywhere">
-																		{log.user_email}
-																	</span>
-																</div>
-																{log.field_name === 'created_record' ? (
-																	<p className="text-sm wrap-break-words overflow-wrap-anywhere">
-																		Creación de nuevo registro médico
-																	</p>
-																) : log.field_name === 'deleted_record' ? (
-																	<p className="text-sm wrap-break-words overflow-wrap-anywhere">
-																		Eliminación del registro: {log.old_value}
-																	</p>
-																) : (
-																	<div className="min-w-0">
-																		<p className="text-sm font-medium wrap-break-words overflow-wrap-anywhere">
-																			{log.field_label}
-																		</p>
-																		<div className="flex flex-wrap items-center gap-2 mt-1 text-sm min-w-0">
-																			<span className="line-through text-gray-500 dark:text-gray-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																				{log.old_value || '(vacío)'}
-																			</span>
-																			<span className="text-xs shrink-0">→</span>
-																			<span className="text-green-600 dark:text-green-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																				{log.new_value || '(vacío)'}
-																			</span>
-																		</div>
-																	</div>
-																)}
-															</div>
-														)
-													})}
-												</div>
-											)}
-										</InfoSection>
-									)}
-
-									{/* Patient Information */}
-									<InfoSection title="Información del Paciente" icon={User}>
-										<div className="space-y-1">
-											<InfoRow
-												label="Nombre completo"
-												value={caseData.nombre}
-												field="nombre"
-												isEditing={false}
-												editedValue={editedCase.nombre ?? null}
-												onChange={handleInputChange}
-											/>
-
-											{/* Representado por - Solo visible si es representado, siempre visible */}
-											{responsableData?.responsable && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-														Representado por:
-													</span>
-													<div className="sm:w-1/2 sm:text-right">
-														<button
-															type="button"
-															onClick={() => setShowResponsableHistoryModal(true)}
-															className="text-sm text-primary dark:text-primary font-medium hover:underline cursor-pointer text-right"
-														>
-															{responsableData.responsable.nombre} • {responsableData.responsable.cedula}
-														</button>
+															<span className="whitespace-nowrap">{actionInfo.text}</span>
+														</div>
+														<div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+															{format(new Date(log.changed_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+														</div>
 													</div>
-												</div>
-											)}
-
-											{/* Botón Ver más/Ver menos */}
-											<div className="flex justify-center pt-2">
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
-													className="text-sm text-primary hover:text-primary/80"
-												>
-													{showFullPatientInfo ? (
-														<>
-															Ver menos
-															<ChevronUp className="ml-1 h-4 w-4" />
-														</>
+													<div className="flex items-center gap-2 mb-2 min-w-0">
+														<span className="text-sm wrap-break-words overflow-wrap-anywhere">{log.user_email}</span>
+													</div>
+													{log.field_name === 'created_record' ? (
+														<p className="text-sm wrap-break-words overflow-wrap-anywhere">
+															Creación de nuevo registro médico
+														</p>
+													) : log.field_name === 'deleted_record' ? (
+														<p className="text-sm wrap-break-words overflow-wrap-anywhere">
+															Eliminación del registro: {log.old_value}
+														</p>
 													) : (
-														<>
-															Ver más
-															<ChevronDown className="ml-1 h-4 w-4" />
-														</>
-													)}
-												</Button>
-											</div>
-
-											{/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
-											{showFullPatientInfo && (
-												<>
-													{/* Cédula - Solo mostrar si NO es representado */}
-													{!responsableData?.responsable && (
-														<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-															<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Cédula:</span>
-															<div className="sm:w-1/2 sm:text-right">
-																<span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
-																	{caseData.cedula || 'Sin cédula'}
+														<div className="min-w-0">
+															<p className="text-sm font-medium wrap-break-words overflow-wrap-anywhere">
+																{log.field_label}
+															</p>
+															<div className="flex flex-wrap items-center gap-2 mt-1 text-sm min-w-0">
+																<span className="line-through text-gray-500 dark:text-gray-400 wrap-break-words overflow-wrap-anywhere max-w-full">
+																	{log.old_value || '(vacío)'}
+																</span>
+																<span className="text-xs shrink-0">→</span>
+																<span className="text-green-600 dark:text-green-400 wrap-break-words overflow-wrap-anywhere max-w-full">
+																	{log.new_value || '(vacío)'}
 																</span>
 															</div>
 														</div>
 													)}
-													{/* Edad: input numérico + dropdown (AÑOS/MESES) */}
-													<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Edad:</span>
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{(() => {
-																// Si hay edad, mostrarla
-																if (caseData.edad) {
-																	return caseData.edad
-																}
-																// Si no hay edad pero hay fecha_nacimiento, calcularla
-																const calculatedAge = calculateAgeFromFechaNacimiento(
-																	(caseData as any).fecha_nacimiento,
-																)
-																if (calculatedAge) {
-																	return calculatedAge
-																}
-																// Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
-																return 'Sin edad'
-															})()}
-														</span>
-													</div>
-													<InfoRow
-														label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
-														value={caseData.telefono || ''}
-														field="telefono"
-														isEditing={false}
-														editedValue={editedCase.telefono ?? null}
-														onChange={handleInputChange}
-														disabled={!!responsableData}
-													/>
-													<InfoRow
-														label="Email"
-														value={caseData.patient_email || 'N/A'}
-														field="patient_email"
-														type="email"
-														isEditing={false}
-														editedValue={editedCase.patient_email ?? null}
-														onChange={handleInputChange}
-													/>
-												</>
-											)}
+												</div>
+											)
+										})}
+									</div>
+								)}
+							</InfoSection>
+						)}
 
-											{/* Note: relationship field not in new structure, could be added if needed */}
+						{/* Patient Information */}
+						<InfoSection title="Información del Paciente" icon={User}>
+							<div className="space-y-1">
+								<InfoRow
+									label="Nombre completo"
+									value={caseData.nombre}
+									field="nombre"
+									isEditing={false}
+									editedValue={editedCase.nombre ?? null}
+									onChange={handleInputChange}
+								/>
+
+								{/* Representado por - Solo visible si es representado, siempre visible */}
+								{responsableData?.responsable && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Representado por:</span>
+										<div className="sm:w-1/2 sm:text-right">
+											<button
+												type="button"
+												onClick={() => setShowResponsableHistoryModal(true)}
+												className="text-sm text-primary dark:text-primary font-medium hover:underline cursor-pointer text-right"
+											>
+												{responsableData.responsable.nombre} • {responsableData.responsable.cedula}
+											</button>
 										</div>
-									</InfoSection>
+									</div>
+								)}
 
-									{/* Medical Information */}
-									<InfoSection title="Información Médica" icon={Stethoscope}>
-										<div className="space-y-1">
-											{/* Estudio - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.examType?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Estudio:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<CustomDropdown
-																options={examTypesOptions}
-																value={editedCase.exam_type || caseData.exam_type || ''}
-																onChange={(value) => handleInputChange('exam_type', value)}
-																placeholder="Seleccione una opción"
-																className="text-sm"
-																direction="auto"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{caseData.exam_type || 'N/A'}
-														</span>
-													)}
-												</div>
-											)}
+								{/* Botón Ver más/Ver menos */}
+								<div className="flex justify-center pt-2">
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
+										className="text-sm text-primary hover:text-primary/80"
+									>
+										{showFullPatientInfo ? (
+											<>
+												Ver menos
+												<ChevronUp className="ml-1 h-4 w-4" />
+											</>
+										) : (
+											<>
+												Ver más
+												<ChevronDown className="ml-1 h-4 w-4" />
+											</>
+										)}
+									</Button>
+								</div>
 
-											{/* Médico Tratante - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.medicoTratante?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Médico tratante:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<AutocompleteInput
-																id="treating-doctor-input"
-																name="treating_doctor"
-																fieldName="treatingDoctor"
-																placeholder="Nombre del Médico"
-																value={
-																	editedCase.treating_doctor !== undefined
-																		? editedCase.treating_doctor
-																		: caseData.treating_doctor || ''
-																}
-																onChange={(e) => {
-																	const { value } = e.target
-																	if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
-																		handleInputChange('treating_doctor', value)
-																	}
-																}}
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{caseData.treating_doctor || 'N/A'}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Tipo de Consulta - Solo para SPT */}
-											{moduleConfig?.fields?.consulta?.enabled && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-														Tipo de consulta:
+								{/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
+								{showFullPatientInfo && (
+									<>
+										{/* Cédula - Solo mostrar si NO es representado */}
+										{!responsableData?.responsable && (
+											<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Cédula:</span>
+												<div className="sm:w-1/2 sm:text-right">
+													<span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+														{caseData.cedula || 'Sin cédula'}
 													</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<FormDropdown
-																id="consulta-input"
-																options={createDropdownOptions(
-																	[
-																		{ value: 'Cardiología', label: 'Cardiología' },
-																		{ value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
-																		{ value: 'Dermatología', label: 'Dermatología' },
-																		{ value: 'Endocrinología', label: 'Endocrinología' },
-																		{ value: 'Fisioterapia', label: 'Fisioterapia' },
-																		{ value: 'Gastroenterología', label: 'Gastroenterología' },
-																		{ value: 'Ginecología', label: 'Ginecología' },
-																		{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
-																		{ value: 'Medicina General', label: 'Medicina General' },
-																		{ value: 'Medicina Interna', label: 'Medicina Interna' },
-																		{ value: 'Nefrología', label: 'Nefrología' },
-																		{ value: 'Neumonología', label: 'Neumonología' },
-																		{ value: 'Neurocirugía', label: 'Neurocirugía' },
-																		{ value: 'Neurología', label: 'Neurología' },
-																		{ value: 'Odontología', label: 'Odontología' },
-																		{ value: 'Oftalmología', label: 'Oftalmología' },
-																		{ value: 'Optometría', label: 'Optometría' },
-																		{ value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
-																		{ value: 'Pediatría', label: 'Pediatría' },
-																		{ value: 'Psicología', label: 'Psicología' },
-																		{ value: 'Psiquiatría', label: 'Psiquiatría' },
-																		{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
-																		{ value: 'Reumatología', label: 'Reumatología' },
-																		{ value: 'Traumatología', label: 'Traumatología' },
-																		{ value: 'Urología', label: 'Urología' },
-																	].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
-																)}
-																value={editedCase.consulta || caseData.consulta || ''}
-																onChange={(value) => handleInputChange('consulta', value)}
-																placeholder="Seleccione una especialidad"
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{caseData.consulta || 'N/A'}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Procedencia - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.procedencia?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Procedencia:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<AutocompleteInput
-																id="origin-input"
-																name="origin"
-																fieldName="origin"
-																placeholder="Hospital o Clínica"
-																value={editedCase.origin || caseData.origin || ''}
-																onChange={(e) => {
-																	const { value } = e.target
-																	if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)) {
-																		handleInputChange('origin', value)
-																	}
-																}}
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{(() => {
-																const originValue = caseData.origin
-																const trimmed = originValue?.trim()
-																const display = trimmed ? originValue : 'N/A'
-																if (isMarihorgen) {
-																	console.log('🔍 Marihorgen - origin display:', {
-																		originValue,
-																		trimmed,
-																		display,
-																		hasValue: !!originValue,
-																		hasTrimmed: !!trimmed,
-																	})
-																}
-																return display
-															})()}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Sede - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.branch?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sede:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<CustomDropdown
-																options={branchOptions}
-																value={editedCase.branch || caseData.branch || ''}
-																onChange={(value) => handleInputChange('branch', value)}
-																placeholder="Seleccione una sede"
-																className="text-sm"
-																direction="auto"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{caseData.branch || 'N/A'}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Muestra - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.sampleType?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Muestra:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<AutocompleteInput
-																id="sample-type-input"
-																name="sample_type"
-																fieldName="sampleType"
-																placeholder="Ej: Biopsia de Piel"
-																value={editedCase.sample_type || caseData.sample_type || ''}
-																onChange={(e) => {
-																	const { value } = e.target
-																	handleInputChange('sample_type', value)
-																}}
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{(() => {
-																const sampleTypeValue = caseData.sample_type
-																const trimmed = sampleTypeValue?.trim()
-																const display = trimmed ? sampleTypeValue : 'N/A'
-																if (isMarihorgen) {
-																	console.log('🔍 Marihorgen - sample_type display:', {
-																		sampleTypeValue,
-																		trimmed,
-																		display,
-																		hasValue: !!sampleTypeValue,
-																		hasTrimmed: !!trimmed,
-																	})
-																}
-																return display
-															})()}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Cantidad de muestras - Siempre visible para marihorgen */}
-											{(isMarihorgen || moduleConfig?.fields?.numberOfSamples?.enabled) && (
-												<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-														Cantidad de muestras:
-													</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															{/* Note: number_of_samples not in current new structure, can be added if needed */}
-															<Input
-																id="number-of-samples-input"
-																name="number_of_samples"
-																type="number"
-																placeholder="1"
-																value="1"
-																disabled
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															1
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
-											<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjuntos:</span>
-												<div className="sm:flex sm:justify-end sm:flex-1">
-													{(() => {
-														const pdfUrls: string[] = Array.isArray((caseData as any).uploaded_pdf_urls) && (caseData as any).uploaded_pdf_urls.length > 0
-															? (caseData as any).uploaded_pdf_urls
-															: (caseData as any).uploaded_pdf_url
-																? [(caseData as any).uploaded_pdf_url]
-																: []
-														const canEditPdf = isSpt && (profile?.role === 'laboratorio' || profile?.role === 'coordinador' || profile?.role === 'owner' || profile?.role === 'prueba' || profile?.role === 'imagenologia' || profile?.role === 'call_center')
-														if (canEditPdf) {
-															return (
-																<CasePDFUpload
-																	caseId={caseData.id}
-																	currentPdfUrls={pdfUrls}
-																	onUploadingChange={setIsUploadingPdf}
-																	onPdfUpdated={async () => {
-																		if (refetchCaseData) await refetchCaseData()
-																		if (onSave) onSave()
-																	}}
-																/>
-															)
-														}
-														if (pdfUrls.length > 0) {
-															return (
-																<div className="flex flex-wrap gap-1">
-																	{pdfUrls.map((url, i) => (
-																		<PDFButton
-																			key={url}
-																			pdfUrl={url}
-																			size="sm"
-																			variant="outline"
-																			isAttached={true}
-																			downloadFileName={case_?.code ? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf` : undefined}
-																		/>
-																	))}
-																</div>
-															)
-														}
-														return <span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
-													})()}
 												</div>
 											</div>
+										)}
+										{/* Edad: input numérico + dropdown (AÑOS/MESES) */}
+										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Edad:</span>
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{(() => {
+													// Si hay edad, mostrarla
+													if (caseData.edad) {
+														return caseData.edad
+													}
+													// Si no hay edad pero hay fecha_nacimiento, calcularla
+													const calculatedAge = calculateAgeFromFechaNacimiento((caseData as any).fecha_nacimiento)
+													if (calculatedAge) {
+														return calculatedAge
+													}
+													// Si no hay ni edad ni fecha_nacimiento, mostrar "Sin edad"
+													return 'Sin edad'
+												})()}
+											</span>
+										</div>
+										<InfoRow
+											label={responsableData ? 'Teléfono (del responsable)' : 'Teléfono'}
+											value={caseData.telefono || ''}
+											field="telefono"
+											isEditing={false}
+											editedValue={editedCase.telefono ?? null}
+											onChange={handleInputChange}
+											disabled={!!responsableData}
+										/>
+										<InfoRow
+											label="Email"
+											value={caseData.patient_email || 'N/A'}
+											field="patient_email"
+											type="email"
+											isEditing={false}
+											editedValue={editedCase.patient_email ?? null}
+											onChange={handleInputChange}
+										/>
+									</>
+								)}
 
-											{isMarihorgen && (
-												<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Bloques:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<Input
-																id="bloques-biopsia-input"
-																name="bloques_biopsia"
-																type="number"
-																placeholder="0"
-																value={
-																	editedCase.bloques_biopsia !== undefined
-																		? ((editedCase.bloques_biopsia as number | null) ?? '')
-																		: ((caseData as any).bloques_biopsia ?? '')
-																}
-																onChange={(e) =>
-																	handleInputChange(
-																		'bloques_biopsia',
-																		e.target.value === '' ? null : Number(e.target.value),
-																	)
-																}
-																className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-															/>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{(caseData as any).bloques_biopsia ?? '-'}
-														</span>
+								{/* Note: relationship field not in new structure, could be added if needed */}
+							</div>
+						</InfoSection>
+
+						{/* Medical Information */}
+						<InfoSection title="Información Médica" icon={Stethoscope}>
+							<div className="space-y-1">
+								{/* Estudio - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.examType?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Estudio:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<CustomDropdown
+													options={examTypesOptions}
+													value={editedCase.exam_type || caseData.exam_type || ''}
+													onChange={(value) => handleInputChange('exam_type', value)}
+													placeholder="Seleccione una opción"
+													className="text-sm"
+													direction="auto"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{caseData.exam_type || 'N/A'}
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Médico Tratante - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.medicoTratante?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Médico tratante:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<AutocompleteInput
+													id="treating-doctor-input"
+													name="treating_doctor"
+													fieldName="treatingDoctor"
+													placeholder="Nombre del Médico"
+													value={
+														editedCase.treating_doctor !== undefined
+															? editedCase.treating_doctor
+															: caseData.treating_doctor || ''
+													}
+													onChange={(e) => {
+														const { value } = e.target
+														if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+															handleInputChange('treating_doctor', value)
+														}
+													}}
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{caseData.treating_doctor || 'N/A'}
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Tipo de Consulta - Solo para SPT */}
+								{moduleConfig?.fields?.consulta?.enabled && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipo de consulta:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<FormDropdown
+													id="consulta-input"
+													options={createDropdownOptions(
+														[
+															{ value: 'Cardiología', label: 'Cardiología' },
+															{ value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
+															{ value: 'Dermatología', label: 'Dermatología' },
+															{ value: 'Endocrinología', label: 'Endocrinología' },
+															{ value: 'Fisioterapia', label: 'Fisioterapia' },
+															{ value: 'Gastroenterología', label: 'Gastroenterología' },
+															{ value: 'Ginecología', label: 'Ginecología' },
+															{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+															{ value: 'Medicina General', label: 'Medicina General' },
+															{ value: 'Medicina Interna', label: 'Medicina Interna' },
+															{ value: 'Nefrología', label: 'Nefrología' },
+															{ value: 'Neumonología', label: 'Neumonología' },
+															{ value: 'Neurocirugía', label: 'Neurocirugía' },
+															{ value: 'Neurología', label: 'Neurología' },
+															{ value: 'Odontología', label: 'Odontología' },
+															{ value: 'Oftalmología', label: 'Oftalmología' },
+															{ value: 'Optometría', label: 'Optometría' },
+															{ value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
+															{ value: 'Pediatría', label: 'Pediatría' },
+															{ value: 'Psicología', label: 'Psicología' },
+															{ value: 'Psiquiatría', label: 'Psiquiatría' },
+															{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+															{ value: 'Reumatología', label: 'Reumatología' },
+															{ value: 'Traumatología', label: 'Traumatología' },
+															{ value: 'Urología', label: 'Urología' },
+														].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
 													)}
-												</div>
-											)}
+													value={editedCase.consulta || caseData.consulta || ''}
+													onChange={(value) => handleInputChange('consulta', value)}
+													placeholder="Seleccione una especialidad"
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{caseData.consulta || 'N/A'}
+											</span>
+										)}
+									</div>
+								)}
 
-											{isMarihorgen && (
-												<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de Muestra:</span>
-													{isEditing ? (
-														<div className="sm:w-1/2">
-															<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
-																<PopoverTrigger asChild>
-																	<Button
-																		variant="outline"
-																		className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
-																	>
-																		<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
-																		{(editedCase.fecha_muestra !== undefined
-																			? editedCase.fecha_muestra
-																			: (caseData as any).fecha_muestra)
-																			? format(
-																					new Date(
-																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																					),
-																					'PPP',
-																					{ locale: es },
-																				)
-																			: 'Seleccionar fecha'}
-																	</Button>
-																</PopoverTrigger>
-																<PopoverContent className="w-auto p-0 z-[9999]" align="end">
-																	<Calendar
-																		mode="single"
-																		selected={
-																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
-																				? new Date(
-																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																					)
-																				: undefined
-																		}
-																		onSelect={(date) => {
-																			handleInputChange('fecha_muestra', date ? format(date, 'yyyy-MM-dd') : null)
-																			setIsFechaMuestraCalendarOpen(false)
-																		}}
-																		initialFocus
-																		locale={es}
-																		defaultMonth={
-																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
-																				? new Date(
-																						(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																					)
-																				: new Date()
-																		}
-																	/>
-																	<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
-																		<Button
-																			variant="ghost"
-																			size="sm"
-																			onClick={() => {
-																				handleInputChange('fecha_muestra', null)
-																				setIsFechaMuestraCalendarOpen(false)
-																			}}
-																		>
-																			Borrar
-																		</Button>
-																		<Button
-																			variant="ghost"
-																			size="sm"
-																			onClick={() => {
-																				handleInputChange('fecha_muestra', format(new Date(), 'yyyy-MM-dd'))
-																				setIsFechaMuestraCalendarOpen(false)
-																			}}
-																		>
-																			Hoy
-																		</Button>
-																	</div>
-																</PopoverContent>
-															</Popover>
-														</div>
-													) : (
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{(caseData as any).fecha_muestra
+								{/* Procedencia - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.procedencia?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Procedencia:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<AutocompleteInput
+													id="origin-input"
+													name="origin"
+													fieldName="origin"
+													placeholder="Hospital o Clínica"
+													value={editedCase.origin || caseData.origin || ''}
+													onChange={(e) => {
+														const { value } = e.target
+														if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/.test(value)) {
+															handleInputChange('origin', value)
+														}
+													}}
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{(() => {
+													const originValue = caseData.origin
+													const trimmed = originValue?.trim()
+													const display = trimmed ? originValue : 'N/A'
+													if (isMarihorgen) {
+														console.log('🔍 Marihorgen - origin display:', {
+															originValue,
+															trimmed,
+															display,
+															hasValue: !!originValue,
+															hasTrimmed: !!trimmed,
+														})
+													}
+													return display
+												})()}
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Sede - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.branch?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sede:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<CustomDropdown
+													options={branchOptions}
+													value={editedCase.branch || caseData.branch || ''}
+													onChange={(value) => handleInputChange('branch', value)}
+													placeholder="Seleccione una sede"
+													className="text-sm"
+													direction="auto"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{caseData.branch || 'N/A'}
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Muestra - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.sampleType?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Muestra:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<AutocompleteInput
+													id="sample-type-input"
+													name="sample_type"
+													fieldName="sampleType"
+													placeholder="Ej: Biopsia de Piel"
+													value={editedCase.sample_type || caseData.sample_type || ''}
+													onChange={(e) => {
+														const { value } = e.target
+														handleInputChange('sample_type', value)
+													}}
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{(() => {
+													const sampleTypeValue = caseData.sample_type
+													const trimmed = sampleTypeValue?.trim()
+													const display = trimmed ? sampleTypeValue : 'N/A'
+													if (isMarihorgen) {
+														console.log('🔍 Marihorgen - sample_type display:', {
+															sampleTypeValue,
+															trimmed,
+															display,
+															hasValue: !!sampleTypeValue,
+															hasTrimmed: !!trimmed,
+														})
+													}
+													return display
+												})()}
+											</span>
+										)}
+									</div>
+								)}
+
+								{/* Cantidad de muestras - Siempre visible para marihorgen */}
+								{(isMarihorgen || moduleConfig?.fields?.numberOfSamples?.enabled) && (
+									<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Cantidad de muestras:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												{/* Note: number_of_samples not in current new structure, can be added if needed */}
+												<Input
+													id="number-of-samples-input"
+													name="number_of_samples"
+													type="number"
+													placeholder="1"
+													value="1"
+													disabled
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">1</span>
+										)}
+									</div>
+								)}
+
+								{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
+								<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjuntos:</span>
+									<div className="sm:flex sm:justify-end sm:flex-1">
+										{(() => {
+											const pdfUrls: string[] =
+												Array.isArray((caseData as any).uploaded_pdf_urls) &&
+												(caseData as any).uploaded_pdf_urls.length > 0
+													? (caseData as any).uploaded_pdf_urls
+													: (caseData as any).uploaded_pdf_url
+														? [(caseData as any).uploaded_pdf_url]
+														: []
+											const canEditPdf =
+												isSpt &&
+												(profile?.role === 'laboratorio' ||
+													profile?.role === 'coordinador' ||
+													profile?.role === 'owner' ||
+													profile?.role === 'prueba' ||
+													profile?.role === 'imagenologia' ||
+													profile?.role === 'call_center')
+											if (canEditPdf) {
+												return (
+													<CasePDFUpload
+														caseId={caseData.id}
+														currentPdfUrls={pdfUrls}
+														onUploadingChange={setIsUploadingPdf}
+														onPdfUpdated={async () => {
+															if (refetchCaseData) await refetchCaseData()
+															if (onSave) onSave()
+														}}
+													/>
+												)
+											}
+											if (pdfUrls.length > 0) {
+												return (
+													<div className="flex flex-wrap gap-1">
+														{pdfUrls.map((url, i) => (
+															<PDFButton
+																key={url}
+																pdfUrl={url}
+																size="sm"
+																variant="outline"
+																isAttached={true}
+																downloadFileName={
+																	case_?.code ? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf` : undefined
+																}
+															/>
+														))}
+													</div>
+												)
+											}
+											return <span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
+										})()}
+									</div>
+								</div>
+
+								{isMarihorgen && (
+									<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Bloques:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<Input
+													id="bloques-biopsia-input"
+													name="bloques_biopsia"
+													type="number"
+													placeholder="0"
+													value={
+														editedCase.bloques_biopsia !== undefined
+															? ((editedCase.bloques_biopsia as number | null) ?? '')
+															: ((caseData as any).bloques_biopsia ?? '')
+													}
+													onChange={(e) =>
+														handleInputChange('bloques_biopsia', e.target.value === '' ? null : Number(e.target.value))
+													}
+													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+												/>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{(caseData as any).bloques_biopsia ?? '-'}
+											</span>
+										)}
+									</div>
+								)}
+
+								{isMarihorgen && (
+									<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de Muestra:</span>
+										{isEditing ? (
+											<div className="sm:w-1/2">
+												<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
+													<PopoverTrigger asChild>
+														<Button
+															variant="outline"
+															className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
+														>
+															<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
+															{(
+																editedCase.fecha_muestra !== undefined
+																	? editedCase.fecha_muestra
+																	: (caseData as any).fecha_muestra
+															)
 																? format(
-																		new Date((caseData as any).fecha_muestra + 'T12:00:00'),
+																		new Date(
+																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																		),
 																		'PPP',
 																		{ locale: es },
 																	)
-																: '-'}
-														</span>
-													)}
-												</div>
-											)}
-
-											{/* Image URLs field - Visible for all roles if images exist; en SPT todos los roles pueden subir/editar */}
-											{/* Oculto para marihorgen */}
-											{!isMarihorgen && (
-												<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-													<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-														Imágenes (Imagenología):
-													</span>
-													<div className="w-full">
-														<MultipleImageUrls
-															images={imageUrls}
-															onChange={setImageUrls}
-															maxImages={10}
-															isEditing={isSpt && isEditing}
-															onUploadFile={
-																isSpt && currentCase?.id && profile?.laboratory_id
-																	? handleUploadImage
+																: 'Seleccionar fecha'}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-0 z-9999" align="end">
+														<Calendar
+															mode="single"
+															selected={
+																(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
+																	? new Date(
+																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																		)
 																	: undefined
 															}
-															isUploading={isUploadingImages}
+															onSelect={(date) => {
+																handleInputChange('fecha_muestra', date ? format(date, 'yyyy-MM-dd') : null)
+																setIsFechaMuestraCalendarOpen(false)
+															}}
+															initialFocus
+															locale={es}
+															defaultMonth={
+																(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
+																	? new Date(
+																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
+																		)
+																	: new Date()
+															}
 														/>
-													</div>
-												</div>
-											)}
+														<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	handleInputChange('fecha_muestra', null)
+																	setIsFechaMuestraCalendarOpen(false)
+																}}
+															>
+																Borrar
+															</Button>
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	handleInputChange('fecha_muestra', format(new Date(), 'yyyy-MM-dd'))
+																	setIsFechaMuestraCalendarOpen(false)
+																}}
+															>
+																Hoy
+															</Button>
+														</div>
+													</PopoverContent>
+												</Popover>
+											</div>
+										) : (
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{(caseData as any).fecha_muestra
+													? format(new Date((caseData as any).fecha_muestra + 'T12:00:00'), 'PPP', { locale: es })
+													: '-'}
+											</span>
+										)}
+									</div>
+								)}
 
-											{/* Comentarios */}
-											<div className="py-2 pt-3">
-												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Comentarios:</span>
-												{isEditing ? (
-													<Textarea
-														id="comments-textarea"
-														name="comments"
-														value={editedCase.comments || ''}
-														onChange={(e) => handleInputChange('comments', e.target.value)}
-														className="mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
-														placeholder="Agregar comentarios adicionales..."
+								{/* Image URLs field - Visible for all roles if images exist; en SPT todos los roles pueden subir/editar */}
+								{/* Oculto para marihorgen */}
+								{!isMarihorgen && (
+									<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+											{isConspat ? 'Imágenes:' : 'Imágenes (Imagenología):'}
+										</span>
+										<div className="w-full">
+											<MultipleImageUrls
+												images={imageUrls}
+												onChange={setImageUrls}
+												maxImages={10}
+												isEditing={isSpt && isEditing || isConspat && isEditing}
+												onUploadFile={
+													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined) ||
+													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
+												}
+												isUploading={isUploadingImages}
+											/>
+										</div>
+									</div>
+								)}
+
+								{/* Comentarios */}
+								<div className="py-2 pt-3">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Comentarios:</span>
+									{isEditing ? (
+										<Textarea
+											id="comments-textarea"
+											name="comments"
+											value={editedCase.comments || ''}
+											onChange={(e) => handleInputChange('comments', e.target.value)}
+											className="mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+											placeholder="Agregar comentarios adicionales..."
+										/>
+									) : (
+										<p className="text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border">
+											{caseData.comments || 'Sin comentarios'}
+										</p>
+									)}
+								</div>
+							</div>
+						</InfoSection>
+
+						{/* Financial Information */}
+						<FeatureGuard feature="hasPayment">
+							{!notShow && (
+								<InfoSection title="Información Financiera" icon={CreditCard}>
+									{!hasValidExchangeRate && (
+										<div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+											<div className="flex items-start gap-2">
+												<svg
+													className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
 													/>
-												) : (
-													<p className="text-sm text-gray-900 dark:text-gray-100 mt-1 p-3 bg-white dark:bg-background rounded border">
-														{caseData.comments || 'Sin comentarios'}
+												</svg>
+												<div className="flex-1">
+													<p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+														Tasa de cambio no disponible
 													</p>
-												)}
+													<p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+														Este caso fue creado sin tasa de cambio. Los pagos en Bs no pueden ser convertidos. Edita el
+														caso para actualizar la información financiera.
+													</p>
+												</div>
 											</div>
 										</div>
-									</InfoSection>
+									)}
+									<div className="space-y-4">
+										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto total:</span>
+											{isEditing ? (
+												<div className="sm:w-1/2">
+													{(() => {
+														const currentValue =
+															editedCase.total_amount !== undefined
+																? editedCase.total_amount
+																: caseData?.total_amount || 0
+														const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+															currentValue,
+															(value) => handleInputChange('total_amount', value),
+															'USD',
+															exchangeRate,
+														)
 
-									{/* Financial Information */}
-									<FeatureGuard feature="hasPayment">
-										{!notShow && (
-											<InfoSection title="Información Financiera" icon={CreditCard}>
-												{!hasValidExchangeRate && (
-													<div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-														<div className="flex items-start gap-2">
-															<svg
-																className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5"
-																fill="none"
-																stroke="currentColor"
-																viewBox="0 0 24 24"
-															>
-																<path
-																	strokeLinecap="round"
-																	strokeLinejoin="round"
-																	strokeWidth={2}
-																	d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-																/>
-															</svg>
-															<div className="flex-1">
-																<p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-																	Tasa de cambio no disponible
-																</p>
-																<p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-																	Este caso fue creado sin tasa de cambio. Los pagos en Bs no pueden ser convertidos.
-																	Edita el caso para actualizar la información financiera.
-																</p>
+														return (
+															<div className="flex flex-col gap-1 w-full">
+																<div className="w-full">
+																	<Input
+																		id="total-amount-input"
+																		name="total_amount"
+																		type="text"
+																		inputMode="decimal"
+																		placeholder={calculatorHandler.placeholder}
+																		value={calculatorHandler.displayValue}
+																		onKeyDown={calculatorHandler.handleKeyDown}
+																		onPaste={calculatorHandler.handlePaste}
+																		onFocus={calculatorHandler.handleFocus}
+																		onChange={calculatorHandler.handleChange}
+																		className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50 text-right font-mono"
+																		autoComplete="off"
+																	/>
+																</div>
+																{calculatorHandler.conversionText && (
+																	<p className="text-xs text-green-600 dark:text-green-400 text-right">
+																		{calculatorHandler.conversionText}
+																	</p>
+																)}
 															</div>
-														</div>
+														)
+													})()}
+												</div>
+											) : (
+												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+													${totalAmount.toFixed(2)}
+												</span>
+											)}
+										</div>
+
+										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+												Tasa de cambio (USD/VES):
+											</span>
+											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+												{exchangeRate.toFixed(2)}
+											</span>
+										</div>
+
+										{isEditing && (
+											<div className="py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+												<div className="w-full space-y-2">
+													<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+														Convertidor USD a VES
+													</label>
+													{(() => {
+														const calculatorHandler = createCalculatorInputHandler(
+															parseFloat(converterUsdValue) || 0,
+															(value: number) => setConverterUsdValue(value.toString()),
+														)
+
+														return (
+															<>
+																<Input
+																	id="converter-usd-input"
+																	name="converter_usd"
+																	type="text"
+																	inputMode="decimal"
+																	placeholder="0,00"
+																	value={calculatorHandler.displayValue}
+																	onKeyDown={calculatorHandler.handleKeyDown}
+																	onPaste={calculatorHandler.handlePaste}
+																	onFocus={calculatorHandler.handleFocus}
+																	onChange={calculatorHandler.handleChange}
+																	className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50 text-right font-mono"
+																	autoComplete="off"
+																/>
+																{converterVesValue && (
+																	<div className="flex items-center gap-2">
+																		<p className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
+																			{converterVesValue} VES
+																		</p>
+																		<Button
+																			variant="ghost"
+																			size="icon"
+																			type="button"
+																			className="h-6 w-6 shrink-0"
+																			onClick={async () => {
+																				try {
+																					await navigator.clipboard.writeText(converterVesValue)
+																					toast({
+																						title: '📋 Copiado',
+																						description: `VES copiado al portapapeles`,
+																						className: 'bg-green-100 border-green-400 text-green-800',
+																					})
+																				} catch {
+																					toast({
+																						title: '❌ No se pudo copiar',
+																						description: 'Intenta nuevamente.',
+																						variant: 'destructive',
+																					})
+																				}
+																			}}
+																			aria-label="Copiar VES"
+																		>
+																			<Copy className="size-4" />
+																		</Button>
+																	</div>
+																)}
+															</>
+														)
+													})()}
+												</div>
+											</div>
+										)}
+
+										{isPaymentComplete ? (
+											<div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+												<div className="flex items-center gap-2 mb-2">
+													<span className="text-green-600 dark:text-green-400">✅</span>
+													<p className="text-sm font-medium text-green-800 dark:text-green-300">Pago completo:</p>
+												</div>
+												<div className="grid grid-cols-2 gap-4 text-sm">
+													<div>
+														<span className="text-green-700 dark:text-green-400">En USD:</span>
+														<p className="font-medium text-green-800 dark:text-green-300">${totalAmount.toFixed(2)}</p>
+													</div>
+													<div>
+														<span className="text-green-700 dark:text-green-400">En Bs:</span>
+														<p className="font-medium text-green-800 dark:text-green-300">
+															Bs. {(totalAmount * exchangeRate).toFixed(2)}
+														</p>
+													</div>
+												</div>
+											</div>
+										) : remainingUSD > 0 ? (
+											<div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+												<div className="flex items-center gap-2 mb-2">
+													<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+													<p className="text-sm font-medium text-orange-800 dark:text-orange-300">Monto faltante:</p>
+												</div>
+												<div className="grid grid-cols-2 gap-4 text-sm">
+													<div>
+														<span className="text-orange-700 dark:text-orange-400">En USD:</span>
+														<p className="font-medium text-orange-800 dark:text-orange-300">
+															${remainingUSD.toFixed(2)}
+														</p>
+													</div>
+													<div>
+														<span className="text-orange-700 dark:text-orange-400">En Bs:</span>
+														<p className="font-medium text-orange-800 dark:text-orange-300">
+															Bs. {remainingVES.toFixed(2)}
+														</p>
+													</div>
+												</div>
+											</div>
+										) : null}
+
+										<div className="mt-4">
+											<div className="flex items-center justify-between mb-3">
+												<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Métodos de Pago:</h4>
+												{isEditing && effectivePaymentMethods.length < 4 && (
+													<Button
+														onClick={handleStartAddingPayment}
+														size="sm"
+														className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+													>
+														<CreditCard className="w-4 h-4 mr-1" />
+														Agregar
+													</Button>
+												)}
+											</div>
+											<div className="flex flex-col gap-2">
+												{effectivePaymentMethods.length > 0 ? (
+													<div className="space-y-3">
+														{effectivePaymentMethods.map((payment, index) => (
+															<div
+																key={index}
+																className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800"
+															>
+																<div className="flex items-center justify-between mb-2">
+																	<span className="text-xs font-medium text-black dark:text-white">
+																		Método de Pago #{index + 1}
+																	</span>
+																	{isEditing && (
+																		<Button
+																			onClick={() => handleRemovePaymentMethod(index)}
+																			size="sm"
+																			variant="destructive"
+																			className="h-6 w-6 p-0 cursor-pointer"
+																		>
+																			<X className="w-3 h-3" />
+																		</Button>
+																	)}
+																</div>
+
+																<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+																	{isEditing ? (
+																		<>
+																			<FormDropdown
+																				options={paymentMethodsOptions}
+																				value={payment.method}
+																				onChange={(value) => handlePaymentMethodChange(index, 'method', value)}
+																				placeholder="Método"
+																				className="text-xs border-dashed focus:border-primary focus:ring-primary"
+																				id={`case-payment-method-${index}`}
+																			/>
+																			{(() => {
+																				const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+																					payment.amount || 0,
+																					(value) => handlePaymentMethodChange(index, 'amount', value),
+																					payment.method,
+																					exchangeRate,
+																				)
+
+																				return (
+																					<div className="flex flex-col gap-1 w-full">
+																						<div className="w-full">
+																							<Input
+																								id={`case-payment-amount-${index}`}
+																								name={`payment_amount_${index + 1}`}
+																								type="text"
+																								inputMode="decimal"
+																								placeholder={calculatorHandler.placeholder}
+																								value={calculatorHandler.displayValue}
+																								onKeyDown={calculatorHandler.handleKeyDown}
+																								onPaste={calculatorHandler.handlePaste}
+																								onFocus={calculatorHandler.handleFocus}
+																								onChange={calculatorHandler.handleChange}
+																								className="text-xs border-dashed focus:border-primary focus:ring-primary text-right font-mono"
+																								autoComplete="off"
+																							/>
+																						</div>
+																						{calculatorHandler.conversionText && (
+																							<p className="text-xs text-green-600 dark:text-green-400 text-right">
+																								{calculatorHandler.conversionText}
+																							</p>
+																						)}
+																					</div>
+																				)
+																			})()}
+																			<Input
+																				id={`case-payment-reference-${index}`}
+																				name={`payment_reference_${index + 1}`}
+																				placeholder="Referencia"
+																				value={payment.reference}
+																				onChange={(e) => handlePaymentMethodChange(index, 'reference', e.target.value)}
+																				className="text-xs border-dashed focus:border-primary focus:ring-primary"
+																			/>
+																		</>
+																	) : (
+																		<>
+																			<div className="flex flex-col">
+																				<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
+																					Forma de Pago
+																				</span>
+																				<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
+																					{payment.method}
+																				</span>
+																			</div>
+																			<div className="flex flex-col">
+																				<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
+																					Monto
+																				</span>
+																				<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
+																					${payment.amount.toFixed(2)}
+																				</span>
+																			</div>
+																			<div className="flex flex-col">
+																				<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
+																					Referencia
+																				</span>
+																				<span className="text-xs text-blue-800 dark:text-blue-300">
+																					{payment.reference || 'Sin referencia'}
+																				</span>
+																			</div>
+																		</>
+																	)}
+																</div>
+															</div>
+														))}
+													</div>
+												) : (
+													<div className="text-center p-4 text-gray-500 dark:text-gray-400 text-sm">
+														{effectivePaymentMethods.length === 0
+															? 'No hay métodos de pago registrados'
+															: 'Cargando métodos de pago...'}
 													</div>
 												)}
-												<div className="space-y-4">
-													<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto total:</span>
-														{isEditing ? (
-															<div className="sm:w-1/2">
-																{(() => {
-																	const currentValue =
-																		editedCase.total_amount !== undefined
-																			? editedCase.total_amount
-																			: caseData?.total_amount || 0
-																	const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																		currentValue,
-																		(value) => handleInputChange('total_amount', value),
-																		'USD',
-																		exchangeRate,
-																	)
 
-																	return (
-																		<div className="flex flex-col gap-1 w-full">
-																			<div className="w-full">
-																				<Input
-																					id="total-amount-input"
-																					name="total_amount"
-																					type="text"
-																					inputMode="decimal"
-																					placeholder={calculatorHandler.placeholder}
-																					value={calculatorHandler.displayValue}
-																					onKeyDown={calculatorHandler.handleKeyDown}
-																					onPaste={calculatorHandler.handlePaste}
-																					onFocus={calculatorHandler.handleFocus}
-																					onChange={calculatorHandler.handleChange}
-																					className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50 text-right font-mono"
-																					autoComplete="off"
-																				/>
-																			</div>
-																			{calculatorHandler.conversionText && (
-																				<p className="text-xs text-green-600 dark:text-green-400 text-right">
-																					{calculatorHandler.conversionText}
-																				</p>
-																			)}
-																		</div>
-																	)
-																})()}
-															</div>
-														) : (
-															<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-																${totalAmount.toFixed(2)}
-															</span>
-														)}
-													</div>
+												{isEditing && isAddingNewPayment && (
+													<div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+														<div className="flex items-center justify-between mb-2">
+															<h5 className="text-xs font-medium text-gray-700 dark:text-gray-300">
+																Agregar Nuevo Método de Pago:
+															</h5>
+															<Button
+																onClick={handleCancelEditPayment}
+																size="sm"
+																variant="outline"
+																className="h-6 px-2 text-xs cursor-pointer"
+															>
+																<X className="w-3 h-3 mr-1" />
+																Cancelar
+															</Button>
+														</div>
+														<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+															<FormDropdown
+																options={paymentMethodsOptions}
+																value={newPaymentMethod.method}
+																onChange={(value) =>
+																	setNewPaymentMethod({
+																		...newPaymentMethod,
+																		method: value,
+																	})
+																}
+																placeholder="Método"
+																className="text-xs border-dashed focus:border-primary focus:ring-primary"
+																id="new-payment-method"
+															/>
+															{(() => {
+																const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+																	newPaymentMethod.amount || 0,
+																	(value) =>
+																		setNewPaymentMethod({
+																			...newPaymentMethod,
+																			amount: value,
+																		}),
+																	newPaymentMethod.method,
+																	exchangeRate,
+																)
 
-													<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-															Tasa de cambio (USD/VES):
-														</span>
-														<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-															{exchangeRate.toFixed(2)}
-														</span>
-													</div>
-
-													{isEditing && (
-														<div className="py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-															<div className="w-full space-y-2">
-																<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-																	Convertidor USD a VES
-																</label>
-																{(() => {
-																	const calculatorHandler = createCalculatorInputHandler(
-																		parseFloat(converterUsdValue) || 0,
-																		(value: number) => setConverterUsdValue(value.toString()),
-																	)
-
-																	return (
-																		<>
+																return (
+																	<div className="flex flex-col gap-1 w-full">
+																		<div className="w-full">
 																			<Input
-																				id="converter-usd-input"
-																				name="converter_usd"
+																				id="new-payment-amount"
+																				name="new_payment_amount"
 																				type="text"
 																				inputMode="decimal"
-																				placeholder="0,00"
+																				placeholder={calculatorHandler.placeholder}
 																				value={calculatorHandler.displayValue}
 																				onKeyDown={calculatorHandler.handleKeyDown}
 																				onPaste={calculatorHandler.handlePaste}
 																				onFocus={calculatorHandler.handleFocus}
 																				onChange={calculatorHandler.handleChange}
-																				className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50 text-right font-mono"
+																				className="text-xs border-dashed focus:border-primary focus:ring-primary text-right font-mono"
 																				autoComplete="off"
 																			/>
-																			{converterVesValue && (
-																				<div className="flex items-center gap-2">
-																					<p className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
-																						{converterVesValue} VES
-																					</p>
-																					<Button
-																						variant="ghost"
-																						size="icon"
-																						type="button"
-																						className="h-6 w-6 shrink-0"
-																						onClick={async () => {
-																							try {
-																								await navigator.clipboard.writeText(converterVesValue)
-																								toast({
-																									title: '📋 Copiado',
-																									description: `VES copiado al portapapeles`,
-																									className: 'bg-green-100 border-green-400 text-green-800',
-																								})
-																							} catch {
-																								toast({
-																									title: '❌ No se pudo copiar',
-																									description: 'Intenta nuevamente.',
-																									variant: 'destructive',
-																								})
-																							}
-																						}}
-																						aria-label="Copiar VES"
-																					>
-																						<Copy className="size-4" />
-																					</Button>
-																				</div>
-																			)}
-																		</>
-																	)
-																})()}
-															</div>
-														</div>
-													)}
-
-													{isPaymentComplete ? (
-														<div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-															<div className="flex items-center gap-2 mb-2">
-																<span className="text-green-600 dark:text-green-400">✅</span>
-																<p className="text-sm font-medium text-green-800 dark:text-green-300">Pago completo:</p>
-															</div>
-															<div className="grid grid-cols-2 gap-4 text-sm">
-																<div>
-																	<span className="text-green-700 dark:text-green-400">En USD:</span>
-																	<p className="font-medium text-green-800 dark:text-green-300">
-																		${totalAmount.toFixed(2)}
-																	</p>
-																</div>
-																<div>
-																	<span className="text-green-700 dark:text-green-400">En Bs:</span>
-																	<p className="font-medium text-green-800 dark:text-green-300">
-																		Bs. {(totalAmount * exchangeRate).toFixed(2)}
-																	</p>
-																</div>
-															</div>
-														</div>
-													) : remainingUSD > 0 ? (
-														<div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
-															<div className="flex items-center gap-2 mb-2">
-																<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-																<p className="text-sm font-medium text-orange-800 dark:text-orange-300">
-																	Monto faltante:
-																</p>
-															</div>
-															<div className="grid grid-cols-2 gap-4 text-sm">
-																<div>
-																	<span className="text-orange-700 dark:text-orange-400">En USD:</span>
-																	<p className="font-medium text-orange-800 dark:text-orange-300">
-																		${remainingUSD.toFixed(2)}
-																	</p>
-																</div>
-																<div>
-																	<span className="text-orange-700 dark:text-orange-400">En Bs:</span>
-																	<p className="font-medium text-orange-800 dark:text-orange-300">
-																		Bs. {remainingVES.toFixed(2)}
-																	</p>
-																</div>
-															</div>
-														</div>
-													) : null}
-
-													<div className="mt-4">
-														<div className="flex items-center justify-between mb-3">
-															<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Métodos de Pago:</h4>
-															{isEditing && effectivePaymentMethods.length < 4 && (
-																<Button
-																	onClick={handleStartAddingPayment}
-																	size="sm"
-																	className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-																>
-																	<CreditCard className="w-4 h-4 mr-1" />
-																	Agregar
-																</Button>
-															)}
-														</div>
-														<div className="flex flex-col gap-2">
-															{effectivePaymentMethods.length > 0 ? (
-																<div className="space-y-3">
-																	{effectivePaymentMethods.map((payment, index) => (
-																		<div
-																			key={index}
-																			className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800"
-																		>
-																			<div className="flex items-center justify-between mb-2">
-																				<span className="text-xs font-medium text-black dark:text-white">
-																					Método de Pago #{index + 1}
-																				</span>
-																				{isEditing && (
-																					<Button
-																						onClick={() => handleRemovePaymentMethod(index)}
-																						size="sm"
-																						variant="destructive"
-																						className="h-6 w-6 p-0 cursor-pointer"
-																					>
-																						<X className="w-3 h-3" />
-																					</Button>
-																				)}
-																			</div>
-
-																			<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-																				{isEditing ? (
-																					<>
-																						<FormDropdown
-																							options={paymentMethodsOptions}
-																							value={payment.method}
-																							onChange={(value) => handlePaymentMethodChange(index, 'method', value)}
-																							placeholder="Método"
-																							className="text-xs border-dashed focus:border-primary focus:ring-primary"
-																							id={`case-payment-method-${index}`}
-																						/>
-																						{(() => {
-																							const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																								payment.amount || 0,
-																								(value) => handlePaymentMethodChange(index, 'amount', value),
-																								payment.method,
-																								exchangeRate,
-																							)
-
-																							return (
-																								<div className="flex flex-col gap-1 w-full">
-																									<div className="w-full">
-																										<Input
-																											id={`case-payment-amount-${index}`}
-																											name={`payment_amount_${index + 1}`}
-																											type="text"
-																											inputMode="decimal"
-																											placeholder={calculatorHandler.placeholder}
-																											value={calculatorHandler.displayValue}
-																											onKeyDown={calculatorHandler.handleKeyDown}
-																											onPaste={calculatorHandler.handlePaste}
-																											onFocus={calculatorHandler.handleFocus}
-																											onChange={calculatorHandler.handleChange}
-																											className="text-xs border-dashed focus:border-primary focus:ring-primary text-right font-mono"
-																											autoComplete="off"
-																										/>
-																									</div>
-																									{calculatorHandler.conversionText && (
-																										<p className="text-xs text-green-600 dark:text-green-400 text-right">
-																											{calculatorHandler.conversionText}
-																										</p>
-																									)}
-																								</div>
-																							)
-																						})()}
-																						<Input
-																							id={`case-payment-reference-${index}`}
-																							name={`payment_reference_${index + 1}`}
-																							placeholder="Referencia"
-																							value={payment.reference}
-																							onChange={(e) =>
-																								handlePaymentMethodChange(index, 'reference', e.target.value)
-																							}
-																							className="text-xs border-dashed focus:border-primary focus:ring-primary"
-																						/>
-																					</>
-																				) : (
-																					<>
-																						<div className="flex flex-col">
-																							<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
-																								Forma de Pago
-																							</span>
-																							<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
-																								{payment.method}
-																							</span>
-																						</div>
-																						<div className="flex flex-col">
-																							<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
-																								Monto
-																							</span>
-																							<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
-																								${payment.amount.toFixed(2)}
-																							</span>
-																						</div>
-																						<div className="flex flex-col">
-																							<span className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">
-																								Referencia
-																							</span>
-																							<span className="text-xs text-blue-800 dark:text-blue-300">
-																								{payment.reference || 'Sin referencia'}
-																							</span>
-																						</div>
-																					</>
-																				)}
-																			</div>
 																		</div>
-																	))}
-																</div>
-															) : (
-																<div className="text-center p-4 text-gray-500 dark:text-gray-400 text-sm">
-																	{effectivePaymentMethods.length === 0
-																		? 'No hay métodos de pago registrados'
-																		: 'Cargando métodos de pago...'}
-																</div>
-															)}
-
-															{isEditing && isAddingNewPayment && (
-																<div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-																	<div className="flex items-center justify-between mb-2">
-																		<h5 className="text-xs font-medium text-gray-700 dark:text-gray-300">
-																			Agregar Nuevo Método de Pago:
-																		</h5>
-																		<Button
-																			onClick={handleCancelEditPayment}
-																			size="sm"
-																			variant="outline"
-																			className="h-6 px-2 text-xs cursor-pointer"
-																		>
-																			<X className="w-3 h-3 mr-1" />
-																			Cancelar
-																		</Button>
+																		{calculatorHandler.conversionText && (
+																			<p className="text-xs text-green-600 dark:text-green-400 text-right">
+																				{calculatorHandler.conversionText}
+																			</p>
+																		)}
 																	</div>
-																	<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-																		<FormDropdown
-																			options={paymentMethodsOptions}
-																			value={newPaymentMethod.method}
-																			onChange={(value) =>
-																				setNewPaymentMethod({
-																					...newPaymentMethod,
-																					method: value,
-																				})
-																			}
-																			placeholder="Método"
-																			className="text-xs border-dashed focus:border-primary focus:ring-primary"
-																			id="new-payment-method"
-																		/>
-																		{(() => {
-																			const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-																				newPaymentMethod.amount || 0,
-																				(value) =>
-																					setNewPaymentMethod({
-																						...newPaymentMethod,
-																						amount: value,
-																					}),
-																				newPaymentMethod.method,
-																				exchangeRate,
-																			)
-
-																			return (
-																				<div className="flex flex-col gap-1 w-full">
-																					<div className="w-full">
-																						<Input
-																							id="new-payment-amount"
-																							name="new_payment_amount"
-																							type="text"
-																							inputMode="decimal"
-																							placeholder={calculatorHandler.placeholder}
-																							value={calculatorHandler.displayValue}
-																							onKeyDown={calculatorHandler.handleKeyDown}
-																							onPaste={calculatorHandler.handlePaste}
-																							onFocus={calculatorHandler.handleFocus}
-																							onChange={calculatorHandler.handleChange}
-																							className="text-xs border-dashed focus:border-primary focus:ring-primary text-right font-mono"
-																							autoComplete="off"
-																						/>
-																					</div>
-																					{calculatorHandler.conversionText && (
-																						<p className="text-xs text-green-600 dark:text-green-400 text-right">
-																							{calculatorHandler.conversionText}
-																						</p>
-																					)}
-																				</div>
-																			)
-																		})()}
-																		<Input
-																			id="new-payment-reference"
-																			name="new_payment_reference"
-																			placeholder="Referencia"
-																			value={newPaymentMethod.reference}
-																			onChange={(e) =>
-																				setNewPaymentMethod({
-																					...newPaymentMethod,
-																					reference: e.target.value,
-																				})
-																			}
-																			className="text-xs border-dashed focus:border-primary focus:ring-primary"
-																		/>
-																	</div>
-																</div>
-															)}
+																)
+															})()}
+															<Input
+																id="new-payment-reference"
+																name="new_payment_reference"
+																placeholder="Referencia"
+																value={newPaymentMethod.reference}
+																onChange={(e) =>
+																	setNewPaymentMethod({
+																		...newPaymentMethod,
+																		reference: e.target.value,
+																	})
+																}
+																className="text-xs border-dashed focus:border-primary focus:ring-primary"
+															/>
 														</div>
 													</div>
-												</div>
-											</InfoSection>
-										)}
-									</FeatureGuard>
-
-									{/* Additional Information */}
-									<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200">
-										<div className="flex items-center justify-between mb-3">
-											<div className="flex items-center gap-2">
-												<FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-												<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-													Información Adicional
-												</h3>
-											</div>
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-												className="text-sm text-primary hover:text-primary/80"
-											>
-												{showAdditionalInfo ? (
-													<>
-														Ver menos
-														<ChevronUp className="ml-1 h-4 w-4" />
-													</>
-												) : (
-													<>
-														Ver más
-														<ChevronDown className="ml-1 h-4 w-4" />
-													</>
 												)}
-											</Button>
+											</div>
 										</div>
-										{showAdditionalInfo && (
-											<div className="space-y-1">
-												<div className="bg-linear-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3">
-													<p className="text-teal-400 text-sm">
-														Este caso fue creado por{' '}
-														<span className="font-semibold">{creatorData?.displayName || 'Usuario del sistema'}</span>
-													</p>
-												</div>
-												<InfoRow
-													label="Fecha de creación"
-													value={new Date(caseData.created_at || '').toLocaleDateString('es-ES')}
-													editable={false}
-												/>
-												{/* Fecha de entrega: solo visible para marihorgen; editable al editar (entrega presencial) */}
-												{isMarihorgen && (
-													<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-															Fecha de entrega
-														</span>
-														{isEditing ? (
-															<div className="sm:w-1/2">
-																<Popover open={isFechaEntregaCalendarOpen} onOpenChange={setIsFechaEntregaCalendarOpen}>
-																	<PopoverTrigger asChild>
-																		<Button
-																			variant="outline"
-																			className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
-																		>
-																			<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
-																			{(editedCase.fecha_entrega !== undefined
-																				? editedCase.fecha_entrega
-																				: caseData.fecha_entrega)
-																				? format(
-																						new Date(
-																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
-																						),
-																						'PPP',
-																						{ locale: es },
-																					)
-																				: 'Seleccionar fecha'}
-																		</Button>
-																	</PopoverTrigger>
-																	<PopoverContent className="w-auto p-0 z-[9999]" align="end">
-																		<Calendar
-																			mode="single"
-																			selected={
-																				(editedCase.fecha_entrega ?? caseData.fecha_entrega)
-																					? new Date(
-																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
-																						)
-																					: undefined
-																			}
-																			onSelect={(date) => {
-																				handleInputChange('fecha_entrega', date ? format(date, 'yyyy-MM-dd') : null)
-																				setIsFechaEntregaCalendarOpen(false)
-																			}}
-																			initialFocus
-																			locale={es}
-																			defaultMonth={
-																				(editedCase.fecha_entrega ?? caseData.fecha_entrega)
-																					? new Date(
-																							(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
-																						)
-																					: new Date()
-																			}
-																		/>
-																		<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
-																			<Button
-																				variant="ghost"
-																				size="sm"
-																				onClick={() => {
-																					handleInputChange('fecha_entrega', null)
-																					setIsFechaEntregaCalendarOpen(false)
-																				}}
-																			>
-																				Borrar
-																			</Button>
-																			<Button
-																				variant="ghost"
-																				size="sm"
-																				onClick={() => {
-																					handleInputChange('fecha_entrega', format(new Date(), 'yyyy-MM-dd'))
-																					setIsFechaEntregaCalendarOpen(false)
-																				}}
-																			>
-																				Hoy
-																			</Button>
-																		</div>
-																	</PopoverContent>
-																</Popover>
-															</div>
-														) : (
-															<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-																{caseData.fecha_entrega
-																	? new Date(`${caseData.fecha_entrega}T00:00:00`).toLocaleDateString('es-ES')
-																	: '-'}
-															</span>
-														)}
-													</div>
-												)}
-												{!isMarihorgen && caseData.fecha_entrega && (
-													<div className="flex items-center justify-between py-2">
-														<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-															Fecha de entrega
-														</span>
-														<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-															{new Date(`${caseData.fecha_entrega}T00:00:00`).toLocaleDateString('es-ES')}
-														</span>
-													</div>
-												)}
-												{isMarihorgen && caseData.patologo_id && (
-													<InfoRow
-														label="Patólogo"
-														value={pathologistData?.display_name || pathologistData?.email || 'Usuario'}
-														editable={false}
-													/>
-												)}
-												<InfoRow
-													label="Última actualización"
-													value={new Date(caseData.updated_at || '').toLocaleDateString('es-ES')}
-													editable={false}
-												/>
-											</div>
-										)}
 									</div>
+								</InfoSection>
+							)}
+						</FeatureGuard>
 
-									{/* Bottom Action Buttons */}
-									{!notShow && (
-										<div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-											<button
-												onClick={handleDeleteClick}
-												className="flex items-center justify-center gap-1 px-3 py-2 text-lg font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 w-full text-center hover:bg-red-200 dark:hover:bg-red-800/40 hover:scale-105 transition-all duration-200"
-											>
-												<Trash2 className="size-5" />
-												Eliminar
-											</button>
+						{/* Additional Information */}
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200">
+							<div className="flex items-center justify-between mb-3">
+								<div className="flex items-center gap-2">
+									<FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+									<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Información Adicional</h3>
+								</div>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+									className="text-sm text-primary hover:text-primary/80"
+								>
+									{showAdditionalInfo ? (
+										<>
+											Ver menos
+											<ChevronUp className="ml-1 h-4 w-4" />
+										</>
+									) : (
+										<>
+											Ver más
+											<ChevronDown className="ml-1 h-4 w-4" />
+										</>
+									)}
+								</Button>
+							</div>
+							{showAdditionalInfo && (
+								<div className="space-y-1">
+									<div className="bg-linear-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-3 rounded-lg border border-teal-200 dark:border-teal-800 mb-3">
+										<p className="text-teal-400 text-sm">
+											Este caso fue creado por{' '}
+											<span className="font-semibold">{creatorData?.displayName || 'Usuario del sistema'}</span>
+										</p>
+									</div>
+									<InfoRow
+										label="Fecha de creación"
+										value={new Date(caseData.created_at || '').toLocaleDateString('es-ES')}
+										editable={false}
+									/>
+									{/* Fecha de entrega: solo visible para marihorgen; editable al editar (entrega presencial) */}
+									{isMarihorgen && (
+										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de entrega</span>
+											{isEditing ? (
+												<div className="sm:w-1/2">
+													<Popover open={isFechaEntregaCalendarOpen} onOpenChange={setIsFechaEntregaCalendarOpen}>
+														<PopoverTrigger asChild>
+															<Button
+																variant="outline"
+																className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
+															>
+																<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
+																{(
+																	editedCase.fecha_entrega !== undefined
+																		? editedCase.fecha_entrega
+																		: caseData.fecha_entrega
+																)
+																	? format(
+																			new Date(
+																				(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
+																			),
+																			'PPP',
+																			{ locale: es },
+																		)
+																	: 'Seleccionar fecha'}
+															</Button>
+														</PopoverTrigger>
+														<PopoverContent className="w-auto p-0 z-9999" align="end">
+															<Calendar
+																mode="single"
+																selected={
+																	(editedCase.fecha_entrega ?? caseData.fecha_entrega)
+																		? new Date((editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00')
+																		: undefined
+																}
+																onSelect={(date) => {
+																	handleInputChange('fecha_entrega', date ? format(date, 'yyyy-MM-dd') : null)
+																	setIsFechaEntregaCalendarOpen(false)
+																}}
+																initialFocus
+																locale={es}
+																defaultMonth={
+																	(editedCase.fecha_entrega ?? caseData.fecha_entrega)
+																		? new Date((editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00')
+																		: new Date()
+																}
+															/>
+															<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	onClick={() => {
+																		handleInputChange('fecha_entrega', null)
+																		setIsFechaEntregaCalendarOpen(false)
+																	}}
+																>
+																	Borrar
+																</Button>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	onClick={() => {
+																		handleInputChange('fecha_entrega', format(new Date(), 'yyyy-MM-dd'))
+																		setIsFechaEntregaCalendarOpen(false)
+																	}}
+																>
+																	Hoy
+																</Button>
+															</div>
+														</PopoverContent>
+													</Popover>
+												</div>
+											) : (
+												<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+													{caseData.fecha_entrega
+														? new Date(`${caseData.fecha_entrega}T00:00:00`).toLocaleDateString('es-ES')
+														: '-'}
+												</span>
+											)}
 										</div>
 									)}
+									{!isMarihorgen && caseData.fecha_entrega && (
+										<div className="flex items-center justify-between py-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de entrega</span>
+											<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+												{new Date(`${caseData.fecha_entrega}T00:00:00`).toLocaleDateString('es-ES')}
+											</span>
+										</div>
+									)}
+									{isMarihorgen && caseData.patologo_id && (
+										<InfoRow
+											label="Patólogo"
+											value={pathologistData?.display_name || pathologistData?.email || 'Usuario'}
+											editable={false}
+										/>
+									)}
+									<InfoRow
+										label="Última actualización"
+										value={new Date(caseData.updated_at || '').toLocaleDateString('es-ES')}
+										editable={false}
+									/>
 								</div>
-							</motion.div>
+							)}
+						</div>
+
+						{/* Bottom Action Buttons */}
+						{!notShow && (
+							<div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+								<button
+									onClick={handleDeleteClick}
+									className="flex items-center justify-center gap-1 px-3 py-2 text-lg font-semibold rounded-md bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 w-full text-center hover:bg-red-200 dark:hover:bg-red-800/40 hover:scale-105 transition-all duration-200"
+								>
+									<Trash2 className="size-5" />
+									Eliminar
+								</button>
+							</div>
+						)}
+					</div>
+				</motion.div>
 			</>
 		)
 
@@ -3214,8 +3221,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									: []
 						}
 						imageUrls={
-							(caseData as any)?.images_urls ||
-							((caseData as any)?.image_url ? [(caseData as any).image_url] : [])
+							(caseData as any)?.images_urls || ((caseData as any)?.image_url ? [(caseData as any).image_url] : [])
 						}
 						laboratoryName={laboratory?.name}
 						laboratoryLogo={laboratory?.branding?.logo || undefined}
@@ -3247,9 +3253,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		return (
 			<>
-				<AnimatePresence mode="wait">
-					{isOpen && overlayContentJSX}
-				</AnimatePresence>
+				<AnimatePresence mode="wait">{isOpen && overlayContentJSX}</AnimatePresence>
 				{restContent}
 			</>
 		)

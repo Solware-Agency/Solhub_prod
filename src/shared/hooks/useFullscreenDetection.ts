@@ -5,9 +5,11 @@ export const useFullscreenDetection = () => {
 
 	useEffect(() => {
 		const handleFullscreenChange = () => {
-			// Verificar si hay un elemento con z-index muy alto (modal de fullscreen)
-			const fullscreenElement = document.querySelector('[style*="z-index: 999999"]') || 
-									document.querySelector('[class*="z-[999999]"]')
+			// Solo considerar fullscreen a modales/paneles que usan z-index muy alto (16+ nueves).
+			// No incluir dropdowns como Select (z-[9999999]) ni modales pequeños (z-[99999999]).
+			const fullscreenElement =
+				document.querySelector('[style*="z-index: 9999999999999999"]') ||
+				document.querySelector('[class*="z-[9999999999999999"]')
 			setIsFullscreenMode(!!fullscreenElement)
 		}
 

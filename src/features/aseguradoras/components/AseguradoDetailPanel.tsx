@@ -3,10 +3,14 @@ import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { Calendar } from '@shared/components/ui/calendar'
 import { SideDetailPanel } from './SideDetailPanel'
 import type { Asegurado, AseguradoUpdate } from '@services/supabase/aseguradoras/asegurados-service'
 import { useToast } from '@shared/hooks/use-toast'
-import { FileText, MapPin, Phone, User } from 'lucide-react'
+import { FileText, MapPin, Phone, User, CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { cn } from '@shared/lib/cn'
 
 interface AseguradoDetailPanelProps {
 	asegurado: Asegurado | null
@@ -30,6 +34,7 @@ export const AseguradoDetailPanel = ({
 		document_id: '',
 		phone: '',
 		email: '',
+		fecha_nacimiento: null,
 		address: '',
 		notes: '',
 		tipo_asegurado: 'Persona natural',
@@ -42,6 +47,7 @@ export const AseguradoDetailPanel = ({
 				document_id: asegurado.document_id,
 				phone: asegurado.phone,
 				email: asegurado.email ?? '',
+				fecha_nacimiento: asegurado.fecha_nacimiento ?? null,
 				address: asegurado.address ?? '',
 				notes: asegurado.notes ?? '',
 				tipo_asegurado: asegurado.tipo_asegurado,
@@ -116,7 +122,7 @@ export const AseguradoDetailPanel = ({
 					<InfoSection title="Información del asegurado" icon={User}>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div className="space-y-2">
-								<Label>Tipo de asegurado</Label>
+								<Label>Tipo de persona</Label>
 								<Select
 									value={form.tipo_asegurado}
 									onValueChange={(value) =>
@@ -130,8 +136,8 @@ export const AseguradoDetailPanel = ({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="Persona natural">Persona natural</SelectItem>
-										<SelectItem value="Persona jurídica">Persona jurídica</SelectItem>
+										<SelectItem value="Persona natural">Natural</SelectItem>
+										<SelectItem value="Persona jurídica">Jurídico</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>
@@ -161,6 +167,36 @@ export const AseguradoDetailPanel = ({
 							<div className="space-y-2">
 								<Label>Email</Label>
 								<Input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+							</div>
+							<div className="space-y-2">
+								<Label>Fecha de nacimiento</Label>
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											className={cn(
+												'w-full justify-start text-left font-normal',
+												!form.fecha_nacimiento && 'text-muted-foreground',
+											)}
+										>
+											<CalendarIcon className="mr-2 h-4 w-4" />
+											{form.fecha_nacimiento
+												? format(new Date(form.fecha_nacimiento + 'T00:00:00'), 'dd/MM/yyyy')
+												: 'Fecha'}
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0">
+										<Calendar
+											mode="single"
+											selected={form.fecha_nacimiento ? new Date(form.fecha_nacimiento + 'T00:00:00') : undefined}
+											onSelect={(date) => {
+												const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
+												setForm((prev) => ({ ...prev, fecha_nacimiento: fechaStr || null }))
+											}}
+											initialFocus
+										/>
+									</PopoverContent>
+								</Popover>
 							</div>
 						</div>
 					</InfoSection>
@@ -218,6 +254,12 @@ export const AseguradoDetailPanel = ({
 								<p className="text-xs text-gray-500">Email</p>
 								<p className="text-sm font-medium">{asegurado.email || 'Sin email'}</p>
 							</div>
+							{asegurado.fecha_nacimiento && (
+								<div>
+									<p className="text-xs text-gray-500">Fecha de nacimiento</p>
+									<p className="text-sm font-medium">{asegurado.fecha_nacimiento}</p>
+								</div>
+							)}
 						</div>
 					</InfoSection>
 

@@ -193,9 +193,9 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 					.from('profiles')
 					.select('laboratory_id')
 					.eq('id', data.user.id)
-					.single()
+					.maybeSingle()
 
-				const labId = (profile as { laboratory_id?: string | null } | null)?.laboratory_id
+				const labId = profile?.laboratory_id as string | null | undefined
 				if (labId) {
 					const { data: lab, error: labError } = await supabase
 						.from('laboratories' as never)
@@ -368,7 +368,7 @@ export const updateUserSessionTimeout = async (userId: string, minutes: number):
 		}
 
 		const { data: profile } = await supabase.from('profiles').select('laboratory_id').eq('id', userId).maybeSingle()
-		const labId = profile?.laboratory_id
+		const labId = profile?.laboratory_id as string | null | undefined
 		if (!labId) {
 			return { error: new Error('No laboratory_id in profile') }
 		}

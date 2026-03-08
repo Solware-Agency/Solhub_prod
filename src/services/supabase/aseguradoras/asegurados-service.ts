@@ -1,6 +1,28 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
 
+const MAX_ATTACHMENTS = 3
+
+function normalizeAttachments(val: unknown): AseguradoAttachment[] {
+	if (!Array.isArray(val)) return []
+	const out: AseguradoAttachment[] = []
+	for (const item of val.slice(0, MAX_ATTACHMENTS)) {
+		if (item && typeof item === 'object' && typeof (item as any).url === 'string') {
+			out.push({
+				url: (item as any).url,
+				name: typeof (item as any).name === 'string' ? (item as any).name : 'Archivo',
+			})
+		}
+	}
+	return out
+}
+
+/** Un adjunto del asegurado: URL pública y nombre para mostrar (máx. 3 por asegurado) */
+export interface AseguradoAttachment {
+	url: string
+	name: string
+}
+
 export interface Asegurado {
 	id: string
 	codigo: string | null
@@ -9,10 +31,12 @@ export interface Asegurado {
 	document_id: string
 	phone: string
 	email: string | null
+	fecha_nacimiento: string | null
 	address: string | null
 	notes: string | null
 	tipo_asegurado: 'Persona natural' | 'Persona jurídica'
 	activo: boolean
+	attachments: AseguradoAttachment[]
 	created_at: string | null
 	updated_at: string | null
 }
@@ -22,9 +46,11 @@ export interface AseguradoInsert {
 	document_id: string
 	phone: string
 	email?: string | null
+	fecha_nacimiento?: string | null
 	address?: string | null
 	notes?: string | null
 	tipo_asegurado: 'Persona natural' | 'Persona jurídica'
+	attachments?: AseguradoAttachment[]
 }
 
 export interface AseguradoUpdate {
@@ -32,10 +58,12 @@ export interface AseguradoUpdate {
 	document_id?: string
 	phone?: string
 	email?: string | null
+	fecha_nacimiento?: string | null
 	address?: string | null
 	notes?: string | null
 	tipo_asegurado?: 'Persona natural' | 'Persona jurídica'
 	activo?: boolean
+	attachments?: AseguradoAttachment[]
 }
 
 export const getAsegurados = async (
@@ -69,8 +97,12 @@ export const getAsegurados = async (
 		throw error
 	}
 
+	const normalized = (data || []).map((row) => ({
+		...row,
+		attachments: normalizeAttachments(row.attachments),
+	}))
 	return {
-		data: (data || []) as Asegurado[],
+		data: normalized as Asegurado[],
 		count: count || 0,
 		page,
 		limit,
@@ -92,7 +124,7 @@ export const findAseguradoById = async (id: string): Promise<Asegurado | null> =
 		throw error
 	}
 
-	return data as Asegurado
+	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
 }
 
 export const getAseguradosByIds = async (ids: string[]): Promise<Asegurado[]> => {
@@ -106,7 +138,11 @@ export const getAseguradosByIds = async (ids: string[]): Promise<Asegurado[]> =>
 		.order('full_name')
 
 	if (error) throw error
-	return (data || []) as Asegurado[]
+	const normalized = (data || []).map((row) => ({
+		...row,
+		attachments: normalizeAttachments(row.attachments),
+	}))
+	return normalized as Asegurado[]
 }
 
 export const findAseguradoByDocumentId = async (documentId: string): Promise<Asegurado | null> => {
@@ -124,7 +160,7 @@ export const findAseguradoByDocumentId = async (documentId: string): Promise<Ase
 		throw error
 	}
 
-	return data as Asegurado
+	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
 }
 
 export const searchAsegurados = async (searchTerm: string, limit = 10): Promise<Asegurado[]> => {
@@ -154,7 +190,7 @@ export const createAsegurado = async (payload: AseguradoInsert): Promise<Asegura
 		throw error
 	}
 
-	return data as Asegurado
+	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
 }
 
 export const updateAsegurado = async (id: string, payload: AseguradoUpdate): Promise<Asegurado> => {
@@ -168,7 +204,7 @@ export const updateAsegurado = async (id: string, payload: AseguradoUpdate): Pro
 		.single()
 
 	if (error) throw error
-	return data as Asegurado
+	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
 }
 
 /** Soft delete: marca asegurado como inactivo; deja de mostrarse en listados pero se conserva en BD */

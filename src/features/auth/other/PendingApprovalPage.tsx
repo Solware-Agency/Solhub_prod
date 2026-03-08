@@ -98,29 +98,6 @@ function PendingApprovalPage() {
               </p>
             </div>
 
-            <div className='w-full mb-6'>
-              <div className='bg-orange-900/50 border border-orange-700/50 text-orange-200 px-4 py-3 rounded mb-4'>
-                <p className='text-sm'>
-                  Aunque hayas verificado tu correo electrónico, necesitas la
-                  aprobación de un administrador para acceder al sistema.
-                </p>
-              </div>
-
-              <div className='space-y-4 text-slate-300 text-sm'>
-                <p>
-                  <strong>¿Qué significa esto?</strong>
-                </p>
-                <ul className='list-disc list-inside space-y-2'>
-                  <li>Tu cuenta ha sido creada correctamente</li>
-                  <li>Un administrador debe aprobar tu acceso al sistema</li>
-                  <li>Recibirás acceso una vez que tu cuenta sea aprobada</li>
-                  <li>
-                    Puedes contactar al administrador para acelerar el proceso
-                  </li>
-                </ul>
-              </div>
-            </div>
-
             <div className='text-center space-y-3'>
               <button
                 onClick={handleLogout}

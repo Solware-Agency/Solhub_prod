@@ -86,7 +86,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 
 	const handleDetailPanelClose = () => {
 		setIsDetailPanelOpen(false)
-		setSelectedStat(null)
+		// selectedStat se limpia en onExited al terminar la animación de salida
 	}
 
 	return (
@@ -749,6 +749,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 				<TriageDetailPanel
 					isOpen={isDetailPanelOpen}
 					onClose={handleDetailPanelClose}
+					onExited={() => setSelectedStat(null)}
 					statType={selectedStat}
 					stats={stats}
 					trends={trends}

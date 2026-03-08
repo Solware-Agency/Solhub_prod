@@ -2,13 +2,15 @@ import { useEffect, useRef } from 'react'
 
 interface EyeTrackingComponentProps {
 	className?: string
+	/** Si true, solo se muestra la cabeza (viewBox recortado). Útil para icono del chatbot. */
+	headOnly?: boolean
 }
 
 const VIEWBOX_WIDTH = 647.42
 const VIEWBOX_HEIGHT = 831.52
 const MAX_PUPIL_OFFSET = 14 // movimiento máximo de la pupila (unidades viewBox)
 
-const EyeTrackingComponent = ({ className = '' }: EyeTrackingComponentProps) => {
+const EyeTrackingComponent = ({ className = '', headOnly = false }: EyeTrackingComponentProps) => {
 	const svgRef = useRef<SVGSVGElement>(null)
 	const lEyeBallRef = useRef<SVGGElement>(null)
 	const rEyeBallRef = useRef<SVGGElement>(null)
@@ -70,7 +72,7 @@ const EyeTrackingComponent = ({ className = '' }: EyeTrackingComponentProps) => 
 			<svg
         ref={svgRef}
         xmlns='http://www.w3.org/2000/svg'
-        viewBox='0 0 647.42 831.52'
+        viewBox={headOnly ? '0 0 647.42 420' : '0 0 647.42 831.52'}
         className={className}
       >
         <defs>

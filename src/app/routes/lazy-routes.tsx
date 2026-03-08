@@ -222,12 +222,6 @@ export const PagosPage = lazy(() =>
     'PagosPage'
   )
 )
-export const DocumentosPage = lazy(() =>
-  lazyRetry(
-    () => import('@features/aseguradoras/pages/DocumentosPage'),
-    'DocumentosPage'
-  )
-)
 export const CompaniasPage = lazy(() =>
   lazyRetry(
     () => import('@features/aseguradoras/pages/CompaniasPage'),

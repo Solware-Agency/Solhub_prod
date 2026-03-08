@@ -1911,12 +1911,15 @@ const logMedicalCaseChanges = async (
 };
 
 /**
- * Buscar casos médicos por código
+ * Buscar casos médicos por código (solo del laboratorio del usuario).
+ * Usa .maybeSingle() para evitar 406 cuando no hay filas (RLS o código de otro lab).
  */
 export const findCaseByCode = async (
   code: string,
 ): Promise<MedicalCaseWithPatient | null> => {
   try {
+    const laboratoryId = await getUserLaboratoryId();
+
     const { data, error } = await supabase
       .from('medical_records_clean')
       .select(
@@ -1934,13 +1937,14 @@ export const findCaseByCode = async (
 			`,
       )
       .eq('code', code)
-      .single();
+      .eq('laboratory_id', laboratoryId)
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
       throw error;
+    }
+    if (!data) {
+      return null;
     }
 
     // Transformar los datos para que coincidan con la interfaz
@@ -1968,6 +1972,82 @@ export const findCaseByCode = async (
     return transformedData;
   } catch (error) {
     console.error('Error buscando caso por código:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtener caso médico por ID con datos del paciente (para abrir modal de detalles desde historial, etc.)
+ */
+export const getCaseByIdWithPatient = async (
+  caseId: string,
+): Promise<MedicalCaseWithPatient | null> => {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single() as { data: { laboratory_id: string } | null; error: any };
+
+    if (profileError || !profile?.laboratory_id) {
+      throw new Error('Usuario no tiene laboratorio asignado');
+    }
+
+    const { data, error } = await supabase
+      .from('medical_records_clean')
+      .select(
+        `
+        *,
+        patients(
+          id,
+          cedula,
+          nombre,
+          edad,
+          telefono,
+          email,
+          fecha_nacimiento
+        )
+      `,
+      )
+      .eq('id', caseId)
+      .eq('laboratory_id', profile.laboratory_id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+
+    const transformedData = {
+      ...data,
+      laboratory_id: data.laboratory_id || '',
+      patient_id: (data as any).patients?.id || data.patient_id,
+      cedula: (data as any).patients?.cedula || '',
+      nombre: (data as any).patients?.nombre || '',
+      edad: (data as any).patients?.edad || null,
+      telefono: (data as any).patients?.telefono || null,
+      patient_email: (data as any).patients?.email || null,
+      fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
+      consulta: (data as any).consulta || null,
+      version: (data as any).version || null,
+      image_url: (data as any).image_url || null,
+      material_remitido: (data as any).material_remitido || null,
+      informacion_clinica: (data as any).informacion_clinica || null,
+      descripcion_macroscopica: (data as any).descripcion_macroscopica || null,
+      diagnostico: (data as any).diagnostico || null,
+      comentario: (data as any).comentario || null,
+    } as MedicalCaseWithPatient;
+
+    return transformedData;
+  } catch (error) {
+    console.error('Error obteniendo caso por ID con paciente:', error);
     throw error;
   }
 };

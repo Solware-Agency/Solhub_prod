@@ -50,12 +50,20 @@ const AseguradoCard = ({ asegurado, onClick }: AseguradoCardProps) => {
 				</div>
 			</div>
 
-			<div>
-				<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-				<p className="text-sm text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
-					<Mail className="w-3 h-3 text-gray-400" />
-					{asegurado.email || 'Sin email'}
-				</p>
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+				<div>
+					<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+					<p className="text-sm text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
+						<Mail className="w-3 h-3 text-gray-400" />
+						{asegurado.email || 'Sin email'}
+					</p>
+				</div>
+				{asegurado.fecha_nacimiento && (
+					<div>
+						<p className="text-xs text-gray-500 dark:text-gray-400">F. nacimiento</p>
+						<p className="text-sm text-gray-900 dark:text-gray-100">{asegurado.fecha_nacimiento}</p>
+					</div>
+				)}
 			</div>
 		</div>
 	)

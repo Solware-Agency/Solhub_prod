@@ -179,12 +179,60 @@ export const getIdentificacionesByPatient = async (pacienteId: string): Promise<
 }
 
 /**
+ * Verifica que (tipo, numero) sea consistente con la cédula del paciente en patients.
+ * Regla: si el paciente tiene cedula en patients, debe coincidir con tipo-numero (normalizado).
+ * Así se evita vincular una identificación a un paciente que tiene otra cédula en su ficha.
+ */
+const assertIdentificacionMatchesPatientCedula = async (
+	pacienteId: string,
+	tipo: string,
+	numero: string,
+	laboratoryId: string,
+): Promise<void> => {
+	const { data: patient, error } = await supabase
+		.from('patients')
+		.select('id, cedula, nombre')
+		.eq('id', pacienteId)
+		.eq('laboratory_id', laboratoryId)
+		.single()
+
+	if (error || !patient) {
+		throw new Error('Paciente no encontrado')
+	}
+
+	const patientCedula = (patient as { cedula?: string | null }).cedula
+	if (patientCedula == null || patientCedula.trim() === '' || patientCedula === 'S/C') {
+		return // Paciente sin cédula en ficha: permitir cualquier (tipo, numero)
+	}
+
+	const expectedCedula = `${tipo}-${numero}`
+	const normalizedPatient = formatCedulaCanonical(patientCedula)
+	const normalizedExpected = formatCedulaCanonical(expectedCedula)
+	if (normalizedPatient !== normalizedExpected) {
+		const nombre = (patient as { nombre?: string }).nombre ?? 'Paciente'
+		throw new Error(
+			`No se puede vincular esta identificación al paciente "${nombre}". ` +
+				`En su ficha la cédula es "${patientCedula}". ` +
+				`El tipo y número (${tipo}-${numero}) deben coincidir con la cédula del paciente. ` +
+				`Edite primero la cédula del paciente o asocie esta identificación al paciente correcto.`,
+		)
+	}
+}
+
+/**
  * Crear nueva identificación - MULTI-TENANT
- * Automáticamente asigna laboratory_id del usuario autenticado
+ * Valida que (tipo, numero) coincida con la cédula del paciente en patients (si tiene cédula).
  */
 export const createIdentification = async (identificacionData: IdentificacionInsert): Promise<Identificacion> => {
 	try {
 		const laboratoryId = identificacionData.laboratory_id || (await getUserLaboratoryId())
+
+		await assertIdentificacionMatchesPatientCedula(
+			identificacionData.paciente_id,
+			identificacionData.tipo_documento,
+			identificacionData.numero.trim(),
+			laboratoryId,
+		)
 
 		const { data, error } = await supabase
 			.from('identificaciones' as any)
@@ -209,10 +257,34 @@ export const createIdentification = async (identificacionData: IdentificacionIns
 
 /**
  * Actualizar identificación existente - MULTI-TENANT
+ * Valida que el nuevo (tipo, numero) coincida con la cédula del paciente en patients (si tiene cédula).
  */
 export const updateIdentification = async (id: string, updates: IdentificacionUpdate): Promise<Identificacion> => {
 	try {
 		const laboratoryId = await getUserLaboratoryId()
+
+		const hasTipoOrNumero = updates.tipo_documento !== undefined || updates.numero !== undefined
+		if (hasTipoOrNumero) {
+			const { data: current } = await supabase
+				.from('identificaciones' as any)
+				.select('paciente_id, tipo_documento, numero')
+				.eq('id', id)
+				.eq('laboratory_id', laboratoryId)
+				.single()
+
+			if (!current) {
+				throw new Error('Identificación no encontrada')
+			}
+
+			const tipo = updates.tipo_documento ?? (current as any).tipo_documento
+			const numero = (updates.numero ?? (current as any).numero)?.trim() ?? ''
+			await assertIdentificacionMatchesPatientCedula(
+				(current as any).paciente_id,
+				tipo,
+				numero,
+				laboratoryId,
+			)
+		}
 
 		const { data, error } = await supabase
 			.from('identificaciones' as any)
@@ -234,6 +306,37 @@ export const updateIdentification = async (id: string, updates: IdentificacionUp
 	} catch (error) {
 		console.error('❌ Error actualizando identificación:', error)
 		throw error
+	}
+}
+
+/**
+ * Obtiene el paciente vinculado a una identificación (nombre + cédula) para mostrar en UI.
+ * Útil para evitar confusión al editar identificaciones: siempre mostrar a qué persona pertenece.
+ */
+export const getPatientInfoForIdentificacion = async (
+	identificacionId: string,
+	laboratoryId: string,
+): Promise<{ nombre: string; cedula: string | null } | null> => {
+	const { data: ident, error: identError } = await supabase
+		.from('identificaciones' as any)
+		.select('paciente_id')
+		.eq('id', identificacionId)
+		.eq('laboratory_id', laboratoryId)
+		.single()
+
+	if (identError || !ident) return null
+
+	const { data: patient, error } = await supabase
+		.from('patients')
+		.select('nombre, cedula')
+		.eq('id', (ident as any).paciente_id)
+		.eq('laboratory_id', laboratoryId)
+		.single()
+
+	if (error || !patient) return null
+	return {
+		nombre: (patient as { nombre?: string }).nombre ?? '',
+		cedula: (patient as { cedula?: string | null }).cedula ?? null,
 	}
 }
 

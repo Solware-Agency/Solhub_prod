@@ -148,6 +148,29 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     retry: 1,
   });
 
+  // Triaje "hecho" = existe, no es borrador y tiene signos vitales completos O al menos un dato clínico (p. ej. médico sin signos vitales)
+  const hasVitalSigns =
+    !!(
+      existingTriage?.oxygen_saturation != null &&
+      existingTriage?.blood_pressure &&
+      existingTriage?.height_cm &&
+      existingTriage?.weight_kg
+    );
+  const hasClinicalData =
+    !!(
+      existingTriage?.reason ||
+      existingTriage?.personal_background ||
+      existingTriage?.family_history ||
+      (existingTriage as { alergias?: string | null })?.alergias ||
+      (existingTriage as { observaciones?: string | null })?.observaciones ||
+      existingTriage?.examen_fisico ||
+      existingTriage?.diagnostico
+    );
+  const isTriajeHecho =
+    !!existingTriage &&
+    !existingTriage.is_draft &&
+    (hasVitalSigns || hasClinicalData);
+
   // Reset forceEditMode when modal closes (para que al reabrir muestre vista, no edición)
   React.useEffect(() => {
     if (!isOpen) {
@@ -310,28 +333,17 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       userRole={profile?.role}
                       forceEditMode={forceEditMode}
                     />
+                  ) : isTriajeHecho ? (
+                    <TriajeModalForm
+                      key={openKey}
+                      case_={case_}
+                      onClose={handleClose}
+                      readOnly
+                    />
                   ) : (
                     <div className='p-6 text-center'>
-                      <div className='text-red-500 mb-4'>
-                        <svg
-                          className='w-16 h-16 mx-auto'
-                          fill='none'
-                          stroke='currentColor'
-                          viewBox='0 0 24 24'
-                        >
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth={2}
-                            d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-                          />
-                        </svg>
-                      </div>
-                      <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>
-                        Sin permisos
-                      </h3>
                       <p className='text-gray-600 dark:text-gray-400'>
-                        No tienes permisos para editar la historia clínica.
+                        No hay historia clínica registrada. No tienes permiso para crearla.
                       </p>
                     </div>
                   )}

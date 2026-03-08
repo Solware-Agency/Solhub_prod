@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -22,6 +23,7 @@ import {
   DollarSign,
   Phone,
   List,
+  MessageCircleQuestion,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
@@ -209,7 +211,15 @@ const NavGroup: React.FC<NavGroupProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       <div
-        className={`flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none ${
+        role='button'
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        className={`flex justify-between items-center gap-2 sm:gap-3 cursor-pointer w-full py-2 px-1 rounded-md transition-none touch-manipulation ${
           isExpanded || isChildActive
             ? 'text-labPrimary'
             : 'hover:text-labPrimary'
@@ -260,6 +270,8 @@ interface SidebarProps {
   onClose?: () => void;
   isExpanded?: boolean;
   isMobile?: boolean;
+  /** Callback para abrir el modal de Centro de Ayuda (chatbot). El estado y el modal viven en Layout. */
+  onOpenHelpModal?: () => void;
   isDark: boolean;
   toggleDarkMode: () => void;
 }
@@ -268,13 +280,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   isExpanded = false,
   isMobile = false,
+  onOpenHelpModal,
   isDark,
   toggleDarkMode,
 }) => {
   // For mobile, always show full sidebar. For desktop, use isExpanded state
   const showFullContent = isMobile || isExpanded;
   const navigate = useNavigate();
-  const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
@@ -305,6 +317,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     clinical: false,
     reports: false,
   });
+
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups((prev) => {
@@ -478,15 +491,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </div>
-              <div className='py-1'>
-                <NavItem
-                  to='/aseguradoras/documentos'
-                  icon={<Clipboard className='stroke-2 size-5 shrink-0' />}
-                  label='Documentos'
-                  showFullContent={showFullContent}
-                  onClick={onClose}
-                />
-              </div>
             </>
           )}
           {isOwner && !isInntegras && (
@@ -606,7 +610,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/dashboard/sample-costs'
                   icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
-                  label='Estructura de costos'
+                  label='Costos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -630,6 +634,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {/* Sala de Espera: solo rol prueba (no listo para otros) */}
+              {isPrueba && (
+                <FeatureGuard feature='hasWaitingRoom'>
+                  <NavItem
+                    to='/dashboard/waiting-room'
+                    icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                    label='Sala de Espera'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </FeatureGuard>
+              )}
             </>
           )}
 
@@ -751,6 +767,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              {/* Sala de Espera: solo rol prueba (no listo para employee/coordinador) */}
             </>
           )}
 
@@ -1230,7 +1247,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavItem
                   to='/prueba/sample-costs'
                   icon={<DollarSign className='stroke-2 size-4 sm:size-5 shrink-0' />}
-                  label='Estructura de costos'
+                  label='Costos'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
@@ -1254,8 +1271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
-              {/* Sala de Espera - Solo para prueba (GodMode) en SPT */}
-              {isSpt && (
+              <FeatureGuard feature='hasWaitingRoom'>
                 <NavItem
                   to='/prueba/waiting-room'
                   icon={<Activity className='stroke-2 size-5 shrink-0' />}
@@ -1263,7 +1279,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />
-              )}
+              </FeatureGuard>
             </>
           )}
 
@@ -1277,6 +1293,34 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={onClose}
               />
             )}
+          </FeatureGuard>
+
+          {/* Centro de Ayuda (Solwy) - feature hasChatbot en dashboard */}
+          <FeatureGuard feature='hasChatbot'>
+            <button
+              type='button'
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenHelpModal?.();
+                if (isMobile && onClose) {
+                  onClose();
+                }
+              }}
+              title={!showFullContent ? 'Ayuda' : undefined}
+              className='flex items-center gap-2 cursor-pointer w-full py-2 px-1 rounded-md transition-none text-left bg-transparent border-0 hover:text-labPrimary'
+            >
+              <MessageCircleQuestion className='stroke-2 size-5 shrink-0' />
+              <p
+                className={`text-sm whitespace-nowrap transition-none ${
+                  showFullContent
+                    ? 'opacity-100 w-auto'
+                    : 'opacity-0 w-0 overflow-hidden'
+                }`}
+              >
+                Ayuda
+              </p>
+            </button>
           </FeatureGuard>
         </div>
       </div>
@@ -1431,6 +1475,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </p>
         </div>
       </div>
+
     </aside>
   );
 };

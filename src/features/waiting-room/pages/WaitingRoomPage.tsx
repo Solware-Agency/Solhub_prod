@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   getWaitingRoomCases,
@@ -41,6 +42,13 @@ const WaitingRoomPage: React.FC = () => {
   const { profile } = useUserProfile();
   const { laboratory } = useLaboratory();
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Sala de espera solo para rol prueba (no listo para otros roles)
+  if (profile?.role && profile.role !== 'prueba') {
+    const to = location.pathname.startsWith('/employee') ? '/employee/home' : '/dashboard/home';
+    return <Navigate to={to} replace />;
+  }
 
   // Employee (y roles con sede asignada) solo ven su sede: sin "Todas" y con sede por defecto
   const isRestrictedToBranch = Boolean(

@@ -155,7 +155,7 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<div key="aseguradora-history-modal" className="fixed inset-0 flex items-center justify-center p-4 z-[10000000000000000]">
+				<div key="aseguradora-history-modal" className="fixed inset-0 flex items-center justify-center p-4 z-10000000000000000">
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -189,7 +189,7 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 						</div>
 
 						<div className="flex-1 overflow-y-auto flex flex-col">
-							<div className="p-4 sm:p-6 flex-shrink-0">
+							<div className="p-4 sm:p-6 shrink-0">
 								<div className="flex flex-wrap items-center gap-2 mb-4">
 									<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
 										{aseguradora.codigo || 'Sin código'}
@@ -232,7 +232,7 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 									>
 										<Send className="w-4 h-4" />
 									</button>
-									<div className="flex-1 min-w-[2rem]" />
+									<div className="flex-1 min-w-8" />
 									<button
 										type="button"
 										onClick={handleEliminarAseguradora}

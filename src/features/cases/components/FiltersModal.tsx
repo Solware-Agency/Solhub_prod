@@ -341,7 +341,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     >
                       <CalendarIcon className='w-4 h-4' />
                       {dateRange?.from && dateRange?.to
-                        ? `Rango: ${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', { locale: es })}`
+                        ? `${format(dateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(dateRange.to, 'dd/MM/yyyy', { locale: es })}`
                         : dateRange?.from
                           ? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
                           : dateRange?.to
@@ -410,7 +410,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       { value: 'false', label: 'No Enviado' },
                     ]}
                     value={emailSentStatusFilter}
-                    placeholder='Estatus de Email'
+                    placeholder='Estatus de Envío'
                     onChange={onEmailSentStatusFilterChange}
                     data-testid='email-sent-status-filter'
                   />
@@ -429,7 +429,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                         { value: 'false', label: 'No Enviado' },
                       ]}
                       value={emailSentStatusFilter}
-                      placeholder='Estatus de Email'
+                      placeholder='Estatus de Envío'
                       onChange={onEmailSentStatusFilterChange}
                       data-testid='email-sent-status-filter'
                     />
@@ -571,7 +571,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                   {(dateRange?.from || dateRange?.to) && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-sm rounded-full'>
                       {dateRange?.from && dateRange?.to
-                        ? `Rango: ${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
+                        ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
                         : format((dateRange?.from ?? dateRange?.to)!, 'dd/MM/yyyy')}
                       <button
                         onClick={() => onDateRangeChange(undefined)}
@@ -697,7 +697,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 
                   {emailSentStatusFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 text-sm rounded-full'>
-                      Email:{' '}
+                      Envío:{' '}
                       {emailSentStatusFilter === 'true'
                         ? 'Enviado'
                         : 'No Enviado'}

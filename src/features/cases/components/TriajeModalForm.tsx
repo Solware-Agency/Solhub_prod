@@ -91,6 +91,8 @@ interface TriajeFormData {
   telefonoEmergencia: string;
   parentesco: string;
   personaQuienLlama: string;
+  alergias: string;
+  observaciones: string;
 }
 
 interface TriajeModalFormProps {
@@ -101,6 +103,8 @@ interface TriajeModalFormProps {
   showOnlyVitalSigns?: boolean;
   userRole?: string;
   forceEditMode?: boolean;
+  /** Solo lectura: cualquier rol puede ver la historia cuando está hecha; si no está hecha se muestra mensaje. */
+  readOnly?: boolean;
 }
 
 // Componente para mostrar información de la historia clínica existente
@@ -407,7 +411,8 @@ const TriageInfoDisplay: React.FC<{
       {(record.personal_background ||
         record.family_history ||
         record.antecedentes_quirurgicos ||
-        (record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales) && (
+        (record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales ||
+        (record as { alergias?: string | null }).alergias) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
@@ -448,15 +453,24 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{(record as { antecedentes_sexuales: string }).antecedentes_sexuales}</p>
               </div>
             )}
+            {(record as { alergias?: string | null }).alergias && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Alergias
+                </p>
+                <p className='text-sm'>{(record as { alergias: string }).alergias}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Examen físico, Diagnóstico, Plan de acción y comentarios */}
+      {/* Examen físico, Diagnóstico, Plan de acción, comentarios y observaciones */}
       {(record.examen_fisico ||
         record.comment ||
         record.diagnostico ||
-        record.plan_de_accion) && (
+        record.plan_de_accion ||
+        (record as { observaciones?: string | null }).observaciones) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
@@ -496,6 +510,14 @@ const TriageInfoDisplay: React.FC<{
                   Plan de acción
                 </p>
                 <p className='text-sm'>{record.plan_de_accion}</p>
+              </div>
+            )}
+            {(record as { observaciones?: string | null }).observaciones && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Observaciones o comentarios adicionales
+                </p>
+                <p className='text-sm'>{(record as { observaciones: string }).observaciones}</p>
               </div>
             )}
           </CardContent>
@@ -571,6 +593,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   showOnlyVitalSigns = false,
   userRole,
   forceEditMode = false,
+  readOnly = false,
 }) => {
   const isEnfermero = userRole === 'enfermero';
   const isMedico = userRole === 'medico_tratante' || userRole === 'medicowner';
@@ -606,6 +629,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     telefonoEmergencia: '',
     parentesco: '',
     personaQuienLlama: '',
+    alergias: '',
+    observaciones: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -643,7 +668,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo)
+  // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo).
+  // Campos recordados: antecedentes, lugar/contacto de emergencia, alergias y observaciones.
   useEffect(() => {
     if (!existingTriage && latestTriageByPatient) {
       const prev = latestTriageByPatient;
@@ -657,6 +683,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         telefonoEmergencia: prev.telefono_emergencia || '',
         parentesco: (prev as { parentesco?: string | null }).parentesco || '',
         personaQuienLlama: (prev as { persona_quien_llama?: string | null }).persona_quien_llama || '',
+        alergias: (prev as { alergias?: string | null }).alergias || '',
+        observaciones: (prev as { observaciones?: string | null }).observaciones || '',
       }));
     }
   }, [existingTriage, latestTriageByPatient]);
@@ -835,6 +863,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           telefonoEmergencia: existingTriage.telefono_emergencia || '',
           parentesco: (existingTriage as any).parentesco || '',
           personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
+          alergias: (existingTriage as any).alergias || '',
+          observaciones: (existingTriage as any).observaciones || '',
           cafe: existingTriage.cafe?.toString() || '',
           alcohol: existingTriage.alcohol || '',
           ...(existingTriage.tabaco !== null &&
@@ -937,6 +967,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       telefonoEmergencia: existingTriage.telefono_emergencia || '',
       parentesco: (existingTriage as any).parentesco || '',
       personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
+      alergias: (existingTriage as any).alergias || '',
+      observaciones: (existingTriage as any).observaciones || '',
       cafe: existingTriage.cafe?.toString() || '',
       alcohol: existingTriage.alcohol || '',
       tabaco: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0 ? 'Si' : 'No',
@@ -1027,49 +1059,40 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     return { isValid: true, errorMessage: '' };
   };
 
-  // Función para validar que todos los signos vitales obligatorios estén completos
+  // Función para validar que todos los signos vitales obligatorios estén completos.
+  // Para médicos los signos vitales son opcionales; para enfermería siguen siendo obligatorios.
   const validateRequiredVitalSigns = (): { isValid: boolean; errorMessage: string } => {
+    if (isMedico) {
+      return { isValid: true, errorMessage: '' };
+    }
+
     const missingFields: string[] = [];
-    
-    // Helper para verificar si un campo tiene valor válido
     const hasValue = (value: string | undefined | null): boolean => {
       return value !== null && value !== undefined && value.trim().length > 0;
     };
-    
-    // Verificar cada signo vital obligatorio
-    // FC (Frecuencia Cardíaca) - No es obligatorio
-    // FR (Frecuencia Respiratoria) - No es obligatorio
-    // Temperatura - No es obligatorio
-    // Glicemia - No es obligatorio
 
     if (!hasValue(formData.saturacionOxigeno)) {
       missingFields.push('SpO₂ (Saturación de Oxígeno)');
     }
-
     if (!hasValue(formData.presionArterial)) {
       missingFields.push('P.A. (Presión Arterial)');
     }
-    
     if (!hasValue(formData.peso)) {
       missingFields.push('Peso');
     }
-    
     if (!hasValue(formData.talla)) {
       missingFields.push('Talla');
     }
-    
-    // Si faltan campos, retornar mensaje específico
+
     if (missingFields.length > 0) {
-      const fieldsText = missingFields.length === 1 
+      const fieldsText = missingFields.length === 1
         ? missingFields[0]
         : missingFields.slice(0, -1).join(', ') + ' y ' + missingFields[missingFields.length - 1];
-        
       return {
         isValid: false,
-        errorMessage: `Es obligatorio completar todos los campos requeridos. Falta(n): ${fieldsText}.`
+        errorMessage: `Es obligatorio completar todos los campos requeridos. Falta(n): ${fieldsText}.`,
       };
     }
-    
     return { isValid: true, errorMessage: '' };
   };
 
@@ -1107,7 +1130,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       return { isValid: true, errorMessage: '' };
     }
 
-    // Si es médico, necesita signos vitales Y datos clínicos
+    // Si es médico: solo se exige al menos un dato clínico; los signos vitales son opcionales
     if (isMedico) {
       const hasClinicalData =
         hasValue(formData.motivoConsulta) ||
@@ -1118,29 +1141,15 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasValue(formData.examenFisico) ||
         hasValue(formData.tabaco) ||
         hasValue(formData.cafe) ||
-        hasValue(formData.alcohol);
-
-      if (!hasVitalSigns && !hasClinicalData) {
-        return {
-          isValid: false,
-          errorMessage:
-            'Debe ingresar los signos vitales completos y al menos un dato clínico para registrar en el sistema.',
-        };
-      }
-
-      if (!hasVitalSigns) {
-        return {
-          isValid: false,
-          errorMessage:
-            'Debe ingresar los signos vitales completos para registrar en el sistema.',
-        };
-      }
+        hasValue(formData.alcohol) ||
+        hasValue(formData.alergias) ||
+        hasValue(formData.observaciones);
 
       if (!hasClinicalData) {
         return {
           isValid: false,
           errorMessage:
-            'Debe ingresar al menos un dato clínico (motivo de consulta, antecedentes, examen físico, etc.) para poder guardar.',
+            'Debe ingresar al menos un dato clínico (motivo de consulta, antecedentes, alergias, examen físico, etc.) para poder guardar.',
         };
       }
 
@@ -1230,6 +1239,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     telefono_emergencia: formData.telefonoEmergencia || null,
     parentesco: formData.parentesco || null,
     persona_quien_llama: formData.personaQuienLlama || null,
+    alergias: formData.alergias || null,
+    observaciones: formData.observaciones || null,
     ...buildVitalSignsData(),
   });
 
@@ -1411,6 +1422,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             telefonoEmergencia: updatedTriage.telefono_emergencia || '',
             parentesco: (updatedTriage as any).parentesco || '',
             personaQuienLlama: (updatedTriage as any).persona_quien_llama || '',
+            alergias: (updatedTriage as any).alergias || '',
+            observaciones: (updatedTriage as any).observaciones || '',
             cafe: updatedTriage.cafe?.toString() || '',
             alcohol: updatedTriage.alcohol || '',
             ...(updatedTriage.tabaco !== null &&
@@ -1463,6 +1476,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             telefonoEmergencia: '',
             parentesco: '',
             personaQuienLlama: '',
+            alergias: '',
+            observaciones: '',
           });
           setMessage('');
           if (onSave) {
@@ -1525,6 +1540,27 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             Cargando información de historia clínica...
           </span>
         </div>
+      </div>
+    );
+  }
+
+  // Modo solo lectura (cualquier rol puede ver cuando la historia está hecha)
+  if (readOnly) {
+    if (existingTriage && triageComplete) {
+      return (
+        <div className='p-4'>
+          <TriageInfoDisplay
+            record={existingTriage}
+            onClose={onClose}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className='p-6 text-center'>
+        <p className='text-gray-600 dark:text-gray-400'>
+          No hay historia clínica registrada. No tienes permiso para crearla.
+        </p>
       </div>
     );
   }
@@ -1680,6 +1716,22 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
                     />
                   </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      <MessageSquare className='h-4 w-4 inline mr-1.5 text-gray-600 dark:text-gray-400' />
+                      Observaciones o comentarios adicionales
+                    </label>
+                    <Textarea
+                      placeholder='Observaciones adicionales'
+                      value={formData.observaciones}
+                      onChange={(e) =>
+                        handleInputChange('observaciones', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1755,8 +1807,8 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 </div>
-                {/* Fila 2: 2 antecedentes */}
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                {/* Fila 2: antecedentes quirúrgicos, sexuales y alergias */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                       <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
@@ -1789,6 +1841,22 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                           'antecedentesSexuales',
                           e.target.value,
                         )
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <AlertCircle className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Alergias
+                    </label>
+                    <Textarea
+                      placeholder='Ej: Ninguna, penicilina, etc.'
+                      value={formData.alergias}
+                      onChange={(e) =>
+                        handleInputChange('alergias', e.target.value)
                       }
                       disabled={loading}
                       rows={4}

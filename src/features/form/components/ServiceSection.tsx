@@ -140,15 +140,11 @@ export const ServiceSection = memo(
       ]);
     }, [JSON.stringify(laboratory?.config?.examTypes)]);
 
-    // Obtener branches desde la configuración del laboratorio
+    // Obtener branches desde la configuración del laboratorio (orden alfabético)
     const branchOptions = useMemo(() => {
       const branches = laboratory?.config?.branches || [];
-      // Si hay branches configurados, usarlos; si no, usar valores por defecto
-      if (branches.length > 0) {
-        return branches;
-      }
-      // Fallback a valores por defecto si no hay configuración
-      return ['PMG', 'CPC', 'CNX', 'STX', 'MCY'];
+      const list = branches.length > 0 ? [...branches] : ['PMG', 'CPC', 'CNX', 'STX', 'MCY'];
+      return list.sort((a, b) => String(a).localeCompare(String(b), 'es'));
     }, [laboratory?.config?.branches]);
 
     // Auto-set branch if user has an assigned branch
@@ -277,7 +273,7 @@ export const ServiceSection = memo(
                   <FormControl>
                     <AutocompleteInput
                       fieldName='treatingDoctor'
-                      placeholder='Nombre del Médico'
+                      placeholder={isLM ? 'Código o nombre del médico' : 'Nombre del Médico'}
                       iconRight={
                         <Stethoscope className='h-4 w-4 text-muted-foreground' />
                       }
@@ -285,7 +281,11 @@ export const ServiceSection = memo(
                       {...field}
                       onChange={(e) => {
                         const { value } = e.target;
-                        if (/^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/.test(value)) {
+                        // Marihorgen: permitir números para buscar por código (A1, V10, etc.)
+                        const re = isLM
+                          ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/
+                          : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/;
+                        if (re.test(value)) {
                           field.onChange(e);
                         }
                       }}

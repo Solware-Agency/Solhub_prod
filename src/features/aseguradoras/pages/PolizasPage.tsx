@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, FileText } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, Paperclip, ExternalLink } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { format, addMonths } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -26,13 +26,18 @@ import {
 	getPolizas,
 	updatePoliza,
 	type Poliza,
+	type DocumentoPoliza,
 } from '@services/supabase/aseguradoras/polizas-service'
 import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
 import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import PolizaCard from '@features/aseguradoras/components/PolizaCard'
-import { uploadPolizaPdf, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
+import {
+	uploadDocumentoPoliza,
+	validateReciboFile,
+	MAX_DOCUMENTOS_POLIZA,
+} from '@services/supabase/storage/pagos-poliza-recibos-service'
 
 const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
 
@@ -54,8 +59,10 @@ const PolizasPage = () => {
 	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = useState<Aseguradora | null>(null)
 	const [editingPoliza, setEditingPoliza] = useState<Poliza | null>(null)
 	const [uploadingPdf, setUploadingPdf] = useState(false)
-	const [pdfFileName, setPdfFileName] = useState<string | null>(null)
-	const pdfFileInputRef = React.useRef<HTMLInputElement>(null)
+	const [documentFiles, setDocumentFiles] = useState<File[]>([])
+	const [existingDocumentos, setExistingDocumentos] = useState<DocumentoPoliza[]>([])
+	const [removedDocIndices, setRemovedDocIndices] = useState<Set<number>>(new Set())
+	const docFileInputRef = React.useRef<HTMLInputElement>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
 		aseguradora_id: '',
@@ -75,7 +82,6 @@ const PolizasPage = () => {
 		dias_frecuencia: '',
 		dias_frecuencia_post: '',
 		dias_recordatorio: '',
-		pdf_url: '',
 		notas: '',
 	})
 
@@ -152,11 +158,12 @@ const PolizasPage = () => {
 			dias_frecuencia: '',
 			dias_frecuencia_post: '',
 			dias_recordatorio: '',
-			pdf_url: '',
 			notas: '',
 		})
-		setPdfFileName(null)
-		if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
+		setDocumentFiles([])
+		setExistingDocumentos([])
+		setRemovedDocIndices(new Set())
+		if (docFileInputRef.current) docFileInputRef.current.value = ''
 		setStep(0)
 		setSelectedAsegurado(null)
 		setEditingPoliza(null)
@@ -167,41 +174,33 @@ const PolizasPage = () => {
 		setOpenModal(true)
 	}
 
-	const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		if (!file || !form.asegurado_id) {
-			if (!form.asegurado_id) toast({ title: 'Selecciona un asegurado primero', variant: 'destructive' })
+	const keptExistingCount = existingDocumentos.length - removedDocIndices.size
+	const totalDocCount = keptExistingCount + documentFiles.length
+	const canAddMoreDocs = totalDocCount < MAX_DOCUMENTOS_POLIZA
+
+	const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? [])
+		if (!form.asegurado_id && !editingPoliza) {
+			toast({ title: 'Selecciona un asegurado primero', variant: 'destructive' })
 			return
 		}
-
-		const validation = validateReciboFile(file)
-		if (!validation.valid) {
-			toast({ title: 'Archivo inválido', description: validation.error, variant: 'destructive' })
-			return
+		const valid: File[] = []
+		for (const file of files) {
+			if (totalDocCount + valid.length >= MAX_DOCUMENTOS_POLIZA) break
+			const v = validateReciboFile(file)
+			if (v.valid) valid.push(file)
+			else toast({ title: v.error, variant: 'destructive' })
 		}
-
-		setUploadingPdf(true)
-		try {
-			const { data, error } = await uploadPolizaPdf(file, form.asegurado_id)
-			if (error) throw error
-			if (data) {
-				setForm((prev) => ({ ...prev, pdf_url: data }))
-				setPdfFileName(file.name)
-				toast({ title: 'Archivo adjuntado' })
-			}
-		} catch (err) {
-			console.error(err)
-			toast({ title: 'Error al subir archivo', variant: 'destructive' })
-		} finally {
-			setUploadingPdf(false)
-			if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
-		}
+		setDocumentFiles((prev) => [...prev, ...valid].slice(0, MAX_DOCUMENTOS_POLIZA - keptExistingCount))
+		e.target.value = ''
 	}
 
-	const handleRemovePdf = () => {
-		setForm((prev) => ({ ...prev, pdf_url: '' }))
-		setPdfFileName(null)
-		if (pdfFileInputRef.current) pdfFileInputRef.current.value = ''
+	const removeDocFile = (index: number) => {
+		setDocumentFiles((prev) => prev.filter((_, i) => i !== index))
+	}
+
+	const removeExistingDoc = (index: number) => {
+		setRemovedDocIndices((prev) => new Set([...prev, index]))
 	}
 
 	const openForEdit = useCallback((poliza: Poliza) => {
@@ -224,7 +223,6 @@ const PolizasPage = () => {
 			dias_frecuencia: poliza.dias_frecuencia != null ? String(poliza.dias_frecuencia) : '',
 			dias_frecuencia_post: poliza.dias_frecuencia_post != null ? String(poliza.dias_frecuencia_post) : '',
 			dias_recordatorio: poliza.dias_recordatorio != null ? String(poliza.dias_recordatorio) : '',
-			pdf_url: poliza.pdf_url ?? '',
 			notas: poliza.notas ?? '',
 		})
 		setSelectedAsegurado(
@@ -232,7 +230,9 @@ const PolizasPage = () => {
 				? ({ id: poliza.asegurado.id, full_name: poliza.asegurado.full_name, document_id: poliza.asegurado.document_id } as Asegurado)
 				: null,
 		)
-		setPdfFileName(null)
+		setExistingDocumentos(poliza.documentos_poliza ?? [])
+		setRemovedDocIndices(new Set())
+		setDocumentFiles([])
 		setEditingPoliza(poliza)
 		setPanelOpen(false)
 		setOpenModal(true)
@@ -313,7 +313,7 @@ const PolizasPage = () => {
 		if (!editingPoliza) {
 			setSaving(true)
 			try {
-				await createPoliza({
+				const newPoliza = await createPoliza({
 					asegurado_id: form.asegurado_id,
 					aseguradora_id: form.aseguradora_id,
 					agente_nombre: form.agente_nombre,
@@ -332,9 +332,23 @@ const PolizasPage = () => {
 					dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
 					dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
 					dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
-					pdf_url: form.pdf_url || null,
+					pdf_url: null,
 					notas: form.notas || null,
 				})
+				const documentos: DocumentoPoliza[] = []
+				for (const file of documentFiles.slice(0, MAX_DOCUMENTOS_POLIZA)) {
+					setUploadingPdf(true)
+					const { data, error } = await uploadDocumentoPoliza(file, newPoliza.id)
+					setUploadingPdf(false)
+					if (error) toast({ title: `Error al subir ${file.name}`, description: error.message, variant: 'destructive' })
+					else if (data) documentos.push({ url: data.url, name: data.name })
+				}
+				if (documentos.length > 0) {
+					await updatePoliza(newPoliza.id, {
+						documentos_poliza: documentos,
+						pdf_url: documentos[0]?.url ?? null,
+					})
+				}
 				queryClient.invalidateQueries({ queryKey: ['polizas'] })
 				setOpenModal(false)
 				toast({ title: 'Póliza creada' })
@@ -343,11 +357,22 @@ const PolizasPage = () => {
 				toast({ title: 'Error al crear póliza', variant: 'destructive' })
 			} finally {
 				setSaving(false)
+				setUploadingPdf(false)
 			}
 			return
 		}
 		setSaving(true)
 		try {
+			const keptExisting = existingDocumentos.filter((_, i) => !removedDocIndices.has(i))
+			const documentos: DocumentoPoliza[] = [...keptExisting]
+			for (const file of documentFiles) {
+				setUploadingPdf(true)
+				const { data, error } = await uploadDocumentoPoliza(file, editingPoliza.id)
+				setUploadingPdf(false)
+				if (error) toast({ title: `Error al subir ${file.name}`, description: error.message, variant: 'destructive' })
+				else if (data) documentos.push({ url: data.url, name: data.name })
+			}
+			const finalDocumentos = documentos.slice(0, MAX_DOCUMENTOS_POLIZA)
 			await updatePoliza(editingPoliza.id, {
 				asegurado_id: form.asegurado_id,
 				aseguradora_id: form.aseguradora_id,
@@ -367,7 +392,8 @@ const PolizasPage = () => {
 				dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
 				dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
 				dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
-				pdf_url: form.pdf_url || null,
+				documentos_poliza: finalDocumentos,
+				pdf_url: finalDocumentos[0]?.url ?? null,
 				notas: form.notas || null,
 			})
 			queryClient.invalidateQueries({ queryKey: ['polizas'] })
@@ -459,11 +485,16 @@ const PolizasPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Agente / Productor <span className="text-destructive">*</span></Label>
-							<Input value={form.agente_nombre} onChange={(e) => setForm((prev) => ({ ...prev, agente_nombre: e.target.value }))} />
+							<Input
+								placeholder="Ej. John Doe"
+								value={form.agente_nombre}
+								onChange={(e) => setForm((prev) => ({ ...prev, agente_nombre: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Número de póliza <span className="text-destructive">*</span></Label>
 							<Input
+								placeholder="Ej. POL-2024-001"
 								value={form.numero_poliza}
 								onChange={(e) => setForm((prev) => ({ ...prev, numero_poliza: e.target.value }))}
 							/>
@@ -476,6 +507,7 @@ const PolizasPage = () => {
 							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
 							<Input
 								type="number"
+								placeholder="Ej. 100000"
 								value={form.suma_asegurada}
 								onChange={(e) => setForm((prev) => ({ ...prev, suma_asegurada: e.target.value }))}
 							/>
@@ -674,12 +706,17 @@ const PolizasPage = () => {
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Tipo de alerta</Label>
-							<Input value={form.tipo_alerta} onChange={(e) => setForm((prev) => ({ ...prev, tipo_alerta: e.target.value }))} />
+							<Input
+								placeholder="Ej. Vencimiento"
+								value={form.tipo_alerta}
+								onChange={(e) => setForm((prev) => ({ ...prev, tipo_alerta: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Días de alerta</Label>
 							<Input
 								type="number"
+								placeholder="Ej. 30"
 								value={form.dias_alerta}
 								onChange={(e) => setForm((prev) => ({ ...prev, dias_alerta: e.target.value }))}
 							/>
@@ -688,6 +725,7 @@ const PolizasPage = () => {
 							<Label>Días frecuencia</Label>
 							<Input
 								type="number"
+								placeholder="Ej. 30"
 								value={form.dias_frecuencia}
 								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia: e.target.value }))}
 							/>
@@ -696,6 +734,7 @@ const PolizasPage = () => {
 							<Label>Frecuencia post</Label>
 							<Input
 								type="number"
+								placeholder="Ej. 7"
 								value={form.dias_frecuencia_post}
 								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia_post: e.target.value }))}
 							/>
@@ -704,6 +743,7 @@ const PolizasPage = () => {
 							<Label>Días recordatorio</Label>
 							<Input
 								type="number"
+								placeholder="Ej. 7"
 								value={form.dias_recordatorio}
 								onChange={(e) => setForm((prev) => ({ ...prev, dias_recordatorio: e.target.value }))}
 							/>
@@ -714,51 +754,83 @@ const PolizasPage = () => {
 				return (
 					<div className="space-y-4">
 						<div className="space-y-2">
-							<Label>PDF póliza</Label>
-							<input
-								ref={pdfFileInputRef}
-								type="file"
-								accept=".pdf,.jpg,.jpeg,.png"
-								onChange={handlePdfFileChange}
-								className="hidden"
-							/>
-							{form.pdf_url ? (
-								<div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-									<FileText className="h-5 w-5 text-primary shrink-0" />
-									<span className="text-sm truncate flex-1">{pdfFileName || 'Documento adjunto'}</span>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onClick={handleRemovePdf}
-										disabled={uploadingPdf}
-										className="shrink-0"
-									>
-										<X className="h-4 w-4" />
-									</Button>
-								</div>
-							) : (
-								<Button
-									type="button"
-									variant="outline"
-									className="w-full"
-									onClick={() => pdfFileInputRef.current?.click()}
-									disabled={uploadingPdf || !form.asegurado_id}
-								>
-									{uploadingPdf ? (
-										'Subiendo...'
-									) : (
-										<>
-											<Upload className="h-4 w-4 mr-2" />
-											PDF, JPG o PNG
-										</>
+							<Label className="flex items-center gap-2">
+								<Paperclip className="h-4 w-4" />
+								Documentos de póliza (máx. {MAX_DOCUMENTOS_POLIZA})
+							</Label>
+							<p className="text-xs text-muted-foreground">PDF, JPG o PNG. Máximo 10 MB por archivo.</p>
+							{existingDocumentos.some((_, i) => !removedDocIndices.has(i)) && (
+								<ul className="space-y-1.5 mb-2">
+									{existingDocumentos.map((doc, i) =>
+										removedDocIndices.has(i) ? null : (
+											<li key={i} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded bg-muted/50">
+												<a
+													href={doc.url}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="inline-flex items-center gap-2 truncate text-primary hover:underline"
+												>
+													<ExternalLink className="h-4 w-4 shrink-0" />
+													<span className="truncate">{doc.name || `Documento ${i + 1}`}</span>
+												</a>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => removeExistingDoc(i)}
+													className="shrink-0 h-8 w-8 p-0"
+													aria-label="Quitar"
+												>
+													<X className="h-4 w-4" />
+												</Button>
+											</li>
+										),
 									)}
-								</Button>
+								</ul>
+							)}
+							{canAddMoreDocs && (
+								<label className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/50 cursor-pointer text-sm">
+									<Upload className="h-4 w-4" />
+									{uploadingPdf ? 'Subiendo...' : 'Seleccionar archivos'}
+									<input
+										ref={docFileInputRef}
+										type="file"
+										accept=".pdf,.jpg,.jpeg,.png"
+										multiple
+										className="hidden"
+										onChange={handleDocFileChange}
+										disabled={uploadingPdf || (!form.asegurado_id && !editingPoliza)}
+									/>
+								</label>
+							)}
+							{documentFiles.length > 0 && (
+								<ul className="space-y-1.5">
+									{documentFiles.map((file, i) => (
+										<li key={i} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded bg-muted/50">
+											<span className="truncate">{file.name}</span>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												onClick={() => removeDocFile(i)}
+												disabled={uploadingPdf}
+												className="shrink-0 h-8 w-8 p-0"
+												aria-label="Quitar"
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</li>
+									))}
+								</ul>
 							)}
 						</div>
 						<div className="space-y-2">
 							<Label>Notas</Label>
-							<Input value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
+							<Input
+								placeholder="Observaciones o comentarios"
+								value={form.notas}
+								onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
+							/>
 						</div>
 					</div>
 				)

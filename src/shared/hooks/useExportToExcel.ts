@@ -180,6 +180,7 @@ export const useExportToExcel = () => {
 						'Monto Pago 4': case_.payment_amount_4 || 0,
 						'Referencia Pago 4': case_.payment_reference_4 || '',
 						'PDF Listo': case_.pdf_en_ready ? 'Sí' : 'No',
+						'Email Enviado': case_.email_sent ? 'Sí' : 'No',
 						'Estatus Citología': case_.cito_status || '',
 					}
 					return Object.fromEntries(Object.entries(row).filter(([k]) => keysToExport.includes(k))) as Record<
