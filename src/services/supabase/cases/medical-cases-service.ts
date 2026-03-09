@@ -574,6 +574,7 @@ export const getCasesWithPatientInfo = async (
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
+    triageStatus?: 'pendiente' | 'completo';
     doctorFilter?: string[];
     originFilter?: string[];
     emailSentStatus?: boolean;
@@ -599,6 +600,88 @@ export const getCasesWithPatientInfo = async (
     }
 
     const cleanSearchTerm = filters?.searchTerm?.trim();
+
+    const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number) => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Timeout de ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
+    };
+
+    // Obtener IDs de casos con triaje completado (is_draft = false) para filtrar por caso real.
+    let completedTriageCaseIdsCache: Set<string> | null = null;
+
+    const getCompletedTriageCaseIds = async (caseIds: string[]) => {
+      if (!caseIds || caseIds.length === 0) {
+        return new Set<string>();
+      }
+
+      // Cargar una sola vez por ejecución para evitar múltiples requests pesados.
+      if (!completedTriageCaseIdsCache) {
+        const { data: triageRows, error: triageError } = await withTimeout(
+          supabase
+            .from('triaje_records')
+            .select('case_id')
+            .eq('laboratory_id', profile.laboratory_id)
+            .eq('is_draft', false)
+            .not('case_id', 'is', null),
+          7000,
+        );
+
+        if (triageError) {
+          throw triageError;
+        }
+
+        completedTriageCaseIdsCache = new Set(
+          (triageRows || [])
+            .map((row: any) => row.case_id)
+            .filter((id: string | null) => !!id),
+        );
+      }
+
+      // Intersección local con los IDs de casos actualmente evaluados.
+      const currentCaseIds = new Set(caseIds);
+      return new Set(
+        Array.from(completedTriageCaseIdsCache).filter((id) =>
+          currentCaseIds.has(id),
+        ),
+      );
+    };
+
+    const applyTriageStatusFilter = async (
+      items: any[],
+      triageStatus?: 'pendiente' | 'completo',
+    ) => {
+      if (!triageStatus || !items || items.length === 0) {
+        return items;
+      }
+
+      const caseIds = items.map((item: any) => item.id);
+
+      let completedTriageCaseIds: Set<string>;
+      try {
+        completedTriageCaseIds = await getCompletedTriageCaseIds(caseIds);
+      } catch (triageError) {
+        // Fallback: no romper la carga completa de casos si falla la consulta de triaje.
+        console.warn(
+          '⚠️ No se pudo aplicar filtro de triaje, se mostrarán casos sin filtrar por triaje:',
+          triageError,
+        );
+        return items;
+      }
+
+      return items.filter((item: any) => {
+        const hasCompletedTriage = completedTriageCaseIds.has(item.id);
+        if (triageStatus === 'completo') {
+          return hasCompletedTriage;
+        }
+        return !hasCompletedTriage;
+      });
+    };
 
     // Si hay término de búsqueda, usar estrategia de búsquedas múltiples
     if (cleanSearchTerm) {
@@ -810,6 +893,14 @@ export const getCasesWithPatientInfo = async (
         });
       }
 
+      // Filtro por estatus de triaje (por case_id, no por patient_id)
+      if (filters?.triageStatus) {
+        combinedResults = await applyTriageStatusFilter(
+          combinedResults,
+          filters.triageStatus,
+        );
+      }
+
       // Filtrar por rol de usuario
       if (filters?.userRole === 'residente') {
         combinedResults = combinedResults.filter(
@@ -1004,7 +1095,9 @@ export const getCasesWithPatientInfo = async (
     let count = 0;
     let error: any = null;
 
-    if (isRelatedField) {
+    const needsClientSideProcessing = isRelatedField || !!filters?.triageStatus;
+
+    if (needsClientSideProcessing) {
       // Si el campo de ordenamiento es de la tabla relacionada,
       // necesitamos obtener todos los datos, ordenarlos en el cliente y luego paginar
       const { data: allData, error: allError, count: totalCount } = await query;
@@ -1023,8 +1116,17 @@ export const getCasesWithPatientInfo = async (
           version: item.version || null,
         })) as MedicalCaseWithPatient[];
 
+        // Filtro por estatus de triaje (por case_id, no por patient_id)
+        let triageFilteredData = transformedAll;
+        if (filters?.triageStatus) {
+          triageFilteredData = await applyTriageStatusFilter(
+            transformedAll,
+            filters.triageStatus,
+          );
+        }
+
         // Ordenar en el cliente
-        transformedAll.sort((a: any, b: any) => {
+        triageFilteredData.sort((a: any, b: any) => {
           let aValue = a[sortField];
           let bValue = b[sortField];
 
@@ -1044,10 +1146,10 @@ export const getCasesWithPatientInfo = async (
         });
 
         // Aplicar paginación después del ordenamiento
-        count = totalCount || 0;
+        count = triageFilteredData.length || totalCount || 0;
         const from = (page - 1) * limit;
         const to = from + limit;
-        data = transformedAll.slice(from, to);
+        data = triageFilteredData.slice(from, to);
       }
     } else {
       // Si el campo es de la tabla principal, ordenar en Supabase
@@ -1067,7 +1169,7 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Transformar los datos (solo si no se transformaron antes)
-    const transformedData = isRelatedField
+    const transformedData = needsClientSideProcessing
       ? (data as MedicalCaseWithPatient[])
       : ((data || []).map((item: any) => ({
           ...item,

@@ -18,6 +18,7 @@ const CasesPage: React.FC = () => {
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
+	triageStatus?: 'pendiente' | 'completo';
     branch?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
     doctorFilter?: string[];
