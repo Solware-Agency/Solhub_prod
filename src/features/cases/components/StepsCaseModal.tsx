@@ -144,8 +144,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 
 		// Paso 1: Datos del paciente - Disponible para owner, residente, citotecno, patologo
 		// Para SPT: también disponible para medico_tratante (flujo completo)
-		// NO disponible para: employee, medicowner (ellos generan docs directamente)
-		const shouldSkipDataStep = isSpt ? isEmployee || isMedicowner : isEmployee || isMedicowner || isMedicoTratante
+		// Marihorgen: todos los roles ven el flujo completo (elegir plantilla, rellenar datos); solo Aprobar es restringido
+		// NO disponible para otros labs: employee, medicowner (ellos generan docs directamente)
+		const shouldSkipDataStep = isMarihorgen
+			? false
+			: isSpt
+				? isEmployee || isMedicowner
+				: isEmployee || isMedicowner || isMedicoTratante
 
 		if (!shouldSkipDataStep) {
 			stepsList.push({
@@ -156,10 +161,13 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			})
 		}
 
-		// Paso 2: Marcar como completado - Disponible para owner, residente, citotecno, patologo
-		// Para SPT: también disponible para medico_tratante (flujo completo)
-		// NO disponible para: employee, medicowner (ellos marcan como completado directamente)
-		const shouldSkipCompleteStep = isSpt ? isEmployee || isMedicowner : isEmployee || isMedicowner || isMedicoTratante
+		// Paso 2: Marcar como completado - Misma lógica que Datos
+		// Marihorgen: todos los roles ven Marcar; solo Aprobar es restringido
+		const shouldSkipCompleteStep = isMarihorgen
+			? false
+			: isSpt
+				? isEmployee || isMedicowner
+				: isEmployee || isMedicowner || isMedicoTratante
 
 		if (!shouldSkipCompleteStep) {
 			stepsList.push({
@@ -212,6 +220,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		isMedicowner,
 		isMedicoTratante,
 		isSpt,
+		isMarihorgen,
 		laboratory?.features?.hasEvaluateCitology,
 	])
 
