@@ -114,11 +114,11 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 - UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-04-06`, **renewal_day_of_month no se cambia**.  
 - Siguiente ciclo: otra vez el 6 (abril, mayo, etc.).
 
-**H2 – Pagó tarde (lab inactive, ej. 15 abr)**  
+**H2 – Pagó tarde (lab inactive, ej. 15 abr, renewal_day = 6)**  
 - Se llama `get_next_payment_date_on_mark_paid(lab_id)`.  
-- La función devuelve: **next_payment_date = 2026-05-15** (hoy + 1 mes), **renewal_day_of_month_new = 15**.  
-- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-05-15`, **renewal_day_of_month = 15**.  
-- A partir de ahí el “día fijo” es el **15**; próximos recordatorios y vencimientos serán los 15 (mayo, junio, etc.).
+- La función devuelve: **next_payment_date = 2026-05-06** (próximo día 6 del mes), **renewal_day_of_month_new = NULL**.  
+- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-05-06`. **renewal_day_of_month no se cambia** (sigue en 6).  
+- El “día fijo” sigue siendo el **6**; próximos recordatorios y vencimientos serán los 6 (mayo, junio, etc.).
 
 ---
 
@@ -136,7 +136,7 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 | Día 8, 04:00 Caracas (payment-reminder) | **inactive** | - | Pantalla de bloqueo | **Sí: “Servicio desactivado”** (solo ese día) |
 | Día 9+ (sigue inactive) | **inactive** | - | Pantalla de bloqueo | No |
 | Tras “Marcar como pagado” (activo) | active | current | Desaparece aviso / siguiente ciclo el 6 | - |
-| Tras “Marcar como pagado” (inactivo) | active | current | Reactivado; siguiente ciclo el **día que pagó** | - |
+| Tras “Marcar como pagado” (inactivo) | active | current | Reactivado; siguiente ciclo el **mismo día fijo** (renewal_day_of_month) | - |
 
 ---
 
@@ -146,4 +146,4 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 - **Cron 08:00 UTC (04:00 Caracas):** Dispara **payment-reminder**; la función usa la zona del lab para “hoy” en recordatorios activos y, para el correo de desactivado, labs inactive con `next_payment_date = hoy UTC - 2`.  
 - **Correos:** 5 tipos: 15 días, 7 días, 1 día, vence hoy, **servicio desactivado** (cuando el lab acaba de pasar a inactive). Tasa euro solo en los 4 primeros; solo a owners.  
 - **Avisos en app:** Mismo criterio de “hoy” por timezone; modal con monto en USD + Bs (euro).  
-- **Marcar como pagado:** Siempre vía **get_next_payment_date_on_mark_paid**; si estaba inactive se actualiza también **renewal_day_of_month** al día que pagó.
+- **Marcar como pagado:** Siempre vía **get_next_payment_date_on_mark_paid**; siempre se asigna el **próximo día fijo de renovación**; **renewal_day_of_month** no se modifica al confirmar el pago.
