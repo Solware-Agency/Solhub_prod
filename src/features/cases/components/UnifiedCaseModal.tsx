@@ -2359,13 +2359,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														? [(caseData as any).uploaded_pdf_url]
 														: []
 											const canEditPdf =
-												isSpt &&
-												(profile?.role === 'laboratorio' ||
-													profile?.role === 'coordinador' ||
-													profile?.role === 'owner' ||
-													profile?.role === 'prueba' ||
-													profile?.role === 'imagenologia' ||
-													profile?.role === 'call_center')
+												(isSpt &&
+													(profile?.role === 'laboratorio' ||
+														profile?.role === 'coordinador' ||
+														profile?.role === 'owner' ||
+														profile?.role === 'prueba' ||
+														profile?.role === 'imagenologia' ||
+														profile?.role === 'call_center')) ||
+												isConspat
 											if (canEditPdf) {
 												return (
 													<CasePDFUpload

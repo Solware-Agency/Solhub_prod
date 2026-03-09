@@ -62,11 +62,6 @@ propias bajo `/aseguradoras`, aislado por `laboratory_id` y visible solo para In
 - dia_vencimiento (int, opcional)
 - fecha_prox_vencimiento (date, opcional/admin)
 - dias_prox_vencimiento (int, opcional/admin)
-- tipo_alerta (text)
-- dias_alerta (int)
-- dias_frecuencia (int)
-- dias_frecuencia_post (int)
-- dias_recordatorio (int)
 - alert_30_enviada (boolean)
 - alert_14_enviada (boolean)
 - alert_7_enviada (boolean)
@@ -106,12 +101,10 @@ propias bajo `/aseguradoras`, aislado por `laboratory_id` y visible solo para In
 - Paso A: seleccionar/crear asegurado (autocomplete).
 - Paso B: datos básicos póliza.
 - Paso C: fechas y vencimientos.
-- Paso D: recordatorios (avanzado/admin).
-- Paso E: documentos y notas.
+- Paso D: documentos y notas.
 
-### Recordatorios (n8n)
-- Cron diario: consultar pólizas por vencer (30, 14, 7, día D, post).
-- Enviar correos y actualizar flags `alert_*_enviada`.
+### Recordatorios (backend / n8n)
+- Ver documento `RECORDATORIOS_ASEGURADORAS_BACKEND.md` para especificación para el backend.
 ## Fuera de este repo
 - Configurar workflows n8n.
 - Ejecución de migración de datos históricos en Supabase.

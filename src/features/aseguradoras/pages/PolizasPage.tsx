@@ -39,7 +39,7 @@ import {
 	MAX_DOCUMENTOS_POLIZA,
 } from '@services/supabase/storage/pagos-poliza-recibos-service'
 
-const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
+const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Documentos'] as const
 
 const PolizasPage = () => {
 	const queryClient = useQueryClient()
@@ -77,11 +77,6 @@ const PolizasPage = () => {
 		fecha_vencimiento: '',
 		dia_vencimiento: '',
 		fecha_prox_vencimiento: '',
-		tipo_alerta: '',
-		dias_alerta: '',
-		dias_frecuencia: '',
-		dias_frecuencia_post: '',
-		dias_recordatorio: '',
 		notas: '',
 	})
 
@@ -153,11 +148,6 @@ const PolizasPage = () => {
 			fecha_vencimiento: '',
 			dia_vencimiento: '',
 			fecha_prox_vencimiento: '',
-			tipo_alerta: '',
-			dias_alerta: '',
-			dias_frecuencia: '',
-			dias_frecuencia_post: '',
-			dias_recordatorio: '',
 			notas: '',
 		})
 		setDocumentFiles([])
@@ -218,11 +208,6 @@ const PolizasPage = () => {
 			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
 			dia_vencimiento: poliza.dia_vencimiento != null ? String(poliza.dia_vencimiento) : '',
 			fecha_prox_vencimiento: poliza.fecha_prox_vencimiento?.slice(0, 10) ?? '',
-			tipo_alerta: poliza.tipo_alerta ?? '',
-			dias_alerta: poliza.dias_alerta != null ? String(poliza.dias_alerta) : '',
-			dias_frecuencia: poliza.dias_frecuencia != null ? String(poliza.dias_frecuencia) : '',
-			dias_frecuencia_post: poliza.dias_frecuencia_post != null ? String(poliza.dias_frecuencia_post) : '',
-			dias_recordatorio: poliza.dias_recordatorio != null ? String(poliza.dias_recordatorio) : '',
 			notas: poliza.notas ?? '',
 		})
 		setSelectedAsegurado(
@@ -327,11 +312,6 @@ const PolizasPage = () => {
 					fecha_vencimiento: form.fecha_vencimiento,
 					dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
 					fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
-					tipo_alerta: form.tipo_alerta || null,
-					dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
-					dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
-					dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
-					dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
 					pdf_url: null,
 					notas: form.notas || null,
 				})
@@ -387,11 +367,6 @@ const PolizasPage = () => {
 				fecha_vencimiento: form.fecha_vencimiento,
 				dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
 				fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
-				tipo_alerta: form.tipo_alerta || null,
-				dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
-				dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
-				dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
-				dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
 				documentos_poliza: finalDocumentos,
 				pdf_url: finalDocumentos[0]?.url ?? null,
 				notas: form.notas || null,
@@ -702,55 +677,6 @@ const PolizasPage = () => {
 					</div>
 				)
 			case 3:
-				return (
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label>Tipo de alerta</Label>
-							<Input
-								placeholder="Ej. Vencimiento"
-								value={form.tipo_alerta}
-								onChange={(e) => setForm((prev) => ({ ...prev, tipo_alerta: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días de alerta</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 30"
-								value={form.dias_alerta}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_alerta: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días frecuencia</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 30"
-								value={form.dias_frecuencia}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Frecuencia post</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 7"
-								value={form.dias_frecuencia_post}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia_post: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días recordatorio</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 7"
-								value={form.dias_recordatorio}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_recordatorio: e.target.value }))}
-							/>
-						</div>
-					</div>
-				)
-			case 4:
 				return (
 					<div className="space-y-4">
 						<div className="space-y-2">

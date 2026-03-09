@@ -262,10 +262,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       <Button
                         onClick={() => setForceEditMode(true)}
                         variant='outline'
-                        className='hidden sm:flex items-center gap-2'
+                        className='flex items-center gap-2 p-2 sm:px-3 sm:py-2'
+                        aria-label='Editar Historia Clínica'
                       >
-                        <Edit className='w-4 h-4' />
-                        Editar Historia Clínica
+                        <Edit className='w-4 h-4 shrink-0' />
+                        <span className='hidden sm:inline'>Editar Historia Clínica</span>
                       </Button>
                     )}
                     <button

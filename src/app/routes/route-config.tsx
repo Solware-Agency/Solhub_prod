@@ -175,6 +175,11 @@ export const medicRoutes: RouteConfig[] = [
     component: UsersPage,
   },
   {
+    path: 'triage-analytics',
+    feature: 'hasTriaje',
+    component: TriageAnalyticsPage,
+  },
+  {
     path: 'settings',
     component: SettingsPage,
   },
@@ -298,6 +303,11 @@ export const medicoTratanteRoutes: RouteConfig[] = [
     path: 'users',
     feature: 'hasUsers',
     component: UsersPage,
+  },
+  {
+    path: 'triage-analytics',
+    feature: 'hasTriaje',
+    component: TriageAnalyticsPage,
   },
   {
     path: 'settings',

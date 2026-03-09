@@ -66,11 +66,6 @@ export interface Poliza {
 	dia_vencimiento: number | null
 	fecha_prox_vencimiento: string | null
 	dias_prox_vencimiento: number | null
-	tipo_alerta: string | null
-	dias_alerta: number | null
-	dias_frecuencia: number | null
-	dias_frecuencia_post: number | null
-	dias_recordatorio: number | null
 	alert_30_enviada: boolean
 	alert_14_enviada: boolean
 	alert_7_enviada: boolean
@@ -108,11 +103,6 @@ export interface PolizaInsert {
 	dia_vencimiento?: number | null
 	fecha_prox_vencimiento?: string | null
 	dias_prox_vencimiento?: number | null
-	tipo_alerta?: string | null
-	dias_alerta?: number | null
-	dias_frecuencia?: number | null
-	dias_frecuencia_post?: number | null
-	dias_recordatorio?: number | null
 	pdf_url?: string | null
 	documentos_poliza?: DocumentoPoliza[]
 	notas?: string | null

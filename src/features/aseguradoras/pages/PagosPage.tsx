@@ -720,7 +720,12 @@ const PagosPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Monto</Label>
-							<Input type="number" value={form.monto} onChange={(e) => setForm((prev) => ({ ...prev, monto: e.target.value }))} />
+							<Input
+								type="number"
+								placeholder="Ej. 150"
+								value={form.monto}
+								onChange={(e) => setForm((prev) => ({ ...prev, monto: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Método</Label>
@@ -742,7 +747,11 @@ const PagosPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Referencia</Label>
-							<Input value={form.referencia} onChange={(e) => setForm((prev) => ({ ...prev, referencia: e.target.value }))} />
+							<Input
+								placeholder="Ej. REF-001"
+								value={form.referencia}
+								onChange={(e) => setForm((prev) => ({ ...prev, referencia: e.target.value }))}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Adjuntar factura</Label>
@@ -789,7 +798,11 @@ const PagosPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Notas</Label>
-							<Input value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
+							<Input
+								placeholder="Opcional"
+								value={form.notas}
+								onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
+							/>
 						</div>
 					</div>
 					<DialogFooter className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
