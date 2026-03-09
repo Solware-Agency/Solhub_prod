@@ -352,7 +352,6 @@ const PagosPage = () => {
 					</div>
 					<div className="p-4 min-h-[220px] flex-1 flex flex-col">
 						<h2 className="text-lg font-semibold mb-2">Registrar pago</h2>
-						<p className="text-xs text-gray-500 mb-4">Solo se muestran pólizas con pago pendiente</p>
 						{polizasForPayment.length === 0 && (
 							<p className="text-sm text-gray-500">No hay pólizas pendientes de pago.</p>
 						)}
@@ -465,7 +464,6 @@ const PagosPage = () => {
 
 					<div className="p-4 min-h-[220px] flex-1 flex flex-col">
 						<h2 className="text-lg font-semibold mb-2">Pagos registrados</h2>
-						<p className="text-xs text-gray-500 mb-4">Histórico de pólizas ya pagadas</p>
 						{filteredPagos.length === 0 && <p className="text-sm text-gray-500">No hay pagos registrados.</p>}
 						<div className="max-h-[340px] overflow-y-auto">
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

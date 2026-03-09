@@ -41,6 +41,53 @@ import {
 
 const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Documentos'] as const
 
+/** Opciones de ramo (desc_ramo) según catálogo de aseguradoras */
+const RAMOS_OPCIONES = [
+	'MAQUINARIA Y EQUIPOS INDUSTRIALES',
+	'AUTOMOVIL',
+	'MILENIO DEL HOGAR',
+	'HCM',
+	'TODO RIESGO DE INCENDIO',
+	'MILENIO INDUSTRIA Y COMERCIO',
+	'SERVICIOS MEDICOS MERCANTIL',
+	'GLOBAL BENEFITS INDIVIDUAL',
+	'HCM COLECTIVO',
+	'INTER INDUSTRIA Y COMERCIO',
+	'SEGURO DE DINERO',
+	'EQUIPOS ELECTRONICOS',
+	'COMBINADO DE RESIDENCIA',
+	'ROBO',
+	'AVIACION',
+	'TRANSPORTE TERRESTRE',
+	'3D',
+	'RESPONSABILIDAD CIVIL GENERAL',
+	'RIESGOS ESPECIALES',
+	'INCENDIO',
+	'TODO RIESGO INCENDIO',
+	'FIANZA',
+	'ACCIDENTES PERSONALES',
+	'TERREMOTO',
+	'VIDA',
+	'RCV EMBARCACIONES',
+	'SEGURO SOLIDARIO SALUD',
+	'SEGURO SOIDARIO FUNERARIO',
+	'SEGURO SOLIDARIO ACCIDENTES PERSONALES',
+	'SEGUROS FUNERARIOS COLECTIVO',
+	'VIDA COLECTIVA',
+	'ACCIDENTES PERSONALES COLECTIVO',
+	'SERVICIOS DE EMERGENCIA MÉDICA',
+	'SEGUROS DE INDUSTRIA Y COMERCIO',
+	'GROUP BENEFITS INTEGRAL',
+	'RESPONSABILIDAD CIVIL PROFESIONAL',
+	'REPONSABILIDAD CIVIL PATRONAL',
+	'REPONSABILIDAD CIVIL EMPRESARIAL',
+	'INCENDIO Y TERREMOTO',
+	'ACCIDENTES PERSONALES ESCOLARES',
+	'PYME',
+	'GLOBAL BENEFITS COLECTIVO',
+	'RCV',
+] as const
+
 const PolizasPage = () => {
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
@@ -476,7 +523,24 @@ const PolizasPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Ramo <span className="text-destructive">*</span></Label>
-							<Input value={form.ramo} onChange={(e) => setForm((prev) => ({ ...prev, ramo: e.target.value }))} />
+							<Select
+								value={form.ramo}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, ramo: value }))}
+							>
+								<SelectTrigger className="min-w-0">
+									<SelectValue placeholder="Seleccionar ramo" />
+								</SelectTrigger>
+								<SelectContent
+									className="max-h-60 max-w-[var(--radix-select-trigger-width)]"
+									position="popper"
+								>
+									{RAMOS_OPCIONES.map((ramo) => (
+										<SelectItem key={ramo} value={ramo} className="min-w-0 [&>span:last-child]:truncate">
+											{ramo}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 						<div className="space-y-2">
 							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
