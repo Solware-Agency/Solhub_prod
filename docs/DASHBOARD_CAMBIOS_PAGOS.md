@@ -1,11 +1,11 @@
 # Cambios en solhub_dashboard: "Marcar como pagado"
 
-Contexto para aplicar en el **proyecto solhub_dashboard** después de la migración `20260310100000_simplify_get_next_payment_date_on_mark_paid` en Solhub_prod.
+Contexto para aplicar en el **proyecto solhub_dashboard** después de la migración `20260311100000_mark_paid_advance_one_period` en Solhub_prod.
 
 ## Resumen del cambio de lógica
 
-- **Antes:** Si el lab estaba `inactive` (pagó tarde), al marcar como pagado se actualizaba `next_payment_date` a "hoy + 1 período" y `renewal_day_of_month` al día del mes en que pagó.
-- **Ahora:** Siempre se usa la misma regla: `next_payment_date` = próximo día fijo (según `renewal_day_of_month` actual). **renewal_day_of_month no se modifica** al confirmar el pago.
+- **Regla actual:** Al marcar como pagado, **next_payment_date** = **fecha actual de vencimiento + 1 período** (1 mes si es mensual, 1 semana si es semanal, 1 año si es anual). Ejemplo: 08/04/2026 → 08/05/2026. **renewal_day_of_month** no se modifica.
+- **Importante:** Si el admin marca como pagado **otra vez por error**, se sumará **otro** período. El dashboard debe avisar de esto (tooltip o modal de confirmación).
 
 ## Qué cambiar en solhub_dashboard
 
@@ -45,10 +45,18 @@ await supabase
 
 ### 3. Migración en Solhub_prod
 
-- Asegurarse de que la migración **20260310100000_simplify_get_next_payment_date_on_mark_paid.sql** esté aplicada en Supabase (mismo proyecto que usa el dashboard) antes de desplegar los cambios del dashboard.
+- Asegurarse de que la migración **20260311100000_mark_paid_advance_one_period.sql** esté aplicada en Supabase antes de desplegar los cambios del dashboard.
 
 ## Comportamiento esperado tras el cambio
 
-- Cliente con `renewal_day_of_month = 8` que venció el 8 de abril y paga el 15 de abril:
-  - **next_payment_date** pasa a **8 de mayo** (próximo día 8).
-  - **renewal_day_of_month** sigue en **8** (no pasa a 15).
+- Cliente con **next_payment_date = 08/04/2026** (venció el 8 de abril). El admin marca como pagado el 15 de abril:
+  - **next_payment_date** pasa a **08/05/2026** (fecha que venció + 1 mes).
+  - **renewal_day_of_month** no se modifica.
+
+## Texto sugerido para tooltip o modal (dashboard)
+
+- **Tooltip del botón:**  
+  *"Marcar como pagado (reactivará). La próxima fecha de vencimiento avanzará un período. Si marcas otra vez por error, se sumará otro período."*
+
+- **Modal de confirmación:**  
+  *"¿Confirmar pago? La próxima fecha de vencimiento será [mostrar fecha devuelta por la RPC]. Ten en cuenta que cada vez que marques como pagado se avanzará un período."*
