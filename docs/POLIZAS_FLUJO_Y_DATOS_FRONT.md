@@ -1,6 +1,6 @@
 # Flujo de pólizas: cómo funciona y qué datos tiene el front
 
-Explicación de cómo funciona todo el sistema de recordatorios y cobros de pólizas **ahora mismo**, y qué datos puedes usar en el front.
+Explicación de cómo funciona todo el sistema de recordatorios y cobros de pólizas **ahora mismo**, todas las situaciones posibles (incluyendo si el front ya tuviera botones de pago), y qué datos puedes usar en el front.
 
 ---
 
@@ -31,9 +31,44 @@ El backfill ya rellenó las 5 nuevas desde las legacy. Puedes leer **solo las nu
 
 ---
 
-## 2. Cómo funciona el flujo **ahora mismo**
+## 2. Situaciones posibles (flujo día a día y con botones en el front)
 
-### 2.1 Recordatorios por email (automático)
+“Hoy” = fecha en la timezone del laboratorio (`laboratories.config.timezone` o `America/Caracas`). Todas las comparaciones del cron y la Edge Function usan ese “hoy”.
+
+| Situación | next_payment_date vs hoy | payment_status (en BD) | Qué hace el cron de recordatorios (08:15 UTC) | Qué ve el front |
+|-----------|---------------------------|------------------------|-----------------------------------------------|------------------|
+| Más de 30 días antes | next_payment_date > hoy + 30 | `current` | No envía nada | “Al día”, “Próximo pago: DD/MM/AAAA” |
+| Exactamente 30 días antes | next_payment_date = hoy + 30 | `current` | Envía 1 email “Vence en 30 días” al asegurado | Igual |
+| Entre 29 y 15 días antes | hoy + 15 < next < hoy + 30 | `current` | No envía | Igual |
+| Exactamente 14 días antes | next_payment_date = hoy + 14 | `current` | Envía “Vence en 14 días” | Igual |
+| Exactamente 7 días antes | next_payment_date = hoy + 7 | `current` | Envía “Vence en 7 días” | Igual |
+| Entre 6 y 1 día antes | hoy < next < hoy + 7 | `current` | No envía | Igual |
+| **Vence hoy** | next_payment_date = hoy | `current` | Envía “Vence hoy” | “Vence hoy”, mismo badge “Al día” hasta que corra el cron de overdue |
+| **Al día siguiente** (post) | next_payment_date = ayer | `overdue` (cron 00:10 ya la marcó) | Envía 1 email “Póliza vencida” (solo ese día) | “En mora”, “Venció el DD/MM” |
+| Dos o más días después | next_payment_date < ayer | `overdue` | No envía más (el “post” ya se envió) | “En mora” |
+
+### Con botón “Marcar como pagado” en el front
+
+- **Usuario hace clic en “Marcar como pagado”**  
+  1. Front llama `get_next_payment_date_on_mark_paid_poliza(p_poliza_id)`.  
+  2. La RPC devuelve la nueva `next_payment_date` (actual + 1 período: mensual +1 mes, trimestral +3 meses, etc.).  
+  3. Front hace `UPDATE polizas SET next_payment_date = resultado, payment_status = 'current'` (y opcionalmente `fecha_prox_vencimiento`, `estatus_pago`).  
+  4. La póliza pasa a “Al día”; los próximos recordatorios se enviarán según la nueva fecha.
+
+- **Usuario hace clic otra vez por error**  
+  Se vuelve a sumar un período (ej. un mes más). El front puede mostrar aviso: “Si marcas de nuevo, se sumará otro período a la próxima fecha.”
+
+- **Asegurado sin email**  
+  Los recordatorios no se envían (la Edge Function omite y sigue). El front puede mostrar “Sin email: no se envían recordatorios” y permitir editar el asegurado.
+
+- **Póliza inactiva (`activo = false`)**  
+  No entra en el cron de recordatorios ni en el de overdue. El front puede ocultarla del listado activo o mostrarla como “Inactiva”.
+
+---
+
+## 3. Cómo funciona el flujo **ahora mismo**
+
+### 3.1 Recordatorios por email (automático)
 
 1. **Cron** (todos los días a las 08:15 UTC): dispara la Edge Function `polizas-reminder`.
 2. **Edge Function**:
@@ -51,7 +86,7 @@ El backfill ya rellenó las 5 nuevas desde las legacy. Puedes leer **solo las nu
 
 No hay flags: la decisión es solo por la **fecha del día** y `next_payment_date`. El front no interviene en este flujo.
 
-### 2.2 Marcar como pagado (cuando lo implementes en el front)
+### 3.2 Marcar como pagado (cuando lo implementes en el front)
 
 Hoy la **lógica en BD ya está**; el front solo tiene que llamarla y actualizar:
 
@@ -69,11 +104,11 @@ Si se marca como pagado otra vez por error, se vuelve a sumar un período (ej. u
 
 ---
 
-## 3. Qué datos puedes sacar para el front (con lo que hay ahora)
+## 4. Qué datos puedes sacar para el front (con lo que hay ahora)
 
 Todo esto lo puedes hacer **ya** con consultas normales a Supabase (con RLS del lab del usuario).
 
-### 3.1 Listado de pólizas (cards, tabla, filtros)
+### 4.1 Listado de pólizas (cards, tabla, filtros)
 
 Puedes leer de `polizas` (y opcionalmente de `asegurados` y `laboratories`):
 
@@ -111,11 +146,11 @@ Con eso en el front puedes:
 - Filtrar por `payment_status = 'overdue'` para una vista “En mora”.
 - Ordenar por `next_payment_date` para ver las que vencen antes.
 
-### 3.2 Detalle de una póliza
+### 4.2 Detalle de una póliza
 
 Misma idea: los mismos campos de `polizas` + lo que necesites de `asegurados` (nombre, email) para mostrar “Asegurado” y “Email para recordatorios”.
 
-### 3.3 “Días hasta el próximo pago”
+### 4.3 “Días hasta el próximo pago”
 
 Lo calculas en el front con la **fecha del cliente** (o la del lab si la tienes):
 
@@ -123,7 +158,7 @@ Lo calculas en el front con la **fecha del cliente** (o la del lab si la tienes)
 - “Hoy” lo puedes obtener en el timezone del lab (si tienes `laboratories.config.timezone`) o en el timezone del navegador.
 - Diferencia en días = `next_payment_date - hoy` → “Vence en X días” o “Venció hace X días”.
 
-### 3.4 Marcar como pagado (cuando lo implementes)
+### 4.4 Marcar como pagado (cuando lo implementes)
 
 - **Input**: `poliza_id`.
 - **Llamada**: `supabase.rpc('get_next_payment_date_on_mark_paid_poliza', { p_poliza_id: poliza_id })`.
@@ -134,7 +169,7 @@ No hay más datos que “sacar” para el front: la RPC solo devuelve la nueva f
 
 ---
 
-## 4. Resumen en una tabla (qué hace cada parte)
+## 5. Resumen en una tabla (qué hace cada parte)
 
 | Parte | Qué hace ahora | Datos que usa / produce |
 |-------|----------------|--------------------------|
@@ -147,7 +182,7 @@ No hay más datos que “sacar” para el front: la RPC solo devuelve la nueva f
 
 ---
 
-## 5. Cómo sirve todo “ahora mismo” (en una frase)
+## 6. Cómo sirve todo “ahora mismo” (en una frase)
 
 - **Backend**: Un cron a las 00:10 UTC actualiza `payment_status` a `overdue` cuando `next_payment_date` ya pasó; otro cron a las 08:15 UTC y la Edge Function envían los recordatorios por email. No hace falta que el front haga nada para eso.
 - **Datos para el front**: En `polizas` tienes ya todo lo necesario para listados, detalle, badges (Al día/En mora), montos, frecuencias y “próximo pago”; y con la RPC + un `UPDATE` tendrás “Marcar como pagado” cuando lo implementes en el front.
