@@ -5,7 +5,7 @@
 
 import { supabase } from '../config/config';
 // import type { Database } from '@shared/types/types' // No longer used
-import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils';
+import { hasRealChange, formatValueForLog, formatAmountForLog, generateChangeSessionId } from '../shared/change-log-utils';
 
 // =====================================================================
 // FUNCIONES HELPER
@@ -1965,7 +1965,47 @@ const logMedicalCaseChanges = async (
       comentario: 'Comentario',
       consulta: 'Tipo de Consulta',
       image_url: 'URL de Imagen',
+      payment_method_1: 'Método de Pago 1',
+      payment_amount_1: 'Monto de Pago 1',
+      payment_reference_1: 'Referencia de Pago 1',
+      payment_method_2: 'Método de Pago 2',
+      payment_amount_2: 'Monto de Pago 2',
+      payment_reference_2: 'Referencia de Pago 2',
+      payment_method_3: 'Método de Pago 3',
+      payment_amount_3: 'Monto de Pago 3',
+      payment_reference_3: 'Referencia de Pago 3',
+      payment_method_4: 'Método de Pago 4',
+      payment_amount_4: 'Monto de Pago 4',
+      payment_reference_4: 'Referencia de Pago 4',
     };
+
+    // Helper: formatear old/new para montos con moneda (USD o Bs) en historial de acciones
+    const getOldValueForLog = (f: string, oldVal: any, newVal: any) => {
+      if (f === 'total_amount') {
+        const n = formatValueForLog(oldVal)
+        return n != null ? `${n} USD` : null
+      }
+      const match = f.match(/^payment_amount_(\d)$/)
+      if (match) {
+        const slot = match[1]
+        const method = oldData[`payment_method_${slot}` as keyof MedicalCase] as string | null | undefined
+        return formatAmountForLog(oldVal, method)
+      }
+      return formatValueForLog(oldVal)
+    }
+    const getNewValueForLog = (f: string, oldVal: any, newVal: any) => {
+      if (f === 'total_amount') {
+        const n = formatValueForLog(newVal)
+        return n != null ? `${n} USD` : null
+      }
+      const match = f.match(/^payment_amount_(\d)$/)
+      if (match) {
+        const slot = match[1]
+        const method = (newData as any)[`payment_method_${slot}`] ?? oldData[`payment_method_${slot}` as keyof MedicalCase]
+        return formatAmountForLog(newVal, method as string | null | undefined)
+      }
+      return formatValueForLog(newVal)
+    }
 
     // Detectar cambios con normalización (evita falsos positivos)
     for (const [field, newValue] of Object.entries(newData)) {
@@ -1982,13 +2022,14 @@ const logMedicalCaseChanges = async (
 					entity_type: 'medical_case',
 					field_name: field,
 					field_label: fieldLabels[field] || field,
-					old_value: formatValueForLog(oldValue),
-					new_value: formatValueForLog(newValue),
+					old_value: getOldValueForLog(field, oldValue, newValue),
+					new_value: getNewValueForLog(field, oldValue, newValue),
 					user_id: userId,
 					user_email: userEmail,
 					user_display_name: userDisplayName,
 					change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
 					changed_at: changedAt, // Mismo timestamp para todos
+					laboratory_id: oldData.laboratory_id, // Requerido por la tabla change_logs
 				})
 			}
 		}

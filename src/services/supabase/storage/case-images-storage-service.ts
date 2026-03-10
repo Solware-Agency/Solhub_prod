@@ -8,8 +8,8 @@ import type { PostgrestError } from '@supabase/supabase-js'
 
 const BUCKET_NAME = 'case-images'
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
 
 export function validateCaseImage(file: File): { valid: boolean; error?: string } {
 	if (file.size > MAX_FILE_SIZE) {
@@ -22,7 +22,7 @@ export function validateCaseImage(file: File): { valid: boolean; error?: string 
 	if (!ALLOWED_EXTENSIONS.includes(ext)) {
 		return {
 			valid: false,
-			error: 'Formato no permitido. Solo se aceptan JPG, PNG o WebP.',
+			error: 'Solo se admiten imágenes JPG y PNG.',
 		}
 	}
 	const mime = (file.type || '').toLowerCase()
@@ -32,7 +32,7 @@ export function validateCaseImage(file: File): { valid: boolean; error?: string 
 	if (!validMime && file.type) {
 		return {
 			valid: false,
-			error: `Tipo de archivo no permitido. Recibido: ${file.type || 'desconocido'}`,
+			error: `Solo se admiten imágenes JPG y PNG. Recibido: ${file.type || 'desconocido'}`,
 		}
 	}
 	return { valid: true }

@@ -103,11 +103,21 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 		return translations[fieldName] || fieldLabel
 	}
 
-	// Función para formatear valores (truncar URLs largas)
-	const formatValue = (value: string | null): string => {
+	// Función para formatear valores (truncar URLs largas, añadir moneda a montos si falta)
+	const formatValue = (value: string | null, fieldName?: string): string => {
 		if (!value || value === '(vacío)') return '(vacío)'
 		if (typeof value === 'string' && value.startsWith('http') && value.length > 60) {
 			return value.substring(0, 60) + '...'
+		}
+		// Para campos de monto: si no tiene USD/Bs, añadir " (USD)" para que siempre se vea la moneda
+		if (fieldName) {
+			const isAmountField =
+				fieldName === 'total_amount' ||
+				fieldName === 'remaining' ||
+				/^payment_amount_\d+$/.test(fieldName)
+			if (isAmountField && !/\s*(USD|Bs)\s*$/.test(value.trim())) {
+				return `${value} (USD)`
+			}
 		}
 		return value
 	}
@@ -230,7 +240,7 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 												Antes:
 											</p>
 											<p className="text-sm text-gray-700 dark:text-gray-300 line-through break-words">
-												{formatValue(change.old_value)}
+												{formatValue(change.old_value, change.field_name)}
 											</p>
 										</div>
 
@@ -239,7 +249,7 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 												Ahora:
 											</p>
 											<p className="text-sm text-green-600 dark:text-green-400 font-medium break-words">
-												{formatValue(change.new_value)}
+												{formatValue(change.new_value, change.field_name)}
 											</p>
 										</div>
 									</div>

@@ -1576,6 +1576,18 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// const remainingUSD = ...
 		// const remainingVES = ...
 
+		// Formatear valor de monto para historial: si es campo de monto y no tiene moneda, añadir " (USD)"
+		const formatAmountForDisplay = useCallback((fieldName: string, value: string | null): string => {
+			if (value == null || value === '' || value === '(vacío)') return value ?? '(vacío)'
+			const isAmountField =
+				fieldName === 'total_amount' ||
+				fieldName === 'remaining' ||
+				/^payment_amount_\d+$/.test(fieldName)
+			if (!isAmountField) return value
+			const hasCurrency = /\s*(USD|Bs)\s*$/.test(value.trim())
+			return hasCurrency ? value : `${value} (USD)`
+		}, [])
+
 		// Get action type display text and icon for changelog
 		const getActionTypeInfo = useCallback((log: ChangeLogEntry) => {
 			if (log.field_name === 'created_record') {
@@ -1980,11 +1992,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															</p>
 															<div className="flex flex-wrap items-center gap-2 mt-1 text-sm min-w-0">
 																<span className="line-through text-gray-500 dark:text-gray-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																	{log.old_value || '(vacío)'}
+																	{formatAmountForDisplay(log.field_name, log.old_value)}
 																</span>
 																<span className="text-xs shrink-0">→</span>
 																<span className="text-green-600 dark:text-green-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																	{log.new_value || '(vacío)'}
+																	{formatAmountForDisplay(log.field_name, log.new_value)}
 																</span>
 															</div>
 														</div>
@@ -2536,6 +2548,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
 												}
 												isUploading={isUploadingImages}
+												accept="image/jpeg,image/png,.jpg,.jpeg,.png"
 											/>
 										</div>
 									</div>

@@ -78,6 +78,18 @@ const ChangelogTable: React.FC = () => {
 		return translations[fieldName] || fieldLabel
 	}
 
+	// Para campos de monto: mostrar moneda (USD/Bs) si no viene en el valor (logs antiguos)
+	const formatAmountForDisplay = (fieldName: string, value: string | null): string => {
+		if (value == null || value === '' || value === '(vacío)') return value ?? '(vacío)'
+		const isAmountField =
+			fieldName === 'total_amount' ||
+			fieldName === 'remaining' ||
+			/^payment_amount_\d+$/.test(fieldName)
+		if (!isAmountField) return value
+		const hasCurrency = /\s*(USD|Bs)\s*$/.test(value.trim())
+		return hasCurrency ? value : `${value} (USD)`
+	}
+
 	// Helper: texto de entidad para casos médicos y si debe mostrarse como "Caso eliminado" (badge rojo)
 	const getCaseEntityDisplay = (log: ChangeLogData): { text: string; isDeletedCase: boolean } => {
 		const isCreated = log.field_name === 'created_record'
@@ -747,7 +759,7 @@ const ChangelogTable: React.FC = () => {
 																	})()}
 																</span>
 															) : group.changeCount === 1 ? (
-																// Si solo hay un cambio, mostrar resumen simple
+																// Si solo hay un cambio, mostrar resumen simple (con moneda en montos)
 																<div className="text-sm wrap-break-word">
 																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
@@ -756,33 +768,13 @@ const ChangelogTable: React.FC = () => {
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																			<span className="line-through">
 																				Antes:{' '}
-																				{(() => {
-																					const value = log.old_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.old_value)}
 																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																			<span>
 																				Ahora:{' '}
-																				{(() => {
-																					const value = log.new_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.new_value)}
 																			</span>
 																		</div>
 																	</div>
@@ -938,33 +930,13 @@ const ChangelogTable: React.FC = () => {
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																			<span className="line-through">
 																				Antes:{' '}
-																				{(() => {
-																					const value = log.old_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.old_value)}
 																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																			<span>
 																				Ahora:{' '}
-																				{(() => {
-																					const value = log.new_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.new_value)}
 																			</span>
 																		</div>
 																	</div>

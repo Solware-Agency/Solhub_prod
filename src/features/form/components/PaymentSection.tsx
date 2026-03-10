@@ -9,7 +9,7 @@ import {
 import { type FormValues } from '@features/form/lib/form-schema'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { FormLabel, FormItem, FormControl } from '@shared/components/ui/form'
+import { FormField, FormLabel, FormItem, FormControl, FormMessage } from '@shared/components/ui/form'
 import { useMemo, memo, useCallback, useEffect } from 'react'
 import { PaymentHeader } from './payment/PaymentHeader'
 import { ConverterUSDtoVES } from './payment/ConverterUSDtoVES'
@@ -182,26 +182,33 @@ export const PaymentSection = memo(({
 				>
 					{isSampleTypeCostsEnabled && sampleTypeCosts && sampleTypeCosts.length > 0 && (
 						<div className="w-full">
-							<FormItem className="w-full">
-								<FormLabel className="text-sm sm:text-base">Tipo de precio</FormLabel>
-								<FormControl>
-									<FormDropdown
-										options={createDropdownOptions(
-											[
-												{ value: 'taquilla', label: 'Taquilla (Costo 1)' },
-												{ value: 'convenios', label: 'Convenios (Costo 2)', disabled: onlyTaquilla },
-												{ value: 'descuento', label: 'Descuento (Costo 3)', disabled: onlyTaquilla },
-											]
-										)}
-										value={priceType || ''}
-										onChange={(value) => applyPriceOption(value as PriceTypeOption)}
-										placeholder="Seleccione tipo de precio"
-										disabled={!selectedCost}
-										className={cn(!selectedCost && 'opacity-50 cursor-not-allowed')}
-										id="payment-price-type"
-									/>
-								</FormControl>
-							</FormItem>
+							<FormField
+								control={control}
+								name="priceType"
+								render={({ field }) => (
+									<FormItem className="w-full">
+										<FormLabel className="text-sm sm:text-base">Tipo de precio <span className="text-destructive">*</span></FormLabel>
+										<FormControl>
+											<FormDropdown
+												options={createDropdownOptions(
+													[
+														{ value: 'taquilla', label: 'Taquilla (Costo 1)' },
+														{ value: 'convenios', label: 'Convenios (Costo 2)', disabled: onlyTaquilla },
+														{ value: 'descuento', label: 'Descuento (Costo 3)', disabled: onlyTaquilla },
+													]
+												)}
+												value={field.value || ''}
+												onChange={(value) => applyPriceOption(value as PriceTypeOption)}
+												placeholder="Seleccione tipo de precio"
+												disabled={!selectedCost}
+												className={cn(!selectedCost && 'opacity-50 cursor-not-allowed')}
+												id="payment-price-type"
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 							{!sampleType && (
 								<p className="text-xs text-muted-foreground mt-2">Seleccione primero el tipo de muestra arriba.</p>
 							)}
