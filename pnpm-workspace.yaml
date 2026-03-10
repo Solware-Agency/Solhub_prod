@@ -1,0 +1,7 @@
+ignoredBuiltDependencies:
+  - '@heroui/shared-utils'
+
+onlyBuiltDependencies:
+  - core-js
+  - esbuild
+  - supabase
