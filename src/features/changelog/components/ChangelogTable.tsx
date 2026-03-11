@@ -73,6 +73,8 @@ const ChangelogTable: React.FC = () => {
 			payment_method_4: 'Método de Pago 4',
 			payment_amount_4: 'Monto de Pago 4',
 			payment_reference_4: 'Referencia de Pago 4',
+			display_name: 'Nombre para mostrar',
+			phone: 'Teléfono',
 		}
 
 		return translations[fieldName] || fieldLabel
@@ -270,7 +272,7 @@ const ChangelogTable: React.FC = () => {
 
 	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso y no eliminado)
 	const handleOpenCaseDetail = async (log: ChangeLogData) => {
-		if (log.entity_type === 'patient') return
+		if (log.entity_type === 'patient' || log.entity_type === 'profile') return
 		const { text: caseCode, isDeletedCase } = getCaseEntityDisplay(log)
 		if (isDeletedCase) {
 			toast({
@@ -680,10 +682,17 @@ const ChangelogTable: React.FC = () => {
 														</span>
 													</td>
 
-													{/* Entity (Case/Patient) */}
+													{/* Entity (Case/Patient/Profile) */}
 													<td className="px-4 py-4">
 														<div className="flex flex-col">
-															{log.entity_type === 'patient' ? (
+															{log.entity_type === 'profile' ? (
+																<span
+																	className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+																	title="Cambios en perfil de usuario"
+																>
+																	Perfil
+																</span>
+															) : log.entity_type === 'patient' ? (
 																<>
 																	{log.patient_id && log.patients ? (
 																		<button
@@ -840,7 +849,14 @@ const ChangelogTable: React.FC = () => {
 														<span className="text-xs text-gray-500">{logTime}</span>
 													</div>
 													<div className="flex flex-col gap-1">
-														{log.entity_type === 'patient' ? (
+														{log.entity_type === 'profile' ? (
+															<span
+																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+																title="Cambios en perfil de usuario"
+															>
+																Perfil
+															</span>
+														) : log.entity_type === 'patient' ? (
 															<>
 																{log.patient_id && log.patients ? (
 																	<button
@@ -865,7 +881,7 @@ const ChangelogTable: React.FC = () => {
 															(() => {
 																const { text, isDeletedCase } = getCaseEntityDisplay(log)
 																const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
-																const canOpenCase = log.entity_type !== 'patient' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
+																const canOpenCase = log.entity_type !== 'patient' && log.entity_type !== 'profile' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																return (
 																	canOpenCase ? (
 																		<button

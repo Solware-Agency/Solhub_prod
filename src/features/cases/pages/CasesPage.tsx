@@ -25,6 +25,9 @@ const CasesPage: React.FC = () => {
     originFilter?: string[];
     dateFrom?: string;
     dateTo?: string;
+    sampleDateFrom?: string;
+    sampleDateTo?: string;
+    sampleTypeFilter?: string;
     emailSentStatus?: boolean;
     sortField?: string;
     sortDirection?: 'asc' | 'desc';

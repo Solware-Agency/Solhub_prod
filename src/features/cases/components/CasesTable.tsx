@@ -88,6 +88,9 @@ type ServerFilters = {
   originFilter?: string[];
   dateFrom?: string;
   dateTo?: string;
+  sampleDateFrom?: string;
+  sampleDateTo?: string;
+  sampleTypeFilter?: string;
   emailSentStatus?: boolean;
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
@@ -157,6 +160,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
     const isSpt = laboratory?.slug === 'spt';
+    const hasTriaje = laboratory?.features?.hasTriaje ?? false;
     const { toast } = useToast();
     const {
       exportToExcel,
@@ -177,6 +181,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [dateRange, setDateRange] = useState<DateRange | undefined>(
       undefined,
     );
+    const [sampleDateRange, setSampleDateRange] = useState<
+      DateRange | undefined
+    >(undefined);
     // Nuevos filtros reales
     const [pendingCasesFilter, setPendingCasesFilter] = useState<string>('all');
     const [pdfStatusFilter, setPdfStatusFilter] = useState<string>('all');
@@ -241,6 +248,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       useState<string>('all');
     const [tempConsultaFilter, setTempConsultaFilter] = useState<string>('all');
     const [tempTriageStatusFilter, setTempTriageStatusFilter] = useState<string>('all');
+    const [tempSampleDateRange, setTempSampleDateRange] = useState<
+      DateRange | undefined
+    >(undefined);
+    const [sampleTypeFilter, setSampleTypeFilter] = useState<string>('all');
+    const [tempSampleTypeFilter, setTempSampleTypeFilter] = useState<string>('all');
 
     // Paginación local (solo se usa si no hay paginación del servidor)
     const [localCurrentPage, setLocalCurrentPage] = useState(1);
@@ -351,12 +363,16 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         setTempDocumentStatusFilter(documentStatusFilter);
         setTempEmailSentStatusFilter(emailSentStatusFilter);
         setTempTriageStatusFilter(triageStatusFilter);
+        setTempSampleDateRange(sampleDateRange);
+        setTempSampleTypeFilter(sampleTypeFilter);
       }
     }, [
       isFiltersModalOpen,
       statusFilter,
       branchFilter,
       dateRange,
+      sampleDateRange,
+      sampleTypeFilter,
       showPdfReadyOnly,
       selectedDoctors,
       selectedOrigins,
@@ -455,10 +471,29 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           if (emailSentStatusFilter !== 'all') {
             currentFilters.emailSentStatus = emailSentStatusFilter === 'true';
           }
-          if (triageStatusFilter !== 'all') {
+          if (hasTriaje && triageStatusFilter !== 'all') {
             currentFilters.triageStatus = triageStatusFilter as
               | 'pendiente'
               | 'completo';
+          }
+          if (sampleDateRange?.from || sampleDateRange?.to) {
+            const formatYmd = (d: Date) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            };
+            const fromStr = sampleDateRange.from
+              ? formatYmd(sampleDateRange.from)
+              : null;
+            const toStr = sampleDateRange.to
+              ? formatYmd(sampleDateRange.to)
+              : null;
+            currentFilters.sampleDateFrom = fromStr ?? toStr ?? undefined;
+            currentFilters.sampleDateTo = toStr ?? fromStr ?? undefined;
+          }
+          if (sampleTypeFilter && sampleTypeFilter !== 'all') {
+            currentFilters.sampleTypeFilter = sampleTypeFilter;
           }
 
           // Agregar el nuevo sort
@@ -486,6 +521,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         dateRange,
         emailSentStatusFilter,
         triageStatusFilter,
+        sampleDateRange,
+        sampleTypeFilter,
+        hasTriaje,
       ],
     );
 
@@ -600,6 +638,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempConsultaFilter('all');
       setTempEmailSentStatusFilter('all');
       setTempTriageStatusFilter('all');
+      setTempSampleDateRange(undefined);
+      setSampleDateRange(undefined);
+      setTempSampleTypeFilter('all');
+      setSampleTypeFilter('all');
       // Si tenemos paginación del servidor, limpiar filtros del servidor también
       // pero mantener el orden actual
       if (pagination && onFiltersChange) {
@@ -628,6 +670,8 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setConsultaFilter(tempConsultaFilter);
       setEmailSentStatusFilter(tempEmailSentStatusFilter);
       setTriageStatusFilter(tempTriageStatusFilter);
+      setSampleDateRange(tempSampleDateRange);
+      setSampleTypeFilter(tempSampleTypeFilter);
       // Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
       if (pagination && onFiltersChange) {
         const serverFilters: ServerFilters = {};
@@ -685,10 +729,29 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
         }
-        if (tempTriageStatusFilter !== 'all') {
+        if (hasTriaje && tempTriageStatusFilter !== 'all') {
           serverFilters.triageStatus = tempTriageStatusFilter as
             | 'pendiente'
             | 'completo';
+        }
+        if (tempSampleDateRange?.from || tempSampleDateRange?.to) {
+          const formatYmd = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          };
+          const fromStr = tempSampleDateRange.from
+            ? formatYmd(tempSampleDateRange.from)
+            : null;
+          const toStr = tempSampleDateRange.to
+            ? formatYmd(tempSampleDateRange.to)
+            : null;
+          serverFilters.sampleDateFrom = fromStr ?? toStr ?? undefined;
+          serverFilters.sampleDateTo = toStr ?? fromStr ?? undefined;
+        }
+        if (tempSampleTypeFilter && tempSampleTypeFilter !== 'all') {
+          serverFilters.sampleTypeFilter = tempSampleTypeFilter;
         }
 
         // Mantener el orden actual
@@ -701,6 +764,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempStatusFilter,
       tempBranchFilter,
       tempDateRange,
+      tempSampleDateRange,
       tempShowPdfReadyOnly,
       tempSelectedDoctors,
       tempSelectedOrigins,
@@ -713,6 +777,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
       tempTriageStatusFilter,
+      hasTriaje,
       pagination,
       onFiltersChange,
       sortField,
@@ -731,6 +796,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const handleTempDateRangeChange = useCallback(
       (range: DateRange | undefined) => {
         setTempDateRange(range);
+      },
+      [],
+    );
+    const handleTempSampleDateRangeChange = useCallback(
+      (range: DateRange | undefined) => {
+        setTempSampleDateRange(range);
       },
       [],
     );
@@ -1420,6 +1491,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     onBranchFilterChange={handleTempBranchFilterChange}
                     dateRange={tempDateRange}
                     onDateRangeChange={handleTempDateRangeChange}
+                    sampleDateRange={tempSampleDateRange}
+                    onSampleDateRangeChange={handleTempSampleDateRangeChange}
+                    sampleTypeFilter={tempSampleTypeFilter}
+                    onSampleTypeFilterChange={setTempSampleTypeFilter}
                     showPdfReadyOnly={tempShowPdfReadyOnly}
                     onPdfFilterToggle={handleTempPdfFilterToggle}
                     selectedDoctors={tempSelectedDoctors}
@@ -1740,6 +1815,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onBranchFilterChange={handleTempBranchFilterChange}
                   dateRange={tempDateRange}
                   onDateRangeChange={handleTempDateRangeChange}
+                  sampleDateRange={tempSampleDateRange}
+                  onSampleDateRangeChange={handleTempSampleDateRangeChange}
+                  sampleTypeFilter={tempSampleTypeFilter}
+                  onSampleTypeFilterChange={setTempSampleTypeFilter}
                   showPdfReadyOnly={tempShowPdfReadyOnly}
                   onPdfFilterToggle={handleTempPdfFilterToggle}
                   selectedDoctors={tempSelectedDoctors}

@@ -561,6 +561,11 @@ export const getCasesWithPatientInfo = async (
     branchFilter?: string[]; // Filtro de múltiples sedes
     dateFrom?: string;
     dateTo?: string;
+    /** Filtro por fecha de muestra (solo labs que usan fecha_muestra, ej. Marihorgen/LM) */
+    sampleDateFrom?: string;
+    sampleDateTo?: string;
+    /** Filtro por tipo de muestra (solo Marihorgen/LM; valor = name de sample_type_costs) */
+    sampleTypeFilter?: string;
     examType?: string;
     consulta?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
@@ -1011,6 +1016,20 @@ export const getCasesWithPatientInfo = async (
       nextDay.setDate(nextDay.getDate() + 1);
       const nextDayStr = nextDay.toISOString().split('T')[0];
       query = query.filter('created_at', 'lt', nextDayStr);
+    }
+
+    if (filters?.sampleDateFrom) {
+      query = query.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
+    }
+    if (filters?.sampleDateTo) {
+      const nextDay = new Date(filters.sampleDateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('fecha_muestra', 'lt', nextDayStr);
+    }
+
+    if (filters?.sampleTypeFilter) {
+      query = query.eq('sample_type', filters.sampleTypeFilter);
     }
 
     if (filters?.examType) {
@@ -1733,6 +1752,20 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         nextDay.setDate(nextDay.getDate() + 1);
         const nextDayStr = nextDay.toISOString().split('T')[0];
         query = query.filter('created_at', 'lt', nextDayStr);
+      }
+
+      if (filters?.sampleDateFrom) {
+        query = query.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
+      }
+      if (filters?.sampleDateTo) {
+        const nextDaySample = new Date(filters.sampleDateTo);
+        nextDaySample.setDate(nextDaySample.getDate() + 1);
+        const nextDaySampleStr = nextDaySample.toISOString().split('T')[0];
+        query = query.filter('fecha_muestra', 'lt', nextDaySampleStr);
+      }
+
+      if (filters?.sampleTypeFilter) {
+        query = query.eq('sample_type', filters.sampleTypeFilter);
       }
 
       if (filters?.examType) {

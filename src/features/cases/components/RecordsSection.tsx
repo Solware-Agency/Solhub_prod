@@ -25,6 +25,9 @@ interface RecordsSectionProps {
 		originFilter?: string[]
 		dateFrom?: string
 		dateTo?: string
+		sampleDateFrom?: string
+		sampleDateTo?: string
+		sampleTypeFilter?: string
 	}) => void
 	pagination?: {
 		currentPage: number

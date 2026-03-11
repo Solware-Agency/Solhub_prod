@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import { useQuery } from '@tanstack/react-query';
+import { getSampleTypeCostsByLaboratory } from '@/services/supabase/laboratories/sample-type-costs-service';
 import BranchFilterPanel from './BranchFilterPanel';
 import DoctorFilterPanel from './DoctorFilterPanel';
 import PatientOriginFilterPanel from './PatientOriginFilterPanel';
@@ -58,6 +60,12 @@ interface FiltersModalProps {
   onBranchFilterChange: (value: string[]) => void;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
+  /** Rango de fecha de muestra (solo labs que usan fecha_muestra: Marihorgen/LM) */
+  sampleDateRange?: DateRange | undefined;
+  onSampleDateRangeChange?: (range: DateRange | undefined) => void;
+  /** Tipo de muestra (solo Marihorgen/LM; opciones desde sample_type_costs) */
+  sampleTypeFilter?: string;
+  onSampleTypeFilterChange?: (value: string) => void;
   showPdfReadyOnly: boolean;
   onPdfFilterToggle: () => void;
   selectedDoctors: string[];
@@ -103,6 +111,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   onBranchFilterChange,
   dateRange,
   onDateRangeChange,
+  sampleDateRange,
+  onSampleDateRangeChange,
+  sampleTypeFilter,
+  onSampleTypeFilterChange,
   showPdfReadyOnly,
   onPdfFilterToggle,
   selectedDoctors,
@@ -135,8 +147,21 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 }) => {
   const { laboratory } = useLaboratory();
   const isSpt = laboratory?.slug === 'spt';
+  const hasTriaje = laboratory?.features?.hasTriaje ?? false;
+  const usesFechaMuestra = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm';
+
+  const { data: sampleTypeCostsResult } = useQuery({
+    queryKey: ['sample-type-costs', laboratory?.id],
+    queryFn: () => getSampleTypeCostsByLaboratory(laboratory!.id),
+    enabled: !!laboratory?.id && usesFechaMuestra,
+  });
+  const sampleTypeOptions = useMemo(() => {
+    const list = sampleTypeCostsResult?.data ?? [];
+    return list.map((s) => ({ value: s.name, label: s.name }));
+  }, [sampleTypeCostsResult?.data]);
 
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
+  const [isSampleDateRangeOpen, setIsSampleDateRangeOpen] = useState(false);
   const [showDoctorFilter, setShowDoctorFilter] = useState(false);
   const [showOriginFilter, setShowOriginFilter] = useState(false);
   const [showBranchFilter, setShowBranchFilter] = useState(false);
@@ -206,7 +231,13 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
     consultaFilter !== 'all' ||
     documentStatusFilter !== 'all' ||
     emailSentStatusFilter !== 'all' ||
-    triageStatusFilter !== 'all';
+    (hasTriaje && triageStatusFilter !== 'all') ||
+    (usesFechaMuestra &&
+      (sampleDateRange?.from != null || sampleDateRange?.to != null)) ||
+    (usesFechaMuestra &&
+      sampleTypeFilter != null &&
+      sampleTypeFilter !== '' &&
+      sampleTypeFilter !== 'all');
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -235,7 +266,17 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 consultaFilter !== 'all' ? 1 : 0,
                 documentStatusFilter !== 'all' ? 1 : 0,
                 emailSentStatusFilter !== 'all' ? 1 : 0,
-                triageStatusFilter !== 'all' ? 1 : 0,
+                hasTriaje && triageStatusFilter !== 'all' ? 1 : 0,
+                usesFechaMuestra &&
+                (sampleDateRange?.from != null || sampleDateRange?.to != null)
+                  ? 1
+                  : 0,
+                usesFechaMuestra &&
+                sampleTypeFilter != null &&
+                sampleTypeFilter !== '' &&
+                sampleTypeFilter !== 'all'
+                  ? 1
+                  : 0,
               ].reduce((a, b) => a + b, 0)}
             </span>
           )}
@@ -352,7 +393,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                           ? format(dateRange.from, 'dd/MM/yyyy', { locale: es })
                           : dateRange?.to
                             ? format(dateRange.to, 'dd/MM/yyyy', { locale: es })
-                            : 'Seleccionar fecha(s)'}
+                            : 'Fecha de recepción'}
                     </Button>
                   </DatePopoverTrigger>
                   <DatePopoverContent
@@ -385,6 +426,75 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 </DatePopover>
               </div>
             </div>
+
+            {/* Fecha de muestra + Tipo de muestra - misma línea, solo Marihorgen/LM */}
+            {usesFechaMuestra && (onSampleDateRangeChange || onSampleTypeFilterChange) && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                {onSampleDateRangeChange && (
+                  <div className='space-y-3'>
+                    <DatePopover
+                      open={isSampleDateRangeOpen}
+                      onOpenChange={setIsSampleDateRangeOpen}
+                      modal={false}
+                    >
+                      <DatePopoverTrigger asChild>
+                        <Button
+                          variant='outline'
+                          className='flex items-center gap-2 w-full justify-start font-bold'
+                        >
+                          <CalendarIcon className='w-4 h-4' />
+                          {sampleDateRange?.from && sampleDateRange?.to
+                            ? `${format(sampleDateRange.from, 'dd/MM/yyyy', { locale: es })} - ${format(sampleDateRange.to, 'dd/MM/yyyy', { locale: es })}`
+                            : sampleDateRange?.from
+                              ? format(sampleDateRange.from, 'dd/MM/yyyy', { locale: es })
+                              : sampleDateRange?.to
+                                ? format(sampleDateRange.to, 'dd/MM/yyyy', { locale: es })
+                                : 'Fecha de muestra'}
+                        </Button>
+                      </DatePopoverTrigger>
+                      <DatePopoverContent
+                        className='w-auto p-0 z-[9999]'
+                        side='top'
+                        align='start'
+                        sideOffset={5}
+                        avoidCollisions={true}
+                        collisionPadding={20}
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                        style={{ position: 'fixed' }}
+                      >
+                        <CalendarComponent
+                          mode='range'
+                          selected={sampleDateRange}
+                          onSelect={(range) => {
+                            onSampleDateRangeChange(range);
+                            if (range?.from && range?.to) {
+                              setIsSampleDateRangeOpen(false);
+                            }
+                          }}
+                          initialFocus
+                          locale={es}
+                          toDate={new Date()}
+                          disabled={{ after: new Date() }}
+                          numberOfMonths={1}
+                          className='scale-90'
+                        />
+                      </DatePopoverContent>
+                    </DatePopover>
+                  </div>
+                )}
+                {onSampleTypeFilterChange && (
+                  <div className='space-y-3 [&>div>div]:text-foreground [&>div>div>span]:text-foreground'>
+                    <CustomDropdown
+                      options={sampleTypeOptions}
+                      value={sampleTypeFilter === 'all' || !sampleTypeFilter ? '' : sampleTypeFilter}
+                      placeholder='Tipo de muestra'
+                      onChange={onSampleTypeFilterChange}
+                      data-testid='sample-type-filter'
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* New Filters Row 2: Exam Type and Consulta/Email Status */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
@@ -424,21 +534,23 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
               )}
             </div>
 
-            {/* New Filters Row 3: Triage Status */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
-              <div className='space-y-3'>
-                <CustomDropdown
-                  options={[
-                    { value: 'pendiente', label: 'Pendiente por Triaje' },
-                    { value: 'completo', label: 'Triaje Completado' },
-                  ]}
-                  value={triageStatusFilter}
-                  placeholder='Estatus de Triaje'
-                  onChange={onTriageStatusFilterChange}
-                  data-testid='triage-status-filter'
-                />
+            {/* New Filters Row 3: Triage Status - solo si el lab tiene triaje activo */}
+            {hasTriaje && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
+                <div className='space-y-3'>
+                  <CustomDropdown
+                    options={[
+                      { value: 'pendiente', label: 'Pendiente por Triaje' },
+                      { value: 'completo', label: 'Triaje Completado' },
+                    ]}
+                    value={triageStatusFilter}
+                    placeholder='Estatus de Triaje'
+                    onChange={onTriageStatusFilterChange}
+                    data-testid='triage-status-filter'
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* SPT: Columna izq (Email + Sede) y columna der (Médico) independientes - no se empujan */}
             {isSpt && (
@@ -732,7 +844,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                     </span>
                   )}
 
-                  {triageStatusFilter !== 'all' && (
+                  {hasTriaje && triageStatusFilter !== 'all' && (
                     <span className='inline-flex items-center gap-1 px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-sm rounded-full'>
                       Triaje: {triageStatusFilter === 'pendiente' ? 'Pendiente' : 'Completado'}
                       <button
@@ -743,6 +855,37 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                       </button>
                     </span>
                   )}
+                  {usesFechaMuestra &&
+                    (sampleDateRange?.from != null || sampleDateRange?.to != null) &&
+                    onSampleDateRangeChange && (
+                      <span className='inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-sm rounded-full'>
+                        Fecha muestra:{' '}
+                        {sampleDateRange?.from && sampleDateRange?.to
+                          ? `${format(sampleDateRange.from, 'dd/MM/yyyy')} - ${format(sampleDateRange.to, 'dd/MM/yyyy')}`
+                          : format((sampleDateRange?.from ?? sampleDateRange?.to)!, 'dd/MM/yyyy')}
+                        <button
+                          onClick={() => onSampleDateRangeChange(undefined)}
+                          className='ml-1 hover:text-amber-600 dark:hover:text-amber-200'
+                        >
+                          <X className='w-3 h-3' />
+                        </button>
+                      </span>
+                    )}
+                  {usesFechaMuestra &&
+                    sampleTypeFilter != null &&
+                    sampleTypeFilter !== '' &&
+                    sampleTypeFilter !== 'all' &&
+                    onSampleTypeFilterChange && (
+                      <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-sm rounded-full'>
+                        Tipo muestra: {sampleTypeFilter}
+                        <button
+                          onClick={() => onSampleTypeFilterChange('all')}
+                          className='ml-1 hover:text-indigo-600 dark:hover:text-indigo-200'
+                        >
+                          <X className='w-3 h-3' />
+                        </button>
+                      </span>
+                    )}
                 </div>
               </div>
             )}
