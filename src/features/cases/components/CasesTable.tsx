@@ -978,6 +978,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       pagination?.totalItems,
       cases.length,
       exportToExcel,
+      emailSentStatusFilter,
     ]);
 
     // Memoize the filtered and sorted cases to improve performance - OPTIMIZED
@@ -1360,6 +1361,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       emailSentStatusFilter,
       pagination,
       onFiltersChange,
+      isSpt,
     ]);
 
     // Paginación
@@ -1400,7 +1402,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const handleItemsPerPageChange = useCallback((newItemsPerPage: number) => {
       setItemsPerPage(newItemsPerPage);
       setCurrentPage(1); // Reset to first page when changing items per page
-    }, []);
+    }, [setCurrentPage, setItemsPerPage]);
 
     const SortIcon = useCallback(
       ({ field }: { field: SortField }) => {

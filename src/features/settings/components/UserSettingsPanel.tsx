@@ -52,6 +52,7 @@ const UserSettingsPanel: React.FC = () => {
 		if (profile?.phone != null && String(profile.phone) !== phone) {
 			setPhone(String(profile.phone))
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- solo sincronizar desde profile al cargar, no cuando el usuario edita
 	}, [user, profile])
 
 	const handleProfileUpdate = async (e: React.FormEvent) => {

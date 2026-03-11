@@ -294,6 +294,7 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			console.log('Calling redirectUser from useEffect')
 			redirectUser()
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- location.hash/search y redirectUser omitidos para evitar loops
 	}, [redirectOnMount, authLoading, profileLoading, user, profile, profileError, isRedirecting, location.pathname])
 
 	return {

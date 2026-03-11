@@ -210,6 +210,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		return stepsList
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- isSptAutoApprove omitido intencionalmente para evitar recálculos
 	}, [
 		isResidente,
 		isEmployee,
@@ -344,6 +345,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		loadPatientInfo()
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- solo cargar al abrir o al cambiar case id
 	}, [isOpen, case_?.id])
 
 	// Actualizar el paso activo cuando el modal se abra y el documento esté aprobado
@@ -352,6 +354,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			const initialStep = getInitialStep()
 			setActiveStep(initialStep)
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- getInitialStep omitido para evitar re-ejecución en cada render
 	}, [isOpen, docAprobado, computedSteps.length])
 
 	const handleNext = () => {

@@ -52,7 +52,7 @@ export function ThemeProvider({
 		if (forceTheme && forceTheme !== theme) {
 			setTheme(forceTheme)
 		}
-	}, [forceTheme])
+	}, [forceTheme, theme])
 
 	useEffect(() => {
 		const root = window.document.documentElement
@@ -94,6 +94,7 @@ export function ThemeProvider({
 	)
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook exportado junto al provider
 export const useTheme = () => {
 	const context = useContext(ThemeProviderContext)
 

@@ -240,6 +240,7 @@ const ReceptionistHomePage: React.FC = () => {
 		})
 
 		return buttons
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- handleLogout estable, omitido para evitar dependencia circular
 	}, [profile?.role, laboratory?.slug, laboratory?.features?.hasCallCenter, laboratory?.features?.hasWaitingRoom])
 
 	return (

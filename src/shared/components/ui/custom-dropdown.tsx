@@ -195,6 +195,7 @@ const CustomDropdown = forwardRef<HTMLDivElement, CustomDropdownProps>(
 				window.removeEventListener('scroll', onScroll)
 				window.removeEventListener('resize', onResize)
 			}
+			// eslint-disable-next-line react-hooks/exhaustive-deps -- computePositioning omitido para evitar re-ejecutar en cada recalculo
 		}, [isOpen])
 
 		const handleSelect = (optionValue: string) => {

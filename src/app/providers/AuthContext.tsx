@@ -27,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
 	isLoadingTimeout: false,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook exportado junto al provider por conveniencia
 export const useAuth = () => {
 	const context = useContext(AuthContext)
 	if (!context) {

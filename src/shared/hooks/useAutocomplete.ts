@@ -434,7 +434,8 @@ export const useAutocomplete = (fieldName: string) => {
 		return () => {
 			isMounted = false
 		}
-	}, [fieldName]) // Only depend on fieldName, not hasPreloadedData
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- solo preload al montar o al cambiar fieldName
+	}, [fieldName])
 
 	// Function to get filtered suggestions based on search term - memoized with useCallback
 	const getFilteredSuggestions = useCallback(
@@ -602,9 +603,10 @@ export const useAutocomplete = (fieldName: string) => {
 
 	// Clean up AbortController on unmount
 	useEffect(() => {
+		const ref = abortControllerRef
 		return () => {
-			if (abortControllerRef.current) {
-				abortControllerRef.current.abort()
+			if (ref.current) {
+				ref.current.abort()
 			}
 		}
 	}, [])

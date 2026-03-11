@@ -38,13 +38,14 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 			},
 		)
 
-		if (cardRef.current) {
-			observer.observe(cardRef.current)
+		const cardEl = cardRef.current
+		if (cardEl) {
+			observer.observe(cardEl)
 		}
 
 		return () => {
-			if (cardRef.current) {
-				observer.unobserve(cardRef.current)
+			if (cardEl) {
+				observer.unobserve(cardEl)
 			}
 		}
 	}, [animationTriggered])

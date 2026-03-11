@@ -396,6 +396,7 @@ export const PatientRelationshipManager = ({
 		}
 
 		loadDependentData()
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- responsable.telefono omitido para no re-ejecutar en cada edición
 	}, [dependentToEdit?.id, trigger, toast])
 
 	return (

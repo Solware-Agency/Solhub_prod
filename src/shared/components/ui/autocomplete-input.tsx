@@ -130,6 +130,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
     
     // Call original onChange if exists
     props.onChange?.(e);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo dependemos de los handlers que usamos
   }, [props.onChange, onValueChange]);
 
   const handleSuggestionClick = React.useCallback((suggestion: string) => {
@@ -157,6 +158,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
     
     // Focus input after selection
     inputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- props.onChange ya incluido
   }, [fieldName, onPatientSelect, onValueChange, props.onChange]);
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -196,6 +198,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       default:
         props.onKeyDown?.(e);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- props.onKeyDown ya incluido
   }, [showSuggestions, suggestions, selectedIndex, searchTerminated, isAutofilled, props.onKeyDown, handleSuggestionClick]);
 
   const handleBlur = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
@@ -205,6 +208,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       setSelectedIndex(-1);
     }, 150);
     props.onBlur?.(e);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo dependemos de props.onBlur
   }, [props.onBlur]);
 
   const handleFocus = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
@@ -222,6 +226,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       }, 0);
     }
     props.onFocus?.(e);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- no añadir props completo para evitar recrear en cada render
   }, [getSuggestions, hasPreloadedData, inputValue, isAutofilled, props.onFocus, searchTerminated]);
 
   // Determine the icon based on field and state - memoized to prevent unnecessary recalculations
@@ -231,7 +236,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
     }
     
     return null;
-  }, [isLoading, searchTerminated, isAutofilled, fieldName, showSuggestions, inputValue, hasFocused]);
+  }, [isLoading, searchTerminated, isAutofilled]);
 
 
 

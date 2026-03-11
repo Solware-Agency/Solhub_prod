@@ -376,6 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         reports: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getExpandedGroupsForCurrentPath omitido para evitar re-ejecutar en cada cambio de ruta
   }, [showFullContent]);
 
   const handleLogout = async () => {

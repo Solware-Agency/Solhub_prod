@@ -108,6 +108,7 @@ export function LaboratoryProvider({
 
   useEffect(() => {
     loadLaboratory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intencional: solo recargar cuando cambie user
   }, [user]);
 
   const refreshLaboratory = async () => {
@@ -124,6 +125,7 @@ export function LaboratoryProvider({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook exportado junto al provider
 export function useLaboratory() {
   const context = useContext(LaboratoryContext);
   if (!context) {

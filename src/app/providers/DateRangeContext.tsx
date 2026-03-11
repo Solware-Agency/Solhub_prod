@@ -36,6 +36,7 @@ export const DateRangeProvider: React.FC<DateRangeProviderProps> = ({ children }
 	return <DateRangeContext.Provider value={contextValue}>{children}</DateRangeContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook exportado junto al provider
 export const useDateRange = (): DateRangeContextType => {
 	const context = useContext(DateRangeContext)
 	if (context === undefined) {

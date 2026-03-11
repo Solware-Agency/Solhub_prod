@@ -24,6 +24,7 @@ export const LABORATORY_ICONS = {
  * @param iconName - Nombre del ícono guardado en Supabase
  * @returns Componente del ícono
  */
+// eslint-disable-next-line react-refresh/only-export-components -- utilidad exportada con componente
 export function getLaboratoryIcon(iconName?: string | null) {
   if (!iconName) return LABORATORY_ICONS.default;
 

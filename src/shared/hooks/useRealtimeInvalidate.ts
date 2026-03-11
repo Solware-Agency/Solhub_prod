@@ -72,5 +72,6 @@ export function useRealtimeInvalidate(
 				channelRef.current = null
 			}
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- filter y queryKeys como valores estables; expresiones simplificadas
 	}, [table, queryKeys.join(','), schema, filter ?? '', events, delayMs, enabled, queryClient])
 }

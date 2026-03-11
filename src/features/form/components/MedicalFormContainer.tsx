@@ -98,6 +98,7 @@ export function MedicalFormContainer() {
 		if (Object.keys(currentErrors).length > 0) {
 			form.trigger()
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- form omitido para no re-ejecutar en cada cambio del formulario
 	}, [dynamicFormSchema])
 
 	const { fields, append, remove } = useFieldArray({
@@ -277,6 +278,7 @@ export function MedicalFormContainer() {
 				setIsSubmitting(false)
 			}
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- moduleConfig omitido para evitar recrear callback en cada cambio de config
 		[exchangeRate, form, toast, setUsdValue, setVesValue, setVesInputValue, setUsdFromVes],
 	)
 

@@ -107,6 +107,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 			{ value: 'Citología', label: 'Citología' },
 			{ value: 'Inmunohistoquímica', label: 'Inmunohistoquímica' },
 		])
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- JSON.stringify para dependencia estable; complex expression aceptada
 	}, [JSON.stringify(laboratory?.config?.examTypes)])
 
 	// Obtener branches desde la configuración del laboratorio (orden alfabético)
