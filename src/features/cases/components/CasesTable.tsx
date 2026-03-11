@@ -777,6 +777,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
       tempTriageStatusFilter,
+      tempSampleTypeFilter,
       hasTriaje,
       pagination,
       onFiltersChange,
