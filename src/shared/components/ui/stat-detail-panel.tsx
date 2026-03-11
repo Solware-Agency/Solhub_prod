@@ -195,8 +195,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												key={month.month}
 												className={`flex-1 rounded-t-sm ${
 													isSelected
-														? 'bg-gradient-to-t from-purple-600 to-purple-400'
-														: 'bg-gradient-to-t from-blue-500 to-blue-300'
+														? 'bg-linear-to-t from-purple-600 to-purple-400'
+														: 'bg-linear-to-t from-blue-500 to-blue-300'
 												}`}
 												style={{ height: `${Math.max(height, 10)}%` }}
 												title={`${month.month}: ${formatCurrency(month.revenue)}`}
@@ -766,8 +766,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													key={month.month}
 													className={`flex-1 rounded-t-sm transition-transform duration-200 ${
 														isSelected
-															? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
-															: 'bg-gradient-to-t from-blue-500 to-blue-300'
+															? 'bg-linear-to-t from-purple-600 to-purple-400 shadow-lg'
+															: 'bg-linear-to-t from-blue-500 to-blue-300'
 													}`}
 													style={{ height: `${Math.max(height, 10)}%` }}
 													title={`${month.month}: ${formatTrendVal(month.revenue)}`}
@@ -1355,7 +1355,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				const cc = stats?.callCenterStats
 				const totalCalls = cc?.totalCalls ?? 0
 				const topData = cc?.topByAtendidoPor ?? []
-				const maxCalls = Math.max(...topData.map((item) => item.calls), 1)
+				const maxCalls = Math.max(...topData.map((item: any) => item.calls), 1)
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
@@ -1377,7 +1377,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
 							) : (
 								<div className="max-h-72 overflow-auto space-y-3 pr-2">
-									{topData.map((item, index) => (
+									{topData.map((item: any, index: number) => (
 										<div key={item.name} className="space-y-1">
 											<div className="flex items-center justify-between">
 												<span className="text-sm text-gray-700 dark:text-gray-300">

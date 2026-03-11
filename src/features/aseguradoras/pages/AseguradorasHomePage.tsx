@@ -394,8 +394,8 @@ const AseguradorasHomePage = () => {
 												key={mes.monthShort + mes.monthIndex + index}
 												className={`flex-1 rounded-t-sm transition-all duration-200 cursor-pointer min-w-0 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 ${
 													isSelected
-														? 'bg-gradient-to-t from-primary to-primary/90 ring-2 ring-primary ring-offset-2 dark:ring-offset-background'
-														: 'bg-gradient-to-t from-primary/80 to-primary hover:from-primary hover:to-primary/90'
+														? 'bg-linear-to-t from-primary to-primary/90 ring-2 ring-primary ring-offset-2 dark:ring-offset-background'
+														: 'bg-linear-to-t from-primary/80 to-primary hover:from-primary hover:to-primary/90'
 												}`}
 												style={{ height: `${Math.max(height, 4)}%` }}
 												title={`${mes.month}: ${mes.count} pagos · ${formatCurrency(mes.monto)}`}
@@ -412,7 +412,7 @@ const AseguradorasHomePage = () => {
 										<button
 											type="button"
 											key={mes.monthShort + mes.monthIndex + index}
-											className={`flex-shrink-0 truncate hover:text-primary ${selectedMesIndex === index ? 'text-primary font-semibold' : ''}`}
+											className={`shrink-0 truncate hover:text-primary ${selectedMesIndex === index ? 'text-primary font-semibold' : ''}`}
 											title={mes.month}
 											onClick={(e) => {
 												e.stopPropagation()
