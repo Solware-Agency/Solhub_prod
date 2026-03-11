@@ -1580,9 +1580,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const formatAmountForDisplay = useCallback((fieldName: string, value: string | null): string => {
 			if (value == null || value === '' || value === '(vacío)') return value ?? '(vacío)'
 			const isAmountField =
-				fieldName === 'total_amount' ||
-				fieldName === 'remaining' ||
-				/^payment_amount_\d+$/.test(fieldName)
+				fieldName === 'total_amount' || fieldName === 'remaining' || /^payment_amount_\d+$/.test(fieldName)
 			if (!isAmountField) return value
 			const hasCurrency = /\s*(USD|Bs)\s*$/.test(value.trim())
 			return hasCurrency ? value : `${value} (USD)`
@@ -2191,27 +2189,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															{ value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
 															{ value: 'Dermatología', label: 'Dermatología' },
 															{ value: 'Endocrinología', label: 'Endocrinología' },
-															{ value: 'Fisioterapia', label: 'Fisioterapia' },
 															{ value: 'Gastroenterología', label: 'Gastroenterología' },
 															{ value: 'Ginecología', label: 'Ginecología' },
-															{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
-															{ value: 'Medicina General', label: 'Medicina General' },
 															{ value: 'Medicina Interna', label: 'Medicina Interna' },
 															{ value: 'Nefrología', label: 'Nefrología' },
 															{ value: 'Neumonología', label: 'Neumonología' },
-															{ value: 'Neurocirugía', label: 'Neurocirugía' },
 															{ value: 'Neurología', label: 'Neurología' },
-															{ value: 'Odontología', label: 'Odontología' },
-															{ value: 'Oftalmología', label: 'Oftalmología' },
-															{ value: 'Optometría', label: 'Optometría' },
+															{ value: 'Neurocirugía', label: 'Neurocirugía' },
 															{ value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
 															{ value: 'Pediatría', label: 'Pediatría' },
 															{ value: 'Psicología', label: 'Psicología' },
-															{ value: 'Psiquiatría', label: 'Psiquiatría' },
-															{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
-															{ value: 'Reumatología', label: 'Reumatología' },
 															{ value: 'Traumatología', label: 'Traumatología' },
 															{ value: 'Urología', label: 'Urología' },
+															{ value: 'Oftalmología', label: 'Oftalmología' },
+															{ value: 'Medicina General', label: 'Medicina General' },
+															{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+															{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+															{ value: 'Reumatología', label: 'Reumatología' },
+															{ value: 'Fisioterapia', label: 'Fisioterapia' },
+															{ value: 'Psiquiatría', label: 'Psiquiatría' },
+															{ value: 'Optometría', label: 'Optometría' },
+															{ value: 'Odontología', label: 'Odontología' },
+															{ value: 'Nutrición', label: 'Nutrición' },
 														].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
 													)}
 													value={editedCase.consulta || caseData.consulta || ''}
@@ -2542,7 +2541,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												images={imageUrls}
 												onChange={setImageUrls}
 												maxImages={10}
-												isEditing={isSpt && isEditing || isConspat && isEditing}
+												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
 												onUploadFile={
 													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined) ||
 													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
