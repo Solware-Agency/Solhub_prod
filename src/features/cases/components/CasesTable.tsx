@@ -937,6 +937,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       if (emailSentStatusFilter !== 'all') {
         serverFilters.emailSentStatus = emailSentStatusFilter === 'true';
       }
+      if (triageStatusFilter !== 'all') {
+        serverFilters.triageStatus = triageStatusFilter as 'pendiente' | 'completo';
+      }
 
       // Agregar ordenamiento actual
       serverFilters.sortField = sortField;
@@ -972,6 +975,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       citologyPositiveFilter,
       citologyNegativeFilter,
       dateRange,
+      triageStatusFilter,
       sortField,
       sortDirection,
       profile?.role,
