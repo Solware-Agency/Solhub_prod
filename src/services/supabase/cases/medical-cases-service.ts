@@ -627,15 +627,17 @@ export const getCasesWithPatientInfo = async (
 
       // Cargar una sola vez por ejecución para evitar múltiples requests pesados.
       if (!completedTriageCaseIdsCache) {
+        const triageQuery = supabase
+          .from('triaje_records')
+          .select('case_id')
+          .eq('laboratory_id', profile.laboratory_id)
+          .eq('is_draft', false)
+          .not('case_id', 'is', null);
+        
         const { data: triageRows, error: triageError } = await withTimeout(
-          supabase
-            .from('triaje_records')
-            .select('case_id')
-            .eq('laboratory_id', profile.laboratory_id)
-            .eq('is_draft', false)
-            .not('case_id', 'is', null),
+          triageQuery as any,
           7000,
-        );
+        ) as any;
 
         if (triageError) {
           throw triageError;
@@ -1258,28 +1260,35 @@ export const getAllCasesWithPatientInfo = async (filters?: {
     };
 
     // Helper para obtener IDs de casos con triaje completado
-    const profile = await supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) throw new Error('Usuario no autenticado');
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('laboratory_id')
-        .eq('id', user.id)
-        .single();
-      return profileData as { laboratory_id: string };
-    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+    
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+    
+    if (profileError || !profileData) {
+      throw new Error('No se pudo obtener el laboratory_id del usuario');
+    }
+    
+    const profile = profileData as { laboratory_id: string };
 
     let completedTriageCaseIdsCache: Set<string> | null = null;
     const getCompletedTriageCaseIds = async (caseIds: string[]) => {
       if (!completedTriageCaseIdsCache) {
+        const triageQuery = supabase
+          .from('triaje_records')
+          .select('case_id')
+          .eq('laboratory_id', profile.laboratory_id)
+          .eq('is_draft', false)
+          .not('case_id', 'is', null);
+        
         const { data: triageRows, error: triageError } = await withTimeout(
-          supabase
-            .from('triaje_records')
-            .select('case_id')
-            .eq('laboratory_id', profile.laboratory_id)
-            .eq('is_draft', false)
-            .not('case_id', 'is', null),
+          triageQuery as any,
           7000,
-        );
+        ) as any;
 
         if (triageError) {
           throw triageError;
