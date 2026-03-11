@@ -1247,6 +1247,101 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   triageStatus?: 'pendiente' | 'completo';
 }) => {
   try {
+    // Helper para timeout
+    const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout de ${timeoutMs}ms excedido`)), timeoutMs),
+        ),
+      ]);
+    };
+
+    // Helper para obtener IDs de casos con triaje completado
+    const profile = await supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) throw new Error('Usuario no autenticado');
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('laboratory_id')
+        .eq('id', user.id)
+        .single();
+      return profileData as { laboratory_id: string };
+    });
+
+    let completedTriageCaseIdsCache: Set<string> | null = null;
+    const getCompletedTriageCaseIds = async (caseIds: string[]) => {
+      if (!completedTriageCaseIdsCache) {
+        const { data: triageRows, error: triageError } = await withTimeout(
+          supabase
+            .from('triaje_records')
+            .select('case_id')
+            .eq('laboratory_id', profile.laboratory_id)
+            .eq('is_draft', false)
+            .not('case_id', 'is', null),
+          7000,
+        );
+
+        if (triageError) {
+          throw triageError;
+        }
+
+        completedTriageCaseIdsCache = new Set(
+          (triageRows || [])
+            .map((row: any) => row.case_id)
+            .filter((id: string | null) => !!id),
+        );
+      }
+
+      const currentCaseIds = new Set(caseIds);
+      return new Set(
+        Array.from(completedTriageCaseIdsCache).filter((id) =>
+          currentCaseIds.has(id),
+        ),
+      );
+    };
+
+    const applyTriageStatusFilter = async (
+      items: any[],
+      triageStatus?: 'pendiente' | 'completo',
+    ) => {
+      if (!triageStatus || !items || items.length === 0) {
+        return items;
+      }
+
+      console.log(`🔍 [EXPORT] Aplicando filtro de triaje: ${triageStatus}, casos antes: ${items.length}`);
+
+      const caseIds = items.map((item: any) => item.id);
+
+      let completedTriageCaseIds: Set<string>;
+      try {
+        completedTriageCaseIds = await getCompletedTriageCaseIds(caseIds);
+        console.log(`✅ [EXPORT] Casos con triaje completado: ${completedTriageCaseIds.size}`);
+      } catch (triageError) {
+        console.warn(
+          '⚠️ No se pudo aplicar filtro de triaje en exportación:',
+          triageError,
+        );
+        return items;
+      }
+
+      const filtered = items.filter((item: any) => {
+        const hasCompletedTriage = completedTriageCaseIds.has(item.id);
+        if (triageStatus === 'completo') {
+          return hasCompletedTriage;
+        }
+        return !hasCompletedTriage;
+      });
+
+      console.log(`✅ [EXPORT] Casos después del filtro: ${filtered.length}`);
+      return filtered;
+    };
+
+    console.log('🔍 [EXPORT] getAllCasesWithPatientInfo llamado con filtros:', {
+      triageStatus: filters?.triageStatus,
+      doctorFilter: filters?.doctorFilter,
+      searchTerm: filters?.searchTerm,
+    });
+
     // Si hay un término de búsqueda, intentar usar función optimizada primero
     if (filters?.searchTerm) {
       const cleanSearchTerm = filters.searchTerm.trim();
