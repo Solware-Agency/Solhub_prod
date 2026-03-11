@@ -1244,6 +1244,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
   emailSentStatus?: boolean;
+  triageStatus?: 'pendiente' | 'completo';
 }) => {
   try {
     // Si hay un término de búsqueda, intentar usar función optimizada primero
@@ -1386,6 +1387,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							if (filters?.userRole === 'patologo') {
 								filteredData = filteredData.filter(
 									(item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
+								)
+							}
+
+							// Aplicar filtro de triaje
+							if (filters?.triageStatus) {
+								filteredData = await applyTriageStatusFilter(
+									filteredData,
+									filters.triageStatus,
 								)
 							}
 
@@ -1671,6 +1680,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
         }
 
+        // Aplicar filtro de triaje
+        if (filters?.triageStatus) {
+          filteredData = await applyTriageStatusFilter(
+            filteredData,
+            filters.triageStatus,
+          );
+        }
+
         // Aplicar ordenamiento
         const sortField = filters?.sortField || 'created_at';
         const sortDirection = filters?.sortDirection || 'desc';
@@ -1881,15 +1898,21 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       }
     }
 
+    // Aplicar filtro de triaje después de obtener todos los datos
+    let finalData = allData;
+    if (filters?.triageStatus) {
+      finalData = await applyTriageStatusFilter(allData, filters.triageStatus);
+    }
+
     console.log(
-      `✅ Obtenidos ${allData.length} casos médicos de ${totalCount} totales`,
+      `✅ Obtenidos ${finalData.length} casos médicos de ${totalCount} totales`,
     );
 
     return {
-      data: allData,
-      count: totalCount,
+      data: finalData,
+      count: finalData.length,
       page: 1,
-      limit: allData.length,
+      limit: finalData.length,
       totalPages: 1,
     };
   } catch (error) {
