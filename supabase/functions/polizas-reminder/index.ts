@@ -60,26 +60,21 @@ function getPolizaReminderMessage(
 	labName: string,
 	numeroPoliza: string,
 	nextPaymentDate: string,
-	billingAmount: number | null,
 ): string {
-	const amountStr =
-		billingAmount != null && billingAmount > 0
-			? `\nMonto a pagar: ${billingAmount.toLocaleString('es')} USD.`
-			: ''
 	if (type === 'post') {
-		return `Le informamos que su póliza **${numeroPoliza}** (${labName}) **venció** el ${nextPaymentDate}.${amountStr}\n\nPor favor, regularice el pago para mantener su cobertura activa.`
+		return `Le informamos que su póliza **${numeroPoliza}** (${labName}) **venció** el ${nextPaymentDate}.\n\nPor favor, regularice el pago para mantener su cobertura activa.`
 	}
 	switch (type) {
 		case '30_days':
-			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 30 días).${amountStr}\n\nPor favor, realice el pago a tiempo.`
+			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 30 días).\n\nPor favor, realice el pago a tiempo.`
 		case '14_days':
-			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 14 días).${amountStr}\n\nPor favor, realice el pago a tiempo.`
+			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 14 días).\n\nPor favor, realice el pago a tiempo.`
 		case '7_days':
-			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 7 días).${amountStr}\n\nPor favor, realice el pago a tiempo.`
+			return `Le recordamos que su póliza **${numeroPoliza}** (${labName}) vence el **${nextPaymentDate}** (en 7 días).\n\nPor favor, realice el pago a tiempo.`
 		case 'due_today':
-			return `**Importante:** Su póliza **${numeroPoliza}** (${labName}) vence **hoy** (${nextPaymentDate}).${amountStr}\n\nPor favor, regularice el pago para evitar la caducidad.`
+			return `**Importante:** Su póliza **${numeroPoliza}** (${labName}) vence **hoy** (${nextPaymentDate}).\n\nPor favor, regularice el pago para evitar la caducidad.`
 		default:
-			return `Recordatorio: póliza ${numeroPoliza} (${labName}). Próxima fecha: ${nextPaymentDate}.${amountStr}`
+			return `Recordatorio: póliza ${numeroPoliza} (${labName}). Próxima fecha: ${nextPaymentDate}.`
 	}
 }
 
@@ -150,7 +145,7 @@ Deno.serve(async (req: Request) => {
 	// Pólizas activas con next_payment_date definido (laboratory se obtiene por laboratory_id si hace falta)
 	const { data: polizas, error: errPolizas } = await sb
 		.from('polizas')
-		.select('id, next_payment_date, numero_poliza, asegurado_id, laboratory_id, billing_amount')
+		.select('id, next_payment_date, numero_poliza, asegurado_id, laboratory_id')
 		.eq('activo', true)
 		.not('next_payment_date', 'is', null)
 
@@ -172,7 +167,6 @@ Deno.serve(async (req: Request) => {
 		numero_poliza: string
 		asegurado_id: string
 		laboratory_id: string
-		billing_amount: number | null
 	}[]
 
 	// Laboratorios (timezone, nombre) por laboratory_id
@@ -226,13 +220,7 @@ Deno.serve(async (req: Request) => {
 		}
 
 		const subject = getPolizaReminderSubject(type)
-		const message = getPolizaReminderMessage(
-			type,
-			labName,
-			pol.numero_poliza,
-			nextDate,
-			pol.billing_amount ?? null,
-		)
+		const message = getPolizaReminderMessage(type, labName, pol.numero_poliza, nextDate)
 		const messagePlain = message.replace(/\*\*([^*]+)\*\*/g, '$1')
 		const fullSubject = `${labName} – ${subject} (${pol.numero_poliza})`
 		const aseguradoName = asegurado.full_name || 'Asegurado'
