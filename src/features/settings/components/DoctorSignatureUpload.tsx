@@ -352,7 +352,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 
 		return (
 			<div className="relative border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-800/50">
-				<div className="flex flex-col items-center justify-center min-h-[100px]">
+				<div className="flex flex-col items-center justify-center min-h-25">
 					<img
 						src={previewUrl}
 						alt={`Preview de ${title.toLowerCase()}`}
@@ -448,7 +448,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 						<div className="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
-									<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+									<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
 									<div className="flex-1 min-w-0">
 										<p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
 											{selectedFile.name}
@@ -464,7 +464,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 									disabled={isUploading || isDeleting}
 									variant="outline"
 									size="sm"
-									className="ml-2 flex-shrink-0"
+									className="ml-2 shrink-0"
 								>
 									Cambiar
 								</Button>
@@ -487,7 +487,7 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 			{/* Mensaje de error */}
 			{error && (
 				<div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded flex items-center gap-2">
-					<AlertCircle className="h-5 w-5 flex-shrink-0" />
+					<AlertCircle className="h-5 w-5 shrink-0" />
 					<span className="text-sm">{error}</span>
 				</div>
 			)}

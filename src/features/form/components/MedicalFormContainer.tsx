@@ -444,7 +444,7 @@ export function MedicalFormContainer() {
 							<Button
 								type="button"
 								onClick={handleButtonClick}
-								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
+								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-linear-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
 								disabled={isSubmitting}
 							>
 								{isSubmitting ? (

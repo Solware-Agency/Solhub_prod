@@ -418,7 +418,7 @@ function RegisterForm() {
   };
 
   return (
-    <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+    <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
       {/* Aurora Background */}
       <Aurora
         colorStops={['#3d84f5', '#06337b', '#3d84f5']}
@@ -427,7 +427,7 @@ function RegisterForm() {
         speed={0.3}
       />
 
-      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center overflow-hidden'>
+      <div className='relative z-10 w-screen h-screen bg-linear-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center overflow-hidden'>
         <FadeContent
           blur={true}
           duration={1000}
@@ -646,9 +646,9 @@ function RegisterForm() {
                   }`}
                 >
                   {rateLimitError ? (
-                    <Clock className='w-5 h-5 mt-0.5 flex-shrink-0' />
+                    <Clock className='w-5 h-5 mt-0.5 shrink-0' />
                   ) : (
-                    <AlertCircle className='w-5 h-5 mt-0.5 flex-shrink-0' />
+                    <AlertCircle className='w-5 h-5 mt-0.5 shrink-0' />
                   )}
                   <div className='flex-1'>
                     <p className='font-medium'>{error}</p>
@@ -687,7 +687,7 @@ function RegisterForm() {
 
               {message && (
                 <div className='bg-green-900/80 border border-green-700 text-green-200 px-4 py-3 rounded mb-4 flex items-center gap-2'>
-                  <CheckCircle className='size-5 flex-shrink-0' />
+                  <CheckCircle className='size-5 shrink-0' />
                   <span>{message}</span>
                 </div>
               )}

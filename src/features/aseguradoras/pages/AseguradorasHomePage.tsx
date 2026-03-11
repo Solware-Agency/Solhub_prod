@@ -58,7 +58,7 @@ const AseguradorasHomePage = () => {
 					<div className="flex-1 text-center sm:text-left mb-2 sm:mb-0">
 						<div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 mb-1 sm:mb-2">
 							<div>
-								<h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+								<h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
 									Bienvenido a {laboratory?.name || 'Inntegras'}
 								</h1>
 								<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
@@ -75,7 +75,7 @@ const AseguradorasHomePage = () => {
 						</p>
 					</div>
 					<div className="relative">
-						<div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full blur-xl opacity-5 animate-pulse"></div>
+						<div className="absolute inset-0 bg-linear-to-r from-blue-400 to-purple-500 rounded-full blur-xl opacity-5 animate-pulse"></div>
 						<EyeTrackingComponent className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 z-10" />
 					</div>
 				</Card>
@@ -84,7 +84,7 @@ const AseguradorasHomePage = () => {
 			<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mt-4">
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<Users className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<Users className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Asegurados</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -93,7 +93,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<Building2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<Building2 className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Aseguradoras</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -102,7 +102,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<FileCheck className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<FileCheck className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Pólizas</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -111,7 +111,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<CalendarClock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<CalendarClock className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Por vencer (30d)</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -120,7 +120,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<XCircle className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<XCircle className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Vencidas</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -129,7 +129,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<CreditCard className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<CreditCard className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Pagos</CardTitle>
 					</CardHeader>
 					<CardContent className="text-xl sm:text-2xl font-semibold p-3 pt-0 sm:p-4 sm:pt-0">
@@ -138,7 +138,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<DollarSign className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<DollarSign className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Mes</CardTitle>
 					</CardHeader>
 					<CardContent className="text-lg sm:text-2xl font-semibold text-green-600 dark:text-green-400 p-3 pt-0 sm:p-4 sm:pt-0">
@@ -147,7 +147,7 @@ const AseguradorasHomePage = () => {
 				</Card>
 				<Card className="shadow-lg transition-transform duration-300 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 cursor-pointer">
 					<CardHeader className="flex flex-row items-center gap-2 p-3 sm:p-4">
-						<TrendingUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<TrendingUp className="w-4 h-4 text-gray-500 shrink-0" />
 						<CardTitle className="text-xs sm:text-sm text-gray-500">Año</CardTitle>
 					</CardHeader>
 					<CardContent className="text-lg sm:text-2xl font-semibold text-green-600 dark:text-green-400 p-3 pt-0 sm:p-4 sm:pt-0">
@@ -297,7 +297,7 @@ const AseguradorasHomePage = () => {
 							const totalPorEstado = (data?.vigentes ?? 0) + (data?.porVencer ?? 0) + (data?.vencidas ?? 0)
 							return (
 							<div className="flex flex-col sm:flex-row items-center gap-4">
-								<div className="h-56 w-full sm:w-56 relative flex-shrink-0">
+								<div className="h-56 w-full sm:w-56 relative shrink-0">
 									<ResponsiveContainer width="100%" height="100%">
 										<PieChart onMouseLeave={() => setHoveredPieIndex(null)}>
 											<Pie
@@ -347,7 +347,7 @@ const AseguradorasHomePage = () => {
 											}}
 											onMouseLeave={() => setHoveredPieIndex(null)}
 										>
-											<div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+											<div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
 											<span className="text-sm text-gray-600 dark:text-gray-400">
 												{item.label}: <strong>{item.value}</strong>
 											</span>

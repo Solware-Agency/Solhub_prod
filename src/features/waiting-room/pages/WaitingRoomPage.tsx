@@ -281,7 +281,7 @@ const WaitingRoomPage: React.FC = () => {
                 <p className="text-sm sm:text-base">No hay casos pendientes de triaje</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[none] sm:max-h-[400px] md:max-h-[340px] overflow-visible p-0.5 sm:p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-none sm:max-h-100 md:max-h-85 overflow-visible p-0.5 sm:p-1">
                 {pendienteTriaje.slice(0, 6).map((case_) => (
                   <WaitingRoomCaseCard
                     key={case_.id}
@@ -312,7 +312,7 @@ const WaitingRoomPage: React.FC = () => {
                 <p className="text-sm sm:text-base">No hay casos esperando consulta</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[none] sm:max-h-[400px] md:max-h-[340px] overflow-visible p-0.5 sm:p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-none sm:max-h-100 md:max-h-85 overflow-visible p-0.5 sm:p-1">
                 {esperandoConsulta.slice(0, 6).map((case_) => (
                   <WaitingRoomCaseCard
                     key={case_.id}

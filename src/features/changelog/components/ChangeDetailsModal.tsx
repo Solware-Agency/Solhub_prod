@@ -252,7 +252,7 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											<p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
 												Antes:
 											</p>
-											<p className="text-sm text-gray-700 dark:text-gray-300 line-through break-words">
+											<p className="text-sm text-gray-700 dark:text-gray-300 line-through wrap-break-word">
 												{formatValue(change.old_value, change.field_name)}
 											</p>
 										</div>
@@ -261,7 +261,7 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											<p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
 												Ahora:
 											</p>
-											<p className="text-sm text-green-600 dark:text-green-400 font-medium break-words">
+											<p className="text-sm text-green-600 dark:text-green-400 font-medium wrap-break-word">
 												{formatValue(change.new_value, change.field_name)}
 											</p>
 										</div>

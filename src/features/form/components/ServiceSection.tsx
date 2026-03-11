@@ -146,7 +146,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 					control={control}
 					name="examType"
 					render={({ field, fieldState }) => (
-						<FormItem className="min-w-[180px] flex-1">
+						<FormItem className="min-w-45 flex-1">
 							<FormLabel>Tipo de Examen {!isSPT && '*'}</FormLabel>
 							<FormControl>
 								<FormDropdown
@@ -168,7 +168,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 						control={control}
 						name="origin"
 						render={({ field, fieldState }) => (
-							<FormItem className="min-w-[180px] flex-1">
+							<FormItem className="min-w-45 flex-1">
 								<FormLabel>Procedencia *</FormLabel>
 								<FormControl>
 									<AutocompleteInput
@@ -199,7 +199,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 					control={control}
 					name="branch"
 					render={({ field, fieldState }) => (
-						<FormItem className="min-w-[180px] flex-1">
+						<FormItem className="min-w-45 flex-1">
 							<FormLabel>Sede *</FormLabel>
 							<FormControl>
 								<FormDropdown
@@ -228,7 +228,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 						control={control}
 						name="treatingDoctor"
 						render={({ field, fieldState }) => (
-							<FormItem className="min-w-[180px] flex-1">
+							<FormItem className="min-w-45 flex-1">
 								<FormLabel>Médico Tratante {medicoTratanteConfig?.required && '*'}</FormLabel>
 								<FormControl>
 									<AutocompleteInput
@@ -264,7 +264,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="sampleType"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Tipo de Muestra *</FormLabel>
 										<FormControl>
 											{hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
@@ -298,7 +298,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="numberOfSamples"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Cantidad de Muestras *</FormLabel>
 										<FormControl>
 											<Input
@@ -325,7 +325,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="fechaMuestra"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Fecha de Muestra *</FormLabel>
 										<FormControl>
 											<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
@@ -345,7 +345,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 															: 'Seleccionar fecha'}
 													</Button>
 												</PopoverTrigger>
-												<PopoverContent className="w-auto p-0 z-[9999]" align="end">
+												<PopoverContent className="w-auto p-0 z-9999" align="end">
 													<Calendar
 														mode="single"
 														selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
@@ -393,7 +393,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="relationship"
 								render={({ field }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Relación</FormLabel>
 										<FormControl>
 											<AutocompleteInput
@@ -416,7 +416,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="sampleType"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Tipo de Muestra *</FormLabel>
 										<FormControl>
 											{hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
@@ -450,7 +450,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="numberOfSamples"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Cantidad de Muestras *</FormLabel>
 										<FormControl>
 											<Input
@@ -477,7 +477,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="fechaMuestra"
 								render={({ field, fieldState }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Fecha de Muestra *</FormLabel>
 										<FormControl>
 											<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
@@ -497,7 +497,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 															: 'Seleccionar fecha'}
 													</Button>
 												</PopoverTrigger>
-												<PopoverContent className="w-auto p-0 z-[9999]" align="end">
+												<PopoverContent className="w-auto p-0 z-9999" align="end">
 													<Calendar
 														mode="single"
 														selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
@@ -545,7 +545,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 								control={control}
 								name="relationship"
 								render={({ field }) => (
-									<FormItem className="min-w-[180px] flex-1">
+									<FormItem className="min-w-45 flex-1">
 										<FormLabel>Relación</FormLabel>
 										<FormControl>
 											<AutocompleteInput
@@ -568,7 +568,7 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 						control={control}
 						name="consulta"
 						render={({ field, fieldState }) => (
-							<FormItem className="min-w-[180px] flex-1">
+							<FormItem className="min-w-45 flex-1">
 								<FormLabel>Consulta {consultaConfig.required && '*'}</FormLabel>
 								<FormControl>
 									<FormDropdown

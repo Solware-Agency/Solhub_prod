@@ -100,7 +100,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 							<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full"></div>
 						</div>
 						<Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v, 10))}>
-							<SelectTrigger className="w-[180px]">
+							<SelectTrigger className="w-45">
 								<SelectValue placeholder="Período" />
 							</SelectTrigger>
 							<SelectContent>

@@ -181,7 +181,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Altura */}
             {record.height_cm && (
               <div className='flex items-start gap-2'>
-                <Ruler className='h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0' />
+                <Ruler className='h-4 w-4 text-blue-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     Altura
@@ -194,7 +194,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Peso */}
             {record.weight_kg && (
               <div className='flex items-start gap-2'>
-                <Scale className='h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0' />
+                <Scale className='h-4 w-4 text-purple-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     Peso
@@ -207,7 +207,7 @@ const TriageInfoDisplay: React.FC<{
             {/* IMC */}
             {record.bmi && (
               <div className='flex items-start gap-2'>
-                <Activity className='h-4 w-4 text-green-500 mt-0.5 flex-shrink-0' />
+                <Activity className='h-4 w-4 text-green-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     IMC
@@ -220,7 +220,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Presión arterial */}
             {record.blood_pressure && (
               <div className='flex items-start gap-2'>
-                <Gauge className='h-4 w-4 text-red-500 mt-0.5 flex-shrink-0' />
+                <Gauge className='h-4 w-4 text-red-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     Presión
@@ -237,7 +237,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Frecuencia cardíaca */}
             {record.heart_rate && (
               <div className='flex items-start gap-2'>
-                <Heart className='h-4 w-4 text-pink-500 mt-0.5 flex-shrink-0' />
+                <Heart className='h-4 w-4 text-pink-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>FC</p>
                   <p className='text-sm font-medium'>{record.heart_rate} lpm</p>
@@ -248,7 +248,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Frecuencia respiratoria */}
             {record.respiratory_rate && (
               <div className='flex items-start gap-2'>
-                <Wind className='h-4 w-4 text-cyan-500 mt-0.5 flex-shrink-0' />
+                <Wind className='h-4 w-4 text-cyan-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>FR</p>
                   <p className='text-sm font-medium'>
@@ -262,7 +262,7 @@ const TriageInfoDisplay: React.FC<{
             {record.oxygen_saturation !== null &&
               record.oxygen_saturation !== undefined && (
                 <div className='flex items-start gap-2'>
-                  <Droplets className='h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0' />
+                  <Droplets className='h-4 w-4 text-blue-500 mt-0.5 shrink-0' />
                   <div>
                     <p className='text-xs text-gray-500 dark:text-gray-400'>
                       SpO₂
@@ -277,7 +277,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Temperatura */}
             {record.temperature_celsius && (
               <div className='flex items-start gap-2'>
-                <Thermometer className='h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0' />
+                <Thermometer className='h-4 w-4 text-orange-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     Temp
@@ -292,7 +292,7 @@ const TriageInfoDisplay: React.FC<{
             {/* Glicemia */}
             {record.blood_glucose && (
               <div className='flex items-start gap-2'>
-                <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0' />
+                <Droplets className='h-4 w-4 text-yellow-500 mt-0.5 shrink-0' />
                 <div>
                   <p className='text-xs text-gray-500 dark:text-gray-400'>
                     Glicemia
@@ -351,7 +351,7 @@ const TriageInfoDisplay: React.FC<{
           </CardHeader>
           <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap items-end gap-x-4 gap-y-3'>
             {record.psychobiological_habits && (
-              <div className='flex-1 min-w-[150px]'>
+              <div className='flex-1 min-w-37.5'>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                   Hábitos psicobiológicos
                 </p>
@@ -359,7 +359,7 @@ const TriageInfoDisplay: React.FC<{
               </div>
             )}
             {record.tabaco !== null && record.tabaco !== undefined && (
-              <div className='flex-1 min-w-[150px]'>
+              <div className='flex-1 min-w-37.5'>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                   Índice Tabáquico
                 </p>
@@ -384,7 +384,7 @@ const TriageInfoDisplay: React.FC<{
               </div>
             )}
             {record.cafe !== null && record.cafe !== undefined && (
-              <div className='flex-1 min-w-[150px]'>
+              <div className='flex-1 min-w-37.5'>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                   Café (tazas/día)
                 </p>
@@ -394,7 +394,7 @@ const TriageInfoDisplay: React.FC<{
               </div>
             )}
             {record.alcohol && (
-              <div className='flex-1 min-w-[150px]'>
+              <div className='flex-1 min-w-37.5'>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
                   Alcohol
                 </p>
@@ -1598,7 +1598,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           {/* Banner informativo de campos obligatorios */}
           <div className='bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 p-3 rounded-r-lg'>
             <div className='flex items-start gap-2'>
-              <Info className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
+              <Info className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0' />
               <div>
                 <p className='text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1'>
                   Campos obligatorios para guardar
@@ -1967,7 +1967,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                           <TooltipContent
                             side='top'
                             sideOffset={5}
-                            className='!z-[1000001] max-w-xs'
+                            className='z-1000001! max-w-xs'
                           >
                             <p className='text-sm'>
                               Fórmula: (Cigarrillos al día × Años) / 20
@@ -2081,7 +2081,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             </CardHeader>
             <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
               <div className='flex flex-wrap items-end gap-3'>
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Heart className='h-4 w-4 text-pink-600 dark:text-pink-400' />
                     FC
@@ -2092,7 +2092,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Frecuencia cardíaca</p>
                       </TooltipContent>
@@ -2109,7 +2109,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Wind className='h-4 w-4 text-cyan-600 dark:text-cyan-400' />
                     FR
@@ -2120,7 +2120,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Frecuencia respiratoria</p>
                       </TooltipContent>
@@ -2137,7 +2137,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[100px]'>
+                <div className='flex-1 min-w-25'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Droplets className='h-4 w-4 text-blue-600 dark:text-blue-400' />
                     SpO₂ <span className='text-red-500'>*</span>
@@ -2148,7 +2148,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Saturación de oxígeno</p>
                       </TooltipContent>
@@ -2165,7 +2165,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Thermometer className='h-4 w-4 text-orange-600 dark:text-orange-400' />
                     Temperatura
@@ -2181,7 +2181,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[150px]'>
+                <div className='flex-1 min-w-37.5'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Gauge className='h-4 w-4 text-red-600 dark:text-red-400' />
                     P.A. <span className='text-red-500'>*</span>
@@ -2192,7 +2192,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Presión Arterial</p>
                       </TooltipContent>
@@ -2209,7 +2209,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Droplets className='h-4 w-4 text-yellow-600 dark:text-yellow-400' />
                     Glicemia
@@ -2220,7 +2220,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Glicemia (glucosa en sangre)</p>
                       </TooltipContent>
@@ -2237,7 +2237,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[100px]'>
+                <div className='flex-1 min-w-25'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Ruler className='h-4 w-4 text-indigo-600 dark:text-indigo-400' />
                     Talla <span className='text-red-500'>*</span>
@@ -2252,7 +2252,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[100px]'>
+                <div className='flex-1 min-w-25'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Scale className='h-4 w-4 text-purple-600 dark:text-purple-400' />
                     Peso <span className='text-red-500'>*</span>
@@ -2266,7 +2266,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
-                <div className='flex-1 min-w-[100px]'>
+                <div className='flex-1 min-w-25'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Activity className='h-4 w-4 text-green-600 dark:text-green-400' />
                     IMC
@@ -2277,7 +2277,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       <TooltipContent
                         side='top'
                         sideOffset={5}
-                        className='!z-[1000001]'
+                        className='z-1000001!'
                       >
                         <p>Índice de masa corporal</p>
                       </TooltipContent>
@@ -2373,7 +2373,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           {/* Mensajes de error y éxito */}
           {error && (
             <div className='border px-4 py-3 rounded mb-4 flex items-start gap-2 bg-red-900/80 border-red-700 text-red-200'>
-              <AlertCircle className='w-5 h-5 mt-0.5 flex-shrink-0' />
+              <AlertCircle className='w-5 h-5 mt-0.5 shrink-0' />
               <div className='flex-1'>
                 <p className='font-medium'>{error}</p>
               </div>
@@ -2382,7 +2382,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
           {message && (
             <div className='bg-green-900/80 border border-green-700 text-green-200 px-4 py-3 rounded mb-4 flex items-center gap-2'>
-              <CheckCircle className='size-5 flex-shrink-0' />
+              <CheckCircle className='size-5 shrink-0' />
               <span>{message}</span>
             </div>
           )}
@@ -2392,7 +2392,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             <Button
               type='submit'
               disabled={loading}
-              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1 min-w-0'
+              className='flex-1 font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-linear-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1 min-w-0'
             >
               {loading ? (
                 <>
@@ -2423,7 +2423,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               }}
               disabled={loading}
               variant='outline'
-              className='px-6 flex-shrink-0 whitespace-nowrap'
+              className='px-6 shrink-0 whitespace-nowrap'
             >
               {isEditing && triageComplete ? 'Cancelar edición' : 'Cancelar'}
             </Button>

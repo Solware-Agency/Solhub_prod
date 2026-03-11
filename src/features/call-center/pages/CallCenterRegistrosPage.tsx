@@ -101,7 +101,7 @@ const CallCenterRegistrosPage: React.FC = () => {
 
 	if (!laboratory?.id) {
 		return (
-			<div className="p-4 flex items-center justify-center min-h-[200px]">
+			<div className="p-4 flex items-center justify-center min-h-50">
 				<p className="text-muted-foreground">Cargando...</p>
 			</div>
 		)
@@ -255,7 +255,7 @@ const CallCenterRegistrosPage: React.FC = () => {
 											<td className="py-2 px-2">{r.telefono_1 ?? '—'}</td>
 											<td className="py-2 px-2">{r.telefono_2 ?? '—'}</td>
 											<td className="py-2 px-2">{r.motivo_llamada}</td>
-											<td className="py-2 px-2 max-w-[200px] truncate" title={r.respuesta_observaciones ?? ''}>
+											<td className="py-2 px-2 max-w-50 truncate" title={r.respuesta_observaciones ?? ''}>
 												{r.respuesta_observaciones ?? '—'}
 											</td>
 											<td className="py-2 px-2">{r.referido_sede ?? '—'}</td>

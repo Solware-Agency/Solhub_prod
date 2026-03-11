@@ -2561,7 +2561,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											name="comments"
 											value={editedCase.comments || ''}
 											onChange={(e) => handleInputChange('comments', e.target.value)}
-											className="mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+											className="mt-1 w-full min-h-25 text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
 											placeholder="Agregar comentarios adicionales..."
 										/>
 									) : (

@@ -282,7 +282,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           {(record.tabaco !== null || record.cafe !== null || record.alcohol) && (
             <div className='flex flex-wrap items-end gap-x-4 gap-y-2 pt-2 border-t border-gray-200 dark:border-gray-700'>
               {record.cafe !== null && record.cafe !== undefined && (
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Café</p>
                   <p className='text-sm font-medium'>
                     {record.cafe} {record.cafe === 1 ? 'taza/día' : 'tazas/día'}
@@ -290,7 +290,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
                 </div>
               )}
               {record.alcohol && (
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Alcohol</p>
                   <p className='text-sm font-medium capitalize'>
                     {record.alcohol === 'No' ? 'No' : record.alcohol}
@@ -298,7 +298,7 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
                 </div>
               )}
               {record.tabaco !== null && record.tabaco !== undefined && (
-                <div className='flex-1 min-w-[120px]'>
+                <div className='flex-1 min-w-30'>
                   <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Tabaquismo</p>
                   <p className='text-sm font-medium'>{record.tabaco} paq/año</p>
                 </div>

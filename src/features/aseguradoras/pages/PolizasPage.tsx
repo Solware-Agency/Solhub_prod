@@ -578,7 +578,7 @@ const PolizasPage = () => {
 									<SelectValue placeholder="Seleccionar ramo" />
 								</SelectTrigger>
 								<SelectContent
-									className="max-h-60 max-w-[var(--radix-select-trigger-width)]"
+									className="max-h-60 max-w-(--radix-select-trigger-width)"
 									position="popper"
 								>
 									{RAMOS_OPCIONES.map((ramo) => (
@@ -940,7 +940,7 @@ const PolizasPage = () => {
 					</div>
 				</div>
 
-				<div className="p-4 min-h-[320px]">
+				<div className="p-4 min-h-80">
 					{isLoading && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
 					{error && <p className="text-sm text-red-500">Error al cargar pólizas</p>}
 					{!isLoading && !error && polizas.length === 0 && (

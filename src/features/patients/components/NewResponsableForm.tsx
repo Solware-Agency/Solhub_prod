@@ -352,7 +352,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 						<div className="space-y-2">
 							<Label>Cédula *</Label>
 							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
-								<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+								<div className="col-span-2 sm:col-span-1 min-w-15">
 									<FormDropdown
 										options={createDropdownOptions([
 											{ value: 'V', label: 'V -' },
@@ -411,7 +411,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
 										<span className="truncate">
 											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
 										</span>

@@ -217,7 +217,7 @@ const CustomDropdown = forwardRef<HTMLDivElement, CustomDropdownProps>(
 				ref={listRef}
 				className={cn(
 					'max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 duration-200', // Altura máxima y scroll para listas largas
-					isInModal ? 'absolute z-50' : 'fixed z-[1000]',
+					isInModal ? 'absolute z-50' : 'fixed z-1000',
 				)}
 				style={menuStyle || undefined}
 				role="listbox"

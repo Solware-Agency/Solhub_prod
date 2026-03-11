@@ -362,7 +362,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 										</Button>
 									</DatePopoverTrigger>
 									<DatePopoverContent
-										className="w-auto p-0 z-[9999]"
+										className="w-auto p-0 z-9999"
 										side="top"
 										align="start"
 										sideOffset={5}
@@ -411,7 +411,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
 												</Button>
 											</DatePopoverTrigger>
 											<DatePopoverContent
-												className="w-auto p-0 z-[9999]"
+												className="w-auto p-0 z-9999"
 												side="top"
 												align="start"
 												sideOffset={5}

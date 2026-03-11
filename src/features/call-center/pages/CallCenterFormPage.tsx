@@ -92,7 +92,7 @@ const CallCenterFormPage: React.FC = () => {
 
   if (!laboratory?.id) {
     return (
-      <div className="p-4 flex items-center justify-center min-h-[200px]">
+      <div className="p-4 flex items-center justify-center min-h-50">
         <p className="text-muted-foreground">Cargando...</p>
       </div>
     )
@@ -125,7 +125,7 @@ const CallCenterFormPage: React.FC = () => {
             <CardTitle className="text-base sm:text-lg">Datos de la llamada</CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0 flex flex-wrap gap-2 sm:gap-3">
-            <div className="min-w-[180px] flex-1 space-y-1.5">
+            <div className="min-w-45 flex-1 space-y-1.5">
               <Label htmlFor="nombre">Nombre y apellido *</Label>
               <Input
                 id="nombre"
@@ -136,7 +136,7 @@ const CallCenterFormPage: React.FC = () => {
                 required
               />
             </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
+            <div className="min-w-45 flex-1 space-y-1.5">
               <Label htmlFor="tel1">Número de teléfono 1</Label>
               <Input
                 id="tel1"
@@ -149,7 +149,7 @@ const CallCenterFormPage: React.FC = () => {
                 className={inputStyles}
               />
             </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
+            <div className="min-w-45 flex-1 space-y-1.5">
               <Label htmlFor="tel2">Número de teléfono 2</Label>
               <Input
                 id="tel2"
@@ -162,7 +162,7 @@ const CallCenterFormPage: React.FC = () => {
                 className={inputStyles}
               />
             </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
+            <div className="min-w-45 flex-1 space-y-1.5">
               <Label>Motivo de la llamada *</Label>
               <FormDropdown
                 options={createDropdownOptions(MOTIVO_OPCIONES.map((m) => ({ value: m, label: m })))}
@@ -172,7 +172,7 @@ const CallCenterFormPage: React.FC = () => {
                 className={inputStyles}
               />
             </div>
-            <div className="min-w-[180px] flex-1 space-y-1.5">
+            <div className="min-w-45 flex-1 space-y-1.5">
               <Label>Referido a sede *</Label>
               <FormDropdown
                 options={createDropdownOptions(SEDE_OPCIONES.map((s) => ({ value: s, label: s })))}
@@ -190,7 +190,7 @@ const CallCenterFormPage: React.FC = () => {
                 onChange={(e) => setRespuestaObservaciones(e.target.value)}
                 placeholder="Añadir comentarios adicionales"
                 rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-transform duration-300 hover:border-primary/50"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-transform duration-300 hover:border-primary/50"
               />
             </div>
           </CardContent>
@@ -200,7 +200,7 @@ const CallCenterFormPage: React.FC = () => {
           <Button
             type="submit"
             disabled={saving}
-            className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
+            className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-linear-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
           >
             {saving ? (
               <>

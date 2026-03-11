@@ -145,7 +145,7 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<div className="fixed inset-0 flex items-center justify-center p-4 z-[10000000000000000]">
+				<div className="fixed inset-0 flex items-center justify-center p-4 z-10000000000000000">
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -182,7 +182,7 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 						{/* Content */}
 						<div className="flex-1 overflow-y-auto flex flex-col">
 							{/* Asegurado info - top */}
-							<div className="p-4 sm:p-6 flex-shrink-0">
+							<div className="p-4 sm:p-6 shrink-0">
 								<div className="flex flex-wrap items-center gap-2 mb-4">
 									<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
 										{asegurado.tipo_asegurado === 'Persona natural' ? 'Natural' : 'Jurídica'}
@@ -221,7 +221,7 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 									>
 										<Send className="w-4 h-4" />
 									</button>
-									<div className="flex-1 min-w-[2rem]" />
+									<div className="flex-1 min-w-8" />
 									<button
 										type="button"
 										onClick={handleEliminarAsegurado}

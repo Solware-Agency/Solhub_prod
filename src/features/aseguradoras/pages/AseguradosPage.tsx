@@ -277,7 +277,7 @@ const AseguradosPage = () => {
 					</div>
 				</div>
 
-				<div className="p-4 min-h-[320px]">
+				<div className="p-4 min-h-80">
 					{isLoading && <p className="text-sm text-gray-500">Cargando asegurados...</p>}
 					{error && <p className="text-sm text-red-500">Error al cargar asegurados</p>}
 					{!isLoading && !error && asegurados.length === 0 && (

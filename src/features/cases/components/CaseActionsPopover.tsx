@@ -53,7 +53,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
         </button>
       </PopoverTrigger>
       <PopoverContent 
-        className='w-[180px] min-w-[180px] h-auto p-1 !z-[9999]' 
+        className='w-45 min-w-45 h-auto p-1 z-9999!' 
         side="bottom"
         align="end"
         sideOffset={8}
@@ -66,7 +66,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
                 'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
               )}
             >
-              <FileText className='w-4 h-4 flex-shrink-0' />
+              <FileText className='w-4 h-4 shrink-0' />
               <span className='truncate'>Generar</span>
             </button>
           </FeatureGuard>
@@ -79,7 +79,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
               'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
             )}
           >
-            <FlaskConical className='w-4 h-4 flex-shrink-0' />
+            <FlaskConical className='w-4 h-4 shrink-0' />
             <span className='truncate'>Reacciones</span>
           </button>
         )}
@@ -92,7 +92,7 @@ const CaseActionsPopover: React.FC<CaseActionsPopoverProps> = ({
                 'flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-blue-900/20 transition-colors'
               )}
             >
-              <ClipboardList className='w-4 h-4 flex-shrink-0' />
+              <ClipboardList className='w-4 h-4 shrink-0' />
               <span className='truncate'>Historia</span>
             </button>
           </FeatureGuard>

@@ -528,9 +528,9 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 									) : (
 										<div 
 											className={cn(
-												"grid grid-cols-2 gap-2 min-h-[180px]",
+												"grid grid-cols-2 gap-2 min-h-45",
 												dependents.length > 6 
-													? "max-h-[180px] overflow-y-auto pr-1" 
+													? "max-h-45 overflow-y-auto pr-1" 
 													: ""
 											)}
 										>
@@ -538,7 +538,7 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 												<div
 													key={dep.id}
 													className={cn(
-														'flex flex-col gap-1 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-colors group relative h-[55px]',
+														'flex flex-col gap-1 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-colors group relative h-13.75',
 														selectedProfile?.id === dep.id
 															? 'border-primary bg-primary/5'
 															: 'border-gray-200 dark:border-gray-700 hover:border-primary/50',

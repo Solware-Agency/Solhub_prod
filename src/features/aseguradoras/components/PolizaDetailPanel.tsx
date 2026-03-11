@@ -120,7 +120,7 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 							<span className="ml-1 hidden sm:inline">Editar</span>
 						</button>
 					)}
-					<div className="flex-1 min-w-[2rem]" />
+					<div className="flex-1 min-w-8" />
 					<button
 						type="button"
 						onClick={handleEliminarPoliza}

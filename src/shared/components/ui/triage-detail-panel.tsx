@@ -1177,7 +1177,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/50 z-[99999998]"
+						className="fixed inset-0 bg-black/50 z-99999998"
 					/>
 
 					{/* Main Panel */}
@@ -1186,7 +1186,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-[99999999] overflow-y-auto rounded-lg border-l border-input flex flex-col"
+						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col"
 					>
 						{/* Header */}
 						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">

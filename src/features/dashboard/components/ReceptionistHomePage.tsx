@@ -250,7 +250,7 @@ const ReceptionistHomePage: React.FC = () => {
 				<div className="flex-1 text-center sm:text-left mb-3 sm:mb-0">
 					<div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 mb-1">
 						<div>
-							<h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+							<h1 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
 								{laboratory?.slug === 'spt' ? 'Bienvenido a Salud Para Todos' : 'Bienvenido a SolHub'}
 							</h1>
 							<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
@@ -270,7 +270,7 @@ const ReceptionistHomePage: React.FC = () => {
 					</p>
 				</div>
 				<div className="relative">
-					<div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full blur-xl opacity-5 animate-pulse"></div>
+					<div className="absolute inset-0 bg-linear-to-r from-blue-400 to-purple-500 rounded-full blur-xl opacity-5 animate-pulse"></div>
 					<EyeTrackingComponent className="w-20 h-20 sm:w-24 sm:h-24 z-10" />
 				</div>
 			</Card>
@@ -290,7 +290,7 @@ const ReceptionistHomePage: React.FC = () => {
 						}}
 					>
 						<div className="flex flex-col items-center text-center space-y-3">
-							<div className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 group-hover:from-blue-600 group-hover:to-purple-600 transition-transform duration-300">
+							<div className="p-3 rounded-full bg-linear-to-r from-blue-500 to-purple-500 group-hover:from-blue-600 group-hover:to-purple-600 transition-transform duration-300">
 								<button.icon className="w-6 h-6 text-white" />
 							</div>
 							<div>

@@ -676,7 +676,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										return (
 											<div
 												key={index}
-												className="flex-1 rounded-t-sm bg-gradient-to-t from-blue-500 to-blue-300"
+												className="flex-1 rounded-t-sm bg-linear-to-t from-blue-500 to-blue-300"
 												style={{ height: `${height}%` }}
 											></div>
 										)
@@ -1211,7 +1211,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 														>
 															<td className="py-2 px-2">
 																<div className="flex items-center gap-2">
-																	<span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 text-xs font-semibold rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+																	<span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 text-xs font-semibold rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
 																		{index + 1}
 																	</span>
 																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1723,7 +1723,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/50 z-[99999998]"
+						className="fixed inset-0 bg-black/50 z-99999998"
 					/>
 
 					{/* Main Panel */}
@@ -1732,7 +1732,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-[99999999] overflow-y-auto rounded-lg border-l border-input flex flex-col"
+						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col"
 					>
 						{/* Header */}
 						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">

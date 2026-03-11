@@ -189,7 +189,7 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         <div className='flex-1 overflow-y-auto p-4 space-y-6'>
           {messages.length === 0 && (
             <div className='text-center text-muted-foreground mt-16'>
-              <div className='w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-labPrimary/10 to-labPrimary/5 flex items-center justify-center border border-labPrimary/20'>
+              <div className='w-12 h-12 mx-auto mb-4 rounded-xl bg-linear-to-br from-labPrimary/10 to-labPrimary/5 flex items-center justify-center border border-labPrimary/20'>
                 <MessageCircle className='w-6 h-6 text-labPrimary' />
               </div>
               <h3 className='text-sm font-medium text-foreground mb-1'>
@@ -209,7 +209,7 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
               }`}
             >
               {message.role === 'assistant' && (
-                <div className='w-6 h-6 rounded-lg bg-gradient-to-br from-labPrimary to-labPrimary/80 flex items-center justify-center text-white shadow-sm shrink-0 mt-1'>
+                <div className='w-6 h-6 rounded-lg bg-linear-to-br from-labPrimary to-labPrimary/80 flex items-center justify-center text-white shadow-sm shrink-0 mt-1'>
                   <Bot className='w-3 h-3' />
                 </div>
               )}

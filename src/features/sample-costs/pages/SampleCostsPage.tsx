@@ -199,7 +199,7 @@ const SampleCostsPage: React.FC = () => {
 
 	if (loading) {
 		return (
-			<div className="p-4 sm:p-6 flex items-center justify-center min-h-[200px]">
+			<div className="p-4 sm:p-6 flex items-center justify-center min-h-50">
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
 			</div>
 		)
@@ -392,7 +392,7 @@ const SampleCostsPage: React.FC = () => {
 								aria-label="Buscar en estructura de costos"
 							/>
 						</div>
-						<div className="flex items-center gap-2 flex-shrink-0">
+						<div className="flex items-center gap-2 shrink-0">
 							<Button
 								type="button"
 								variant="outline"

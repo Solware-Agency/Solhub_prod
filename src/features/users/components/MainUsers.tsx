@@ -1270,7 +1270,7 @@ const MainUsers: React.FC = () => {
 														<Info className="size-4" />
 													</TooltipTrigger>
 													<TooltipContent className="p-3 max-w-lg w-auto">
-														<div className="flex flex-col gap-3 text-xs min-w-[250px]">
+														<div className="flex flex-col gap-3 text-xs min-w-62.5">
 															<div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
 																<Mail className="w-3 h-3 text-gray-600 dark:text-gray-400 shrink-0" />
 																<span className="whitespace-nowrap flex-1 overflow-hidden text-ellipsis">{user.email}</span>

@@ -322,7 +322,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							size="sm"
 							onClick={handleUpload}
 							disabled={isUploading || isDeletingIndex !== null}
-							className="flex-shrink-0"
+							className="shrink-0"
 						>
 							{isUploading ? (
 								<>

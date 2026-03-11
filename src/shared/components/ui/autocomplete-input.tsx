@@ -274,7 +274,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       {showSuggestions && suggestions.length > 0 && !searchTerminated && !isAutofilled && (
         <div
           ref={suggestionsRef}
-          className="absolute z-[9999] w-full mt-1 bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-md shadow-xl max-h-60 overflow-auto"
+          className="absolute z-9999 w-full mt-1 bg-white dark:bg-background border border-gray-200 dark:border-gray-700 rounded-md shadow-xl max-h-60 overflow-auto"
         >
 
           {suggestions.map((suggestion, index) => (

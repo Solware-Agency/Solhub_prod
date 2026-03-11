@@ -304,7 +304,7 @@ const PagosPage = () => {
 						</div>
 					</div>
 				</div>
-				<div className="p-4 min-h-[220px] flex-1 flex flex-col">
+				<div className="p-4 min-h-55 flex-1 flex flex-col">
 					<h2 className="text-lg font-semibold mb-2">Pólizas</h2>
 					<p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
 						Ordenadas por próximo vencimiento (menor a mayor). Marca como pagado para registrar el pago y actualizar la próxima fecha.
@@ -312,7 +312,7 @@ const PagosPage = () => {
 					{filteredPolizas.length === 0 && (
 						<p className="text-sm text-gray-500">No hay pólizas activas.</p>
 					)}
-					<div className="max-h-[420px] overflow-y-auto">
+					<div className="max-h-105 overflow-y-auto">
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 							{polizaPageData.map((poliza) => {
 								const dueDate = poliza.next_payment_date ?? poliza.fecha_prox_vencimiento ?? poliza.fecha_vencimiento
@@ -456,13 +456,13 @@ const PagosPage = () => {
 						</div>
 					</div>
 				</div>
-				<div className="p-4 min-h-[220px] flex-1 flex flex-col">
+				<div className="p-4 min-h-55 flex-1 flex flex-col">
 					<h2 className="text-lg font-semibold mb-2">Historial de pagos</h2>
 					<p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
 						Haz clic en una card para ver el detalle y el comprobante de pago.
 					</p>
 					{filteredPagos.length === 0 && <p className="text-sm text-gray-500">No hay pagos registrados.</p>}
-					<div className="max-h-[420px] overflow-y-auto">
+					<div className="max-h-105 overflow-y-auto">
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 							{historialPageData.map((pago) => (
 								<div
@@ -725,7 +725,7 @@ const PagosPage = () => {
 												<img
 													src={selectedPago.documento_pago_url}
 													alt="Comprobante"
-													className="w-full max-h-[320px] object-contain"
+													className="w-full max-h-80 object-contain"
 												/>
 											)}
 										</a>
