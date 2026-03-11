@@ -88,6 +88,49 @@ const RAMOS_OPCIONES = [
 	'RCV',
 ] as const
 
+/** Construye las 5 columnas de cobro/recordatorios desde los valores del formulario. */
+function buildPaymentColumnsFromForm(form: {
+	fecha_prox_vencimiento: string
+	fecha_vencimiento: string
+	dia_vencimiento: string
+	modalidad_pago: 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
+	suma_asegurada: string
+	estatus_pago: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora'
+}) {
+	const nextPaymentDate = form.fecha_prox_vencimiento || form.fecha_vencimiento || null
+	const renewalDay = form.dia_vencimiento ? Number(form.dia_vencimiento) : null
+	const paymentFrequency =
+		form.modalidad_pago === 'Mensual'
+			? 'monthly'
+			: form.modalidad_pago === 'Trimestral'
+				? 'quarterly'
+				: form.modalidad_pago === 'Semestral'
+					? 'semiannual'
+					: 'yearly'
+	const billingAmount = form.suma_asegurada ? Number(form.suma_asegurada) : null
+	let paymentStatus: 'current' | 'overdue' =
+		form.estatus_pago === 'Pagado'
+			? 'current'
+			: form.estatus_pago === 'En mora'
+				? 'overdue'
+				: (() => {
+						const refDate = nextPaymentDate || form.fecha_vencimiento
+						if (!refDate) return 'current'
+						const ref = new Date(refDate)
+						ref.setHours(0, 0, 0, 0)
+						const today = new Date()
+						today.setHours(0, 0, 0, 0)
+						return ref < today ? 'overdue' : 'current'
+					})()
+	return {
+		next_payment_date: nextPaymentDate || null,
+		renewal_day_of_month: renewalDay,
+		payment_frequency: paymentFrequency,
+		billing_amount: billingAmount,
+		payment_status: paymentStatus,
+	}
+}
+
 const PolizasPage = () => {
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
@@ -345,6 +388,7 @@ const PolizasPage = () => {
 		if (!editingPoliza) {
 			setSaving(true)
 			try {
+				const paymentCols = buildPaymentColumnsFromForm(form)
 				const newPoliza = await createPoliza({
 					asegurado_id: form.asegurado_id,
 					aseguradora_id: form.aseguradora_id,
@@ -361,6 +405,7 @@ const PolizasPage = () => {
 					fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
 					pdf_url: null,
 					notas: form.notas || null,
+					...paymentCols,
 				})
 				const documentos: DocumentoPoliza[] = []
 				for (const file of documentFiles.slice(0, MAX_DOCUMENTOS_POLIZA)) {
@@ -400,6 +445,7 @@ const PolizasPage = () => {
 				else if (data) documentos.push({ url: data.url, name: data.name })
 			}
 			const finalDocumentos = documentos.slice(0, MAX_DOCUMENTOS_POLIZA)
+			const paymentCols = buildPaymentColumnsFromForm(form)
 			await updatePoliza(editingPoliza.id, {
 				asegurado_id: form.asegurado_id,
 				aseguradora_id: form.aseguradora_id,
@@ -417,6 +463,7 @@ const PolizasPage = () => {
 				documentos_poliza: finalDocumentos,
 				pdf_url: finalDocumentos[0]?.url ?? null,
 				notas: form.notas || null,
+				...paymentCols,
 			})
 			queryClient.invalidateQueries({ queryKey: ['polizas'] })
 			queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })

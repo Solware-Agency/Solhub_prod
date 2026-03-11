@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
@@ -13,9 +13,29 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
-import { DollarSign, Download, Search, ChevronLeft, ChevronRight, Bell, FileText, CalendarDays, Upload, X } from 'lucide-react'
-import { getPolizas, getPolizaById, updatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
-import { createPagoPoliza, getPagosPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
+import {
+	DollarSign,
+	Download,
+	Search,
+	ChevronLeft,
+	ChevronRight,
+	FileText,
+	CalendarDays,
+	Upload,
+	X,
+	Receipt,
+} from 'lucide-react'
+import {
+	getPolizas,
+	updatePoliza,
+	getNextPaymentDateOnMarkPaidPoliza,
+	type Poliza,
+} from '@services/supabase/aseguradoras/polizas-service'
+import {
+	createPagoPoliza,
+	getPagosPoliza,
+	type PagoPoliza,
+} from '@services/supabase/aseguradoras/pagos-poliza-service'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
 import { uploadReciboPago, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -28,29 +48,34 @@ const METODOS_PAGO = [
 	{ value: 'Efectivo', label: 'Efectivo' },
 ] as const
 
-const addMonths = (date: Date, months: number) => {
-	const d = new Date(date)
-	d.setMonth(d.getMonth() + months)
-	return d
-}
+const PERIODOS_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 const daysBetween = (dateStr: string | null) => {
 	if (!dateStr) return null
 	const today = new Date()
+	today.setHours(0, 0, 0, 0)
 	const date = new Date(dateStr)
+	date.setHours(0, 0, 0, 0)
 	const diff = date.getTime() - today.getTime()
 	return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
+const formatDateForDisplay = (dateStr: string) => {
+	const d = new Date(dateStr + 'T12:00:00')
+	return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+type PagoWithPoliza = PagoPoliza & { poliza?: { id: string; numero_poliza: string } }
+
 const PagosPage = () => {
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
-	const [searchTerm, setSearchTerm] = useState('')
-	const [registerSearch, setRegisterSearch] = useState('')
-	const [registerPage, setRegisterPage] = useState(1)
-	const [registerItemsPerPage, setRegisterItemsPerPage] = useState(4)
-	const [currentPage, setCurrentPage] = useState(1)
-	const [itemsPerPage, setItemsPerPage] = useState(4)
+	const [polizaSearch, setPolizaSearch] = useState('')
+	const [polizaPage, setPolizaPage] = useState(1)
+	const [polizaItemsPerPage, setPolizaItemsPerPage] = useState(8)
+	const [historialSearch, setHistorialSearch] = useState('')
+	const [historialPage, setHistorialPage] = useState(1)
+	const [historialItemsPerPage, setHistorialItemsPerPage] = useState(8)
 	const [openModal, setOpenModal] = useState(false)
 	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
 	const [polizaPanelOpen, setPolizaPanelOpen] = useState(false)
@@ -62,149 +87,85 @@ const PagosPage = () => {
 		referencia: '',
 		documento_pago_url: '',
 		notas: '',
+		periodosAPagar: 1,
 	})
 	const [saving, setSaving] = useState(false)
 	const [uploadingRecibo, setUploadingRecibo] = useState(false)
 	const [reciboFileName, setReciboFileName] = useState<string | null>(null)
 	const fileInputRef = React.useRef<HTMLInputElement>(null)
-	const [recordatorioSearch, setRecordatorioSearch] = useState('')
-	const [recordatorioPage, setRecordatorioPage] = useState(1)
-	const [recordatorioItemsPerPage, setRecordatorioItemsPerPage] = useState(16)
+	const [nextPaymentDateAlert, setNextPaymentDateAlert] = useState<string | null>(null)
+	const [detallePagoOpen, setDetallePagoOpen] = useState(false)
+	const [selectedPago, setSelectedPago] = useState<PagoWithPoliza | null>(null)
 
 	const { data: polizasData } = useQuery({
 		queryKey: ['polizas-pagos'],
-		queryFn: () => getPolizas(1, 100),
+		queryFn: () => getPolizas(1, 500, undefined, 'next_payment_date', 'asc'),
 		staleTime: 1000 * 60 * 5,
 	})
 
 	const { data: pagosData } = useQuery({
 		queryKey: ['pagos-poliza'],
-		queryFn: () => getPagosPoliza(1, 200),
-		staleTime: 1000 * 60 * 5,
-	})
-
-	const { data: polizasRecordatorioData, isLoading: loadingRecordatorio } = useQuery({
-		queryKey: ['polizas-recordatorios'],
-		queryFn: () => getPolizas(1, 200),
+		queryFn: () => getPagosPoliza(1, 300),
 		staleTime: 1000 * 60 * 5,
 	})
 
 	const polizas = useMemo(() => polizasData?.data ?? [], [polizasData])
-	const polizasRecordatorio = useMemo(() => polizasRecordatorioData?.data ?? [], [polizasRecordatorioData])
 	const pagos = useMemo(() => pagosData?.data ?? [], [pagosData])
+
+	const polizasSorted = useMemo(() => {
+		const list = [...polizas]
+		list.sort((a, b) => {
+			const dateA = a.next_payment_date ?? a.fecha_prox_vencimiento ?? a.fecha_vencimiento ?? ''
+			const dateB = b.next_payment_date ?? b.fecha_prox_vencimiento ?? b.fecha_vencimiento ?? ''
+			if (!dateA && !dateB) return 0
+			if (!dateA) return 1
+			if (!dateB) return -1
+			return dateA.localeCompare(dateB)
+		})
+		return list
+	}, [polizas])
+
+	const filteredPolizas = useMemo(() => {
+		if (!polizaSearch.trim()) return polizasSorted
+		const q = polizaSearch.trim().toLowerCase()
+		return polizasSorted.filter(
+			(row) =>
+				[row.numero_poliza, row.asegurado?.full_name, row.asegurado?.document_id]
+					.filter(Boolean)
+					.some((v) => String(v).toLowerCase().includes(q)),
+		)
+	}, [polizasSorted, polizaSearch])
+
 	const filteredPagos = useMemo(() => {
-		if (!searchTerm.trim()) return pagos
-		const q = searchTerm.trim().toLowerCase()
+		if (!historialSearch.trim()) return pagos
+		const q = historialSearch.trim().toLowerCase()
 		return pagos.filter((row) =>
-			[
-				row.poliza?.numero_poliza,
-				row.referencia,
-				row.metodo_pago,
-			]
-				.filter(Boolean)
-				.some((value) => String(value).toLowerCase().includes(q)),
+			[row.poliza?.numero_poliza, row.referencia, row.metodo_pago].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)),
 		)
-	}, [pagos, searchTerm])
-	const totalPages = Math.max(1, Math.ceil(filteredPagos.length / itemsPerPage))
-	const pageData = useMemo(() => {
-		const from = (currentPage - 1) * itemsPerPage
-		return filteredPagos.slice(from, from + itemsPerPage)
-	}, [filteredPagos, currentPage, itemsPerPage])
+	}, [pagos, historialSearch])
 
-	const handleSearch = useCallback((value: string) => {
-		setSearchTerm(value)
-		setCurrentPage(1)
-	}, [])
+	const polizaTotalPages = Math.max(1, Math.ceil(filteredPolizas.length / polizaItemsPerPage))
+	const polizaPageData = useMemo(() => {
+		const from = (polizaPage - 1) * polizaItemsPerPage
+		return filteredPolizas.slice(from, from + polizaItemsPerPage)
+	}, [filteredPolizas, polizaPage, polizaItemsPerPage])
 
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page)
-	}, [])
-
-	const handleItemsPerPage = useCallback((value: string) => {
-		const parsed = Number(value)
-		if (!Number.isNaN(parsed)) {
-			setItemsPerPage(parsed)
-			setCurrentPage(1)
-		}
-	}, [])
-
-	const polizasForPayment = useMemo(() => {
-		const list = polizas.filter((p) => p.estatus_pago !== 'Pagado')
-		if (!registerSearch.trim()) return list
-		const q = registerSearch.trim().toLowerCase()
-		return list.filter((row) =>
-			[
-				row.numero_poliza,
-				row.asegurado?.full_name,
-				row.asegurado?.document_id,
-			]
-				.filter(Boolean)
-				.some((value) => String(value).toLowerCase().includes(q)),
-		)
-	}, [polizas, registerSearch])
-
-	const registerTotalPages = Math.max(1, Math.ceil(polizasForPayment.length / registerItemsPerPage))
-	const registerPageData = useMemo(() => {
-		const from = (registerPage - 1) * registerItemsPerPage
-		return polizasForPayment.slice(from, from + registerItemsPerPage)
-	}, [polizasForPayment, registerPage, registerItemsPerPage])
-
-	const handleRegisterSearch = useCallback((value: string) => {
-		setRegisterSearch(value)
-		setRegisterPage(1)
-	}, [])
-
-	const handleRegisterItems = useCallback((value: string) => {
-		const parsed = Number(value)
-		if (!Number.isNaN(parsed)) {
-			setRegisterItemsPerPage(parsed)
-			setRegisterPage(1)
-		}
-	}, [])
-
-	const handleRegisterPage = useCallback((page: number) => {
-		setRegisterPage(page)
-	}, [])
-
-	const filteredPolizasRecordatorio = useMemo(() => {
-		if (!recordatorioSearch.trim()) return polizasRecordatorio
-		const q = recordatorioSearch.trim().toLowerCase()
-		return polizasRecordatorio.filter((row) =>
-			[row.numero_poliza, row.asegurado?.full_name, row.asegurado?.document_id]
-				.filter(Boolean)
-				.some((value) => String(value).toLowerCase().includes(q)),
-		)
-	}, [polizasRecordatorio, recordatorioSearch])
-	const recordatorioTotalPages = Math.max(1, Math.ceil(filteredPolizasRecordatorio.length / recordatorioItemsPerPage))
-	const recordatorioPageData = useMemo(() => {
-		const from = (recordatorioPage - 1) * recordatorioItemsPerPage
-		return filteredPolizasRecordatorio.slice(from, from + recordatorioItemsPerPage)
-	}, [filteredPolizasRecordatorio, recordatorioPage, recordatorioItemsPerPage])
-
-	const handleRecordatorioSearch = useCallback((value: string) => {
-		setRecordatorioSearch(value)
-		setRecordatorioPage(1)
-	}, [])
-	const handleRecordatorioPageChange = useCallback((page: number) => {
-		setRecordatorioPage(page)
-	}, [])
-	const handleRecordatorioItemsPerPage = useCallback((value: string) => {
-		const parsed = Number(value)
-		if (!Number.isNaN(parsed)) {
-			setRecordatorioItemsPerPage(parsed)
-			setRecordatorioPage(1)
-		}
-	}, [])
+	const historialTotalPages = Math.max(1, Math.ceil(filteredPagos.length / historialItemsPerPage))
+	const historialPageData = useMemo(() => {
+		const from = (historialPage - 1) * historialItemsPerPage
+		return filteredPagos.slice(from, from + historialItemsPerPage)
+	}, [filteredPagos, historialPage, historialItemsPerPage])
 
 	const openPagoModal = (poliza: Poliza) => {
 		setSelectedPoliza(poliza)
 		setForm({
-			fecha_pago: new Date().toISOString().slice(0, 10),
+			fecha_pago: new Date().toLocaleDateString('en-CA'),
 			monto: '',
 			metodo_pago: '',
 			referencia: '',
 			documento_pago_url: '',
 			notas: '',
+			periodosAPagar: 1,
 		})
 		setReciboFileName(null)
 		if (fileInputRef.current) fileInputRef.current.value = ''
@@ -214,13 +175,11 @@ const PagosPage = () => {
 	const handleReciboFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0]
 		if (!file || !selectedPoliza) return
-
 		const validation = validateReciboFile(file)
 		if (!validation.valid) {
 			toast({ title: 'Archivo inválido', description: validation.error, variant: 'destructive' })
 			return
 		}
-
 		setUploadingRecibo(true)
 		try {
 			const { data, error } = await uploadReciboPago(file, selectedPoliza.id)
@@ -247,6 +206,11 @@ const PagosPage = () => {
 
 	const handleSave = async () => {
 		if (!selectedPoliza) return
+		const periodos = Math.max(1, Math.min(12, Number(form.periodosAPagar) || 1))
+		if (!form.fecha_pago || !form.monto) {
+			toast({ title: 'Completa fecha y monto', variant: 'destructive' })
+			return
+		}
 		setSaving(true)
 		try {
 			await createPagoPoliza({
@@ -259,39 +223,34 @@ const PagosPage = () => {
 				notas: form.notas || null,
 			})
 
-			const baseDate = new Date(selectedPoliza.fecha_vencimiento)
-			const monthsToAdd =
-				selectedPoliza.modalidad_pago === 'Mensual'
-					? 1
-					: selectedPoliza.modalidad_pago === 'Trimestral'
-						? 3
-						: selectedPoliza.modalidad_pago === 'Semestral'
-							? 6
-							: 12
-			const nextDue = addMonths(baseDate, monthsToAdd)
-
-			await updatePoliza(selectedPoliza.id, {
-				estatus_pago: 'Pagado',
-				fecha_pago_ultimo: form.fecha_pago,
-				fecha_prox_vencimiento: nextDue.toISOString().slice(0, 10),
-				alert_30_enviada: false,
-				alert_14_enviada: false,
-				alert_7_enviada: false,
-				alert_dia_enviada: false,
-				alert_post_enviada: false,
-			})
+			let nextDate: string | null = null
+			for (let i = 0; i < periodos; i++) {
+				nextDate = await getNextPaymentDateOnMarkPaidPoliza(selectedPoliza.id)
+				if (!nextDate) break
+				await updatePoliza(selectedPoliza.id, {
+					next_payment_date: nextDate,
+					payment_status: 'current',
+					fecha_prox_vencimiento: nextDate,
+					estatus_pago: 'Pagado',
+				})
+			}
 
 			queryClient.invalidateQueries({ queryKey: ['pagos-poliza'] })
 			queryClient.invalidateQueries({ queryKey: ['polizas-pagos'] })
-			queryClient.invalidateQueries({ queryKey: ['polizas-recordatorios'] })
 			toast({ title: 'Pago registrado' })
 			setOpenModal(false)
+			if (nextDate) setNextPaymentDateAlert(nextDate)
 		} catch (err) {
 			console.error(err)
 			toast({ title: 'Error al registrar pago', variant: 'destructive' })
 		} finally {
 			setSaving(false)
 		}
+	}
+
+	const openDetallePago = (pago: PagoWithPoliza) => {
+		setSelectedPago(pago)
+		setDetallePagoOpen(true)
 	}
 
 	return (
@@ -301,154 +260,165 @@ const PagosPage = () => {
 					<h1 className="text-2xl sm:text-3xl font-bold">Pagos</h1>
 					<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
 				</div>
-				<Button
-					variant="outline"
-					onClick={() =>
-						exportRowsToExcel(
-							'pagos_poliza',
-							pagos.map((row) => ({
-								Póliza: row.poliza?.numero_poliza || '',
-								Fecha: row.fecha_pago,
-								Monto: row.monto,
-								Método: row.metodo_pago || '',
-								Referencia: row.referencia || '',
-							})),
-						)
-					}
-					className="gap-2"
-				>
-					<Download className="w-4 h-4" />
-					Exportar
-				</Button>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<Card className="overflow-hidden flex flex-col min-w-0">
-					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
-							<div className="relative flex-1 min-w-0">
-								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-								<Input
-									className="pl-9"
-									placeholder="Buscar póliza pendiente"
-									value={registerSearch}
-									onChange={(e) => handleRegisterSearch(e.target.value)}
-								/>
-							</div>
-							<div className="flex items-center gap-2 text-sm text-gray-500">
-								<span>Filas:</span>
-								<Select value={String(registerItemsPerPage)} onValueChange={handleRegisterItems}>
-									<SelectTrigger className="w-20">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="4">4</SelectItem>
-										<SelectItem value="8">8</SelectItem>
-										<SelectItem value="16">16</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+			{/* Sección 1: Pólizas (cards ordenadas por próximo vencimiento) */}
+			<Card className="overflow-hidden flex flex-col min-w-0 mb-4">
+				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+					<div className="flex flex-col sm:flex-row sm:items-center gap-3">
+						<div className="relative flex-1 min-w-0">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+							<Input
+								className="pl-9"
+								placeholder="Buscar por póliza o asegurado"
+								value={polizaSearch}
+								onChange={(e) => {
+									setPolizaSearch(e.target.value)
+									setPolizaPage(1)
+								}}
+							/>
+						</div>
+						<div className="flex items-center gap-2 text-sm text-gray-500">
+							<span>Filas:</span>
+							<Select
+								value={String(polizaItemsPerPage)}
+								onValueChange={(v) => {
+									const n = Number(v)
+									if (!Number.isNaN(n)) setPolizaItemsPerPage(n)
+									setPolizaPage(1)
+								}}
+							>
+								<SelectTrigger className="w-20">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="4">4</SelectItem>
+									<SelectItem value="8">8</SelectItem>
+									<SelectItem value="16">16</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
-					<div className="p-4 min-h-[220px] flex-1 flex flex-col">
-						<h2 className="text-lg font-semibold mb-2">Registrar pago</h2>
-						{polizasForPayment.length === 0 && (
-							<p className="text-sm text-gray-500">No hay pólizas pendientes de pago.</p>
-						)}
-						<div className="max-h-[340px] overflow-y-auto">
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-								{registerPageData.map((poliza) => (
-								<div
-									key={poliza.id}
-									role="button"
-									tabIndex={0}
-									onClick={() => {
-										setSelectedPolizaForPanel(poliza)
-										setPolizaPanelOpen(true)
-									}}
-									onKeyDown={(e) => {
-										if (e.key === 'Enter' || e.key === ' ') {
-											e.preventDefault()
-											setSelectedPolizaForPanel(poliza)
-											setPolizaPanelOpen(true)
-										}
-									}}
-									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 flex flex-col gap-2 cursor-pointer"
-								>
-									<div className="flex flex-wrap gap-1.5 mb-1.5">
-										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">
-											{poliza.estatus_pago || 'Pendiente'}
-										</span>
-										{poliza.modalidad_pago && (
-											<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-												{poliza.modalidad_pago}
-											</span>
-										)}
-									</div>
-									<div className="flex items-center gap-2 mb-1.5">
-										<FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-										<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{poliza.numero_poliza}</p>
-									</div>
-									<div className="mb-1.5">
-										<p className="text-xs text-gray-500 dark:text-gray-400">Asegurado</p>
-										<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{poliza.asegurado?.full_name || 'Asegurado'}</p>
-									</div>
-									<Button
-										size="sm"
-										onClick={(e) => {
-											e.stopPropagation()
-											openPagoModal(poliza)
-										}}
-										className="mt-auto"
+				</div>
+				<div className="p-4 min-h-[220px] flex-1 flex flex-col">
+					<h2 className="text-lg font-semibold mb-2">Pólizas</h2>
+					<p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+						Ordenadas por próximo vencimiento (menor a mayor). Marca como pagado para registrar el pago y actualizar la próxima fecha.
+					</p>
+					{filteredPolizas.length === 0 && (
+						<p className="text-sm text-gray-500">No hay pólizas activas.</p>
+					)}
+					<div className="max-h-[420px] overflow-y-auto">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+							{polizaPageData.map((poliza) => {
+								const dueDate = poliza.next_payment_date ?? poliza.fecha_prox_vencimiento ?? poliza.fecha_vencimiento
+								const days = daysBetween(dueDate)
+								const isVencido = days != null && days < 0
+								const isHoy = days === 0
+								const badgeText = isVencido
+									? `Venció hace ${Math.abs(days)} días`
+									: isHoy
+										? 'Vence hoy'
+										: days != null
+											? `${days} días`
+											: '—'
+								const badgeClass = isVencido
+									? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+									: isHoy
+										? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+										: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300'
+								return (
+									<div
+										key={poliza.id}
+										className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 flex flex-col gap-2"
 									>
-										<DollarSign className="w-4 h-4 mr-2" />
-										Marcar como pagado
-									</Button>
-								</div>
-							))}
-							</div>
+										<div className="flex flex-wrap gap-1.5 mb-1.5">
+											<span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>
+												{badgeText}
+											</span>
+											{poliza.payment_status === 'overdue' && (
+												<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+													En mora
+												</span>
+											)}
+											{poliza.modalidad_pago && (
+												<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+													{poliza.modalidad_pago}
+												</span>
+											)}
+										</div>
+										<div className="flex items-center gap-2 mb-1.5">
+											<FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+											<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{poliza.numero_poliza}</p>
+										</div>
+										<div className="mb-1.5">
+											<p className="text-xs text-gray-500 dark:text-gray-400">Asegurado</p>
+											<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{poliza.asegurado?.full_name || 'Asegurado'}</p>
+										</div>
+										<div className="mb-1.5">
+											<p className="text-xs text-gray-500 dark:text-gray-400">Vence</p>
+											<p className="text-sm text-gray-900 dark:text-gray-100 flex items-center gap-1 flex-wrap">
+												<CalendarDays className="w-3 h-3 text-gray-400 shrink-0" />
+												{dueDate ? formatDateForDisplay(dueDate) : '—'}
+												{days != null && ` - ${days < 0 ? Math.abs(days) + ' días venc.' : days + ' días'}`}
+											</p>
+										</div>
+										<Button
+											size="sm"
+											onClick={() => openPagoModal(poliza)}
+											className="mt-auto"
+										>
+											<DollarSign className="w-4 h-4 mr-2" />
+											Marcar como pagado
+										</Button>
+									</div>
+								)
+							})}
 						</div>
 					</div>
-					<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-						<div className="text-sm text-gray-600 dark:text-gray-400">
-							Página {registerPage} de {registerTotalPages}
-						</div>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={registerPage <= 1}
-								onClick={() => handleRegisterPage(registerPage - 1)}
-							>
-								<ChevronLeft className="w-4 h-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={registerPage >= registerTotalPages}
-								onClick={() => handleRegisterPage(registerPage + 1)}
-							>
-								<ChevronRight className="w-4 h-4" />
-							</Button>
-						</div>
+				</div>
+				<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+					<div className="text-sm text-gray-600 dark:text-gray-400">
+						Página {polizaPage} de {polizaTotalPages}
 					</div>
-				</Card>
+					<div className="flex gap-2">
+						<Button variant="outline" size="sm" disabled={polizaPage <= 1} onClick={() => setPolizaPage((p) => p - 1)}>
+							<ChevronLeft className="w-4 h-4" />
+						</Button>
+						<Button variant="outline" size="sm" disabled={polizaPage >= polizaTotalPages} onClick={() => setPolizaPage((p) => p + 1)}>
+							<ChevronRight className="w-4 h-4" />
+						</Button>
+					</div>
+				</div>
+			</Card>
 
-				<Card className="overflow-hidden flex flex-col min-w-0">
-					<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
-							<div className="relative flex-1 min-w-0">
-								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-								<Input
-									className="pl-9"
-									placeholder="Buscar por póliza, referencia o método"
-									value={searchTerm}
-									onChange={(e) => handleSearch(e.target.value)}
-								/>
-							</div>
+			{/* Sección 2: Historial de pagos (cards) */}
+			<Card className="overflow-hidden flex flex-col min-w-0">
+				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+					<div className="flex flex-col sm:flex-row sm:items-center gap-3">
+						<div className="relative flex-1 min-w-0">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+							<Input
+								className="pl-9"
+								placeholder="Buscar por póliza, referencia o método"
+								value={historialSearch}
+								onChange={(e) => {
+									setHistorialSearch(e.target.value)
+									setHistorialPage(1)
+								}}
+							/>
+						</div>
+						<div className="flex items-center gap-2">
 							<div className="flex items-center gap-2 text-sm text-gray-500">
 								<span>Filas:</span>
-								<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
+								<Select
+									value={String(historialItemsPerPage)}
+									onValueChange={(v) => {
+										const n = Number(v)
+										if (!Number.isNaN(n)) setHistorialItemsPerPage(n)
+										setHistorialPage(1)
+									}}
+								>
 									<SelectTrigger className="w-20">
 										<SelectValue />
 									</SelectTrigger>
@@ -459,51 +429,47 @@ const PagosPage = () => {
 									</SelectContent>
 								</Select>
 							</div>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									exportRowsToExcel(
+										'pagos_poliza',
+										filteredPagos.map((row) => ({
+											Póliza: row.poliza?.numero_poliza || '',
+											Fecha: row.fecha_pago,
+											Monto: row.monto,
+											Método: row.metodo_pago || '',
+											Referencia: row.referencia || '',
+										})),
+									)
+								}
+								className="gap-2"
+							>
+								<Download className="w-4 h-4" />
+								Exportar
+							</Button>
 						</div>
 					</div>
-
-					<div className="p-4 min-h-[220px] flex-1 flex flex-col">
-						<h2 className="text-lg font-semibold mb-2">Pagos registrados</h2>
-						{filteredPagos.length === 0 && <p className="text-sm text-gray-500">No hay pagos registrados.</p>}
-						<div className="max-h-[340px] overflow-y-auto">
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-								{pageData.map((pago) => (
+				</div>
+				<div className="p-4 min-h-[220px] flex-1 flex flex-col">
+					<h2 className="text-lg font-semibold mb-2">Historial de pagos</h2>
+					<p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+						Haz clic en una card para ver el detalle y el comprobante de pago.
+					</p>
+					{filteredPagos.length === 0 && <p className="text-sm text-gray-500">No hay pagos registrados.</p>}
+					<div className="max-h-[420px] overflow-y-auto">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+							{historialPageData.map((pago) => (
 								<div
 									key={pago.id}
 									role="button"
 									tabIndex={0}
-									onClick={async () => {
-										const found = polizas.find((p) => p.id === pago.poliza_id)
-										if (found) {
-											setSelectedPolizaForPanel(found)
-											setPolizaPanelOpen(true)
-											return
-										}
-										const pol = await getPolizaById(pago.poliza_id)
-										if (pol) {
-											setSelectedPolizaForPanel(pol)
-											setPolizaPanelOpen(true)
-										} else {
-											toast({ title: 'No se encontró la póliza', variant: 'destructive' })
-										}
-									}}
+									onClick={() => openDetallePago(pago)}
 									onKeyDown={(e) => {
 										if (e.key === 'Enter' || e.key === ' ') {
 											e.preventDefault()
-											const found = polizas.find((p) => p.id === pago.poliza_id)
-											if (found) {
-												setSelectedPolizaForPanel(found)
-												setPolizaPanelOpen(true)
-											} else {
-												getPolizaById(pago.poliza_id).then((pol) => {
-													if (pol) {
-														setSelectedPolizaForPanel(pol)
-														setPolizaPanelOpen(true)
-													} else {
-														toast({ title: 'No se encontró la póliza', variant: 'destructive' })
-													}
-												})
-											}
+											openDetallePago(pago)
 										}
 									}}
 									className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200 cursor-pointer"
@@ -514,9 +480,9 @@ const PagosPage = () => {
 										</span>
 									</div>
 									<div className="flex items-center gap-2 mb-1.5">
-										<FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+										<FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
 										<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
-											{pago.poliza?.numero_poliza || 'Póliza'} · {pago.monto}
+											{pago.poliza?.numero_poliza || 'Póliza'} {pago.referencia ? `· ${pago.referencia}` : ''}
 										</p>
 									</div>
 									<div className="grid grid-cols-1 gap-1.5">
@@ -534,175 +500,25 @@ const PagosPage = () => {
 									</div>
 								</div>
 							))}
-							</div>
 						</div>
 					</div>
-
-					<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-						<div className="text-sm text-gray-600 dark:text-gray-400">
-							Página {currentPage} de {totalPages}
-						</div>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={currentPage <= 1}
-								onClick={() => handlePageChange(currentPage - 1)}
-							>
-								<ChevronLeft className="w-4 h-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={currentPage >= totalPages}
-								onClick={() => handlePageChange(currentPage + 1)}
-							>
-								<ChevronRight className="w-4 h-4" />
-							</Button>
-						</div>
-					</div>
-				</Card>
-			</div>
-
-			<Card className="overflow-hidden mt-4">
-				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
-						<div className="relative flex-1 min-w-0">
-							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-							<Input
-								className="pl-9"
-								placeholder="Buscar por póliza o asegurado"
-								value={recordatorioSearch}
-								onChange={(e) => handleRecordatorioSearch(e.target.value)}
-							/>
-						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<span>Filas:</span>
-							<Select value={String(recordatorioItemsPerPage)} onValueChange={handleRecordatorioItemsPerPage}>
-								<SelectTrigger className="w-20">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="8">8</SelectItem>
-									<SelectItem value="16">16</SelectItem>
-									<SelectItem value="32">32</SelectItem>
-								</SelectContent>
-							</Select>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() =>
-									exportRowsToExcel(
-										'vencimientos_polizas',
-										polizasRecordatorio.map((row) => ({
-											'Número póliza': row.numero_poliza,
-											Asegurado: row.asegurado?.full_name || '',
-											'Fecha próximo vencimiento': row.fecha_prox_vencimiento || row.fecha_vencimiento,
-											'Días restantes': daysBetween(row.fecha_prox_vencimiento || row.fecha_vencimiento) ?? '',
-											'Alert_30': row.alert_30_enviada ? 'Sí' : 'No',
-											'Alert_14': row.alert_14_enviada ? 'Sí' : 'No',
-											'Alert_7': row.alert_7_enviada ? 'Sí' : 'No',
-											'Alert_Día': row.alert_dia_enviada ? 'Sí' : 'No',
-											'Alert_Post': row.alert_post_enviada ? 'Sí' : 'No',
-										})),
-									)
-								}
-								className="gap-1.5"
-							>
-								<Download className="w-4 h-4" />
-								Exportar vencimientos
-							</Button>
-						</div>
-					</div>
-				</div>
-				<div className="p-4 min-h-[220px]">
-					<h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-						<Bell className="w-5 h-5 text-amber-500" />
-						Recordatorios
-					</h2>
-					<p className="text-xs text-gray-500 mb-4">Vencimientos y estado de alertas por póliza</p>
-					{loadingRecordatorio && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
-					{!loadingRecordatorio && filteredPolizasRecordatorio.length === 0 && (
-						<p className="text-sm text-gray-500">No hay pólizas registradas.</p>
-					)}
-					{!loadingRecordatorio && recordatorioPageData.length > 0 && (
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-							{recordatorioPageData.map((row) => {
-								const days = daysBetween(row.fecha_prox_vencimiento || row.fecha_vencimiento)
-								const venceFecha = row.fecha_prox_vencimiento || row.fecha_vencimiento
-								const isPorVencer = days != null && days <= 30 && days >= 0
-								const isVencido = days != null && days < 0
-								return (
-									<div
-										key={row.id}
-										className="relative bg-white dark:bg-background rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 hover:border-primary/70 dark:hover:border-primary/60 transition-colors duration-200"
-									>
-										<div className="flex flex-wrap gap-1.5 mb-1.5">
-											{days != null && (
-												<span
-													className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${
-														isVencido
-															? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-															: isPorVencer
-																? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-																: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-													}`}
-												>
-													{days < 0 ? `${Math.abs(days)} días venc.` : `${days} días`}
-												</span>
-											)}
-										</div>
-										<div className="flex items-center gap-2 mb-1.5">
-											<FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-											<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{row.numero_poliza}</p>
-										</div>
-										<div className="mb-1.5">
-											<p className="text-xs text-gray-500 dark:text-gray-400">Asegurado</p>
-											<p className="text-sm text-gray-900 dark:text-gray-100 truncate">{row.asegurado?.full_name || 'Asegurado'}</p>
-										</div>
-										<div className="mb-1.5">
-											<p className="text-xs text-gray-500 dark:text-gray-400">Vence</p>
-											<p className="text-sm text-gray-900 dark:text-gray-100 flex items-center gap-1">
-												<CalendarDays className="w-3 h-3 text-gray-400" />
-												{venceFecha || '—'} {days != null && `· ${days} días`}
-											</p>
-										</div>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											30({row.alert_30_enviada ? 'Sí' : 'No'}) · 14({row.alert_14_enviada ? 'Sí' : 'No'}) ·
-											7({row.alert_7_enviada ? 'Sí' : 'No'}) · D({row.alert_dia_enviada ? 'Sí' : 'No'}) ·
-											Post({row.alert_post_enviada ? 'Sí' : 'No'})
-										</p>
-									</div>
-								)
-							})}
-						</div>
-					)}
 				</div>
 				<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
 					<div className="text-sm text-gray-600 dark:text-gray-400">
-						Página {recordatorioPage} de {recordatorioTotalPages}
+						Página {historialPage} de {historialTotalPages}
 					</div>
 					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={recordatorioPage <= 1}
-							onClick={() => handleRecordatorioPageChange(recordatorioPage - 1)}
-						>
+						<Button variant="outline" size="sm" disabled={historialPage <= 1} onClick={() => setHistorialPage((p) => p - 1)}>
 							<ChevronLeft className="w-4 h-4" />
 						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={recordatorioPage >= recordatorioTotalPages}
-							onClick={() => handleRecordatorioPageChange(recordatorioPage + 1)}
-						>
+						<Button variant="outline" size="sm" disabled={historialPage >= historialTotalPages} onClick={() => setHistorialPage((p) => p + 1)}>
 							<ChevronRight className="w-4 h-4" />
 						</Button>
 					</div>
 				</div>
 			</Card>
 
+			{/* Modal Registrar pago */}
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
 					className="max-w-lg bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
@@ -726,6 +542,25 @@ const PagosPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
+							<Label>Periodos a pagar</Label>
+							<Select
+								value={String(form.periodosAPagar)}
+								onValueChange={(v) => setForm((prev) => ({ ...prev, periodosAPagar: Number(v) || 1 }))}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{PERIODOS_OPCIONES.map((n) => (
+										<SelectItem key={n} value={String(n)}>
+											{n} {n === 1 ? 'período' : 'períodos'}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-gray-500">Cada período avanza la próxima fecha (ej. 1 mes). Si eliges 2, se sumarán 2 períodos.</p>
+						</div>
+						<div className="space-y-2">
 							<Label>Método</Label>
 							<Select
 								value={form.metodo_pago || undefined}
@@ -743,7 +578,7 @@ const PagosPage = () => {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 sm:col-span-2">
 							<Label>Referencia</Label>
 							<Input
 								placeholder="Ej. REF-001"
@@ -751,8 +586,8 @@ const PagosPage = () => {
 								onChange={(e) => setForm((prev) => ({ ...prev, referencia: e.target.value }))}
 							/>
 						</div>
-						<div className="space-y-2">
-							<Label>Adjuntar factura</Label>
+						<div className="space-y-2 sm:col-span-2">
+							<Label>Adjuntar comprobante</Label>
 							<input
 								ref={fileInputRef}
 								type="file"
@@ -764,14 +599,7 @@ const PagosPage = () => {
 								<div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
 									<FileText className="h-5 w-5 text-primary shrink-0" />
 									<span className="text-sm truncate flex-1">{reciboFileName || 'Archivo adjunto'}</span>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onClick={handleRemoveRecibo}
-										disabled={uploadingRecibo}
-										className="shrink-0"
-									>
+									<Button type="button" variant="ghost" size="sm" onClick={handleRemoveRecibo} disabled={uploadingRecibo} className="shrink-0">
 										<X className="h-4 w-4" />
 									</Button>
 								</div>
@@ -783,9 +611,7 @@ const PagosPage = () => {
 									onClick={() => fileInputRef.current?.click()}
 									disabled={uploadingRecibo || !selectedPoliza}
 								>
-									{uploadingRecibo ? (
-										'Subiendo...'
-									) : (
+									{uploadingRecibo ? 'Subiendo...' : (
 										<>
 											<Upload className="h-4 w-4 mr-2" />
 											PDF, JPG o PNG
@@ -794,13 +620,9 @@ const PagosPage = () => {
 								</Button>
 							)}
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 sm:col-span-2">
 							<Label>Notas</Label>
-							<Input
-								placeholder="Opcional"
-								value={form.notas}
-								onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
-							/>
+							<Input placeholder="Opcional" value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
 						</div>
 					</div>
 					<DialogFooter className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -811,6 +633,103 @@ const PagosPage = () => {
 							{saving ? 'Guardando...' : 'Guardar pago'}
 						</Button>
 					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Modal advertencia: próxima fecha de pago */}
+			<Dialog open={!!nextPaymentDateAlert} onOpenChange={(open) => !open && setNextPaymentDateAlert(null)}>
+				<DialogContent className="max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Pago registrado</DialogTitle>
+					</DialogHeader>
+					<p className="text-sm text-gray-600 dark:text-gray-400">
+						La <strong>próxima fecha de pago</strong> de esta póliza será:{' '}
+						<strong className="text-primary">{nextPaymentDateAlert ? formatDateForDisplay(nextPaymentDateAlert) : ''}</strong>.
+					</p>
+					<p className="text-xs text-gray-500 mt-2">
+						Si marcas como pagado otra vez por error, se sumará otro período a la próxima fecha.
+					</p>
+					<DialogFooter>
+						<Button onClick={() => setNextPaymentDateAlert(null)}>Entendido</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Modal detalle de pago (comprobante) */}
+			<Dialog open={detallePagoOpen} onOpenChange={setDetallePagoOpen}>
+				<DialogContent className="max-w-lg bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Receipt className="w-5 h-5" />
+							Detalle del pago
+						</DialogTitle>
+					</DialogHeader>
+					{selectedPago && (
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-3 text-sm">
+								<div>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Póliza</p>
+									<p className="font-medium">{selectedPago.poliza?.numero_poliza || '—'}</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Fecha de pago</p>
+									<p className="font-medium">{selectedPago.fecha_pago}</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Monto</p>
+									<p className="font-medium">{selectedPago.monto}</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Método</p>
+									<p className="font-medium">{selectedPago.metodo_pago || '—'}</p>
+								</div>
+								{selectedPago.banco && (
+									<div>
+										<p className="text-xs text-gray-500 dark:text-gray-400">Banco</p>
+										<p className="font-medium">{selectedPago.banco}</p>
+									</div>
+								)}
+								{selectedPago.referencia && (
+									<div className="col-span-2">
+										<p className="text-xs text-gray-500 dark:text-gray-400">Referencia</p>
+										<p className="font-medium">{selectedPago.referencia}</p>
+									</div>
+								)}
+								{selectedPago.notas && (
+									<div className="col-span-2">
+										<p className="text-xs text-gray-500 dark:text-gray-400">Notas</p>
+										<p className="font-medium">{selectedPago.notas}</p>
+									</div>
+								)}
+							</div>
+							{selectedPago.documento_pago_url && (
+								<div>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Comprobante de pago</p>
+									<div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+										<a
+											href={selectedPago.documento_pago_url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="block"
+										>
+											{/\.(pdf)$/i.test(selectedPago.documento_pago_url) ? (
+												<div className="p-6 text-center">
+													<FileText className="w-12 h-12 mx-auto text-primary mb-2" />
+													<p className="text-sm text-primary font-medium">Abrir PDF</p>
+												</div>
+											) : (
+												<img
+													src={selectedPago.documento_pago_url}
+													alt="Comprobante"
+													className="w-full max-h-[320px] object-contain"
+												/>
+											)}
+										</a>
+									</div>
+								</div>
+							)}
+						</div>
+					)}
 				</DialogContent>
 			</Dialog>
 
