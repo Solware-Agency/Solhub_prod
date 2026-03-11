@@ -42,7 +42,6 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Resetear al cerrar
   const handleClose = () => {
     setMessages([])
     setInputValue('')
@@ -128,7 +127,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-black/50 z-[99999999999999999]"
           />
 
@@ -152,7 +151,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                   </h2>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />

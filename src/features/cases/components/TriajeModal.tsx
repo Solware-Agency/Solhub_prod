@@ -1,7 +1,7 @@
 import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Edit, Activity } from 'lucide-react';
+import { X, Edit } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
@@ -10,7 +10,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getTriageByCase } from '@/services/supabase/triage/triage-service';
 import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
-import { supabase } from '@/services/supabase/config/config';
 
 // Error Boundary para capturar errores en el formulario
 class TriajeFormErrorBoundary extends Component<

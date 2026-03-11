@@ -108,7 +108,7 @@ function buildPaymentColumnsFromForm(form: {
 					? 'semiannual'
 					: 'yearly'
 	const billingAmount = form.suma_asegurada ? Number(form.suma_asegurada) : null
-	let paymentStatus: 'current' | 'overdue' =
+	const paymentStatus: 'current' | 'overdue' =
 		form.estatus_pago === 'Pagado'
 			? 'current'
 			: form.estatus_pago === 'En mora'

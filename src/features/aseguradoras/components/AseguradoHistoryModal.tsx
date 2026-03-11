@@ -85,8 +85,8 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 	}, [])
 
 	const handleAseguradoClickFromPoliza = useCallback(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- firma requerida por el callback del padre
 		(_aseguradoId: string) => {
-			// Ya estamos en el historial de este asegurado; cerrar el panel de póliza para volver a la vista del asegurado
 			closePolizaDetail()
 		},
 		[closePolizaDetail],

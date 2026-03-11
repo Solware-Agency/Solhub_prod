@@ -29,7 +29,7 @@ const AseguradorasHomePage = () => {
 		queryFn: getAseguradorasStats,
 		staleTime: 1000 * 60 * 5,
 	})
-	const { data: selectedPoliza, isLoading: loadingPoliza } = useQuery({
+	const { data: selectedPoliza } = useQuery({
 		queryKey: ['poliza', selectedPolizaId],
 		queryFn: () => getPolizaById(selectedPolizaId!),
 		enabled: !!selectedPolizaId,

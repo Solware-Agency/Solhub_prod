@@ -4,7 +4,7 @@ import { Stethoscope, Info } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface DoctorRevenueReportProps {
 	startDate?: Date

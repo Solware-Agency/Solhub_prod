@@ -17,7 +17,7 @@ import { PaymentMethodsList } from './payment/PaymentMethodsList'
 import { PaymentSectionSkeleton } from './payment/PaymentSectionSkeleton'
 import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { Info, DollarSign, FileCheck, Percent } from 'lucide-react'
+import { Info } from 'lucide-react'
 import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service'
 import { cn } from '@shared/lib/cn'
 
@@ -48,28 +48,24 @@ interface PaymentSectionProps {
 	descuentoDiscountPercent?: number
 }
 
-export const PaymentSection = memo(({
-	control,
-	fields,
-	append,
-	remove,
-	inputStyles,
-	usdValue,
-	setUsdValue,
-	vesValue,
-	vesInputValue,
-	setVesInputValue,
-	usdFromVes,
-	converterUsdValue,
-	setConverterUsdValue,
-	converterVesValue,
-	exchangeRate,
-	isLoadingRate,
-	isSampleTypeCostsEnabled = false,
-	sampleTypeCosts = null,
-	convenioDiscountPercent = 5,
-	descuentoDiscountPercent = 10,
-}: PaymentSectionProps) => {
+export const PaymentSection = memo((props: PaymentSectionProps) => {
+	const {
+		control,
+		fields,
+		append,
+		remove,
+		inputStyles,
+		setUsdValue,
+		converterUsdValue,
+		setConverterUsdValue,
+		converterVesValue,
+		exchangeRate,
+		isLoadingRate,
+		isSampleTypeCostsEnabled = false,
+		sampleTypeCosts = null,
+		convenioDiscountPercent = 5,
+		descuentoDiscountPercent = 10,
+	} = props
 	const { setValue } = useFormContext<FormValues>()
 	const factorConvenios = (100 - convenioDiscountPercent) / 100
 	const factorDescuento = (100 - descuentoDiscountPercent) / 100

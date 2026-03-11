@@ -34,11 +34,8 @@ export const createFormSchema = (
 	const medicoTratanteConfig = moduleConfig?.fields?.medicoTratante
 
 	const originRequired = (originConfig?.enabled && originConfig?.required) || isMarihorgen
-	const sampleTypeEnabled = sampleTypeConfig?.enabled || isMarihorgen
 	const sampleTypeRequired = (sampleTypeConfig?.enabled && sampleTypeConfig?.required) || isMarihorgen
-	const numberOfSamplesEnabled = numberOfSamplesConfig?.enabled || isMarihorgen
 	const numberOfSamplesRequired = (numberOfSamplesConfig?.enabled && numberOfSamplesConfig?.required) || isMarihorgen
-	const medicoTratanteEnabled = medicoTratanteConfig?.enabled || isMarihorgen
 	const medicoTratanteRequired = medicoTratanteConfig?.enabled && medicoTratanteConfig?.required
 
 	// examType: Opcional, pero validado condicionalmente con consulta

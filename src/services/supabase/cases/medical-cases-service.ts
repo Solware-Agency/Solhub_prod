@@ -2013,7 +2013,8 @@ const logMedicalCaseChanges = async (
     };
 
     // Helper: formatear old/new para montos con moneda (USD o Bs) en historial de acciones
-    const getOldValueForLog = (f: string, oldVal: any, newVal: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- firma requerida por getNewValueForLog
+    const getOldValueForLog = (f: string, oldVal: any, _newVal: any) => {
       if (f === 'total_amount') {
         const n = formatValueForLog(oldVal)
         return n != null ? `${n} USD` : null

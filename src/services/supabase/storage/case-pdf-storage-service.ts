@@ -9,7 +9,6 @@ import type { PostgrestError } from '@supabase/supabase-js'
 const BUCKET_NAME = 'case-pdfs'
 const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB en bytes
 const ALLOWED_EXTENSIONS = ['.pdf']
-const ALLOWED_MIME_TYPES = ['application/pdf']
 
 /**
  * Valida que el archivo sea PDF y no exceda el tamaño máximo
@@ -183,7 +182,6 @@ export async function uploadCasePDF(
 			body: pdfFile,
 		})
 
-		let uploadData = null
 		let uploadError = null
 
 		if (!uploadResponse.ok) {
@@ -204,11 +202,9 @@ export async function uploadCasePDF(
 			}
 		} else {
 			try {
-				const responseData = await uploadResponse.json()
-				uploadData = responseData
+				await uploadResponse.json()
 			} catch {
-				// Si no hay JSON en la respuesta, crear un objeto de éxito
-				uploadData = { path: filePath }
+				// Sin JSON en la respuesta; el upload fue exitoso por status ok
 			}
 		}
 

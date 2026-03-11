@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase/config/config'
-import { format, getYear, getMonth } from 'date-fns'
+import { getYear, getMonth } from 'date-fns'
 
 /**
  * Generates a unique medical record code using the flexible template system.

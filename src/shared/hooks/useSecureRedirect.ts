@@ -35,10 +35,6 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		ownerPath = '/dashboard/home',
 		medicownerPath = '/dashboard/home',
 		employeePath = '/employee/home',
-		imagenologiaPath = '/imagenologia/cases',
-		adminPath = '/medic/cases',
-		citoPath = '/cito/cases',
-		patoloPath = '/patolo/cases',
 		onRedirect,
 	} = options
 

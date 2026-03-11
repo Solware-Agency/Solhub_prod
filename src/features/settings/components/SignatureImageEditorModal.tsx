@@ -107,7 +107,7 @@ export const SignatureImageEditorModal: React.FC<SignatureImageEditorModalProps>
 				<div className="flex-1 flex gap-3 sm:gap-6 px-3 sm:px-6 py-3 sm:py-4 overflow-hidden min-h-0">
 					{/* Editor de imagen */}
 					<div className="flex-1 flex flex-col min-w-0 min-h-0">
-						<div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 min-h-0" style={{ minHeight: '300px' }}>
+						<div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 min-h-0" style={{ minHeight: '300px' }} data-rotation-deg={rotation}>
 							{imageSrc && (
 								<Cropper
 									ref={cropperRef}

@@ -5,7 +5,7 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts'
 
 export type TriageStatType =
 	| 'totalTriages'
@@ -120,12 +120,10 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 		}
 
 		switch (statType) {
-			case 'totalTriages':
+			case 'totalTriages': {
 				const totalTriages = stats.totalTriages || 0
 				const avgDaily = days > 0 ? (totalTriages / days).toFixed(1) : '0'
 				const daysWithData = trends?.filter(t => t.count > 0).length || 0
-				const daysWithoutData = days - daysWithData
-				
 				return (
 					<div className="space-y-6">
 						{/* Resumen General */}
@@ -214,8 +212,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						)}
 					</div>
 				)
-
-			case 'heartRate':
+			}
+			case 'heartRate': {
 				const hrAvg = stats.averages?.heartRate
 				const hrRanges = stats.ranges?.heartRate || { low: 0, normal: 0, high: 0 }
 				const hrTotal = hrRanges.low + hrRanges.normal + hrRanges.high
@@ -330,8 +328,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'respiratoryRate':
+			}
+			case 'respiratoryRate': {
 				const rrAvg = stats.averages?.respiratoryRate
 				const rrRanges = stats.ranges?.respiratoryRate || { low: 0, normal: 0, high: 0 }
 				const rrTotal = rrRanges.low + rrRanges.normal + rrRanges.high
@@ -444,8 +442,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'oxygenSaturation':
+			}
+			case 'oxygenSaturation': {
 				const osAvg = stats.averages?.oxygenSaturation
 				const osRanges = stats.ranges?.oxygenSaturation || { low: 0, normal: 0, high: 0 }
 				const osTotal = osRanges.low + osRanges.normal + osRanges.high
@@ -554,8 +552,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'temperature':
+			}
+			case 'temperature': {
 				const tempAvg = stats.averages?.temperature
 				const tempRanges = stats.ranges?.temperature || { low: 0, normal: 0, high: 0 }
 				const tempTotal = tempRanges.low + tempRanges.normal + tempRanges.high
@@ -664,8 +662,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bmi':
+			}
+			case 'bmi': {
 				const bmiAvg = stats.averages?.bmi
 				const bmiRanges = stats.ranges?.bmi || { underweight: 0, normal: 0, overweight: 0, obese: 0 }
 				const bmiTotal = bmiRanges.underweight + bmiRanges.normal + bmiRanges.overweight + bmiRanges.obese
@@ -791,8 +789,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bloodPressure':
+			}
+			case 'bloodPressure': {
 				const bpAvg = stats.averages?.systolicBP
 				const bpRanges = stats.ranges?.bloodPressure || { low: 0, normal: 0, high: 0 }
 				const bpTotal = bpRanges.low + bpRanges.normal + bpRanges.high
@@ -902,8 +900,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bloodGlucose':
+			}
+			case 'bloodGlucose': {
 				const bgAvg = stats.averages?.bloodGlucose
 				const bgRanges = stats.ranges?.bloodGlucose || { low: 0, normal: 0, high: 0 }
 				const bgTotal = bgRanges.low + bgRanges.normal + bgRanges.high
@@ -1013,8 +1011,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'habits':
+			}
+			case 'habits': {
 				const tabacoHabits = stats.habits?.tabaco || {}
 				const cafeHabits = stats.habits?.cafe || {}
 				const alcoholHabits = stats.habits?.alcohol || {}
@@ -1157,7 +1155,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						)}
 					</div>
 				)
-
+			}
 			default:
 				return (
 					<div className="text-center py-8">

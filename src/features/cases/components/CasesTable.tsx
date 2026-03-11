@@ -1728,7 +1728,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               ?.toLowerCase()
               .includes('inmuno') && (
               <RequestCaseModal
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 case_={selectedCaseForGenerate as any}
                 isOpen={isGenerateModalOpen}
                 onClose={() => {
@@ -1744,7 +1743,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           {/* Steps Case Modal - Para todos los roles */}
           {selectedCaseForGenerate && (
             <HorizontalLinearStepper
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               case_={selectedCaseForGenerate as any}
               isOpen={isStepsModalOpen}
               onClose={() => {
@@ -2040,7 +2038,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             ?.toLowerCase()
             .includes('inmuno') && (
             <RequestCaseModal
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               case_={selectedCaseForGenerate as any}
               isOpen={isGenerateModalOpen}
               onClose={() => {
@@ -2056,7 +2053,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         {/* Steps Case Modal - Para todos los roles */}
         {selectedCaseForGenerate && (
           <HorizontalLinearStepper
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             case_={selectedCaseForGenerate as any}
             isOpen={isStepsModalOpen}
             onClose={() => {

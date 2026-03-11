@@ -53,19 +53,15 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
 }) => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
-  const [newBccEmail, setNewBccEmail] = useState('');
   const [emailHistory, setEmailHistory] = useState<EmailSendLog[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'preview'>('form');
 
   // Cargar historial de envíos cuando se abre el modal
   useEffect(() => {
     const loadHistory = async () => {
       if (isOpen && caseId) {
-        setIsLoadingHistory(true);
         const { data } = await getEmailSendHistory(caseId);
         setEmailHistory(data || []);
-        setIsLoadingHistory(false);
       }
     };
     loadHistory();

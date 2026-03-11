@@ -9,7 +9,7 @@ import { useLaboratory } from './LaboratoryContext';
  */
 export function SptThemeEnforcer() {
 	const { laboratory } = useLaboratory();
-	const { setTheme, theme } = useTheme();
+	const { setTheme } = useTheme();
 	const hasSetDefault = useRef(false);
 
 	useEffect(() => {

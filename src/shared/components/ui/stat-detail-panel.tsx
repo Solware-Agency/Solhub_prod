@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, Stethoscope, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
+import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
 import { Button } from '@shared/components/ui/button'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
@@ -1612,7 +1612,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{sortedExamTypes.map((exam: any, index: number) => {
+										{sortedExamTypes.map((exam: any) => {
 													const totalVal = isSpt
 														? rawExamTypes.reduce((sum: number, e: any) => sum + e.count, 0)
 														: rawExamTypes.reduce((sum: number, e: any) => sum + e.revenue, 0)

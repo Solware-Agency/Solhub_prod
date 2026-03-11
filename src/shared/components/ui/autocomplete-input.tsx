@@ -92,8 +92,8 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Don't search if terminated, autofilled, haven't focused, no preloaded data, or empty input
-    if (searchTerminated || isAutofilled || !hasFocused || !hasPreloadedData || inputValue.length === 0) {
+    // Don't search if terminated, autofilled, haven't focused, no preloaded data, or input shorter than minSearchLength
+    if (searchTerminated || isAutofilled || !hasFocused || !hasPreloadedData || inputValue.length < minSearchLength) {
       setShowSuggestions(false);
       return;
     }
@@ -117,7 +117,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [inputValue, getSuggestions, searchTerminated, isAutofilled, hasFocused, hasPreloadedData]);
+  }, [inputValue, getSuggestions, searchTerminated, isAutofilled, hasFocused, hasPreloadedData, minSearchLength]);
 
   // Memoize handlers to prevent unnecessary re-renders
   const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

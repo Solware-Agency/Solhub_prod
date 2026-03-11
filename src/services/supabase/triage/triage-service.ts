@@ -6,7 +6,8 @@
 import { supabase } from '@services/supabase/config/config';
 import type { Database } from '@shared/types/types';
 
-// Extender los tipos de Supabase para incluir triaje_records
+// Extender los tipos de Supabase para incluir triaje_records (reservado para tipado futuro)
+/* eslint-disable @typescript-eslint/no-unused-vars */
 type SupabaseClient = typeof supabase;
 type ExtendedDatabase = Database & {
   public: Database['public'] & {
@@ -133,6 +134,7 @@ type ExtendedDatabase = Database & {
     };
   };
 };
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // Tipo para niveles de hábitos
 export type HabitLevel = 'muy alta' | 'alta' | 'media' | 'baja' | 'muy baja' | 'No' | '';

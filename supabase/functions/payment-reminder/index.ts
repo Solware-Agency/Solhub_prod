@@ -161,9 +161,8 @@ Deno.serve(async (req: Request) => {
 	const resend = new Resend(resendKey)
 	const results: { labId: string; labName: string; type: ReminderType; emailsSent: number }[] = []
 
-	// Hoy en UTC (YYYY-MM-DD) y fecha de vencimiento "hace 2 días" para detectar labs recién inactivados
+	// Fecha "hace 2 días" para detectar labs recién inactivados
 	const now = new Date()
-	const todayUtc = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
 	const twoDaysAgo = new Date(now)
 	twoDaysAgo.setUTCDate(twoDaysAgo.getUTCDate() - 2)
 	const twoDaysAgoStr = `${twoDaysAgo.getUTCFullYear()}-${String(twoDaysAgo.getUTCMonth() + 1).padStart(2, '0')}-${String(twoDaysAgo.getUTCDate()).padStart(2, '0')}`
@@ -246,8 +245,8 @@ Deno.serve(async (req: Request) => {
 						html,
 					})
 					if (!error && data?.id) emailsSent += 1
-				} catch (_e) {
-					// log and continue
+				} catch {
+					// ignorar fallo de envío y continuar
 				}
 			}
 
@@ -297,7 +296,9 @@ Deno.serve(async (req: Request) => {
 							html,
 						})
 						if (!error && data?.id) emailsSent += 1
-					} catch (_e) {}
+					} catch {
+						// ignorar fallo de envío
+					}
 				}
 			}
 			results.push({

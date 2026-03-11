@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
 import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { getCallCenterStats } from '@/services/supabase/call-center/call-center-registros-service'
@@ -119,8 +119,6 @@ const normalizeExamType = (examType: string): string => {
 }
 
 export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear?: number) => {
-	const queryClient = useQueryClient()
-
 	const query = useQuery({
 		queryKey: ['dashboard-stats', startDate?.toISOString(), endDate?.toISOString(), selectedYear],
 		queryFn: async (): Promise<DashboardStats> => {
@@ -285,7 +283,6 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const receptionistIds = Object.keys(receptionistCounts)
 				const pathologistIds = Object.keys(pathologistCounts)
 				const citotecnoIds = Object.keys(citotecnoCounts)
-				const profileIds = Array.from(new Set([...receptionistIds, ...pathologistIds, ...citotecnoIds]))
 
 				const casesByReceptionist = receptionistIds
 					.map((id) => ({

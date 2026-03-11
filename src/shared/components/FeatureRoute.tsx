@@ -16,27 +16,23 @@ export function FeatureRoute({
   fallbackPath = '/dashboard/home',
 }: FeatureRouteProps) {
   const { laboratory, isLoading } = useLaboratory();
+  const { profile } = useUserProfile();
   const location = useLocation();
   const pathname = location.pathname;
 
-  // Spinner de carga (mismo componente para no duplicar)
   const loadingSpinner = (
     <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
     </div>
   );
 
-  // Si está cargando, mostrar loading
   if (isLoading) {
     return loadingSpinner;
   }
 
-  // Si no hay feature requerida, mostrar el componente directamente
   if (!feature) {
     return <>{children}</>;
   }
-
-  const { profile } = useUserProfile()
 
   // El rol "prueba" respeta las features del laboratorio igual que otros roles
   // Solo tiene bypass en rutas protegidas por roles (PrivateRoute)

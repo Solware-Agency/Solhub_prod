@@ -25,7 +25,6 @@ interface SignatureSectionProps {
 	title: string
 	isRequired: boolean
 	currentSignatureUrl: string | null | undefined
-	profile: any
 	user: any
 	laboratoryId: string
 	onSignatureUpdated: () => void | Promise<void>
@@ -39,7 +38,6 @@ const SignatureSection: React.FC<SignatureSectionProps> = ({
 	title,
 	isRequired,
 	currentSignatureUrl,
-	profile,
 	user,
 	laboratoryId,
 	onSignatureUpdated,
@@ -608,7 +606,6 @@ export const DoctorSignatureUpload: React.FC = () => {
 						title="Principal"
 						isRequired={true}
 						currentSignatureUrl={profile?.signature_url}
-						profile={profile}
 						user={user}
 						laboratoryId={profile.laboratory_id}
 						onSignatureUpdated={handleSignatureUpdated}
@@ -620,7 +617,6 @@ export const DoctorSignatureUpload: React.FC = () => {
 						title="Adicional 1"
 						isRequired={false}
 						currentSignatureUrl={profile?.signature_url_2}
-						profile={profile}
 						user={user}
 						laboratoryId={profile.laboratory_id}
 						onSignatureUpdated={handleSignatureUpdated}
@@ -632,7 +628,6 @@ export const DoctorSignatureUpload: React.FC = () => {
 						title="Adicional 2"
 						isRequired={false}
 						currentSignatureUrl={profile?.signature_url_3}
-						profile={profile}
 						user={user}
 						laboratoryId={profile.laboratory_id}
 						onSignatureUpdated={handleSignatureUpdated}

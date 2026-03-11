@@ -1701,7 +1701,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// const isEmployee = profile?.role === 'employee';
 		// const isOwner = profile?.role === 'owner'
 		// const isCitotecno = profile?.role === 'citotecno'
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		// const isEmployeeSpt = isEmployee && isSpt;
 
 		// Overlay (backdrop + panel) para AnimatePresence; contenido estable en portal

@@ -235,8 +235,8 @@ Deno.serve(async (req: Request) => {
 				html,
 			})
 			if (!error && data?.id) emailSent = true
-		} catch (_e) {
-			// continue
+		} catch {
+			// ignorar fallo de envío
 		}
 		results.push({ polizaId: pol.id, numeroPoliza: pol.numero_poliza, type, emailSent })
 	}

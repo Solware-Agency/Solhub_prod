@@ -30,30 +30,20 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 	const { laboratory } = useLaboratory()
 	const useNewPatientSystem = laboratory?.features?.hasNewPatientSystem || false
 
-	// Si el feature flag está activo, usar el nuevo sistema
-	if (useNewPatientSystem) {
-		return <NewPatientDataSection control={control} inputStyles={inputStyles} />
-	}
-
-	// Sistema antiguo (comportamiento actual)
+	// Llamar todos los hooks incondicionalmente (reglas de React)
 	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
 	const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValue)
 	const [isRegistrationDateCalendarOpen, setIsRegistrationDateCalendarOpen] = useState(false)
-
-	// Observar el valor del tipo de cédula para deshabilitar el input cuando sea S/C
 	const idType = useWatch({ control, name: 'idType' })
 	const idNumber = useWatch({ control, name: 'idNumber' })
 	const isIdDisabled = idType === 'S/C'
 
-	// Validación condicional para el campo idNumber
 	useEffect(() => {
 		if (idType === 'S/C') {
-			// Limpiar errores cuando se selecciona S/C
 			clearErrors('idNumber')
 		}
 	}, [idType, idNumber, clearErrors, setError])
 
-	// Memoize the handler to prevent unnecessary re-renders
 	const handlePatientSelect = useCallback(
 		(idNumber: string) => {
 			// Si la cédula viene en formato completo (V-12345678), extraer el número
@@ -71,6 +61,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 		},
 		[fillPatientData, setValue],
 	)
+
+	// Si el feature flag está activo, usar el nuevo sistema (después de todos los hooks)
+	if (useNewPatientSystem) {
+		return <NewPatientDataSection control={control} inputStyles={inputStyles} />
+	}
 
 	return (
 		<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
