@@ -50,14 +50,18 @@ const METODOS_PAGO = [
 
 const PERIODOS_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
+/** Diferencia en días entre hoy (local) y la fecha de vencimiento. La fecha se interpreta como día natural en hora local para evitar desfases por UTC. */
 const daysBetween = (dateStr: string | null) => {
 	if (!dateStr) return null
 	const today = new Date()
 	today.setHours(0, 0, 0, 0)
-	const date = new Date(dateStr)
-	date.setHours(0, 0, 0, 0)
-	const diff = date.getTime() - today.getTime()
-	return Math.ceil(diff / (1000 * 60 * 60 * 24))
+	const iso = dateStr.slice(0, 10).replace(/-/g, '-')
+	const [y, m, d] = iso.split('-').map(Number)
+	if (Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return null
+	const due = new Date(y, m - 1, d)
+	due.setHours(0, 0, 0, 0)
+	const diff = due.getTime() - today.getTime()
+	return Math.round(diff / (1000 * 60 * 60 * 24))
 }
 
 const formatDateForDisplay = (dateStr: string) => {
