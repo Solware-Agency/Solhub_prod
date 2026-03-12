@@ -48,10 +48,10 @@ const getUserLaboratoryId = async (): Promise<string> => {
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
+  laboratory_id: string;
   patient_id: string | null;
   exam_type: string;
-  consulta: string | null; // Especialidad médica (SPT)
+  consulta: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -60,7 +60,7 @@ export interface MedicalCase {
   branch: string;
   date: string;
   code: string | null;
-  total_amount: number;
+  total_amount: number | null;
   payment_status: 'Incompleto' | 'Pagado';
   remaining: number | null;
   payment_method_1: string | null;
@@ -79,61 +79,50 @@ export interface MedicalCase {
   generated_by: string | null;
   created_at: string | null;
   updated_at: string | null;
-  // Campos adicionales del esquema original para compatibilidad
-  log: string | null;
-  diagnostico: string | null;
-  inmunohistoquimica: string | null;
   ims: string | null;
   googledocs_url: string | null;
   informepdf_url: string | null;
   attachment_url: string | null;
-  doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined;
-  // Campos adicionales que existen en la tabla
+  doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
   exchange_rate: number | null;
   created_by: string | null;
   created_by_display_name: string | null;
-  material_remitido: string | null;
-  informacion_clinica: string | null;
-  descripcion_macroscopica: string | null;
-  comentario: string | null;
   pdf_en_ready: boolean | null;
   informe_qr: string | null;
   generated_by_display_name: string | null;
   generated_at: string | null;
   token: string | null;
-  cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent: boolean; // Nueva columna para indicar si el email fue enviado
-  version: number | null;
-  positivo: string | null;
-  negativo: string | null;
-  ki67: string | null;
-  conclusion_diagnostica: string | null;
-  image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
+  cito_status: 'positivo' | 'negativo' | null;
+  email_sent: boolean;
+  image_url: string | null;
+  images_urls: string[] | null;
+  uploaded_pdf_url: string | null;
+  uploaded_pdf_urls: string[] | null;
+  owner_display_code: string | null;
   bloques_biopsia: number | null;
-  fecha_entrega: string | null; // YYYY-MM-DD
-  fecha_muestra: string | null; // YYYY-MM-DD
+  estado_spt: string | null;
+  price_type: string | null;
+  fecha_entrega: string | null;
+  fecha_muestra: string | null;
   patologo_id: string | null;
 }
 
 export interface MedicalCaseInsert {
   id?: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
+  laboratory_id: string;
   patient_id?: string | null;
-  exam_type: string | null; // NULL permitido si no está configurado
-  consulta?: string | null; // Especialidad médica (SPT)
+  exam_type: string;
+  consulta?: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
   number_of_samples: number;
   relationship?: string | null;
-  branch: string | null; // Nullable en BD
+  branch: string;
   date: string;
   code?: string | null;
-  total_amount: number | null; // NULL permitido para labs sin módulo de pagos
-  payment_status: 'Incompleto' | 'Pagado';
+  total_amount?: number | null;
+  payment_status?: 'Incompleto' | 'Pagado';
   remaining?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
@@ -149,52 +138,42 @@ export interface MedicalCaseInsert {
   payment_reference_4?: string | null;
   comments?: string | null;
   generated_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  // Campos adicionales que existen en la tabla
+  created_at?: string | null;
+  updated_at?: string | null;
   exchange_rate?: number | null;
   created_by?: string | null;
   created_by_display_name?: string | null;
-  material_remitido?: string | null;
-  informacion_clinica?: string | null;
-  descripcion_macroscopica?: string | null;
-  diagnostico?: string | null;
-  comentario?: string | null;
   pdf_en_ready?: boolean | null;
   attachment_url?: string | null;
-  inmunohistoquimica?: string | null;
-  positivo?: string | null;
-  negativo?: string | null;
-  ki67?: string | null;
-  conclusion_diagnostica?: string | null;
   generated_by_display_name?: string | null;
   generated_at?: string | null;
-  log?: string | null;
   ims?: string | null;
   googledocs_url?: string | null;
   informepdf_url?: string | null;
   informe_qr?: string | null;
   token?: string | null;
-  doc_aprobado?:
-    | 'faltante'
-    | 'pendiente'
-    | 'aprobado'
-    | 'rechazado'
-    | undefined;
-  cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
+  cito_status?: 'positivo' | 'negativo' | null;
+  email_sent?: boolean;
   bloques_biopsia?: number | null;
-  fecha_entrega?: string | null; // YYYY-MM-DD
-  fecha_muestra?: string | null; // YYYY-MM-DD
+  image_url?: string | null;
+  images_urls?: string[] | null;
+  uploaded_pdf_url?: string | null;
+  uploaded_pdf_urls?: string[] | null;
+  owner_display_code?: string | null;
+  estado_spt?: string | null;
+  price_type?: string | null;
+  fecha_entrega?: string | null;
+  fecha_muestra?: string | null;
   patologo_id?: string | null;
 }
 
 export interface MedicalCaseUpdate {
   id?: string;
-  laboratory_id?: string; // NUEVO: Multi-tenant
+  laboratory_id?: string;
   patient_id?: string | null;
   exam_type?: string;
-  consulta?: string | null; // Especialidad médica (SPT)
+  consulta?: string | null;
   origin?: string;
   treating_doctor?: string;
   sample_type?: string;
@@ -202,10 +181,10 @@ export interface MedicalCaseUpdate {
   relationship?: string | null;
   branch?: string;
   date?: string;
-  code?: string;
-  total_amount?: number;
+  code?: string | null;
+  total_amount?: number | null;
   payment_status?: 'Incompleto' | 'Pagado';
-  remaining?: number;
+  remaining?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
   payment_reference_1?: string | null;
@@ -220,47 +199,33 @@ export interface MedicalCaseUpdate {
   payment_reference_4?: string | null;
   comments?: string | null;
   generated_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  // Campos adicionales que existen en la tabla
-  image_url?: string | null; // URL de imagen para imagenologia
+  created_at?: string | null;
+  updated_at?: string | null;
+  image_url?: string | null;
   exchange_rate?: number | null;
   created_by?: string | null;
   created_by_display_name?: string | null;
-  material_remitido?: string | null;
-  informacion_clinica?: string | null;
-  descripcion_macroscopica?: string | null;
-  diagnostico?: string | null;
-  comentario?: string | null;
   pdf_en_ready?: boolean | null;
   attachment_url?: string | null;
-  inmunohistoquimica?: string | null;
-  positivo?: string | null;
-  negativo?: string | null;
-  ki67?: string | null;
-  conclusion_diagnostica?: string | null;
   generated_by_display_name?: string | null;
   generated_at?: string | null;
-  log?: string | null;
   ims?: string | null;
   googledocs_url?: string | null;
   informepdf_url?: string | null;
   informe_qr?: string | null;
   token?: string | null;
-  doc_aprobado?:
-    | 'faltante'
-    | 'pendiente'
-    | 'aprobado'
-    | 'rechazado'
-    | undefined;
-  cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
-  uploaded_pdf_url?: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls?: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
+  doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
+  cito_status?: 'positivo' | 'negativo' | null;
+  email_sent?: boolean;
+  uploaded_pdf_url?: string | null;
+  uploaded_pdf_urls?: string[] | null;
+  owner_display_code?: string | null;
   bloques_biopsia?: number | null;
-  fecha_entrega?: string | null; // YYYY-MM-DD
-  fecha_muestra?: string | null; // YYYY-MM-DD
+  images_urls?: string[] | null;
+  estado_spt?: string | null;
+  price_type?: string | null;
+  fecha_entrega?: string | null;
+  fecha_muestra?: string | null;
   patologo_id?: string | null;
 }
 
@@ -268,10 +233,10 @@ export interface MedicalCaseUpdate {
 export interface MedicalCaseWithPatient {
   // Campos de medical_records_clean
   id: string;
-  laboratory_id: string; // Multi-tenant
+  laboratory_id: string;
   patient_id: string | null;
   exam_type: string;
-  consulta: string | null; // Especialidad médica (SPT)
+  consulta: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -279,10 +244,10 @@ export interface MedicalCaseWithPatient {
   relationship: string | null;
   branch: string;
   date: string;
-  total_amount: number;
+  total_amount: number | null;
   exchange_rate: number | null;
   payment_status: 'Incompleto' | 'Pagado';
-  remaining: number;
+  remaining: number | null;
   payment_method_1: string | null;
   payment_amount_1: number | null;
   payment_reference_1: string | null;
@@ -301,34 +266,37 @@ export interface MedicalCaseWithPatient {
   updated_at: string | null;
   created_by: string | null;
   created_by_display_name: string | null;
-  material_remitido: string | null;
-  informacion_clinica: string | null;
-  descripcion_macroscopica: string | null;
-  diagnostico: string | null;
-  comentario: string | null;
   pdf_en_ready: boolean | null;
   attachment_url: string | null;
   doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
   generated_by: string | null;
-  version: number | null;
-  cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent: boolean; // Nueva columna para indicar si el email fue enviado
-  image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
+  generated_by_display_name: string | null;
+  generated_at: string | null;
+  cito_status: 'positivo' | 'negativo' | null;
+  email_sent: boolean;
+  image_url: string | null;
+  images_urls: string[] | null;
+  uploaded_pdf_url: string | null;
+  uploaded_pdf_urls: string[] | null;
+  owner_display_code: string | null;
   bloques_biopsia: number | null;
-  fecha_entrega: string | null; // YYYY-MM-DD
-  fecha_muestra: string | null; // YYYY-MM-DD
+  ims: string | null;
+  googledocs_url: string | null;
+  informepdf_url: string | null;
+  informe_qr: string | null;
+  token: string | null;
+  estado_spt: string | null;
+  price_type: string | null;
+  fecha_entrega: string | null;
+  fecha_muestra: string | null;
   patologo_id: string | null;
   // Campos de patients
-  informepdf_url: string | null;
   cedula: string;
   nombre: string;
   edad: string | null;
   telefono: string | null;
   patient_email: string | null;
-  fecha_nacimiento?: string | null; // Fecha de nacimiento del paciente
+  fecha_nacimiento?: string | null;
 }
 
 // =====================================================================
@@ -627,7 +595,7 @@ export const getCasesWithPatientInfo = async (
 
       // Cargar una sola vez por ejecución para evitar múltiples requests pesados.
       if (!completedTriageCaseIdsCache) {
-        const triageQuery = supabase
+        const triageQuery = (supabase as any)
           .from('triaje_records')
           .select('case_id')
           .eq('laboratory_id', profile.laboratory_id)
@@ -635,7 +603,7 @@ export const getCasesWithPatientInfo = async (
           .not('case_id', 'is', null);
         
         const { data: triageRows, error: triageError } = await withTimeout(
-          triageQuery as any,
+          triageQuery,
           7000,
         ) as any;
 
@@ -1273,12 +1241,12 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       throw new Error('No se pudo obtener el laboratory_id del usuario');
     }
     
-    const profile = profileData as { laboratory_id: string };
+    const profile = profileData as unknown as { laboratory_id: string };
 
     let completedTriageCaseIdsCache: Set<string> | null = null;
     const getCompletedTriageCaseIds = async (caseIds: string[]) => {
       if (!completedTriageCaseIdsCache) {
-        const triageQuery = supabase
+        const triageQuery = (supabase as any)
           .from('triaje_records')
           .select('case_id')
           .eq('laboratory_id', profile.laboratory_id)
@@ -1286,7 +1254,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           .not('case_id', 'is', null);
         
         const { data: triageRows, error: triageError } = await withTimeout(
-          triageQuery as any,
+          triageQuery,
           7000,
         ) as any;
 
@@ -1359,7 +1327,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         // Intentar usar función SQL optimizada con pg_trgm
         try {
           const laboratoryId = await getUserLaboratoryId();
-          const { data: optimizedResults, error: optimizedError } = await supabase.rpc(
+          const { data: optimizedResults, error: optimizedError } = await (supabase as any).rpc(
             'search_medical_cases_optimized',
             {
               search_term: cleanSearchTerm,
@@ -1368,9 +1336,9 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             },
           );
 
-          if (!optimizedError && optimizedResults && optimizedResults.length > 0) {
+          if (!optimizedError && optimizedResults && (optimizedResults as any).length > 0) {
 						// IDs en orden de relevancia (exactos, luego primer nombre = término, score, código)
-						const caseIds = optimizedResults.map((r: any) => r.id)
+						const caseIds = (optimizedResults as any).map((r: any) => r.id)
 
 						// Obtener los casos completos (solo pacientes activos; sin order para respetar relevancia después)
 						const { data: fullCases, error: fullCasesError } = await supabase
@@ -1875,18 +1843,18 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         query = query.filter('created_at', 'lt', nextDayStr);
       }
 
-      if (filters?.sampleDateFrom) {
-        query = query.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
+      if ((filters as any)?.sampleDateFrom) {
+        query = query.filter('fecha_muestra', 'gte', (filters as any).sampleDateFrom);
       }
-      if (filters?.sampleDateTo) {
-        const nextDaySample = new Date(filters.sampleDateTo);
+      if ((filters as any)?.sampleDateTo) {
+        const nextDaySample = new Date((filters as any).sampleDateTo);
         nextDaySample.setDate(nextDaySample.getDate() + 1);
         const nextDaySampleStr = nextDaySample.toISOString().split('T')[0];
         query = query.filter('fecha_muestra', 'lt', nextDaySampleStr);
       }
 
-      if (filters?.sampleTypeFilter) {
-        query = query.eq('sample_type', filters.sampleTypeFilter);
+      if ((filters as any)?.sampleTypeFilter) {
+        query = query.eq('sample_type', (filters as any).sampleTypeFilter);
       }
 
       if (filters?.examType) {
@@ -2140,7 +2108,6 @@ const logMedicalCaseChanges = async (
     };
 
     // Helper: formatear old/new para montos con moneda (USD o Bs) en historial de acciones
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- firma requerida por getNewValueForLog
     const getOldValueForLog = (f: string, oldVal: any, _newVal: any) => {
       if (f === 'total_amount') {
         const n = formatValueForLog(oldVal)
@@ -2154,7 +2121,7 @@ const logMedicalCaseChanges = async (
       }
       return formatValueForLog(oldVal)
     }
-    const getNewValueForLog = (f: string, oldVal: any, newVal: any) => {
+    const getNewValueForLog = (f: string, _oldVal: any, newVal: any) => {
       if (f === 'total_amount') {
         const n = formatValueForLog(newVal)
         return n != null ? `${n} USD` : null
@@ -2263,14 +2230,7 @@ export const findCaseByCode = async (
       patient_email: (data as any).patients?.email || null,
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
-      version: (data as any).version || null,
       image_url: (data as any).image_url || null,
-      // Asegurar que todas las propiedades requeridas estén presentes
-      material_remitido: (data as any).material_remitido || null,
-      informacion_clinica: (data as any).informacion_clinica || null,
-      descripcion_macroscopica: (data as any).descripcion_macroscopica || null,
-      diagnostico: (data as any).diagnostico || null,
-      comentario: (data as any).comentario || null,
     } as MedicalCaseWithPatient;
 
     return transformedData;
@@ -2340,13 +2300,7 @@ export const getCaseByIdWithPatient = async (
       patient_email: (data as any).patients?.email || null,
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
-      version: (data as any).version || null,
       image_url: (data as any).image_url || null,
-      material_remitido: (data as any).material_remitido || null,
-      informacion_clinica: (data as any).informacion_clinica || null,
-      descripcion_macroscopica: (data as any).descripcion_macroscopica || null,
-      diagnostico: (data as any).diagnostico || null,
-      comentario: (data as any).comentario || null,
     } as MedicalCaseWithPatient;
 
     return transformedData;
@@ -2506,10 +2460,10 @@ export const deleteMedicalCase = async (
     }
 
     // Eliminar todos los PDFs adjuntos si existen (uploaded_pdf_urls o uploaded_pdf_url)
-    const pdfUrlsToDelete: string[] = Array.isArray(existingCase.uploaded_pdf_urls) && existingCase.uploaded_pdf_urls.length > 0
-      ? existingCase.uploaded_pdf_urls
-      : existingCase.uploaded_pdf_url
-        ? [existingCase.uploaded_pdf_url]
+    const pdfUrlsToDelete: string[] = Array.isArray((existingCase as any).uploaded_pdf_urls) && (existingCase as any).uploaded_pdf_urls.length > 0
+      ? (existingCase as any).uploaded_pdf_urls
+      : (existingCase as any).uploaded_pdf_url
+        ? [(existingCase as any).uploaded_pdf_url]
         : [];
     if (pdfUrlsToDelete.length > 0) {
       try {

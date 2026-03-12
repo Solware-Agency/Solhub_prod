@@ -2616,7 +2616,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																? editedCase.total_amount
 																: caseData?.total_amount || 0
 														const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-															currentValue,
+															currentValue ?? 0,
 															(value) => handleInputChange('total_amount', value),
 															'USD',
 															exchangeRate,
