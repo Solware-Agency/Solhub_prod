@@ -8,10 +8,13 @@ import {
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signUp } from '@/services/supabase/auth/auth';
+import { supabase } from '@/services/supabase/config/config';
 import { emailExists as getUserByEmail } from '@/services/supabase/auth/user-management'; // debe devolver { exists: boolean, error: any }
 import {
   validateLaboratoryCode,
   incrementCodeUsage,
+  checkCodeValidityRPC,
+  validateAndUseCodeRPC,
 } from '@/services/supabase/laboratories/laboratory-codes-service';
 import {
   getAvailableRolesForLaboratory,
@@ -94,35 +97,49 @@ function RegisterForm() {
 
       setLoadingRoles(true);
       try {
-        // Validar código primero
-        const codeValidationResult = await validateLaboratoryCode(normalizedCode);
+        // 🆕 NUEVO: Usar RPC que NO consume el código (solo verifica)
+        const codeCheckResult = await checkCodeValidityRPC(normalizedCode);
         
-        if (!codeValidationResult.success || !codeValidationResult.laboratory_id) {
+        if (!codeCheckResult.valid) {
           setCodeValidation({
             isValid: false,
-            message: codeValidationResult.error || 'Código inválido',
+            message: codeCheckResult.error || 'Código inválido',
           });
           setLoadingRoles(false);
           return;
         }
 
-        setLaboratoryId(codeValidationResult.laboratory_id);
+        // Extraer laboratory_id del slug o buscar en BD
+        // Por ahora asumimos que tenemos que buscar el laboratorio por slug
+        const { data: lab, error: labError } = await (supabase as any)
+          .from('laboratories')
+          .select('id')
+          .eq('slug', codeCheckResult.laboratory_slug)
+          .single();
+
+        if (labError || !lab) {
+          setCodeValidation({
+            isValid: false,
+            message: 'Laboratorio no encontrado',
+          });
+          setLoadingRoles(false);
+          return;
+        }
+
+        setLaboratoryId(lab.id);
         
-        // Calcular usos restantes
-        const remainingUses = codeValidationResult.code?.max_uses !== null && codeValidationResult.code?.max_uses !== undefined
-          ? codeValidationResult.code.max_uses - codeValidationResult.code.current_uses
-          : null; // null = ilimitado
-        
+        // Mostrar mensaje con usos restantes
+        const remainingUses = codeCheckResult.remaining_uses;
         setCodeValidation({
           isValid: true,
           message: remainingUses === null 
-            ? `Código válido (usos ilimitados)` 
-            : `Código válido (${remainingUses} usos restantes)`,
+            ? `✅ Código válido (usos ilimitados)` 
+            : `✅ Código válido (${remainingUses} usos restantes)`,
           remainingUses,
         });
 
         // Obtener roles disponibles
-        const rolesResult = await getAvailableRolesForLaboratory(codeValidationResult.laboratory_id);
+        const rolesResult = await getAvailableRolesForLaboratory(lab.id);
 
         if (rolesResult.success && rolesResult.roles.length > 0) {
           setAvailableRoles(
@@ -234,16 +251,31 @@ function RegisterForm() {
         return;
       }
 
-      // Re-validar código antes de registro (por seguridad)
-      const codeValidationResult = await validateLaboratoryCode(normalizedCode);
+      // 🆕 NUEVO: Validar Y consumir código atómicamente (RPC)
+      // Esto hace validaciones finales + incrementa current_uses en una transacción
+      const codeResult = await validateAndUseCodeRPC(normalizedCode);
       
-      if (!codeValidationResult.success || !codeValidationResult.laboratory_id) {
-        setError(codeValidationResult.error || 'El código de laboratorio ya no es válido.');
+      if (!codeResult.success || !codeResult.laboratory_id) {
+        // Mapear error_code a mensaje amigable
+        const errorMessages: Record<string, string> = {
+          'NOT_FOUND': 'El código de laboratorio no existe',
+          'INACTIVE': 'El código de laboratorio está inactivo',
+          'EXPIRED': 'El código de laboratorio ha expirado',
+          'EXHAUSTED': 'El código ya alcanzó su límite de usos',
+          'INTERNAL_ERROR': 'Error al validar el código. Intenta de nuevo.',
+        };
+        
+        setError(
+          codeResult.error_code && errorMessages[codeResult.error_code]
+            ? errorMessages[codeResult.error_code]
+            : codeResult.error || 'El código de laboratorio ya no es válido.'
+        );
         setLoading(false);
         return;
       }
       
-      console.log('Código re-validado para laboratorio:', codeValidationResult.laboratory_id);
+      console.log('✅ Código validado y consumido. Laboratory ID:', codeResult.laboratory_id);
+      console.log('📊 Usos restantes:', codeResult.remaining_uses === null ? 'Ilimitado' : codeResult.remaining_uses);
 
       // Pre-check de UX (opcional, pero útil). No es seguridad, el hook es quien manda.
       try {
@@ -277,10 +309,10 @@ function RegisterForm() {
       const { user, error: signUpError } = await signUp(
         cleanedEmail,
         password,
-        codeValidationResult.laboratory_id, // ← CORREGIDO: laboratoryId como 3er parámetro (obligatorio)
-        selectedRole, // ← NUEVO: Rol seleccionado como 4to parámetro (obligatorio)
-        displayName.trim(), // ← CORREGIDO: displayName como 5to parámetro
-        normalizedPhone, // ← CORREGIDO: phone como 6to parámetro
+        codeResult.laboratory_id, // ← ACTUALIZADO: usar laboratory_id del RPC
+        selectedRole, // ← Rol seleccionado como 4to parámetro (obligatorio)
+        displayName.trim(), // ← displayName como 5to parámetro
+        normalizedPhone, // ← phone como 6to parámetro
       );
 
       if (signUpError) {
@@ -345,19 +377,8 @@ function RegisterForm() {
           (user as User).confirmation_sent_at,
         );
 
-        // NUEVO: Incrementar uso del código después de registro exitoso
-        try {
-          await incrementCodeUsage(codeValidationResult.code!.id);
-          console.log(
-            'Código usage incrementado:',
-            codeValidationResult.code!.id,
-          );
-        } catch (incrementError) {
-          // Si falla incrementar el uso, no es crítico (el usuario ya está registrado)
-          // Pero lo logueamos para debugging
-          console.error('Error al incrementar uso del código:', incrementError);
-          // No mostramos error al usuario porque el registro fue exitoso
-        }
+        // ℹ️ NOTA: Ya NO llamamos a incrementCodeUsage() porque
+        // el RPC validate_and_use_code() ya incrementó current_uses atómicamente
 
         setMessage(
           `¡Cuenta creada exitosamente! Se ha enviado un correo de verificación a tu email. Revisa tu bandeja de entrada y carpeta de spam. Tu cuenta está pendiente de aprobación por el administrador del laboratorio.`,
