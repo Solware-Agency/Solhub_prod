@@ -181,7 +181,7 @@ export function MedicalFormContainer() {
 
 				// Validar datos antes del envío
 				// Pasar configuración completa del módulo para validación
-				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig)
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug ?? null)
 				
 				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
 				if (Object.keys(validationResult.fieldErrors).length > 0) {

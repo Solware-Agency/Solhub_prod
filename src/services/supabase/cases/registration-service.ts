@@ -538,15 +538,18 @@ export interface ValidationErrors {
  * @param formData - Datos del formulario
  * @param exchangeRate - Tasa de cambio (opcional)
  * @param moduleConfig - Configuración del módulo registrationForm (opcional)
+ * @param laboratorySlug - Slug del laboratorio (opcional); si es 'marihorgen', el teléfono no es obligatorio
  * @returns Objeto con errores mapeados a nombres de campos y array de mensajes para retrocompatibilidad
  */
 export const validateRegistrationData = (
 	formData: FormValues,
 	exchangeRate?: number,
 	moduleConfig?: ModuleConfig | null,
+	laboratorySlug?: string | null,
 ): { fieldErrors: ValidationErrors; errorMessages: string[] } => {
 	const fieldErrors: ValidationErrors = {}
 	const errorMessages: string[] = []
+	const isMarihorgen = laboratorySlug === 'marihorgen' || laboratorySlug === 'lm'
 
 	// Validaciones obligatorias básicas (siempre requeridas)
 	// NOTA: Estas también están en Zod, pero las mantenemos aquí como validación de seguridad
@@ -567,7 +570,7 @@ export const validateRegistrationData = (
 		errorMessages.push(errorMsg)
 	}
 
-	if (!formData.phone) {
+	if (!isMarihorgen && !formData.phone) {
 		const errorMsg = 'El teléfono es obligatorio'
 		fieldErrors.phone = errorMsg
 		errorMessages.push(errorMsg)

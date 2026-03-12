@@ -454,8 +454,8 @@ const AseguradosPage = () => {
 							</Label>
 							<p className="text-xs text-muted-foreground">PDF, JPG o PNG. Máximo 10 MB por archivo.</p>
 							{attachmentFiles.length < MAX_ASEGURADO_ATTACHMENTS && (
-								<label className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/50 cursor-pointer text-sm">
-									<Plus className="w-4 h-4" />
+								<label className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-md border-2 border-dashed border-border bg-muted text-foreground hover:bg-muted/80 hover:border-primary/40 cursor-pointer text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+									<Plus className="w-4 h-4 shrink-0 text-muted-foreground" />
 									Seleccionar archivos
 									<input
 										type="file"

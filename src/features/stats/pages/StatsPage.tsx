@@ -454,6 +454,7 @@ const StatsPage: React.FC = () => {
 					statType={selectedStat || 'totalRevenue'}
 					stats={stats}
 					isLoading={isLoading}
+					selectedYear={selectedYear}
 					isSpt={laboratory?.slug === 'spt'}
 				/>
 			</Suspense>
@@ -466,6 +467,7 @@ const StatsPage: React.FC = () => {
 					statType={selectedChart || 'revenueTrend'}
 					stats={stats}
 					isLoading={isLoading}
+					selectedYear={selectedYear}
 					isSpt={laboratory?.slug === 'spt'}
 				/>
 			</Suspense>

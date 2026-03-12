@@ -1497,6 +1497,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																			</div>
 																			<div className="min-w-0 flex flex-col justify-end">
 																				<Button
+																					size="icon"
+																					variant="default"
 																					onClick={() => handleCheckAndDownloadPDF(caseItem)}
 																					disabled={
 																						isGeneratingPDF ||
@@ -1505,23 +1507,19 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																						selectedRepresentadoCases.size > 0 ||
 																						isDownloadingMultiple
 																					}
-																					className="w-full min-w-0"
+																					className="h-9 w-9 shrink-0"
+																					title="Descargar PDF"
 																				>
 																					{isGeneratingPDF ? (
 																						<>
-																							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 shrink-0"></div>
-																							<span className="truncate">Generando...</span>
+																							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white shrink-0"></div>
 																						</>
 																					) : isSaving ? (
 																						<>
-																							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 shrink-0"></div>
-																							<span className="truncate">Descargando...</span>
+																							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white shrink-0"></div>
 																						</>
 																					) : (
-																						<>
-																							<Download className="h-4 w-4 mr-2 shrink-0" />
-																							<span className="truncate">PDF</span>
-																						</>
+																						<Download className="h-4 w-4 shrink-0" />
 																					)}
 																				</Button>
 																			</div>
@@ -1809,6 +1807,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																						</div>
 																						<div className="flex gap-2 items-center">
 																							<Button
+																								size="icon"
+																								variant="default"
 																								onClick={(e) => {
 																									e.stopPropagation()
 																									handleCheckAndDownloadPDF(caseItem)
@@ -1820,18 +1820,15 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																									selectedRepresentadoCases.size > 0 ||
 																									isDownloadingMultiple
 																								}
-																								size="sm"
+																								className="h-9 w-9 shrink-0"
+																								title="Descargar PDF"
 																							>
 																								{isGeneratingPDF || isSaving ? (
 																									<>
-																										<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-																										Generando...
+																										<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
 																									</>
 																								) : (
-																									<>
-																										<Download className="h-4 w-4 mr-2" />
-																										PDF
-																									</>
+																									<Download className="h-4 w-4" />
 																								)}
 																							</Button>
 																						</div>

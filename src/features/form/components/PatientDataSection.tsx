@@ -29,6 +29,7 @@ interface PatientDataSectionProps {
 export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSectionProps) => {
 	const { laboratory } = useLaboratory()
 	const useNewPatientSystem = laboratory?.features?.hasNewPatientSystem || false
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 
 	// Llamar todos los hooks incondicionalmente (reglas de React)
 	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
@@ -205,7 +206,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					name="phone"
 					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
-							<FormLabel>Teléfono *</FormLabel>
+							<FormLabel>{isMarihorgen ? 'Teléfono' : 'Teléfono *'}</FormLabel>
 							<FormControl>
 								<AutocompleteInput
 									fieldName="phone"

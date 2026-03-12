@@ -169,7 +169,7 @@ export const CustomPieChart: React.FC<CustomPieChartProps> = ({
                   : 'text-gray-700 dark:text-gray-300 font-medium'
               }`}
             >
-              {Math.round(entry.percentage)}% ({formatValue(entry.revenue)})
+              {formatValue(entry.revenue)}
             </span>
           </div>
         ))}

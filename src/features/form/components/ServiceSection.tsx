@@ -410,134 +410,137 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 					</div>
 				) : (
 					<>
-						{/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
-						{(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
-							<FormField
-								control={control}
-								name="sampleType"
-								render={({ field, fieldState }) => (
-									<FormItem className="min-w-45 flex-1">
-										<FormLabel>Tipo de Muestra *</FormLabel>
-										<FormControl>
-											{hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
-												<FormDropdown
-													options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
-													value={field.value}
-													onChange={field.onChange}
-													placeholder="Seleccione tipo de muestra"
-													className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-													id="service-sample-type"
-												/>
-											) : (
-												<AutocompleteInput
-													fieldName="sampleType"
-													placeholder="Ej: Biopsia de Piel"
-													iconRight={<Microscope className="h-4 w-4 text-muted-foreground" />}
-													{...field}
-													className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-												/>
-											)}
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						)}
-
-						{/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
-						{(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
-							<FormField
-								control={control}
-								name="numberOfSamples"
-								render={({ field, fieldState }) => (
-									<FormItem className="min-w-45 flex-1">
-										<FormLabel>Cantidad de Muestras *</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												placeholder="0"
-												{...field}
-												value={field.value === 0 ? '' : field.value}
-												onChange={(e) => {
-													const value = e.target.value
-													field.onChange(value === '' ? 0 : Number(value))
-												}}
-												className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						)}
-
-						{/* Fecha de Muestra - Solo Marihorgen/LM */}
-						{isLM && (
-							<FormField
-								control={control}
-								name="fechaMuestra"
-								render={({ field, fieldState }) => (
-									<FormItem className="min-w-45 flex-1">
-										<FormLabel>Fecha de Muestra *</FormLabel>
-										<FormControl>
-											<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
-												<PopoverTrigger asChild>
-													<Button
-														variant="outline"
-														className={cn(
-															'w-full justify-start text-left font-normal h-10',
-															!field.value && 'text-muted-foreground',
-															inputStyles,
-															fieldState.error && 'border-red-500 focus:border-red-500',
-														)}
-													>
-														<CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-														{field.value
-															? format(new Date(field.value + 'T12:00:00'), 'dd/MM/yyyy', { locale: es })
-															: 'Seleccionar fecha'}
-													</Button>
-												</PopoverTrigger>
-												<PopoverContent className="w-auto p-0 z-9999" align="end">
-													<Calendar
-														mode="single"
-														selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-														onSelect={(date) => {
-															field.onChange(date ? format(date, 'yyyy-MM-dd') : '')
-															setIsFechaMuestraCalendarOpen(false)
-														}}
-														locale={es}
-														defaultMonth={field.value ? new Date(field.value + 'T12:00:00') : new Date()}
+						{/* Para Marihorgen/LM: Tipo de Muestra, Cantidad de Muestras y Fecha de Muestra en la siguiente línea */}
+						<div className={cn('flex flex-wrap gap-2 sm:gap-3', isLM && 'w-full')}>
+							{/* Tipo de Muestra - Siempre visible para LM/Marihorgen */}
+							{(sampleTypeConfig?.enabled || hasSampleTypeCosts || isLM) && (
+								<FormField
+									control={control}
+									name="sampleType"
+									render={({ field, fieldState }) => (
+										<FormItem className="min-w-45 flex-1">
+											<FormLabel>Tipo de Muestra *</FormLabel>
+											<FormControl>
+												{hasSampleTypeCosts && sampleTypeCosts && sampleTypeCosts.length > 0 ? (
+													<FormDropdown
+														options={createDropdownOptions(sampleTypeOptionsFromCosts(sampleTypeCosts))}
+														value={field.value}
+														onChange={field.onChange}
+														placeholder="Seleccione tipo de muestra"
+														className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+														id="service-sample-type"
 													/>
-													<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+												) : (
+													<AutocompleteInput
+														fieldName="sampleType"
+														placeholder="Ej: Biopsia de Piel"
+														iconRight={<Microscope className="h-4 w-4 text-muted-foreground" />}
+														{...field}
+														className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+													/>
+												)}
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+
+							{/* Cantidad de Muestras - Siempre visible para LM/Marihorgen */}
+							{(numberOfSamplesConfig?.enabled || hasSampleTypeCosts || isLM) && (
+								<FormField
+									control={control}
+									name="numberOfSamples"
+									render={({ field, fieldState }) => (
+										<FormItem className="min-w-45 flex-1">
+											<FormLabel>Cantidad de Muestras *</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													placeholder="0"
+													{...field}
+													value={field.value === 0 ? '' : field.value}
+													onChange={(e) => {
+														const value = e.target.value
+														field.onChange(value === '' ? 0 : Number(value))
+													}}
+													className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+
+							{/* Fecha de Muestra - Solo Marihorgen/LM */}
+							{isLM && (
+								<FormField
+									control={control}
+									name="fechaMuestra"
+									render={({ field, fieldState }) => (
+										<FormItem className="min-w-45 flex-1">
+											<FormLabel>Fecha de Muestra *</FormLabel>
+											<FormControl>
+												<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
+													<PopoverTrigger asChild>
 														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => {
-																field.onChange('')
+															variant="outline"
+															className={cn(
+																'w-full justify-start text-left font-normal h-10',
+																!field.value && 'text-muted-foreground',
+																inputStyles,
+																fieldState.error && 'border-red-500 focus:border-red-500',
+															)}
+														>
+															<CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+															{field.value
+																? format(new Date(field.value + 'T12:00:00'), 'dd/MM/yyyy', { locale: es })
+																: 'Seleccionar fecha'}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-0 z-9999" align="end">
+														<Calendar
+															mode="single"
+															selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+															onSelect={(date) => {
+																field.onChange(date ? format(date, 'yyyy-MM-dd') : '')
 																setIsFechaMuestraCalendarOpen(false)
 															}}
-														>
-															Borrar
-														</Button>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => {
-																field.onChange(format(new Date(), 'yyyy-MM-dd'))
-																setIsFechaMuestraCalendarOpen(false)
-															}}
-														>
-															Hoy
-														</Button>
-													</div>
-												</PopoverContent>
-											</Popover>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						)}
+															locale={es}
+															defaultMonth={field.value ? new Date(field.value + 'T12:00:00') : new Date()}
+														/>
+														<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	field.onChange('')
+																	setIsFechaMuestraCalendarOpen(false)
+																}}
+															>
+																Borrar
+															</Button>
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	field.onChange(format(new Date(), 'yyyy-MM-dd'))
+																	setIsFechaMuestraCalendarOpen(false)
+																}}
+															>
+																Hoy
+															</Button>
+														</div>
+													</PopoverContent>
+												</Popover>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+						</div>
 
 						{/* Relación - CON AUTOCOMPLETADO */}
 						{relationshipConfig?.enabled && (

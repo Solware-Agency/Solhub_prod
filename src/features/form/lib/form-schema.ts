@@ -116,14 +116,25 @@ export const createFormSchema = (
 				(val) => !val || /^[0-9]+$/.test(val),
 				'Cédula solo debe contener números',
 			),
-		phone: z
-			.string()
-			.min(1, 'El número de teléfono es requerido')
-			.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
-			.regex(
-				/^[0-9-+\s()]+$/,
-				'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
-			),
+		// Para marihorgen el teléfono no es obligatorio
+		phone: isMarihorgen
+			? z
+					.string()
+					.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
+					.regex(
+						/^[0-9-+\s()]*$/,
+						'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
+					)
+					.optional()
+					.or(z.literal(''))
+			: z
+					.string()
+					.min(1, 'El número de teléfono es requerido')
+					.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
+					.regex(
+						/^[0-9-+\s()]+$/,
+						'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
+					),
 		ageValue: z
 			.number({
 				required_error: 'La edad es requerida.',

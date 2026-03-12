@@ -680,8 +680,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						revenue: stats.revenue,
 						percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0,
 					}))
-					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
-					.slice(0, 5) // Top 5 origins
+					.sort((a, b) => b.revenue - a.revenue) // Todas las procedencias (sin límite)
 
 				// Estadísticas del call center (solo SPT con hasCallCenter)
 				let callCenterStats: DashboardStats['callCenterStats'] = undefined
