@@ -1175,7 +1175,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									<tbody>
 										{sortedDoctors.length > 0 &&
 											sortedDoctors.map((doctor: any, index: number) => {
-													const totalVal = isSpt ? (stats.totalCases || 0) : (stats.totalRevenue || stats.monthlyRevenue || 0)
+													const totalVal = isSpt
+														? (stats.totalCases || 0)
+														: (stats.periodTotalRevenue ?? stats.totalRevenue ?? stats.monthlyRevenue ?? 0)
 													const doctorVal = isSpt ? doctor.cases : doctor.revenue
 													const percentageOfTotal = totalVal > 0 ? (doctorVal / totalVal) * 100 : 0
 													const maxVal = sortedDoctors.length ? Math.max(...sortedDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))) : 0

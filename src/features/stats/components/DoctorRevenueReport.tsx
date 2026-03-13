@@ -16,7 +16,9 @@ interface DoctorRevenueReportProps {
 const DoctorRevenueReport: React.FC<DoctorRevenueReportProps> = ({ startDate, endDate, onClick, isSpt = false }) => {
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
-	const totalVal = isSpt ? (stats?.totalCases || 0) : (stats?.totalRevenue || 0)
+	const totalVal = isSpt
+		? (stats?.totalCases || 0)
+		: (stats?.periodTotalRevenue ?? stats?.totalRevenue ?? 0)
 	// SPT: top 5 por casos; no-SPT: top 5 por ingresos (topTreatingDoctors)
 	const cardDoctors = isSpt && stats?.allTreatingDoctors?.length
 		? [...(stats.allTreatingDoctors)].sort((a, b) => b.cases - a.cases).slice(0, 5)
