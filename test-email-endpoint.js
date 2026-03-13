@@ -1,48 +1,47 @@
-// Script para probar el endpoint de email
+// Script para probar la Edge Function send-email (Supabase)
 // Ejecutar con: node test-email-endpoint.js
+// Opcional: definir VITE_SUPABASE_URL y (para auth) BEARER_TOKEN en .env
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://sbqepjsxnqtldyvlntqk.supabase.co';
+const SEND_EMAIL_URL = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/send-email`;
+const BEARER_TOKEN = process.env.BEARER_TOKEN || '';
 
 const testEmailEndpoint = async () => {
-  const baseUrl = 'https://conspat.solhub.agency';
-  
-  console.log('🧪 Probando endpoints de email...\n');
-  
+  console.log('🧪 Probando Edge Function send-email...\n');
+  console.log('URL:', SEND_EMAIL_URL);
+  if (!BEARER_TOKEN) {
+    console.log('⚠️  Sin BEARER_TOKEN: la función puede rechazar la petición si tiene verify_jwt: true.\n');
+  }
+
   try {
-    // 1. Probar endpoint de configuración
-    console.log('1️⃣ Probando endpoint de configuración...');
-    const configResponse = await fetch(`${baseUrl}/api/test-config`);
-    const configData = await configResponse.json();
-    
-    console.log('✅ Configuración:', configData);
-    console.log('');
-    
-    // 2. Probar endpoint de email con datos de prueba
-    console.log('2️⃣ Probando endpoint de email...');
-    const emailResponse = await fetch(`${baseUrl}/api/send-email`, {
+    const headers = { 'Content-Type': 'application/json' };
+    if (BEARER_TOKEN) headers['Authorization'] = `Bearer ${BEARER_TOKEN}`;
+
+    const emailResponse = await fetch(SEND_EMAIL_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         patientEmail: 'test@example.com',
         patientName: 'Paciente de Prueba',
         caseCode: 'TEST-001',
-        pdfUrl: 'https://example.com/test.pdf'
-      })
+        pdfUrl: 'https://example.com/test.pdf',
+      }),
     });
-    
-    const emailData = await emailResponse.json();
-    console.log('📧 Respuesta del email:', emailData);
-    
+
+    const emailData = await emailResponse.json().catch(() => ({}));
+    console.log('📧 Respuesta:', emailData);
+
     if (emailResponse.ok) {
-      console.log('✅ Email enviado exitosamente!');
+      console.log('✅ Email enviado exitosamente (o función respondió OK).');
     } else {
-      console.log('❌ Error al enviar email:', emailData.error);
+      console.log('❌ Error:', emailResponse.status, emailData.error || emailData);
     }
-    
   } catch (error) {
     console.error('❌ Error en la prueba:', error.message);
   }
 };
 
-// Ejecutar la prueba
 testEmailEndpoint();

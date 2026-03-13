@@ -4,7 +4,6 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import chatRoutes from './routes/chat.js';
-import emailRoutes from './routes/email.js';
 
 dotenv.config();
 
@@ -31,7 +30,6 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', chatRoutes);
-app.use('/api', emailRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
