@@ -53,6 +53,7 @@ import { FeatureGuard } from '@shared/components/FeatureGuard'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getCodeLegend } from '@/shared/utils/code-legend-utils'
 import { useModuleConfig } from '@shared/hooks/useModuleConfig'
+import { useExchangeRate } from '@shared/hooks/useExchangeRate'
 import SendEmailModal from './SendEmailModal'
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service'
 import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
@@ -347,6 +348,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				{ value: 'Bs en efectivo', label: 'Bs en efectivo' },
 			])
 		}, [laboratory?.config?.paymentMethods])
+
+		const { data: dailyRate } = useExchangeRate()
 
 		// Query to get the user who created the record
 		const { data: creatorData } = useQuery({
@@ -813,6 +816,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const handleSaveChanges = async () => {
 			if (!currentCase || !user) return
 
+			// Tasa para cálculos al guardar: preferir tasa del día; fallback a tasa del caso
+			const rateToUse =
+				dailyRate != null && Number(dailyRate) > 0 ? Number(dailyRate) : (currentCase?.exchange_rate ?? 0)
+
 			setIsSaving(true)
 			try {
 				// Solo permitir editar campos del caso (Información Médica + Información Adicional)
@@ -920,8 +927,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				if (financialChanges.total_amount !== undefined || financialChanges.exchange_rate !== undefined) {
 					const totalForCalc =
 						(financialChanges.total_amount ?? editedCase.total_amount ?? currentCase.total_amount) || 0
-					const rateForCalc =
-						financialChanges.exchange_rate ?? editedCase.exchange_rate ?? currentCase.exchange_rate ?? undefined
 					const paymentMethodsForRecalc: PaymentMethod[] = []
 					for (let i = 1; i <= 4; i++) {
 						const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
@@ -939,7 +944,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
 							paymentMethodsForRecalc,
 							totalForCalc,
-							rateForCalc,
+							rateToUse,
 						)
 						financialChanges.remaining = Math.max(0, missingAmount ?? 0)
 						financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
@@ -997,12 +1002,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						financialChanges[`payment_reference_${i}`] = pm.reference || null
 					})
 
-					// Calcular monto restante usando la lógica correcta de conversión
+					// Calcular monto restante usando la lógica correcta (tasa del día)
 					const totalAmount = editedCase.total_amount || currentCase.total_amount || 0
 					const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
 						finalPaymentMethods,
 						totalAmount,
-						exchangeRate,
+						rateToUse,
 					)
 					financialChanges.remaining = Math.max(0, missingAmount || 0)
 
@@ -1662,14 +1667,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Calculate financial information
 		const totalAmount = caseData?.total_amount || 0
-		const exchangeRate = caseData?.exchange_rate || 0
+		const caseExchangeRate = caseData?.exchange_rate || 0
+		// Tasa para cálculos y conversiones: preferir tasa del día (API); fallback a tasa del caso
+		const rateForCalculations =
+			dailyRate != null && Number(dailyRate) > 0 ? Number(dailyRate) : caseExchangeRate
+		const hasValidExchangeRate = rateForCalculations > 0
 
-		// Validar si falta la tasa de cambio para casos antiguos
-		const hasValidExchangeRate = exchangeRate > 0
-
-		// Calculate VES value for converter
+		// Calculate VES value for converter (usa tasa del día)
 		const converterVesValue =
-			converterUsdValue && hasValidExchangeRate ? (parseFloat(converterUsdValue) * exchangeRate).toFixed(2) : ''
+			converterUsdValue && hasValidExchangeRate ? (parseFloat(converterUsdValue) * rateForCalculations).toFixed(2) : ''
 
 		// Get payment methods from current case data
 		const currentPaymentMethods: PaymentMethod[] = []
@@ -1689,10 +1695,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Use current payment methods if not editing, otherwise use edited ones
 		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
-		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
+		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, rateForCalculations)
 		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
-		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-		const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * exchangeRate : 0
+		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares (usa tasa del día)
+		const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * rateForCalculations : 0
 		// Un pago está completo solo si: hay monto total > 0 Y el pago cubre el total
 		const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount
 
@@ -2619,7 +2625,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															currentValue ?? 0,
 															(value) => handleInputChange('total_amount', value),
 															'USD',
-															exchangeRate,
+															rateForCalculations,
 														)
 
 														return (
@@ -2656,13 +2662,24 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											)}
 										</div>
 
-										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-												Tasa de cambio (USD/VES):
-											</span>
-											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-												{exchangeRate.toFixed(2)}
-											</span>
+										<div className="space-y-2 py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<div className="flex flex-col sm:flex-row sm:justify-between">
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+													Tasa del caso (USD/VES):
+												</span>
+												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+													{caseExchangeRate.toFixed(2)}
+												</span>
+											</div>
+											<div className="flex flex-col sm:flex-row sm:justify-between">
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+													Tasa del día (usada para cálculos):
+												</span>
+												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+													{dailyRate != null ? rateForCalculations.toFixed(2) : caseExchangeRate.toFixed(2)}
+													{dailyRate != null ? '' : ' (sin API)'}
+												</span>
+											</div>
 										</div>
 
 										{isEditing && (
@@ -2746,7 +2763,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													<div>
 														<span className="text-green-700 dark:text-green-400">En Bs:</span>
 														<p className="font-medium text-green-800 dark:text-green-300">
-															Bs. {(totalAmount * exchangeRate).toFixed(2)}
+															Bs. {(totalAmount * rateForCalculations).toFixed(2)}
 														</p>
 													</div>
 												</div>
@@ -2828,7 +2845,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																					payment.amount || 0,
 																					(value) => handlePaymentMethodChange(index, 'amount', value),
 																					payment.method,
-																					exchangeRate,
+																					rateForCalculations,
 																				)
 
 																				return (
@@ -2945,7 +2962,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																			amount: value,
 																		}),
 																	newPaymentMethod.method,
-																	exchangeRate,
+																	rateForCalculations,
 																)
 
 																return (
