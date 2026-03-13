@@ -96,6 +96,7 @@ export interface MedicalCase {
   email_sent: boolean;
   image_url: string | null;
   images_urls: string[] | null;
+  video_urls: string[] | null;
   uploaded_pdf_url: string | null;
   uploaded_pdf_urls: string[] | null;
   owner_display_code: string | null;
@@ -158,6 +159,7 @@ export interface MedicalCaseInsert {
   bloques_biopsia?: number | null;
   image_url?: string | null;
   images_urls?: string[] | null;
+  video_urls?: string[] | null;
   uploaded_pdf_url?: string | null;
   uploaded_pdf_urls?: string[] | null;
   owner_display_code?: string | null;
@@ -222,6 +224,7 @@ export interface MedicalCaseUpdate {
   owner_display_code?: string | null;
   bloques_biopsia?: number | null;
   images_urls?: string[] | null;
+  video_urls?: string[] | null;
   estado_spt?: string | null;
   price_type?: string | null;
   fecha_entrega?: string | null;

@@ -56,10 +56,11 @@ import { useModuleConfig } from '@shared/hooks/useModuleConfig'
 import { useExchangeRate } from '@shared/hooks/useExchangeRate'
 import SendEmailModal from './SendEmailModal'
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service'
-import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
+import { MultipleMediaUrls, type MediaItem } from '@shared/components/ui/MultipleMediaUrls'
 import { PDFButton } from '@shared/components/ui/PDFButton'
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload'
 import { uploadCaseImage, validateCaseImage } from '@/services/supabase/storage/case-images-storage-service'
+import { uploadCaseVideo, validateCaseVideo } from '@/services/supabase/storage/case-videos-storage-service'
 import PatientHistoryModal from '@features/patients/components/PatientHistoryModal'
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
@@ -285,8 +286,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const [isUploadingImages, setIsUploadingImages] = useState(false)
 		const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
-		// Image URLs state for imagenologia role (hasta 10 imágenes)
-		const [imageUrls, setImageUrls] = useState<string[]>([])
+		// Media URLs state (imágenes + videos, máximo 5 total)
+		const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
 
 		// Payment editing states
 		const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -569,11 +570,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// Initialize edited case when currentCase changes or when entering edit mode
 		useEffect(() => {
 			if (currentCase) {
-				// Initialize image URLs for imagenologia role (siempre, no solo en edición)
+				// Initialize media URLs (imágenes + videos, máximo 5 total)
 				// Priorizar images_urls (nuevo), fallback a image_url (legacy)
 				const caseImages =
 					(currentCase as any).images_urls || ((currentCase as any).image_url ? [(currentCase as any).image_url] : [])
-				setImageUrls(caseImages)
+				const caseVideos = (currentCase as any).video_urls || []
+				const media: MediaItem[] = [
+					...caseImages.map((url: string) => ({ type: 'image' as const, url })),
+					...caseVideos.map((url: string) => ({ type: 'video' as const, url })),
+				]
+				setMediaItems(media)
 
 				if (isEditing) {
 					// Initialize with current case data - separating patient and case data
@@ -712,40 +718,79 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			}))
 		}, [])
 
-		const handleUploadImage = useCallback(
-			async (file: File): Promise<string | null> => {
+		const handleUploadMedia = useCallback(
+			async (file: File): Promise<{ type: 'image' | 'video'; url: string } | null> => {
 				if (!currentCase?.id || !profile?.laboratory_id) return null
-				const validation = validateCaseImage(file)
-				if (!validation.valid) {
-					toast({
-						title: '❌ Imagen no válida',
-						description: validation.error,
-						variant: 'destructive',
-					})
-					return null
-				}
-				setIsUploadingImages(true)
-				try {
-					const { data, error } = await uploadCaseImage(currentCase.id, file, profile.laboratory_id)
-					if (error) {
+				
+				// Detectar tipo de archivo
+				const isVideo = file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mp4')
+				
+				if (isVideo) {
+					const validation = validateCaseVideo(file)
+					if (!validation.valid) {
 						toast({
-							title: '❌ Error al subir',
-							description: error.message,
+							title: '❌ Video no válido',
+							description: validation.error,
 							variant: 'destructive',
 						})
 						return null
 					}
-					if (data) {
-						setImageUrls((prev) => (prev.length >= 10 ? prev : [...prev, data]))
-						toast({
-							title: '✅ Imagen subida',
-							description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
-							className: 'bg-green-100 border-green-400 text-green-800',
-						})
+					setIsUploadingImages(true)
+					try {
+						const { data, error } = await uploadCaseVideo(currentCase.id, file, profile.laboratory_id)
+						if (error) {
+							toast({
+								title: '❌ Error al subir video',
+								description: error.message,
+								variant: 'destructive',
+							})
+							return null
+						}
+						if (data) {
+							toast({
+								title: '✅ Video subido',
+								description: 'El video se subió correctamente. Guarda el caso para conservar los cambios.',
+								className: 'bg-green-100 border-green-400 text-green-800',
+							})
+							return { type: 'video', url: data }
+						}
+						return null
+					} finally {
+						setIsUploadingImages(false)
 					}
-					return data
-				} finally {
-					setIsUploadingImages(false)
+				} else {
+					const validation = validateCaseImage(file)
+					if (!validation.valid) {
+						toast({
+							title: '❌ Imagen no válida',
+							description: validation.error,
+							variant: 'destructive',
+						})
+						return null
+					}
+					setIsUploadingImages(true)
+					try {
+						const { data, error } = await uploadCaseImage(currentCase.id, file, profile.laboratory_id)
+						if (error) {
+							toast({
+								title: '❌ Error al subir',
+								description: error.message,
+								variant: 'destructive',
+							})
+							return null
+						}
+						if (data) {
+							toast({
+								title: '✅ Imagen subida',
+								description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
+								className: 'bg-green-100 border-green-400 text-green-800',
+							})
+							return { type: 'image', url: data }
+						}
+						return null
+					} finally {
+						setIsUploadingImages(false)
+					}
 				}
 			},
 			[currentCase?.id, profile?.laboratory_id, toast],
@@ -1031,12 +1076,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Detectar cambios en URLs de imágenes (se guardan aparte en images_urls)
+				// Detectar cambios en URLs de medios (imágenes + videos)
 				const currentImages: string[] =
 					(currentCase as any).images_urls || ((currentCase as any).image_url ? [(currentCase as any).image_url] : [])
-				const imagesChanged = JSON.stringify(imageUrls) !== JSON.stringify(currentImages)
+				const currentVideos: string[] = (currentCase as any).video_urls || []
+				const currentMedia: MediaItem[] = [
+					...currentImages.map((url: string) => ({ type: 'image' as const, url })),
+					...currentVideos.map((url: string) => ({ type: 'video' as const, url })),
+				]
+				const mediaChanged = JSON.stringify(mediaItems) !== JSON.stringify(currentMedia)
 
-				if (Object.keys(caseChanges).length === 0 && Object.keys(financialChanges).length === 0 && !imagesChanged) {
+				if (Object.keys(caseChanges).length === 0 && Object.keys(financialChanges).length === 0 && !mediaChanged) {
 					toast({
 						title: 'Sin cambios',
 						description: 'No se detectaron cambios para guardar.',
@@ -1073,24 +1123,31 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de imágenes (images_urls) - SPT y Conspat: todos los roles pueden guardar
-				if (imagesChanged && (isSpt || isConspat)) {
-					const { error: imageUrlsError } = await supabase
+				// Guardar URLs de medios (images_urls + video_urls) - SPT y Conspat: todos los roles pueden guardar
+				if (mediaChanged && (isSpt || isConspat)) {
+					const imageUrls = mediaItems.filter(m => m.type === 'image').map(m => m.url)
+					const videoUrls = mediaItems.filter(m => m.type === 'video').map(m => m.url)
+					
+					const { error: mediaUrlsError } = await supabase
 						.from('medical_records_clean')
-						.update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
+						.update({
+							images_urls: imageUrls.length > 0 ? imageUrls : null,
+							video_urls: videoUrls.length > 0 ? videoUrls : null,
+						})
 						.eq('id', currentCase.id)
 
-					if (imageUrlsError) {
-						console.error('Error saving image URLs:', imageUrlsError)
+					if (mediaUrlsError) {
+						console.error('Error saving media URLs:', mediaUrlsError)
 						toast({
 							title: '❌ Error al guardar URLs',
-							description: 'No se pudieron guardar las URLs de las imágenes.',
+							description: 'No se pudieron guardar las URLs de los archivos.',
 							variant: 'destructive',
 						})
 					} else {
+						const totalMedia = mediaItems.length
 						toast({
-							title: '✅ URLs de imágenes guardadas',
-							description: `Se ${imageUrls.length === 1 ? 'ha' : 'han'} guardado ${imageUrls.length} ${imageUrls.length === 1 ? 'imagen' : 'imágenes'} correctamente.`,
+							title: '✅ Archivos guardados',
+							description: `Se ${totalMedia === 1 ? 'ha' : 'han'} guardado ${totalMedia} ${totalMedia === 1 ? 'archivo' : 'archivos'} correctamente (${imageUrls.length} imagen${imageUrls.length !== 1 ? 'es' : ''}, ${videoUrls.length} video${videoUrls.length !== 1 ? 's' : ''}).`,
 							className: 'bg-green-100 border-green-400 text-green-800',
 						})
 					}
@@ -1107,7 +1164,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				setPaymentMethods([])
 				setIsAddingNewPayment(false)
 				setNewPaymentMethod({ method: '', amount: 0, reference: '' })
-				setImageUrls([]) // Clear image URLs
+				setMediaItems([]) // Clear media URLs
 
 				// Call onSave callback if provided
 				if (onSave) {
@@ -1264,7 +1321,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.nombre}`
 				const emailBody = `Hola ${case_?.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`
 
-				// Obtener imágenes del caso (priorizar images_urls array)
+				// Obtener medios del caso (imágenes + videos)
 				const caseImages =
 					(currentCase as any)?.images_urls &&
 					Array.isArray((currentCase as any).images_urls) &&
@@ -1273,6 +1330,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						: (currentCase as any)?.image_url
 							? [(currentCase as any).image_url]
 							: []
+				const caseVideos = (currentCase as any)?.video_urls || []
+				const allMediaUrls = [...caseImages, ...caseVideos]
 
 				// Enviar email vía Supabase Edge Function send-email
 				const uploadedPdfUrlsForEmail: string[] =
@@ -1298,7 +1357,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						pdfUrl: pdfUrl,
 						uploadedPdfUrl: (currentCase as any)?.uploaded_pdf_url || null,
 						uploadedPdfUrls: uploadedPdfUrlsForEmail,
-						imageUrls: caseImages,
+						imageUrls: allMediaUrls,
 						laboratory_id: case_?.laboratory_id || laboratory?.id,
 						subject: emailSubject,
 						message: emailBody,
@@ -1430,6 +1489,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					: (currentCase as any)?.image_url
 						? [(currentCase as any).image_url]
 						: []
+			const caseVideos = (currentCase as any)?.video_urls || []
+			const allMediaUrls = [...caseImages, ...caseVideos]
 
 			const SIGNED_URL_TTL_SECONDS = 60 * 30
 			const createSignedUrlIfSupabase = async (url: string | null): Promise<string | null> => {
@@ -1458,16 +1519,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				}
 			}
 
-			const [signedPdfUrl, signedUploadedPdfUrls, signedImageUrls] = isSpt
+			const [signedPdfUrl, signedUploadedPdfUrls, signedMediaUrls] = isSpt
 				? await Promise.all([
 						createSignedUrlIfSupabase(pdfUrl),
 						Promise.all(uploadedPdfUrlsList.map((url: string) => createSignedUrlIfSupabase(url))),
-						Promise.all(caseImages.map((url: string) => createSignedUrlIfSupabase(url))),
+						Promise.all(allMediaUrls.map((url: string) => createSignedUrlIfSupabase(url))),
 					])
-				: [pdfUrl, uploadedPdfUrlsList, caseImages]
+				: [pdfUrl, uploadedPdfUrlsList, allMediaUrls]
 
 			const safeUploadedPdfUrls = (signedUploadedPdfUrls || []).filter(Boolean) as string[]
-			const safeImageUrls = (signedImageUrls || []).filter(Boolean) as string[]
+			const safeImageUrls = (signedMediaUrls || []).filter(Boolean) as string[]
 
 			const sptMessageLines = [`Hola ${case_.nombre}, te escribimos desde Salud Para Todos.`]
 
@@ -2539,20 +2600,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								{!isMarihorgen && (
 									<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-											{isConspat ? 'Imágenes:' : 'Imágenes (Imagenología):'}
+											Imágenes/Videos:
 										</span>
 										<div className="w-full">
-											<MultipleImageUrls
-												images={imageUrls}
-												onChange={setImageUrls}
-												maxImages={10}
+											<MultipleMediaUrls
+												media={mediaItems}
+												onChange={setMediaItems}
+												maxItems={5}
 												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
 												onUploadFile={
-													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined) ||
-													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
+													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined) ||
+													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined)
 												}
 												isUploading={isUploadingImages}
-												accept="image/jpeg,image/png,.jpg,.jpeg,.png"
 											/>
 										</div>
 									</div>
@@ -3250,7 +3310,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									: []
 						}
 						imageUrls={
-							(caseData as any)?.images_urls || ((caseData as any)?.image_url ? [(caseData as any).image_url] : [])
+							[
+								...((caseData as any)?.images_urls || ((caseData as any)?.image_url ? [(caseData as any).image_url] : [])),
+								...((caseData as any)?.video_urls || [])
+							]
 						}
 						laboratoryName={laboratory?.name}
 						laboratoryLogo={laboratory?.branding?.logo || undefined}

@@ -799,7 +799,8 @@ export interface MedicalRecord {
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
   image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
-  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
+  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 5 total con videos)
+  video_urls?: string[] | null; // Array de URLs de videos MP4 para imagenología (hasta 5 total con imágenes)
   uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT; compatibilidad: primer elemento de uploaded_pdf_urls)
   uploaded_pdf_urls?: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
 }
