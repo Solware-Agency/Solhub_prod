@@ -39,12 +39,6 @@ function AuthCallback() {
 				const hashType = hashParams.get('type')
 				const accessToken = hashParams.get('access_token')
 
-				console.log('Callback type (query):', type)
-				console.log('Has code (query):', !!codeFromQuery)
-				console.log('Has token (query):', !!tokenFromQuery)
-				console.log('Callback type (hash):', hashType)
-				console.log('Has access_token (hash):', !!accessToken)
-
 				// Handle password recovery with highest priority
 				// Case A: Recovery via PKCE authorization code/token in query params
 				const recoveryCode = codeFromQuery || tokenFromQuery || hashParams.get('code') || hashParams.get('token')
