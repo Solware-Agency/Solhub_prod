@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { supabase, CHAT_FUNCTION_URL } from '@/services/supabase/config/config'
 import { Input } from './input'
 import { Button } from './button'
 import { Send, User, Bot, MessageCircle } from 'lucide-react'
@@ -71,11 +72,15 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
 			abortControllerRef.current = new AbortController()
 
-			const response = await fetch('/api/chat', {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession()
+			const chatHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+			if (session?.access_token) chatHeaders['Authorization'] = `Bearer ${session.access_token}`
+
+			const response = await fetch(CHAT_FUNCTION_URL, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: chatHeaders,
 				body: JSON.stringify({
 					messages: [
 						{

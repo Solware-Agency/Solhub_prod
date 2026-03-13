@@ -1,6 +1,4 @@
-/**
- * Utilidades para la descarga de PDFs
- */
+import { DOWNLOAD_PDF_FUNCTION_URL } from '@/services/supabase/config/config'
 
 /**
  * Determina si estamos en un entorno de producción
@@ -17,16 +15,30 @@ export function isProduction(): boolean {
 }
 
 /**
- * Genera la URL de descarga apropiada según el entorno
+ * Genera la URL de descarga apropiada según el entorno.
+ * En producción usa la Edge Function download-pdf (Supabase).
  */
-export function getDownloadUrl(caseId: string, token: string | null, directUrl: string | null): string {
-	// Si estamos en producción y tenemos token, usar el endpoint de descarga
-	if (isProduction() && token && directUrl) {
-		return `/api/download-pdf?caseId=${caseId}&token=${token}`
+export function getDownloadUrl(
+	caseId: string,
+	token: string | null,
+	directUrl: string | null,
+	preview?: boolean,
+): string {
+	if (isProduction() && token && directUrl && DOWNLOAD_PDF_FUNCTION_URL) {
+		const params = new URLSearchParams({ caseId, token })
+		if (preview) params.set('preview', 'true')
+		return `${DOWNLOAD_PDF_FUNCTION_URL}?${params.toString()}`
 	}
 
-	// En desarrollo o si no hay token, usar la URL directa
+	// En desarrollo o si no hay Edge Function, usar la URL directa
 	return directUrl || ''
+}
+
+/**
+ * Indica si la URL de descarga es la Edge Function (requiere header Authorization con anon key).
+ */
+export function isEdgeFunctionDownloadUrl(url: string): boolean {
+	return Boolean(url && url.includes('/functions/v1/download-pdf'))
 }
 
 /**
