@@ -16,13 +16,25 @@ import {
 	Wind,
 } from 'lucide-react'
 import React, { useState } from 'react'
-import { getTriageStats, getTriageTrends } from '../services/triage-stats-service'
+import { getTriageStats, getTriageTrends, type TriageStatType as ServiceStatType, type TriageRangeValue } from '../services/triage-stats-service'
+import TriageCasesFilterModal from './TriageCasesFilterModal'
 
 export const TriageAnalyticsPage: React.FC = () => {
 	const { profile } = useUserProfile()
 	const [days, setDays] = useState<number>(30)
 	const [selectedStat, setSelectedStat] = useState<TriageStatType | null>(null)
 	const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
+	
+	// Estado para el modal de casos filtrados
+	const [casesFilterModal, setCasesFilterModal] = useState<{
+		isOpen: boolean
+		statType: ServiceStatType | null
+		rangeValue: TriageRangeValue | null
+	}>({
+		isOpen: false,
+		statType: null,
+		rangeValue: null,
+	})
 
 	// Type assertion para laboratory_id ya que no está en la interfaz generada
 	const laboratoryId = (profile as any)?.laboratory_id as string | undefined
@@ -87,6 +99,32 @@ export const TriageAnalyticsPage: React.FC = () => {
 	const handleDetailPanelClose = () => {
 		setIsDetailPanelOpen(false)
 		// selectedStat se limpia en onExited al terminar la animación de salida
+	}
+
+	// Función para manejar el click en una barra de rango
+	const handleRangeClick = (statType: ServiceStatType, rangeValue: TriageRangeValue, e: React.MouseEvent) => {
+		e.stopPropagation() // Evitar que se dispare el click de la card
+		setCasesFilterModal({
+			isOpen: true,
+			statType,
+			rangeValue,
+		})
+	}
+
+	const handleCasesFilterModalClose = () => {
+		setCasesFilterModal({
+			isOpen: false,
+			statType: null,
+			rangeValue: null,
+		})
+	}
+
+	// Calcular fechas de filtro basadas en el selector de días
+	const getDateRange = () => {
+		const endDate = new Date()
+		const startDate = new Date()
+		startDate.setDate(startDate.getDate() - days)
+		return { startDate, endDate }
 	}
 
 	return (
@@ -155,24 +193,31 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.heartRate.low,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.heartRate.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.heartRate.high,
 										color: 'bg-yellow-500',
 										textColor: 'text-yellow-700 dark:text-yellow-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total = stats.ranges.heartRate.low + stats.ranges.heartRate.normal + stats.ranges.heartRate.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('heartRate', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -217,18 +262,21 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.respiratoryRate.low,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.respiratoryRate.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.respiratoryRate.high,
 										color: 'bg-yellow-500',
 										textColor: 'text-yellow-700 dark:text-yellow-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
@@ -237,7 +285,11 @@ export const TriageAnalyticsPage: React.FC = () => {
 										stats.ranges.respiratoryRate.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('respiratoryRate', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -282,18 +334,21 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.oxygenSaturation.low,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.oxygenSaturation.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.oxygenSaturation.high,
 										color: 'bg-yellow-500',
 										textColor: 'text-yellow-700 dark:text-yellow-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
@@ -302,7 +357,11 @@ export const TriageAnalyticsPage: React.FC = () => {
 										stats.ranges.oxygenSaturation.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('oxygenSaturation', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -347,25 +406,32 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.temperature.low,
 										color: 'bg-blue-500',
 										textColor: 'text-blue-700 dark:text-blue-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.temperature.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.temperature.high,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
 										stats.ranges.temperature.low + stats.ranges.temperature.normal + stats.ranges.temperature.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('temperature', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -407,24 +473,28 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.bmi.underweight,
 										color: 'bg-blue-500',
 										textColor: 'text-blue-700 dark:text-blue-300',
+										rangeValue: 'underweight' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.bmi.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Sobrepeso',
 										value: stats.ranges.bmi.overweight,
 										color: 'bg-yellow-500',
 										textColor: 'text-yellow-700 dark:text-yellow-300',
+										rangeValue: 'overweight' as TriageRangeValue,
 									},
 									{
 										label: 'Obesidad',
 										value: stats.ranges.bmi.obese,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'obese' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
@@ -434,7 +504,11 @@ export const TriageAnalyticsPage: React.FC = () => {
 										stats.ranges.bmi.obese
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('bmi', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -477,25 +551,32 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.bloodPressure.low,
 										color: 'bg-blue-500',
 										textColor: 'text-blue-700 dark:text-blue-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.bloodPressure.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.bloodPressure.high,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
 										stats.ranges.bloodPressure.low + stats.ranges.bloodPressure.normal + stats.ranges.bloodPressure.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('bloodPressure', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -540,25 +621,32 @@ export const TriageAnalyticsPage: React.FC = () => {
 										value: stats.ranges.bloodGlucose.low,
 										color: 'bg-red-500',
 										textColor: 'text-red-700 dark:text-red-300',
+										rangeValue: 'low' as TriageRangeValue,
 									},
 									{
 										label: 'Normal',
 										value: stats.ranges.bloodGlucose.normal,
 										color: 'bg-green-500',
 										textColor: 'text-green-700 dark:text-green-300',
+										rangeValue: 'normal' as TriageRangeValue,
 									},
 									{
 										label: 'Alta',
 										value: stats.ranges.bloodGlucose.high,
 										color: 'bg-yellow-500',
 										textColor: 'text-yellow-700 dark:text-yellow-300',
+										rangeValue: 'high' as TriageRangeValue,
 									},
 								].map((item) => {
 									const total =
 										stats.ranges.bloodGlucose.low + stats.ranges.bloodGlucose.normal + stats.ranges.bloodGlucose.high
 									const percentage = total > 0 ? (item.value / total) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-1">
+										<div 
+											key={item.label} 
+											className="space-y-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={(e) => handleRangeClick('bloodGlucose', item.rangeValue, e)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className={item.textColor}>{item.label}</span>
 												<span className="font-medium">
@@ -755,6 +843,19 @@ export const TriageAnalyticsPage: React.FC = () => {
 					trends={trends}
 					days={days}
 					isLoading={loadingStats || loadingTrends}
+				/>
+			)}
+
+			{/* Modal de casos filtrados por rango de triage */}
+			{casesFilterModal.statType && casesFilterModal.rangeValue && laboratoryId && (
+				<TriageCasesFilterModal
+					isOpen={casesFilterModal.isOpen}
+					onClose={handleCasesFilterModalClose}
+					statType={casesFilterModal.statType}
+					rangeValue={casesFilterModal.rangeValue}
+					laboratoryId={laboratoryId}
+					startDate={getDateRange().startDate}
+					endDate={getDateRange().endDate}
 				/>
 			)}
 		</>
