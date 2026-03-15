@@ -119,6 +119,18 @@ export const TriageAnalyticsPage: React.FC = () => {
 		})
 	}
 
+	// Función para manejar el click en una barra de rango desde el panel de detalles
+	const handleDetailPanelRangeClick = (statType: TriageStatType, rangeValue: TriageRangeValue) => {
+		// Cerrar el panel de detalles
+		setIsDetailPanelOpen(false)
+		// Abrir el modal de casos filtrados
+		setCasesFilterModal({
+			isOpen: true,
+			statType,
+			rangeValue,
+		})
+	}
+
 	// Calcular fechas de filtro basadas en el selector de días
 	const getDateRange = () => {
 		const endDate = new Date()
@@ -843,6 +855,7 @@ export const TriageAnalyticsPage: React.FC = () => {
 					trends={trends}
 					days={days}
 					isLoading={loadingStats || loadingTrends}
+					onRangeClick={handleDetailPanelRangeClick}
 				/>
 			)}
 
