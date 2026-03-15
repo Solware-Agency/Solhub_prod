@@ -15,6 +15,8 @@ interface MultipleImageUrlsProps {
   onUploadFile?: (file: File) => Promise<string | null>;
   /** Mientras sube un archivo (ej. desde el padre) para deshabilitar el botón de subida */
   isUploading?: boolean;
+  /** Tipos de archivo aceptados en el input (ej. "image/jpeg,image/png,.jpg,.jpeg,.png"). Por defecto "image/*". */
+  accept?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
   className,
   onUploadFile,
   isUploading = false,
+  accept = 'image/*',
 }) => {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -170,7 +173,7 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
               <input
                 ref={cameraInputRef}
                 type='file'
-                accept='image/*'
+                accept={accept}
                 capture='environment'
                 className='hidden'
                 onChange={handleFileSelect}
@@ -179,7 +182,7 @@ export const MultipleImageUrls: React.FC<MultipleImageUrlsProps> = ({
               <input
                 ref={galleryInputRef}
                 type='file'
-                accept='image/*'
+                accept={accept}
                 className='hidden'
                 onChange={handleFileSelect}
                 aria-label='Elegir imagen de galería'

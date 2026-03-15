@@ -44,24 +44,15 @@ const WaitingRoomPage: React.FC = () => {
   const { toast } = useToast();
   const location = useLocation();
 
-  // Sala de espera solo para rol prueba (no listo para otros roles)
-  if (profile?.role && profile.role !== 'prueba') {
-    const to = location.pathname.startsWith('/employee') ? '/employee/home' : '/dashboard/home';
-    return <Navigate to={to} replace />;
-  }
-
-  // Employee (y roles con sede asignada) solo ven su sede: sin "Todas" y con sede por defecto
   const isRestrictedToBranch = Boolean(
     (profile?.role === 'employee' || profile?.role === 'coordinador') && profile?.assigned_branch
   );
-  const defaultBranch = isRestrictedToBranch ? profile!.assigned_branch! : null;
+  const defaultBranch = isRestrictedToBranch ? profile?.assigned_branch ?? null : null;
   const [selectedBranch, setSelectedBranch] = useState<string | null>(defaultBranch);
   const [selectedStatCard, setSelectedStatCard] = useState<WaitingRoomStatCardType | null>(null);
 
-  // Verificar que es SPT
   const isSpt = laboratory?.slug === 'spt';
 
-  // Obtener sedes activas
   const {
     data: branches = [],
     isLoading: branchesLoading,
@@ -78,12 +69,10 @@ const WaitingRoomPage: React.FC = () => {
     },
   });
 
-  // Obtener casos de sala de espera
   const {
     data: cases = [],
     isLoading: casesLoading,
     error: casesError,
-    refetch: refetchCases,
   } = useQuery({
     queryKey: ['waiting-room-cases', selectedBranch],
     queryFn: () => getWaitingRoomCases(selectedBranch || undefined),
@@ -92,7 +81,6 @@ const WaitingRoomPage: React.FC = () => {
     staleTime: 1000 * 15, // 15 segundos
   });
 
-  // Obtener estadísticas
   const {
     data: stats,
     isLoading: statsLoading,
@@ -103,7 +91,17 @@ const WaitingRoomPage: React.FC = () => {
     staleTime: 1000 * 30, // 30 segundos
   });
 
-  // Si no es SPT, no mostrar nada
+  const pendienteTriaje = cases.filter((c) => c.estado_spt === 'pendiente_triaje');
+  const esperandoConsulta = cases.filter((c) => c.estado_spt === 'esperando_consulta');
+  const oldestTriajeMinutes = useMemo(() => getOldestWaitingMinutes(pendienteTriaje), [pendienteTriaje]);
+  const oldestConsultaMinutes = useMemo(() => getOldestWaitingMinutes(esperandoConsulta), [esperandoConsulta]);
+
+  // Sala de espera solo para rol prueba (no listo para otros roles)
+  if (profile?.role && profile.role !== 'prueba') {
+    const to = location.pathname.startsWith('/employee') ? '/employee/home' : '/dashboard/home';
+    return <Navigate to={to} replace />;
+  }
+
   if (!isSpt) {
     return (
       <div className="container mx-auto p-6">
@@ -115,14 +113,6 @@ const WaitingRoomPage: React.FC = () => {
       </div>
     );
   }
-
-  // Separar casos por estado
-  const pendienteTriaje = cases.filter((c) => c.estado_spt === 'pendiente_triaje');
-  const esperandoConsulta = cases.filter((c) => c.estado_spt === 'esperando_consulta');
-
-  // Tiempos del más antiguo en cada estado (para owner/prueba)
-  const oldestTriajeMinutes = useMemo(() => getOldestWaitingMinutes(pendienteTriaje), [pendienteTriaje]);
-  const oldestConsultaMinutes = useMemo(() => getOldestWaitingMinutes(esperandoConsulta), [esperandoConsulta]);
 
   const handleCaseClick = (caseId: string) => {
     // TODO: Navegar a detalles del caso o abrir modal
@@ -291,7 +281,7 @@ const WaitingRoomPage: React.FC = () => {
                 <p className="text-sm sm:text-base">No hay casos pendientes de triaje</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[none] sm:max-h-[400px] md:max-h-[340px] overflow-visible p-0.5 sm:p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-none sm:max-h-100 md:max-h-85 overflow-visible p-0.5 sm:p-1">
                 {pendienteTriaje.slice(0, 6).map((case_) => (
                   <WaitingRoomCaseCard
                     key={case_.id}
@@ -322,7 +312,7 @@ const WaitingRoomPage: React.FC = () => {
                 <p className="text-sm sm:text-base">No hay casos esperando consulta</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[none] sm:max-h-[400px] md:max-h-[340px] overflow-visible p-0.5 sm:p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-none sm:max-h-100 md:max-h-85 overflow-visible p-0.5 sm:p-1">
                 {esperandoConsulta.slice(0, 6).map((case_) => (
                   <WaitingRoomCaseCard
                     key={case_.id}

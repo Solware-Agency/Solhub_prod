@@ -376,10 +376,10 @@ export const universalFAQs: Array<{ question: string; answer: string; category: 
 // ÁRBOL DE DECISIÓN BASE
 // ============================================
 
-export const getBotDecisionTree = (userRole: UserRole) => {
-  // Future use: personalize message based on role
-  // const roleInfo = roleDefinitions[userRole] || roleDefinitions.employee
-
+export const getBotDecisionTree = (
+  userRole: UserRole // reservado para personalización por rol
+) => {
+  void userRole
   return {
     initial: {
       id: 0,

@@ -46,7 +46,7 @@ export const SideDetailPanel = ({ isOpen, onClose, title, subtitle, actions, chi
 										{subtitle && <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>}
 									</div>
 								</div>
-								<div className="flex items-center gap-2 flex-shrink-0">
+								<div className="flex items-center gap-2 shrink-0">
 									{actions}
 									<button
 										onClick={onClose}

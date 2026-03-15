@@ -38,13 +38,14 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 			},
 		)
 
-		if (cardRef.current) {
-			observer.observe(cardRef.current)
+		const cardEl = cardRef.current
+		if (cardEl) {
+			observer.observe(cardEl)
 		}
 
 		return () => {
-			if (cardRef.current) {
-				observer.unobserve(cardRef.current)
+			if (cardEl) {
+				observer.unobserve(cardEl)
 			}
 		}
 	}, [animationTriggered])
@@ -86,7 +87,7 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 							<div className="grid grid-cols-1 gap-3 flex-1">
 								{/* Amount Card - oculto para SPT */}
 								{!isSpt && (
-								<div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-3 border border-red-200 dark:border-red-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
+								<div className="bg-linear-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-3 border border-red-200 dark:border-red-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
 									<div className="flex flex-col items-center text-center mb-2">
 										<div className="p-2 bg-red-500 rounded-lg mb-2">
 											<DollarSign className="w-5 h-5 text-white" />
@@ -120,7 +121,7 @@ const RemainingAmount: React.FC<RemainingAmountProps> = ({ startDate, endDate, o
 								)}
 
 								{/* Cases Card */}
-								<div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-3 border border-orange-200 dark:border-orange-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
+								<div className="bg-linear-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-3 border border-orange-200 dark:border-orange-800/30 hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-center">
 									<div className="flex flex-col items-center text-center mb-2">
 										<div className="p-2 bg-orange-500 rounded-lg mb-2">
 											<AlertTriangle className="w-5 h-5 text-white" />

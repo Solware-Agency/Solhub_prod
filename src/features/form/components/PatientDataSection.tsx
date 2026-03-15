@@ -29,31 +29,22 @@ interface PatientDataSectionProps {
 export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSectionProps) => {
 	const { laboratory } = useLaboratory()
 	const useNewPatientSystem = laboratory?.features?.hasNewPatientSystem || false
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 
-	// Si el feature flag está activo, usar el nuevo sistema
-	if (useNewPatientSystem) {
-		return <NewPatientDataSection control={control} inputStyles={inputStyles} />
-	}
-
-	// Sistema antiguo (comportamiento actual)
+	// Llamar todos los hooks incondicionalmente (reglas de React)
 	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
 	const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValue)
 	const [isRegistrationDateCalendarOpen, setIsRegistrationDateCalendarOpen] = useState(false)
-
-	// Observar el valor del tipo de cédula para deshabilitar el input cuando sea S/C
 	const idType = useWatch({ control, name: 'idType' })
 	const idNumber = useWatch({ control, name: 'idNumber' })
 	const isIdDisabled = idType === 'S/C'
 
-	// Validación condicional para el campo idNumber
 	useEffect(() => {
 		if (idType === 'S/C') {
-			// Limpiar errores cuando se selecciona S/C
 			clearErrors('idNumber')
 		}
 	}, [idType, idNumber, clearErrors, setError])
 
-	// Memoize the handler to prevent unnecessary re-renders
 	const handlePatientSelect = useCallback(
 		(idNumber: string) => {
 			// Si la cédula viene en formato completo (V-12345678), extraer el número
@@ -71,6 +62,11 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 		},
 		[fillPatientData, setValue],
 	)
+
+	// Si el feature flag está activo, usar el nuevo sistema (después de todos los hooks)
+	if (useNewPatientSystem) {
+		return <NewPatientDataSection control={control} inputStyles={inputStyles} />
+	}
 
 	return (
 		<Card className="hover:border-primary hover:shadow-lg hover:shadow-primary/20">
@@ -149,7 +145,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 								</FormItem>
 							)}
 						/>
-						<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-[32px] sm:min-h-[36px] leading-tight w-full col-span-full">
+						<p className="text-[10px] sm:text-xs text-gray-500 mt-1 min-h-8 sm:min-h-9 leading-tight w-full col-span-full">
 							{isIdDisabled
 								? '👶 S/C: Sin cédula (menor de edad)'
 								: '💡 Haz clic en una cédula para llenar automáticamente los datos del paciente'}
@@ -210,7 +206,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					name="phone"
 					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col">
-							<FormLabel>Teléfono *</FormLabel>
+							<FormLabel>{isMarihorgen ? 'Teléfono' : 'Teléfono *'}</FormLabel>
 							<FormControl>
 								<AutocompleteInput
 									fieldName="phone"
@@ -340,7 +336,7 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 										</Button>
 									</FormControl>
 								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0 z-[9999]" align="start">
+								<PopoverContent className="w-auto p-0 z-9999" align="start">
 									<Calendar
 										mode="single"
 										selected={field.value instanceof Date ? field.value : undefined}

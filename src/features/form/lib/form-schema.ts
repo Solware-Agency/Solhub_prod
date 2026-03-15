@@ -34,11 +34,8 @@ export const createFormSchema = (
 	const medicoTratanteConfig = moduleConfig?.fields?.medicoTratante
 
 	const originRequired = (originConfig?.enabled && originConfig?.required) || isMarihorgen
-	const sampleTypeEnabled = sampleTypeConfig?.enabled || isMarihorgen
 	const sampleTypeRequired = (sampleTypeConfig?.enabled && sampleTypeConfig?.required) || isMarihorgen
-	const numberOfSamplesEnabled = numberOfSamplesConfig?.enabled || isMarihorgen
 	const numberOfSamplesRequired = (numberOfSamplesConfig?.enabled && numberOfSamplesConfig?.required) || isMarihorgen
-	const medicoTratanteEnabled = medicoTratanteConfig?.enabled || isMarihorgen
 	const medicoTratanteRequired = medicoTratanteConfig?.enabled && medicoTratanteConfig?.required
 
 	// examType: Opcional, pero validado condicionalmente con consulta
@@ -119,14 +116,25 @@ export const createFormSchema = (
 				(val) => !val || /^[0-9]+$/.test(val),
 				'Cédula solo debe contener números',
 			),
-		phone: z
-			.string()
-			.min(1, 'El número de teléfono es requerido')
-			.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
-			.regex(
-				/^[0-9-+\s()]+$/,
-				'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
-			),
+		// Para marihorgen el teléfono no es obligatorio
+		phone: isMarihorgen
+			? z
+					.string()
+					.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
+					.regex(
+						/^[0-9-+\s()]*$/,
+						'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
+					)
+					.optional()
+					.or(z.literal(''))
+			: z
+					.string()
+					.min(1, 'El número de teléfono es requerido')
+					.max(15, 'El número de teléfono no puede tener más de 15 caracteres')
+					.regex(
+						/^[0-9-+\s()]+$/,
+						'El teléfono solo puede contener números, guiones, espacios, paréntesis y el símbolo +',
+					),
 		ageValue: z
 			.number({
 				required_error: 'La edad es requerida.',
@@ -176,7 +184,15 @@ export const createFormSchema = (
 		totalAmount: totalAmountSchema,
 		payments: z.array(paymentSchema).optional().default([]),
 		comments: z.string().optional(),
-		priceType: z.enum(['taquilla', 'convenios', 'descuento']).optional().or(z.literal('')),
+		// Marihorgen/LM: tipo de precio obligatorio; resto de laboratorios opcional
+		priceType: isMarihorgen
+			? z
+					.string()
+					.refine(
+						(val) => val === 'taquilla' || val === 'convenios' || val === 'descuento',
+						{ message: 'El tipo de precio es requerido' },
+					)
+			: z.enum(['taquilla', 'convenios', 'descuento']).optional().or(z.literal('')),
 		// Campos adicionales para compatibilidad con registration-service
 		doctorName: z.string().default(''),
 		patientType: z.string().default(''),

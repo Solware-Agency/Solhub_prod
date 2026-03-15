@@ -6,7 +6,7 @@ import FadeContent from "@shared/components/ui/FadeContent"
 
 export const NotFoundPage: React.FC = () => {
 return (
-  <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+  <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
     {/* Aurora Background */}
     <Aurora
       colorStops={['#3d84f5', '#06337b', '#3d84f5']}
@@ -16,7 +16,7 @@ return (
     />
 
     {/* 404 Content Container */}
-    <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+    <div className='relative z-10 w-screen h-screen bg-linear-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
       <FadeContent
         blur={true}
         duration={1000}
@@ -28,7 +28,7 @@ return (
         <div className='flex flex-col items-center justify-center md:rounded-xl w-screen h-screen md:h-auto md:w-full md:max-w-2xl bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20'>
           {/* 404 Number */}
           <div className='text-center mb-8'>
-            <h1 className='text-8xl sm:text-9xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4'>
+            <h1 className='text-8xl sm:text-9xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4'>
               404
             </h1>
             <h2 className='text-2xl sm:text-3xl font-bold text-white mb-4'>

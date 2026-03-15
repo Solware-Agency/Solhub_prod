@@ -50,5 +50,6 @@ const createDropdownOptions = (
 	})
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- utilidad createDropdownOptions exportada con el componente
 export { FormDropdown, createDropdownOptions }
 export type { FormDropdownProps }

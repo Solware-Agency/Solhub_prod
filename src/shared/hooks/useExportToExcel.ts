@@ -59,6 +59,7 @@ interface ServerFilters {
 	sortField?: string
 	sortDirection?: 'asc' | 'desc'
 	emailSentStatus?: boolean
+	triageStatus?: 'pendiente' | 'completo'
 }
 
 export const useExportToExcel = () => {
@@ -201,12 +202,11 @@ export const useExportToExcel = () => {
 				// Agregar la hoja al workbook
 				XLSX.utils.book_append_sheet(wb, ws, 'Casos Médicos')
 
-				// Generar el nombre del archivo con fecha y filtros
+				// Generar el nombre del archivo con fecha
 				const now = new Date()
 				const dateStr = now.toISOString().split('T')[0]
-				const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-')
 
-				let fileName = `casos_medicos_${dateStr}_${timeStr}`
+				let fileName = `Solhub_casos_medicos_${dateStr}`
 
 				// Agregar información de filtros al nombre del archivo
 				const filterParts = []
@@ -222,6 +222,7 @@ export const useExportToExcel = () => {
 				if (serverFilters.citoStatus) filterParts.push(`citologia_${serverFilters.citoStatus}`)
 				if (serverFilters.documentStatus) filterParts.push(`doc_${serverFilters.documentStatus}`)
 				if (serverFilters.examType) filterParts.push(`examen_${serverFilters.examType}`)
+				if (serverFilters.triageStatus) filterParts.push(`triaje_${serverFilters.triageStatus}`)
 				if (serverFilters.searchTerm) filterParts.push('busqueda')
 				if (serverFilters.dateFrom || serverFilters.dateTo) filterParts.push('rango_fechas')
 				if (serverFilters.sortField) filterParts.push(`orden_${serverFilters.sortField}_${serverFilters.sortDirection}`)

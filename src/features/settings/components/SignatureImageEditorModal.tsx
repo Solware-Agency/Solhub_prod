@@ -97,7 +97,7 @@ export const SignatureImageEditorModal: React.FC<SignatureImageEditorModalProps>
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0 left-[1rem] right-[1rem] sm:left-[50%] sm:right-auto translate-x-0 sm:translate-x-[-50%] bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
+			<DialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0 left-4 right-4 sm:left-[50%] sm:right-auto translate-x-0 sm:translate-x-[-50%] bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]">
 				{/* Título arriba */}
 				<DialogHeader className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
 					<DialogTitle className="text-base sm:text-lg">Editar firma</DialogTitle>
@@ -107,7 +107,7 @@ export const SignatureImageEditorModal: React.FC<SignatureImageEditorModalProps>
 				<div className="flex-1 flex gap-3 sm:gap-6 px-3 sm:px-6 py-3 sm:py-4 overflow-hidden min-h-0">
 					{/* Editor de imagen */}
 					<div className="flex-1 flex flex-col min-w-0 min-h-0">
-						<div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 min-h-0" style={{ minHeight: '300px' }}>
+						<div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 min-h-0" style={{ minHeight: '300px' }} data-rotation-deg={rotation}>
 							{imageSrc && (
 								<Cropper
 									ref={cropperRef}
@@ -138,7 +138,7 @@ export const SignatureImageEditorModal: React.FC<SignatureImageEditorModalProps>
 					</div>
 
 					{/* Instrucciones a la derecha - Ocultas en móviles */}
-					<div className="hidden md:block w-64 flex-shrink-0">
+					<div className="hidden md:block w-64 shrink-0">
 						<div className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg h-full">
 							<p className="font-semibold mb-3">Instrucciones:</p>
 							<ul className="list-disc list-inside space-y-2 text-xs">

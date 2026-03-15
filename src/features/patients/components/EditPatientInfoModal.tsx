@@ -8,7 +8,6 @@ import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
 import { createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@/services/supabase/config/config'
-import type { ChangeLog } from '@/services/legacy/supabase-service'
 import type { Patient } from '@/services/supabase/patients/patients-service'
 import { updatePatient } from '@/services/supabase/patients/patients-service'
 import { cn } from '@shared/lib/cn'
@@ -227,7 +226,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<div className="fixed inset-0 z-[99999] flex items-center justify-center">
+				<div className="fixed inset-0 z-99999 flex items-center justify-center">
 					{/* Overlay de fondo con opacidad desde el inicio */}
 					<motion.div
 						initial={{ opacity: 0 }}
@@ -297,7 +296,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Cédula</label>
 													<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
-														<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+														<div className="col-span-2 sm:col-span-1 min-w-15">
 															<CustomDropdown
 																options={createDropdownOptions(['V', 'E', 'J', 'C', 'S/C'])}
 																value={formData.cedulaType}

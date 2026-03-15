@@ -62,7 +62,7 @@ export const ConverterUSDtoVES = memo(({ converterUsdValue, setConverterUsdValue
 						variant="ghost"
 						size="icon"
 						type="button"
-						className="h-6 w-6 flex-shrink-0"
+						className="h-6 w-6 shrink-0"
 						onClick={(e) => {
 							e.stopPropagation()
 							handleCopyToClipboard(converterVesValue)

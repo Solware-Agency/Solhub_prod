@@ -5,7 +5,7 @@
 
 import { supabase } from '../config/config';
 // import type { Database } from '@shared/types/types' // No longer used
-import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils';
+import { hasRealChange, formatValueForLog, formatAmountForLog, generateChangeSessionId } from '../shared/change-log-utils';
 
 // =====================================================================
 // FUNCIONES HELPER
@@ -48,10 +48,10 @@ const getUserLaboratoryId = async (): Promise<string> => {
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
+  laboratory_id: string;
   patient_id: string | null;
   exam_type: string;
-  consulta: string | null; // Especialidad médica (SPT)
+  consulta: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -60,7 +60,7 @@ export interface MedicalCase {
   branch: string;
   date: string;
   code: string | null;
-  total_amount: number;
+  total_amount: number | null;
   payment_status: 'Incompleto' | 'Pagado';
   remaining: number | null;
   payment_method_1: string | null;
@@ -79,61 +79,51 @@ export interface MedicalCase {
   generated_by: string | null;
   created_at: string | null;
   updated_at: string | null;
-  // Campos adicionales del esquema original para compatibilidad
-  log: string | null;
-  diagnostico: string | null;
-  inmunohistoquimica: string | null;
   ims: string | null;
   googledocs_url: string | null;
   informepdf_url: string | null;
   attachment_url: string | null;
-  doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | undefined;
-  // Campos adicionales que existen en la tabla
+  doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
   exchange_rate: number | null;
   created_by: string | null;
   created_by_display_name: string | null;
-  material_remitido: string | null;
-  informacion_clinica: string | null;
-  descripcion_macroscopica: string | null;
-  comentario: string | null;
   pdf_en_ready: boolean | null;
   informe_qr: string | null;
   generated_by_display_name: string | null;
   generated_at: string | null;
   token: string | null;
-  cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent: boolean; // Nueva columna para indicar si el email fue enviado
-  version: number | null;
-  positivo: string | null;
-  negativo: string | null;
-  ki67: string | null;
-  conclusion_diagnostica: string | null;
-  image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF subido manualmente (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code: string | null; // Código visible que el owner de Marihorgen asigna a casos Inmunohistoquímica (máx. 5 dígitos). Solo UI; code sigue siendo el único interno.
+  cito_status: 'positivo' | 'negativo' | null;
+  email_sent: boolean;
+  image_url: string | null;
+  images_urls: string[] | null;
+  video_urls: string[] | null;
+  uploaded_pdf_url: string | null;
+  uploaded_pdf_urls: string[] | null;
+  owner_display_code: string | null;
   bloques_biopsia: number | null;
-  fecha_entrega: string | null; // YYYY-MM-DD
-  fecha_muestra: string | null; // YYYY-MM-DD
+  estado_spt: string | null;
+  price_type: string | null;
+  fecha_entrega: string | null;
+  fecha_muestra: string | null;
   patologo_id: string | null;
 }
 
 export interface MedicalCaseInsert {
   id?: string;
-  laboratory_id: string; // NUEVO: Multi-tenant
+  laboratory_id: string;
   patient_id?: string | null;
-  exam_type: string | null; // NULL permitido si no está configurado
-  consulta?: string | null; // Especialidad médica (SPT)
+  exam_type: string;
+  consulta?: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
   number_of_samples: number;
   relationship?: string | null;
-  branch: string | null; // Nullable en BD
+  branch: string;
   date: string;
   code?: string | null;
-  total_amount: number | null; // NULL permitido para labs sin módulo de pagos
-  payment_status: 'Incompleto' | 'Pagado';
+  total_amount?: number | null;
+  payment_status?: 'Incompleto' | 'Pagado';
   remaining?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
@@ -149,52 +139,43 @@ export interface MedicalCaseInsert {
   payment_reference_4?: string | null;
   comments?: string | null;
   generated_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  // Campos adicionales que existen en la tabla
+  created_at?: string | null;
+  updated_at?: string | null;
   exchange_rate?: number | null;
   created_by?: string | null;
   created_by_display_name?: string | null;
-  material_remitido?: string | null;
-  informacion_clinica?: string | null;
-  descripcion_macroscopica?: string | null;
-  diagnostico?: string | null;
-  comentario?: string | null;
   pdf_en_ready?: boolean | null;
   attachment_url?: string | null;
-  inmunohistoquimica?: string | null;
-  positivo?: string | null;
-  negativo?: string | null;
-  ki67?: string | null;
-  conclusion_diagnostica?: string | null;
   generated_by_display_name?: string | null;
   generated_at?: string | null;
-  log?: string | null;
   ims?: string | null;
   googledocs_url?: string | null;
   informepdf_url?: string | null;
   informe_qr?: string | null;
   token?: string | null;
-  doc_aprobado?:
-    | 'faltante'
-    | 'pendiente'
-    | 'aprobado'
-    | 'rechazado'
-    | undefined;
-  cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
+  doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
+  cito_status?: 'positivo' | 'negativo' | null;
+  email_sent?: boolean;
   bloques_biopsia?: number | null;
-  fecha_entrega?: string | null; // YYYY-MM-DD
-  fecha_muestra?: string | null; // YYYY-MM-DD
+  image_url?: string | null;
+  images_urls?: string[] | null;
+  video_urls?: string[] | null;
+  uploaded_pdf_url?: string | null;
+  uploaded_pdf_urls?: string[] | null;
+  owner_display_code?: string | null;
+  estado_spt?: string | null;
+  price_type?: string | null;
+  fecha_entrega?: string | null;
+  fecha_muestra?: string | null;
   patologo_id?: string | null;
 }
 
 export interface MedicalCaseUpdate {
   id?: string;
-  laboratory_id?: string; // NUEVO: Multi-tenant
+  laboratory_id?: string;
   patient_id?: string | null;
   exam_type?: string;
-  consulta?: string | null; // Especialidad médica (SPT)
+  consulta?: string | null;
   origin?: string;
   treating_doctor?: string;
   sample_type?: string;
@@ -202,10 +183,10 @@ export interface MedicalCaseUpdate {
   relationship?: string | null;
   branch?: string;
   date?: string;
-  code?: string;
-  total_amount?: number;
+  code?: string | null;
+  total_amount?: number | null;
   payment_status?: 'Incompleto' | 'Pagado';
-  remaining?: number;
+  remaining?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
   payment_reference_1?: string | null;
@@ -220,47 +201,34 @@ export interface MedicalCaseUpdate {
   payment_reference_4?: string | null;
   comments?: string | null;
   generated_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  // Campos adicionales que existen en la tabla
-  image_url?: string | null; // URL de imagen para imagenologia
+  created_at?: string | null;
+  updated_at?: string | null;
+  image_url?: string | null;
   exchange_rate?: number | null;
   created_by?: string | null;
   created_by_display_name?: string | null;
-  material_remitido?: string | null;
-  informacion_clinica?: string | null;
-  descripcion_macroscopica?: string | null;
-  diagnostico?: string | null;
-  comentario?: string | null;
   pdf_en_ready?: boolean | null;
   attachment_url?: string | null;
-  inmunohistoquimica?: string | null;
-  positivo?: string | null;
-  negativo?: string | null;
-  ki67?: string | null;
-  conclusion_diagnostica?: string | null;
   generated_by_display_name?: string | null;
   generated_at?: string | null;
-  log?: string | null;
   ims?: string | null;
   googledocs_url?: string | null;
   informepdf_url?: string | null;
   informe_qr?: string | null;
   token?: string | null;
-  doc_aprobado?:
-    | 'faltante'
-    | 'pendiente'
-    | 'aprobado'
-    | 'rechazado'
-    | undefined;
-  cito_status?: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent?: boolean; // Nueva columna para indicar si el email fue enviado
-  uploaded_pdf_url?: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls?: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code?: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
+  doc_aprobado?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
+  cito_status?: 'positivo' | 'negativo' | null;
+  email_sent?: boolean;
+  uploaded_pdf_url?: string | null;
+  uploaded_pdf_urls?: string[] | null;
+  owner_display_code?: string | null;
   bloques_biopsia?: number | null;
-  fecha_entrega?: string | null; // YYYY-MM-DD
-  fecha_muestra?: string | null; // YYYY-MM-DD
+  images_urls?: string[] | null;
+  video_urls?: string[] | null;
+  estado_spt?: string | null;
+  price_type?: string | null;
+  fecha_entrega?: string | null;
+  fecha_muestra?: string | null;
   patologo_id?: string | null;
 }
 
@@ -268,10 +236,10 @@ export interface MedicalCaseUpdate {
 export interface MedicalCaseWithPatient {
   // Campos de medical_records_clean
   id: string;
-  laboratory_id: string; // Multi-tenant
+  laboratory_id: string;
   patient_id: string | null;
   exam_type: string;
-  consulta: string | null; // Especialidad médica (SPT)
+  consulta: string | null;
   origin: string;
   treating_doctor: string;
   sample_type: string;
@@ -279,10 +247,10 @@ export interface MedicalCaseWithPatient {
   relationship: string | null;
   branch: string;
   date: string;
-  total_amount: number;
+  total_amount: number | null;
   exchange_rate: number | null;
   payment_status: 'Incompleto' | 'Pagado';
-  remaining: number;
+  remaining: number | null;
   payment_method_1: string | null;
   payment_amount_1: number | null;
   payment_reference_1: string | null;
@@ -301,34 +269,37 @@ export interface MedicalCaseWithPatient {
   updated_at: string | null;
   created_by: string | null;
   created_by_display_name: string | null;
-  material_remitido: string | null;
-  informacion_clinica: string | null;
-  descripcion_macroscopica: string | null;
-  diagnostico: string | null;
-  comentario: string | null;
   pdf_en_ready: boolean | null;
   attachment_url: string | null;
   doc_aprobado: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado' | null;
   generated_by: string | null;
-  version: number | null;
-  cito_status: 'positivo' | 'negativo' | null; // Nueva columna para estado citológico
-  email_sent: boolean; // Nueva columna para indicar si el email fue enviado
-  image_url: string | null; // URL de imagen para imagenología
-  uploaded_pdf_url: string | null; // URL del PDF (compatibilidad: primer elemento de uploaded_pdf_urls)
-  uploaded_pdf_urls: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
-  owner_display_code: string | null; // Marihorgen + Inmunohistoquímica: código visible del owner (máx. 5 dígitos)
+  generated_by_display_name: string | null;
+  generated_at: string | null;
+  cito_status: 'positivo' | 'negativo' | null;
+  email_sent: boolean;
+  image_url: string | null;
+  images_urls: string[] | null;
+  uploaded_pdf_url: string | null;
+  uploaded_pdf_urls: string[] | null;
+  owner_display_code: string | null;
   bloques_biopsia: number | null;
-  fecha_entrega: string | null; // YYYY-MM-DD
-  fecha_muestra: string | null; // YYYY-MM-DD
+  ims: string | null;
+  googledocs_url: string | null;
+  informepdf_url: string | null;
+  informe_qr: string | null;
+  token: string | null;
+  estado_spt: string | null;
+  price_type: string | null;
+  fecha_entrega: string | null;
+  fecha_muestra: string | null;
   patologo_id: string | null;
   // Campos de patients
-  informepdf_url: string | null;
   cedula: string;
   nombre: string;
   edad: string | null;
   telefono: string | null;
   patient_email: string | null;
-  fecha_nacimiento?: string | null; // Fecha de nacimiento del paciente
+  fecha_nacimiento?: string | null;
 }
 
 // =====================================================================
@@ -561,6 +532,11 @@ export const getCasesWithPatientInfo = async (
     branchFilter?: string[]; // Filtro de múltiples sedes
     dateFrom?: string;
     dateTo?: string;
+    /** Filtro por fecha de muestra (solo labs que usan fecha_muestra, ej. Marihorgen/LM) */
+    sampleDateFrom?: string;
+    sampleDateTo?: string;
+    /** Filtro por tipo de muestra (solo Marihorgen/LM; valor = name de sample_type_costs) */
+    sampleTypeFilter?: string;
     examType?: string;
     consulta?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
@@ -574,6 +550,7 @@ export const getCasesWithPatientInfo = async (
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
+    triageStatus?: 'pendiente' | 'completo';
     doctorFilter?: string[];
     originFilter?: string[];
     emailSentStatus?: boolean;
@@ -599,6 +576,90 @@ export const getCasesWithPatientInfo = async (
     }
 
     const cleanSearchTerm = filters?.searchTerm?.trim();
+
+    const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number) => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Timeout de ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
+    };
+
+    // Obtener IDs de casos con triaje completado (is_draft = false) para filtrar por caso real.
+    let completedTriageCaseIdsCache: Set<string> | null = null;
+
+    const getCompletedTriageCaseIds = async (caseIds: string[]) => {
+      if (!caseIds || caseIds.length === 0) {
+        return new Set<string>();
+      }
+
+      // Cargar una sola vez por ejecución para evitar múltiples requests pesados.
+      if (!completedTriageCaseIdsCache) {
+        const triageQuery = (supabase as any)
+          .from('triaje_records')
+          .select('case_id')
+          .eq('laboratory_id', profile.laboratory_id)
+          .eq('is_draft', false)
+          .not('case_id', 'is', null);
+        
+        const { data: triageRows, error: triageError } = await withTimeout(
+          triageQuery,
+          7000,
+        ) as any;
+
+        if (triageError) {
+          throw triageError;
+        }
+
+        completedTriageCaseIdsCache = new Set(
+          (triageRows || [])
+            .map((row: any) => row.case_id)
+            .filter((id: string | null) => !!id),
+        );
+      }
+
+      // Intersección local con los IDs de casos actualmente evaluados.
+      const currentCaseIds = new Set(caseIds);
+      return new Set(
+        Array.from(completedTriageCaseIdsCache).filter((id) =>
+          currentCaseIds.has(id),
+        ),
+      );
+    };
+
+    const applyTriageStatusFilter = async (
+      items: any[],
+      triageStatus?: 'pendiente' | 'completo',
+    ) => {
+      if (!triageStatus || !items || items.length === 0) {
+        return items;
+      }
+
+      const caseIds = items.map((item: any) => item.id);
+
+      let completedTriageCaseIds: Set<string>;
+      try {
+        completedTriageCaseIds = await getCompletedTriageCaseIds(caseIds);
+      } catch (triageError) {
+        // Fallback: no romper la carga completa de casos si falla la consulta de triaje.
+        console.warn(
+          '⚠️ No se pudo aplicar filtro de triaje, se mostrarán casos sin filtrar por triaje:',
+          triageError,
+        );
+        return items;
+      }
+
+      return items.filter((item: any) => {
+        const hasCompletedTriage = completedTriageCaseIds.has(item.id);
+        if (triageStatus === 'completo') {
+          return hasCompletedTriage;
+        }
+        return !hasCompletedTriage;
+      });
+    };
 
     // Si hay término de búsqueda, usar estrategia de búsquedas múltiples
     if (cleanSearchTerm) {
@@ -810,6 +871,14 @@ export const getCasesWithPatientInfo = async (
         });
       }
 
+      // Filtro por estatus de triaje (por case_id, no por patient_id)
+      if (filters?.triageStatus) {
+        combinedResults = await applyTriageStatusFilter(
+          combinedResults,
+          filters.triageStatus,
+        );
+      }
+
       // Filtrar por rol de usuario
       if (filters?.userRole === 'residente') {
         combinedResults = combinedResults.filter(
@@ -922,6 +991,20 @@ export const getCasesWithPatientInfo = async (
       query = query.filter('created_at', 'lt', nextDayStr);
     }
 
+    if (filters?.sampleDateFrom) {
+      query = query.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
+    }
+    if (filters?.sampleDateTo) {
+      const nextDay = new Date(filters.sampleDateTo);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.filter('fecha_muestra', 'lt', nextDayStr);
+    }
+
+    if (filters?.sampleTypeFilter) {
+      query = query.eq('sample_type', filters.sampleTypeFilter);
+    }
+
     if (filters?.examType) {
       // Mapear el valor del filtro al valor exacto en la base de datos
       let exactExamType = filters.examType;
@@ -1004,7 +1087,9 @@ export const getCasesWithPatientInfo = async (
     let count = 0;
     let error: any = null;
 
-    if (isRelatedField) {
+    const needsClientSideProcessing = isRelatedField || !!filters?.triageStatus;
+
+    if (needsClientSideProcessing) {
       // Si el campo de ordenamiento es de la tabla relacionada,
       // necesitamos obtener todos los datos, ordenarlos en el cliente y luego paginar
       const { data: allData, error: allError, count: totalCount } = await query;
@@ -1023,8 +1108,17 @@ export const getCasesWithPatientInfo = async (
           version: item.version || null,
         })) as MedicalCaseWithPatient[];
 
+        // Filtro por estatus de triaje (por case_id, no por patient_id)
+        let triageFilteredData = transformedAll;
+        if (filters?.triageStatus) {
+          triageFilteredData = await applyTriageStatusFilter(
+            transformedAll,
+            filters.triageStatus,
+          );
+        }
+
         // Ordenar en el cliente
-        transformedAll.sort((a: any, b: any) => {
+        triageFilteredData.sort((a: any, b: any) => {
           let aValue = a[sortField];
           let bValue = b[sortField];
 
@@ -1044,10 +1138,10 @@ export const getCasesWithPatientInfo = async (
         });
 
         // Aplicar paginación después del ordenamiento
-        count = totalCount || 0;
+        count = triageFilteredData.length || totalCount || 0;
         const from = (page - 1) * limit;
         const to = from + limit;
-        data = transformedAll.slice(from, to);
+        data = triageFilteredData.slice(from, to);
       }
     } else {
       // Si el campo es de la tabla principal, ordenar en Supabase
@@ -1067,7 +1161,7 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Transformar los datos (solo si no se transformaron antes)
-    const transformedData = isRelatedField
+    const transformedData = needsClientSideProcessing
       ? (data as MedicalCaseWithPatient[])
       : ((data || []).map((item: any) => ({
           ...item,
@@ -1123,8 +1217,111 @@ export const getAllCasesWithPatientInfo = async (filters?: {
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
   emailSentStatus?: boolean;
+  triageStatus?: 'pendiente' | 'completo';
 }) => {
   try {
+    // Helper para timeout
+    const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout de ${timeoutMs}ms excedido`)), timeoutMs),
+        ),
+      ]);
+    };
+
+    // Helper para obtener IDs de casos con triaje completado
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+    
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('laboratory_id')
+      .eq('id', user.id)
+      .single();
+    
+    if (profileError || !profileData) {
+      throw new Error('No se pudo obtener el laboratory_id del usuario');
+    }
+    
+    const profile = profileData as unknown as { laboratory_id: string };
+
+    let completedTriageCaseIdsCache: Set<string> | null = null;
+    const getCompletedTriageCaseIds = async (caseIds: string[]) => {
+      if (!completedTriageCaseIdsCache) {
+        const triageQuery = (supabase as any)
+          .from('triaje_records')
+          .select('case_id')
+          .eq('laboratory_id', profile.laboratory_id)
+          .eq('is_draft', false)
+          .not('case_id', 'is', null);
+        
+        const { data: triageRows, error: triageError } = await withTimeout(
+          triageQuery,
+          7000,
+        ) as any;
+
+        if (triageError) {
+          throw triageError;
+        }
+
+        completedTriageCaseIdsCache = new Set(
+          (triageRows || [])
+            .map((row: any) => row.case_id)
+            .filter((id: string | null) => !!id),
+        );
+      }
+
+      const currentCaseIds = new Set(caseIds);
+      return new Set(
+        Array.from(completedTriageCaseIdsCache).filter((id) =>
+          currentCaseIds.has(id),
+        ),
+      );
+    };
+
+    const applyTriageStatusFilter = async (
+      items: any[],
+      triageStatus?: 'pendiente' | 'completo',
+    ) => {
+      if (!triageStatus || !items || items.length === 0) {
+        return items;
+      }
+
+      console.log(`🔍 [EXPORT] Aplicando filtro de triaje: ${triageStatus}, casos antes: ${items.length}`);
+
+      const caseIds = items.map((item: any) => item.id);
+
+      let completedTriageCaseIds: Set<string>;
+      try {
+        completedTriageCaseIds = await getCompletedTriageCaseIds(caseIds);
+        console.log(`✅ [EXPORT] Casos con triaje completado: ${completedTriageCaseIds.size}`);
+      } catch (triageError) {
+        console.warn(
+          '⚠️ No se pudo aplicar filtro de triaje en exportación:',
+          triageError,
+        );
+        return items;
+      }
+
+      const filtered = items.filter((item: any) => {
+        const hasCompletedTriage = completedTriageCaseIds.has(item.id);
+        if (triageStatus === 'completo') {
+          return hasCompletedTriage;
+        }
+        return !hasCompletedTriage;
+      });
+
+      console.log(`✅ [EXPORT] Casos después del filtro: ${filtered.length}`);
+      return filtered;
+    };
+
+    console.log('🔍 [EXPORT] getAllCasesWithPatientInfo llamado con filtros:', {
+      triageStatus: filters?.triageStatus,
+      doctorFilter: filters?.doctorFilter,
+      searchTerm: filters?.searchTerm,
+    });
+
     // Si hay un término de búsqueda, intentar usar función optimizada primero
     if (filters?.searchTerm) {
       const cleanSearchTerm = filters.searchTerm.trim();
@@ -1133,7 +1330,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         // Intentar usar función SQL optimizada con pg_trgm
         try {
           const laboratoryId = await getUserLaboratoryId();
-          const { data: optimizedResults, error: optimizedError } = await supabase.rpc(
+          const { data: optimizedResults, error: optimizedError } = await (supabase as any).rpc(
             'search_medical_cases_optimized',
             {
               search_term: cleanSearchTerm,
@@ -1142,9 +1339,9 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             },
           );
 
-          if (!optimizedError && optimizedResults && optimizedResults.length > 0) {
+          if (!optimizedError && optimizedResults && (optimizedResults as any).length > 0) {
 						// IDs en orden de relevancia (exactos, luego primer nombre = término, score, código)
-						const caseIds = optimizedResults.map((r: any) => r.id)
+						const caseIds = (optimizedResults as any).map((r: any) => r.id)
 
 						// Obtener los casos completos (solo pacientes activos; sin order para respetar relevancia después)
 						const { data: fullCases, error: fullCasesError } = await supabase
@@ -1265,6 +1462,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							if (filters?.userRole === 'patologo') {
 								filteredData = filteredData.filter(
 									(item) => item.exam_type === 'Biopsia' || item.exam_type === 'Inmunohistoquímica',
+								)
+							}
+
+							// Aplicar filtro de triaje
+							if (filters?.triageStatus) {
+								filteredData = await applyTriageStatusFilter(
+									filteredData,
+									filters.triageStatus,
 								)
 							}
 
@@ -1550,6 +1755,14 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           );
         }
 
+        // Aplicar filtro de triaje
+        if (filters?.triageStatus) {
+          filteredData = await applyTriageStatusFilter(
+            filteredData,
+            filters.triageStatus,
+          );
+        }
+
         // Aplicar ordenamiento
         const sortField = filters?.sortField || 'created_at';
         const sortDirection = filters?.sortDirection || 'desc';
@@ -1631,6 +1844,20 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         nextDay.setDate(nextDay.getDate() + 1);
         const nextDayStr = nextDay.toISOString().split('T')[0];
         query = query.filter('created_at', 'lt', nextDayStr);
+      }
+
+      if ((filters as any)?.sampleDateFrom) {
+        query = query.filter('fecha_muestra', 'gte', (filters as any).sampleDateFrom);
+      }
+      if ((filters as any)?.sampleDateTo) {
+        const nextDaySample = new Date((filters as any).sampleDateTo);
+        nextDaySample.setDate(nextDaySample.getDate() + 1);
+        const nextDaySampleStr = nextDaySample.toISOString().split('T')[0];
+        query = query.filter('fecha_muestra', 'lt', nextDaySampleStr);
+      }
+
+      if ((filters as any)?.sampleTypeFilter) {
+        query = query.eq('sample_type', (filters as any).sampleTypeFilter);
       }
 
       if (filters?.examType) {
@@ -1746,15 +1973,21 @@ export const getAllCasesWithPatientInfo = async (filters?: {
       }
     }
 
+    // Aplicar filtro de triaje después de obtener todos los datos
+    let finalData = allData;
+    if (filters?.triageStatus) {
+      finalData = await applyTriageStatusFilter(allData, filters.triageStatus);
+    }
+
     console.log(
-      `✅ Obtenidos ${allData.length} casos médicos de ${totalCount} totales`,
+      `✅ Obtenidos ${finalData.length} casos médicos de ${totalCount} totales`,
     );
 
     return {
-      data: allData,
-      count: totalCount,
+      data: finalData,
+      count: finalData.length,
       page: 1,
-      limit: allData.length,
+      limit: finalData.length,
       totalPages: 1,
     };
   } catch (error) {
@@ -1863,7 +2096,47 @@ const logMedicalCaseChanges = async (
       comentario: 'Comentario',
       consulta: 'Tipo de Consulta',
       image_url: 'URL de Imagen',
+      payment_method_1: 'Método de Pago 1',
+      payment_amount_1: 'Monto de Pago 1',
+      payment_reference_1: 'Referencia de Pago 1',
+      payment_method_2: 'Método de Pago 2',
+      payment_amount_2: 'Monto de Pago 2',
+      payment_reference_2: 'Referencia de Pago 2',
+      payment_method_3: 'Método de Pago 3',
+      payment_amount_3: 'Monto de Pago 3',
+      payment_reference_3: 'Referencia de Pago 3',
+      payment_method_4: 'Método de Pago 4',
+      payment_amount_4: 'Monto de Pago 4',
+      payment_reference_4: 'Referencia de Pago 4',
     };
+
+    // Helper: formatear old/new para montos con moneda (USD o Bs) en historial de acciones
+    const getOldValueForLog = (f: string, oldVal: any, _newVal: any) => {
+      if (f === 'total_amount') {
+        const n = formatValueForLog(oldVal)
+        return n != null ? `${n} USD` : null
+      }
+      const match = f.match(/^payment_amount_(\d)$/)
+      if (match) {
+        const slot = match[1]
+        const method = oldData[`payment_method_${slot}` as keyof MedicalCase] as string | null | undefined
+        return formatAmountForLog(oldVal, method)
+      }
+      return formatValueForLog(oldVal)
+    }
+    const getNewValueForLog = (f: string, _oldVal: any, newVal: any) => {
+      if (f === 'total_amount') {
+        const n = formatValueForLog(newVal)
+        return n != null ? `${n} USD` : null
+      }
+      const match = f.match(/^payment_amount_(\d)$/)
+      if (match) {
+        const slot = match[1]
+        const method = (newData as any)[`payment_method_${slot}`] ?? oldData[`payment_method_${slot}` as keyof MedicalCase]
+        return formatAmountForLog(newVal, method as string | null | undefined)
+      }
+      return formatValueForLog(newVal)
+    }
 
     // Detectar cambios con normalización (evita falsos positivos)
     for (const [field, newValue] of Object.entries(newData)) {
@@ -1880,13 +2153,14 @@ const logMedicalCaseChanges = async (
 					entity_type: 'medical_case',
 					field_name: field,
 					field_label: fieldLabels[field] || field,
-					old_value: formatValueForLog(oldValue),
-					new_value: formatValueForLog(newValue),
+					old_value: getOldValueForLog(field, oldValue, newValue),
+					new_value: getNewValueForLog(field, oldValue, newValue),
 					user_id: userId,
 					user_email: userEmail,
 					user_display_name: userDisplayName,
 					change_session_id: changeSessionId, // Mismo session_id para todos los cambios del submit
 					changed_at: changedAt, // Mismo timestamp para todos
+					laboratory_id: oldData.laboratory_id, // Requerido por la tabla change_logs
 				})
 			}
 		}
@@ -1959,14 +2233,7 @@ export const findCaseByCode = async (
       patient_email: (data as any).patients?.email || null,
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
-      version: (data as any).version || null,
       image_url: (data as any).image_url || null,
-      // Asegurar que todas las propiedades requeridas estén presentes
-      material_remitido: (data as any).material_remitido || null,
-      informacion_clinica: (data as any).informacion_clinica || null,
-      descripcion_macroscopica: (data as any).descripcion_macroscopica || null,
-      diagnostico: (data as any).diagnostico || null,
-      comentario: (data as any).comentario || null,
     } as MedicalCaseWithPatient;
 
     return transformedData;
@@ -2036,13 +2303,7 @@ export const getCaseByIdWithPatient = async (
       patient_email: (data as any).patients?.email || null,
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
-      version: (data as any).version || null,
       image_url: (data as any).image_url || null,
-      material_remitido: (data as any).material_remitido || null,
-      informacion_clinica: (data as any).informacion_clinica || null,
-      descripcion_macroscopica: (data as any).descripcion_macroscopica || null,
-      diagnostico: (data as any).diagnostico || null,
-      comentario: (data as any).comentario || null,
     } as MedicalCaseWithPatient;
 
     return transformedData;
@@ -2202,10 +2463,10 @@ export const deleteMedicalCase = async (
     }
 
     // Eliminar todos los PDFs adjuntos si existen (uploaded_pdf_urls o uploaded_pdf_url)
-    const pdfUrlsToDelete: string[] = Array.isArray(existingCase.uploaded_pdf_urls) && existingCase.uploaded_pdf_urls.length > 0
-      ? existingCase.uploaded_pdf_urls
-      : existingCase.uploaded_pdf_url
-        ? [existingCase.uploaded_pdf_url]
+    const pdfUrlsToDelete: string[] = Array.isArray((existingCase as any).uploaded_pdf_urls) && (existingCase as any).uploaded_pdf_urls.length > 0
+      ? (existingCase as any).uploaded_pdf_urls
+      : (existingCase as any).uploaded_pdf_url
+        ? [(existingCase as any).uploaded_pdf_url]
         : [];
     if (pdfUrlsToDelete.length > 0) {
       try {

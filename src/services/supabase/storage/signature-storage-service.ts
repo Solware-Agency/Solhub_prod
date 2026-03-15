@@ -9,7 +9,6 @@ import type { PostgrestError } from '@supabase/supabase-js'
 const BUCKET_NAME = 'doctor-signatures'
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB en bytes
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 
 /**
  * Valida que el archivo sea JPG/JPEG/PNG y no exceda el tamaño máximo
@@ -236,7 +235,7 @@ export async function uploadDoctorSignature(
 			
 			try {
 				// Primero, verificar el mimetype actual
-				const { data: fileInfo, error: infoError } = await supabase.storage
+				await supabase.storage
 					.from(BUCKET_NAME)
 					.list(filePath.split('/').slice(0, -1).join('/'), {
 						limit: 1,

@@ -53,12 +53,14 @@ import { FeatureGuard } from '@shared/components/FeatureGuard'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { getCodeLegend } from '@/shared/utils/code-legend-utils'
 import { useModuleConfig } from '@shared/hooks/useModuleConfig'
+import { useExchangeRate } from '@shared/hooks/useExchangeRate'
 import SendEmailModal from './SendEmailModal'
 import { getResponsableByDependiente } from '@services/supabase/patients/responsabilidades-service'
-import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
+import { MultipleMediaUrls, type MediaItem } from '@shared/components/ui/MultipleMediaUrls'
 import { PDFButton } from '@shared/components/ui/PDFButton'
 import { CasePDFUpload } from '@shared/components/ui/CasePDFUpload'
 import { uploadCaseImage, validateCaseImage } from '@/services/supabase/storage/case-images-storage-service'
+import { uploadCaseVideo, validateCaseVideo } from '@/services/supabase/storage/case-videos-storage-service'
 import PatientHistoryModal from '@features/patients/components/PatientHistoryModal'
 // import EditPatientInfoModal from '@features/patients/components/EditPatientInfoModal';
 
@@ -284,8 +286,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const [isUploadingImages, setIsUploadingImages] = useState(false)
 		const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
-		// Image URLs state for imagenologia role (hasta 10 imágenes)
-		const [imageUrls, setImageUrls] = useState<string[]>([])
+		// Media URLs state (imágenes + videos, máximo 5 total)
+		const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
 
 		// Payment editing states
 		const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -347,6 +349,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				{ value: 'Bs en efectivo', label: 'Bs en efectivo' },
 			])
 		}, [laboratory?.config?.paymentMethods])
+
+		const { data: dailyRate } = useExchangeRate()
 
 		// Query to get the user who created the record
 		const { data: creatorData } = useQuery({
@@ -566,11 +570,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// Initialize edited case when currentCase changes or when entering edit mode
 		useEffect(() => {
 			if (currentCase) {
-				// Initialize image URLs for imagenologia role (siempre, no solo en edición)
+				// Initialize media URLs (imágenes + videos, máximo 5 total)
 				// Priorizar images_urls (nuevo), fallback a image_url (legacy)
 				const caseImages =
 					(currentCase as any).images_urls || ((currentCase as any).image_url ? [(currentCase as any).image_url] : [])
-				setImageUrls(caseImages)
+				const caseVideos = (currentCase as any).video_urls || []
+				const media: MediaItem[] = [
+					...caseImages.map((url: string) => ({ type: 'image' as const, url })),
+					...caseVideos.map((url: string) => ({ type: 'video' as const, url })),
+				]
+				setMediaItems(media)
 
 				if (isEditing) {
 					// Initialize with current case data - separating patient and case data
@@ -709,40 +718,79 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			}))
 		}, [])
 
-		const handleUploadImage = useCallback(
-			async (file: File): Promise<string | null> => {
+		const handleUploadMedia = useCallback(
+			async (file: File): Promise<{ type: 'image' | 'video'; url: string } | null> => {
 				if (!currentCase?.id || !profile?.laboratory_id) return null
-				const validation = validateCaseImage(file)
-				if (!validation.valid) {
-					toast({
-						title: '❌ Imagen no válida',
-						description: validation.error,
-						variant: 'destructive',
-					})
-					return null
-				}
-				setIsUploadingImages(true)
-				try {
-					const { data, error } = await uploadCaseImage(currentCase.id, file, profile.laboratory_id)
-					if (error) {
+				
+				// Detectar tipo de archivo
+				const isVideo = file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mp4')
+				
+				if (isVideo) {
+					const validation = validateCaseVideo(file)
+					if (!validation.valid) {
 						toast({
-							title: '❌ Error al subir',
-							description: error.message,
+							title: '❌ Video no válido',
+							description: validation.error,
 							variant: 'destructive',
 						})
 						return null
 					}
-					if (data) {
-						setImageUrls((prev) => (prev.length >= 10 ? prev : [...prev, data]))
-						toast({
-							title: '✅ Imagen subida',
-							description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
-							className: 'bg-green-100 border-green-400 text-green-800',
-						})
+					setIsUploadingImages(true)
+					try {
+						const { data, error } = await uploadCaseVideo(currentCase.id, file, profile.laboratory_id)
+						if (error) {
+							toast({
+								title: '❌ Error al subir video',
+								description: error.message,
+								variant: 'destructive',
+							})
+							return null
+						}
+						if (data) {
+							toast({
+								title: '✅ Video subido',
+								description: 'El video se subió correctamente. Guarda el caso para conservar los cambios.',
+								className: 'bg-green-100 border-green-400 text-green-800',
+							})
+							return { type: 'video', url: data }
+						}
+						return null
+					} finally {
+						setIsUploadingImages(false)
 					}
-					return data
-				} finally {
-					setIsUploadingImages(false)
+				} else {
+					const validation = validateCaseImage(file)
+					if (!validation.valid) {
+						toast({
+							title: '❌ Imagen no válida',
+							description: validation.error,
+							variant: 'destructive',
+						})
+						return null
+					}
+					setIsUploadingImages(true)
+					try {
+						const { data, error } = await uploadCaseImage(currentCase.id, file, profile.laboratory_id)
+						if (error) {
+							toast({
+								title: '❌ Error al subir',
+								description: error.message,
+								variant: 'destructive',
+							})
+							return null
+						}
+						if (data) {
+							toast({
+								title: '✅ Imagen subida',
+								description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
+								className: 'bg-green-100 border-green-400 text-green-800',
+							})
+							return { type: 'image', url: data }
+						}
+						return null
+					} finally {
+						setIsUploadingImages(false)
+					}
 				}
 			},
 			[currentCase?.id, profile?.laboratory_id, toast],
@@ -812,6 +860,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		const handleSaveChanges = async () => {
 			if (!currentCase || !user) return
+
+			// Tasa para cálculos al guardar: preferir tasa del día; fallback a tasa del caso
+			const rateToUse =
+				dailyRate != null && Number(dailyRate) > 0 ? Number(dailyRate) : (currentCase?.exchange_rate ?? 0)
 
 			setIsSaving(true)
 			try {
@@ -920,8 +972,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				if (financialChanges.total_amount !== undefined || financialChanges.exchange_rate !== undefined) {
 					const totalForCalc =
 						(financialChanges.total_amount ?? editedCase.total_amount ?? currentCase.total_amount) || 0
-					const rateForCalc =
-						financialChanges.exchange_rate ?? editedCase.exchange_rate ?? currentCase.exchange_rate ?? undefined
 					const paymentMethodsForRecalc: PaymentMethod[] = []
 					for (let i = 1; i <= 4; i++) {
 						const method = currentCase[`payment_method_${i}` as keyof MedicalCaseWithPatient] as string
@@ -939,7 +989,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
 							paymentMethodsForRecalc,
 							totalForCalc,
-							rateForCalc,
+							rateToUse,
 						)
 						financialChanges.remaining = Math.max(0, missingAmount ?? 0)
 						financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
@@ -997,12 +1047,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						financialChanges[`payment_reference_${i}`] = pm.reference || null
 					})
 
-					// Calcular monto restante usando la lógica correcta de conversión
+					// Calcular monto restante usando la lógica correcta (tasa del día)
 					const totalAmount = editedCase.total_amount || currentCase.total_amount || 0
 					const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
 						finalPaymentMethods,
 						totalAmount,
-						exchangeRate,
+						rateToUse,
 					)
 					financialChanges.remaining = Math.max(0, missingAmount || 0)
 
@@ -1026,12 +1076,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Detectar cambios en URLs de imágenes (se guardan aparte en images_urls)
+				// Detectar cambios en URLs de medios (imágenes + videos)
 				const currentImages: string[] =
 					(currentCase as any).images_urls || ((currentCase as any).image_url ? [(currentCase as any).image_url] : [])
-				const imagesChanged = JSON.stringify(imageUrls) !== JSON.stringify(currentImages)
+				const currentVideos: string[] = (currentCase as any).video_urls || []
+				const currentMedia: MediaItem[] = [
+					...currentImages.map((url: string) => ({ type: 'image' as const, url })),
+					...currentVideos.map((url: string) => ({ type: 'video' as const, url })),
+				]
+				const mediaChanged = JSON.stringify(mediaItems) !== JSON.stringify(currentMedia)
 
-				if (Object.keys(caseChanges).length === 0 && Object.keys(financialChanges).length === 0 && !imagesChanged) {
+				if (Object.keys(caseChanges).length === 0 && Object.keys(financialChanges).length === 0 && !mediaChanged) {
 					toast({
 						title: 'Sin cambios',
 						description: 'No se detectaron cambios para guardar.',
@@ -1068,24 +1123,31 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de imágenes (images_urls) - SPT y Conspat: todos los roles pueden guardar
-				if (imagesChanged && (isSpt || isConspat)) {
-					const { error: imageUrlsError } = await supabase
+				// Guardar URLs de medios (images_urls + video_urls) - SPT y Conspat: todos los roles pueden guardar
+				if (mediaChanged && (isSpt || isConspat)) {
+					const imageUrls = mediaItems.filter(m => m.type === 'image').map(m => m.url)
+					const videoUrls = mediaItems.filter(m => m.type === 'video').map(m => m.url)
+					
+					const { error: mediaUrlsError } = await supabase
 						.from('medical_records_clean')
-						.update({ images_urls: imageUrls.length > 0 ? imageUrls : null })
+						.update({
+							images_urls: imageUrls.length > 0 ? imageUrls : null,
+							video_urls: videoUrls.length > 0 ? videoUrls : null,
+						})
 						.eq('id', currentCase.id)
 
-					if (imageUrlsError) {
-						console.error('Error saving image URLs:', imageUrlsError)
+					if (mediaUrlsError) {
+						console.error('Error saving media URLs:', mediaUrlsError)
 						toast({
 							title: '❌ Error al guardar URLs',
-							description: 'No se pudieron guardar las URLs de las imágenes.',
+							description: 'No se pudieron guardar las URLs de los archivos.',
 							variant: 'destructive',
 						})
 					} else {
+						const totalMedia = mediaItems.length
 						toast({
-							title: '✅ URLs de imágenes guardadas',
-							description: `Se ${imageUrls.length === 1 ? 'ha' : 'han'} guardado ${imageUrls.length} ${imageUrls.length === 1 ? 'imagen' : 'imágenes'} correctamente.`,
+							title: '✅ Archivos guardados',
+							description: `Se ${totalMedia === 1 ? 'ha' : 'han'} guardado ${totalMedia} ${totalMedia === 1 ? 'archivo' : 'archivos'} correctamente (${imageUrls.length} imagen${imageUrls.length !== 1 ? 'es' : ''}, ${videoUrls.length} video${videoUrls.length !== 1 ? 's' : ''}).`,
 							className: 'bg-green-100 border-green-400 text-green-800',
 						})
 					}
@@ -1102,7 +1164,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				setPaymentMethods([])
 				setIsAddingNewPayment(false)
 				setNewPaymentMethod({ method: '', amount: 0, reference: '' })
-				setImageUrls([]) // Clear image URLs
+				setMediaItems([]) // Clear media URLs
 
 				// Call onSave callback if provided
 				if (onSave) {
@@ -1259,7 +1321,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				const emailSubject = `Caso ${case_?.code || case_?.id} - ${case_?.nombre}`
 				const emailBody = `Hola ${case_?.nombre},\n\nLe escribimos desde el laboratorio ${laboratoryName} por su caso ${case_?.code || 'N/A'}.\n\nSaludos cordiales.`
 
-				// Obtener imágenes del caso (priorizar images_urls array)
+				// Obtener medios del caso (imágenes + videos)
 				const caseImages =
 					(currentCase as any)?.images_urls &&
 					Array.isArray((currentCase as any).images_urls) &&
@@ -1268,6 +1330,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						: (currentCase as any)?.image_url
 							? [(currentCase as any).image_url]
 							: []
+				const caseVideos = (currentCase as any)?.video_urls || []
+				const allMediaUrls = [...caseImages, ...caseVideos]
 
 				// Enviar email vía Supabase Edge Function send-email
 				const uploadedPdfUrlsForEmail: string[] =
@@ -1293,7 +1357,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						pdfUrl: pdfUrl,
 						uploadedPdfUrl: (currentCase as any)?.uploaded_pdf_url || null,
 						uploadedPdfUrls: uploadedPdfUrlsForEmail,
-						imageUrls: caseImages,
+						imageUrls: allMediaUrls,
 						laboratory_id: case_?.laboratory_id || laboratory?.id,
 						subject: emailSubject,
 						message: emailBody,
@@ -1425,6 +1489,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					: (currentCase as any)?.image_url
 						? [(currentCase as any).image_url]
 						: []
+			const caseVideos = (currentCase as any)?.video_urls || []
+			const allMediaUrls = [...caseImages, ...caseVideos]
 
 			const SIGNED_URL_TTL_SECONDS = 60 * 30
 			const createSignedUrlIfSupabase = async (url: string | null): Promise<string | null> => {
@@ -1453,16 +1519,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				}
 			}
 
-			const [signedPdfUrl, signedUploadedPdfUrls, signedImageUrls] = isSpt
+			const [signedPdfUrl, signedUploadedPdfUrls, signedMediaUrls] = isSpt
 				? await Promise.all([
 						createSignedUrlIfSupabase(pdfUrl),
 						Promise.all(uploadedPdfUrlsList.map((url: string) => createSignedUrlIfSupabase(url))),
-						Promise.all(caseImages.map((url: string) => createSignedUrlIfSupabase(url))),
+						Promise.all(allMediaUrls.map((url: string) => createSignedUrlIfSupabase(url))),
 					])
-				: [pdfUrl, uploadedPdfUrlsList, caseImages]
+				: [pdfUrl, uploadedPdfUrlsList, allMediaUrls]
 
 			const safeUploadedPdfUrls = (signedUploadedPdfUrls || []).filter(Boolean) as string[]
-			const safeImageUrls = (signedImageUrls || []).filter(Boolean) as string[]
+			const safeImageUrls = (signedMediaUrls || []).filter(Boolean) as string[]
 
 			const sptMessageLines = [`Hola ${case_.nombre}, te escribimos desde Salud Para Todos.`]
 
@@ -1576,6 +1642,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// const remainingUSD = ...
 		// const remainingVES = ...
 
+		// Formatear valor de monto para historial: si es campo de monto y no tiene moneda, añadir " (USD)"
+		const formatAmountForDisplay = useCallback((fieldName: string, value: string | null): string => {
+			if (value == null || value === '' || value === '(vacío)') return value ?? '(vacío)'
+			const isAmountField =
+				fieldName === 'total_amount' || fieldName === 'remaining' || /^payment_amount_\d+$/.test(fieldName)
+			if (!isAmountField) return value
+			const hasCurrency = /\s*(USD|Bs)\s*$/.test(value.trim())
+			return hasCurrency ? value : `${value} (USD)`
+		}, [])
+
 		// Get action type display text and icon for changelog
 		const getActionTypeInfo = useCallback((log: ChangeLogEntry) => {
 			if (log.field_name === 'created_record') {
@@ -1652,14 +1728,15 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Calculate financial information
 		const totalAmount = caseData?.total_amount || 0
-		const exchangeRate = caseData?.exchange_rate || 0
+		const caseExchangeRate = caseData?.exchange_rate || 0
+		// Tasa para cálculos y conversiones: preferir tasa del día (API); fallback a tasa del caso
+		const rateForCalculations =
+			dailyRate != null && Number(dailyRate) > 0 ? Number(dailyRate) : caseExchangeRate
+		const hasValidExchangeRate = rateForCalculations > 0
 
-		// Validar si falta la tasa de cambio para casos antiguos
-		const hasValidExchangeRate = exchangeRate > 0
-
-		// Calculate VES value for converter
+		// Calculate VES value for converter (usa tasa del día)
 		const converterVesValue =
-			converterUsdValue && hasValidExchangeRate ? (parseFloat(converterUsdValue) * exchangeRate).toFixed(2) : ''
+			converterUsdValue && hasValidExchangeRate ? (parseFloat(converterUsdValue) * rateForCalculations).toFixed(2) : ''
 
 		// Get payment methods from current case data
 		const currentPaymentMethods: PaymentMethod[] = []
@@ -1679,10 +1756,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 		// Use current payment methods if not editing, otherwise use edited ones
 		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
-		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, exchangeRate)
+		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, rateForCalculations)
 		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
-		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares
-		const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * exchangeRate : 0
+		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares (usa tasa del día)
+		const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * rateForCalculations : 0
 		// Un pago está completo solo si: hay monto total > 0 Y el pago cubre el total
 		const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount
 
@@ -1691,7 +1768,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// const isEmployee = profile?.role === 'employee';
 		// const isOwner = profile?.role === 'owner'
 		// const isCitotecno = profile?.role === 'citotecno'
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		// const isEmployeeSpt = isEmployee && isSpt;
 
 		// Overlay (backdrop + panel) para AnimatePresence; contenido estable en portal
@@ -1980,11 +2056,11 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															</p>
 															<div className="flex flex-wrap items-center gap-2 mt-1 text-sm min-w-0">
 																<span className="line-through text-gray-500 dark:text-gray-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																	{log.old_value || '(vacío)'}
+																	{formatAmountForDisplay(log.field_name, log.old_value)}
 																</span>
 																<span className="text-xs shrink-0">→</span>
 																<span className="text-green-600 dark:text-green-400 wrap-break-words overflow-wrap-anywhere max-w-full">
-																	{log.new_value || '(vacío)'}
+																	{formatAmountForDisplay(log.field_name, log.new_value)}
 																</span>
 															</div>
 														</div>
@@ -2179,27 +2255,28 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 															{ value: 'Cirujano Cardiovascular', label: 'Cirujano Cardiovascular' },
 															{ value: 'Dermatología', label: 'Dermatología' },
 															{ value: 'Endocrinología', label: 'Endocrinología' },
-															{ value: 'Fisioterapia', label: 'Fisioterapia' },
 															{ value: 'Gastroenterología', label: 'Gastroenterología' },
 															{ value: 'Ginecología', label: 'Ginecología' },
-															{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
-															{ value: 'Medicina General', label: 'Medicina General' },
 															{ value: 'Medicina Interna', label: 'Medicina Interna' },
 															{ value: 'Nefrología', label: 'Nefrología' },
 															{ value: 'Neumonología', label: 'Neumonología' },
-															{ value: 'Neurocirugía', label: 'Neurocirugía' },
 															{ value: 'Neurología', label: 'Neurología' },
-															{ value: 'Odontología', label: 'Odontología' },
-															{ value: 'Oftalmología', label: 'Oftalmología' },
-															{ value: 'Optometría', label: 'Optometría' },
+															{ value: 'Neurocirugía', label: 'Neurocirugía' },
 															{ value: 'Otorrinolaringología', label: 'Otorrinolaringología' },
 															{ value: 'Pediatría', label: 'Pediatría' },
 															{ value: 'Psicología', label: 'Psicología' },
-															{ value: 'Psiquiatría', label: 'Psiquiatría' },
-															{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
-															{ value: 'Reumatología', label: 'Reumatología' },
 															{ value: 'Traumatología', label: 'Traumatología' },
 															{ value: 'Urología', label: 'Urología' },
+															{ value: 'Oftalmología', label: 'Oftalmología' },
+															{ value: 'Medicina General', label: 'Medicina General' },
+															{ value: 'Medicina del Dolor', label: 'Medicina del Dolor' },
+															{ value: 'Radiólogos', label: 'Radiólogos (Radiología)' },
+															{ value: 'Reumatología', label: 'Reumatología' },
+															{ value: 'Fisioterapia', label: 'Fisioterapia' },
+															{ value: 'Psiquiatría', label: 'Psiquiatría' },
+															{ value: 'Optometría', label: 'Optometría' },
+															{ value: 'Odontología', label: 'Odontología' },
+															{ value: 'Nutrición', label: 'Nutrición' },
 														].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
 													)}
 													value={editedCase.consulta || caseData.consulta || ''}
@@ -2359,13 +2436,14 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 														? [(caseData as any).uploaded_pdf_url]
 														: []
 											const canEditPdf =
-												isSpt &&
-												(profile?.role === 'laboratorio' ||
-													profile?.role === 'coordinador' ||
-													profile?.role === 'owner' ||
-													profile?.role === 'prueba' ||
-													profile?.role === 'imagenologia' ||
-													profile?.role === 'call_center')
+												(isSpt &&
+													(profile?.role === 'laboratorio' ||
+														profile?.role === 'coordinador' ||
+														profile?.role === 'owner' ||
+														profile?.role === 'prueba' ||
+														profile?.role === 'imagenologia' ||
+														profile?.role === 'call_center')) ||
+												isConspat
 											if (canEditPdf) {
 												return (
 													<CasePDFUpload
@@ -2522,17 +2600,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								{!isMarihorgen && (
 									<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-											{isConspat ? 'Imágenes:' : 'Imágenes (Imagenología):'}
+											Imágenes/Videos:
 										</span>
 										<div className="w-full">
-											<MultipleImageUrls
-												images={imageUrls}
-												onChange={setImageUrls}
-												maxImages={10}
-												isEditing={isSpt && isEditing || isConspat && isEditing}
+											<MultipleMediaUrls
+												media={mediaItems}
+												onChange={setMediaItems}
+												maxItems={5}
+												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
 												onUploadFile={
-													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined) ||
-													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadImage : undefined)
+													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined) ||
+													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined)
 												}
 												isUploading={isUploadingImages}
 											/>
@@ -2549,7 +2627,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											name="comments"
 											value={editedCase.comments || ''}
 											onChange={(e) => handleInputChange('comments', e.target.value)}
-											className="mt-1 w-full min-h-[100px] text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
+											className="mt-1 w-full min-h-25 text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
 											placeholder="Agregar comentarios adicionales..."
 										/>
 									) : (
@@ -2604,10 +2682,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																? editedCase.total_amount
 																: caseData?.total_amount || 0
 														const calculatorHandler = createCalculatorInputHandlerWithCurrency(
-															currentValue,
+															currentValue ?? 0,
 															(value) => handleInputChange('total_amount', value),
 															'USD',
-															exchangeRate,
+															rateForCalculations,
 														)
 
 														return (
@@ -2644,13 +2722,24 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											)}
 										</div>
 
-										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-												Tasa de cambio (USD/VES):
-											</span>
-											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-												{exchangeRate.toFixed(2)}
-											</span>
+										<div className="space-y-2 py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+											<div className="flex flex-col sm:flex-row sm:justify-between">
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+													Tasa del caso (USD/VES):
+												</span>
+												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+													{caseExchangeRate.toFixed(2)}
+												</span>
+											</div>
+											<div className="flex flex-col sm:flex-row sm:justify-between">
+												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+													Tasa del día (usada para cálculos):
+												</span>
+												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
+													{dailyRate != null ? rateForCalculations.toFixed(2) : caseExchangeRate.toFixed(2)}
+													{dailyRate != null ? '' : ' (sin API)'}
+												</span>
+											</div>
 										</div>
 
 										{isEditing && (
@@ -2734,7 +2823,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													<div>
 														<span className="text-green-700 dark:text-green-400">En Bs:</span>
 														<p className="font-medium text-green-800 dark:text-green-300">
-															Bs. {(totalAmount * exchangeRate).toFixed(2)}
+															Bs. {(totalAmount * rateForCalculations).toFixed(2)}
 														</p>
 													</div>
 												</div>
@@ -2816,7 +2905,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																					payment.amount || 0,
 																					(value) => handlePaymentMethodChange(index, 'amount', value),
 																					payment.method,
-																					exchangeRate,
+																					rateForCalculations,
 																				)
 
 																				return (
@@ -2933,7 +3022,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																			amount: value,
 																		}),
 																	newPaymentMethod.method,
-																	exchangeRate,
+																	rateForCalculations,
 																)
 
 																return (
@@ -3221,7 +3310,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									: []
 						}
 						imageUrls={
-							(caseData as any)?.images_urls || ((caseData as any)?.image_url ? [(caseData as any).image_url] : [])
+							[
+								...((caseData as any)?.images_urls || ((caseData as any)?.image_url ? [(caseData as any).image_url] : [])),
+								...((caseData as any)?.video_urls || [])
+							]
 						}
 						laboratoryName={laboratory?.name}
 						laboratoryLogo={laboratory?.branding?.logo || undefined}

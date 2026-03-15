@@ -29,7 +29,6 @@ function Calendar({ className, classNames, showOutsideDays = true, allowFutureDa
 	// Year picker functionality
 	const currentYear = new Date().getFullYear()
 	const currentMonthNum = new Date().getMonth()
-	const currentDay = new Date().getDate()
 	const startYear = 1900 // Allow selection from 1900
 	const endYear = allowFutureDates ? currentYear + 15 : currentYear
 

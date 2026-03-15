@@ -143,7 +143,7 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 
 						{/* Leyenda - compacta como Distribución por Sede */}
 						<div className="flex flex-col">
-							{displayedData.map((entry, index) => {
+							{displayedData.map((entry) => {
 								const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
 								return (
 									<div

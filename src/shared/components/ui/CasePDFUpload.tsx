@@ -31,8 +31,9 @@ interface CasePDFUploadProps {
 }
 
 /**
- * Componente para subir y eliminar hasta 5 PDFs por caso
- * Solo para roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center en SPT
+ * Componente para subir y eliminar hasta 5 PDFs por caso.
+ * SPT: roles laboratorio, coordinador, owner, prueba, imagenologia, call_center.
+ * Conspat: todos los roles.
  */
 export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
@@ -55,16 +56,18 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	const canAddMore = urls.length < MAX_PDFS
 
 	const isSpt = laboratory?.slug === 'spt'
+	const isConspat = laboratory?.slug === 'conspat'
 	const canUpload =
-		isSpt &&
 		user &&
 		profile?.laboratory_id &&
-		(profile?.role === 'laboratorio' ||
-			profile?.role === 'coordinador' ||
-			profile?.role === 'owner' ||
-			profile?.role === 'prueba' ||
-			profile?.role === 'imagenologia' ||
-			profile?.role === 'call_center')
+		((isSpt &&
+			(profile?.role === 'laboratorio' ||
+				profile?.role === 'coordinador' ||
+				profile?.role === 'owner' ||
+				profile?.role === 'prueba' ||
+				profile?.role === 'imagenologia' ||
+				profile?.role === 'call_center')) ||
+			isConspat)
 
 	if (!canUpload) {
 		return null
@@ -319,7 +322,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							size="sm"
 							onClick={handleUpload}
 							disabled={isUploading || isDeletingIndex !== null}
-							className="flex-shrink-0"
+							className="shrink-0"
 						>
 							{isUploading ? (
 								<>

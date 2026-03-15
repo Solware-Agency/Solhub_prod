@@ -68,7 +68,7 @@ const DoctorFilterPanel: React.FC<DoctorFilterPanelProps> = ({ cases, onFilterCh
 				/>
 			</div>
 
-			<div className="max-h-[200px] overflow-y-auto pr-2 border border-gray-200 dark:border-gray-700 rounded-md">
+			<div className="max-h-50 overflow-y-auto pr-2 border border-gray-200 dark:border-gray-700 rounded-md">
 				{filteredDoctors.length > 0 ? (
 					<div className="space-y-1 p-2">
 						{filteredDoctors.map((doctor) => (

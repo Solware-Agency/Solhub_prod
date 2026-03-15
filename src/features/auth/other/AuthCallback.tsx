@@ -39,12 +39,6 @@ function AuthCallback() {
 				const hashType = hashParams.get('type')
 				const accessToken = hashParams.get('access_token')
 
-				console.log('Callback type (query):', type)
-				console.log('Has code (query):', !!codeFromQuery)
-				console.log('Has token (query):', !!tokenFromQuery)
-				console.log('Callback type (hash):', hashType)
-				console.log('Has access_token (hash):', !!accessToken)
-
 				// Handle password recovery with highest priority
 				// Case A: Recovery via PKCE authorization code/token in query params
 				const recoveryCode = codeFromQuery || tokenFromQuery || hashParams.get('code') || hashParams.get('token')
@@ -341,7 +335,7 @@ function AuthCallback() {
 	}, [navigate, searchParams, redirectUser])
 
 	return (
-    <div className='w-screen h-screen relative overflow-hidden bg-gradient-to-br from-black via-black to-black'>
+    <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
       {/* Aurora Background with New Color Palette */}
       <Aurora
         colorStops={['#3d84f5', '#06337b', '#3d84f5']}
@@ -351,7 +345,7 @@ function AuthCallback() {
       />
 
       {/* Content Container with FadeContent Animation */}
-      <div className='relative z-10 w-screen h-screen bg-gradient-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
+      <div className='relative z-10 w-screen h-screen bg-linear-to-br from-black/20 via-transparent to-black/30 flex items-center justify-center'>
         <FadeContent
           blur={true}
           duration={1000}

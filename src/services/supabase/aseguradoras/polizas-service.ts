@@ -65,28 +65,19 @@ export interface Poliza {
 	fecha_vencimiento: string
 	dia_vencimiento: number | null
 	fecha_prox_vencimiento: string | null
-	dias_prox_vencimiento: number | null
-	tipo_alerta: string | null
-	dias_alerta: number | null
-	dias_frecuencia: number | null
-	dias_frecuencia_post: number | null
-	dias_recordatorio: number | null
-	alert_30_enviada: boolean
-	alert_14_enviada: boolean
-	alert_7_enviada: boolean
-	alert_dia_enviada: boolean
-	alert_post_enviada: boolean
-	ultima_alerta: string | null
-	alert_type_ultima: string | null
-	alert_cycle_id: string | null
-	fecha_pago_ultimo: string | null
-	fecha_pago_ultimo_backup: string | null
 	pdf_url: string | null
 	documentos_poliza: DocumentoPoliza[]
 	notas: string | null
 	activo: boolean
 	created_at: string | null
 	updated_at: string | null
+	/** Fecha de próximo pago (recordatorios y lógica de cobro). */
+	next_payment_date?: string | null
+	renewal_day_of_month?: number | null
+	payment_frequency?: string | null
+	billing_amount?: number | null
+	/** current = al día; overdue = vencida. */
+	payment_status?: 'current' | 'overdue' | null
 	asegurado?: { id: string; full_name: string; document_id: string } | null
 	aseguradora?: { id: string; nombre: string } | null
 }
@@ -107,26 +98,44 @@ export interface PolizaInsert {
 	fecha_vencimiento: string
 	dia_vencimiento?: number | null
 	fecha_prox_vencimiento?: string | null
-	dias_prox_vencimiento?: number | null
-	tipo_alerta?: string | null
-	dias_alerta?: number | null
-	dias_frecuencia?: number | null
-	dias_frecuencia_post?: number | null
-	dias_recordatorio?: number | null
 	pdf_url?: string | null
 	documentos_poliza?: DocumentoPoliza[]
 	notas?: string | null
+	/** Columnas de cobro/recordatorios (se rellenan desde el form). */
+	next_payment_date?: string | null
+	renewal_day_of_month?: number | null
+	payment_frequency?: string | null
+	billing_amount?: number | null
+	payment_status?: 'current' | 'overdue' | null
 }
 
 export interface PolizaUpdate extends Partial<PolizaInsert> {
 	activo?: boolean
+	next_payment_date?: string | null
+	renewal_day_of_month?: number | null
+	payment_frequency?: string | null
+	billing_amount?: number | null
+	payment_status?: 'current' | 'overdue' | null
+	fecha_prox_vencimiento?: string | null
+	estatus_pago?: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora' | null
+}
+
+/** RPC: devuelve la nueva next_payment_date al marcar como pagado (actual + 1 período). Opción A: llamar N veces para N periodos. */
+export const getNextPaymentDateOnMarkPaidPoliza = async (polizaId: string): Promise<string | null> => {
+	const { data, error } = await supabase.rpc('get_next_payment_date_on_mark_paid_poliza', {
+		p_poliza_id: polizaId,
+	})
+	if (error) throw error
+	const row = Array.isArray(data) && data.length > 0 ? data[0] : null
+	const date = row?.next_payment_date
+	return date ? String(date).slice(0, 10) : null
 }
 
 export const getPolizas = async (
 	page = 1,
 	limit = 50,
 	searchTerm?: string,
-	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' = 'created_at',
+	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' | 'next_payment_date' = 'created_at',
 	sortDirection: 'asc' | 'desc' = 'desc',
 ) => {
 	const laboratoryId = await getUserLaboratoryId()
@@ -146,7 +155,10 @@ export const getPolizas = async (
 		)
 	}
 
-	query = query.order(sortField, { ascending: sortDirection === 'asc' })
+	const orderOpts = sortField === 'next_payment_date'
+		? { ascending: sortDirection === 'asc', nullsFirst: false }
+		: { ascending: sortDirection === 'asc' }
+	query = query.order(sortField, orderOpts)
 
 	const from = (page - 1) * limit
 	const to = from + limit - 1
@@ -335,11 +347,6 @@ export const createPoliza = async (payload: PolizaInsert): Promise<Poliza> => {
 		.insert({
 			...payload,
 			laboratory_id: laboratoryId,
-			alert_30_enviada: false,
-			alert_14_enviada: false,
-			alert_7_enviada: false,
-			alert_dia_enviada: false,
-			alert_post_enviada: false,
 		})
 		.select('*')
 		.single()

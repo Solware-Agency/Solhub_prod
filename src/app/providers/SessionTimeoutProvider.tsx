@@ -12,6 +12,7 @@ interface SessionTimeoutContextType {
 
 const SessionTimeoutContext = createContext<SessionTimeoutContextType | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook exportado junto al provider
 export const useSessionTimeout = () => {
 	const context = useContext(SessionTimeoutContext)
 	if (!context) {

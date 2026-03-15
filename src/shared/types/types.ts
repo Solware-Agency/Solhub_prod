@@ -220,16 +220,19 @@ export type Database = {  // Allows to automatically instantiate createClient wi
       medical_records_clean: {
         Row: {
           attachment_url: string | null;
+          bloques_biopsia: number | null;
           branch: string;
           cito_status: Database['public']['Enums']['cito_status_type'] | null;
           code: string | null;
           comments: string | null;
+          consulta: string | null;
           created_at: string | null;
           created_by: string | null;
           created_by_display_name: string | null;
           date: string;
-          doc_aprobado: Database['public']['Enums']['doc_aprobado_status'];
+          doc_aprobado: Database['public']['Enums']['doc_aprobado_status'] | null;
           email_sent: boolean;
+          estado_spt: string | null;
           exam_type: string;
           exchange_rate: number | null;
           generated_at: string | null;
@@ -245,6 +248,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           informepdf_url: string | null;
           number_of_samples: number;
           origin: string;
+          owner_display_code: string | null;
           patient_id: string | null;
           payment_amount_1: number | null;
           payment_amount_2: number | null;
@@ -260,26 +264,35 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           payment_reference_4: string | null;
           payment_status: Database['public']['Enums']['payment_status_type'];
           pdf_en_ready: boolean | null;
+          price_type: string | null;
           relationship: string | null;
           remaining: number | null;
           sample_type: string;
           token: string | null;
-          total_amount: number;
+          total_amount: number | null;
           treating_doctor: string;
           updated_at: string | null;
+          uploaded_pdf_url: string | null;
+          uploaded_pdf_urls: string[] | null;
+          fecha_entrega: string | null;
+          fecha_muestra: string | null;
+          patologo_id: string | null;
         };
         Insert: {
           attachment_url?: string | null;
+          bloques_biopsia?: number | null;
           branch: string;
           cito_status?: Database['public']['Enums']['cito_status_type'] | null;
           code?: string | null;
           comments?: string | null;
+          consulta?: string | null;
           created_at?: string | null;
           created_by?: string | null;
           created_by_display_name?: string | null;
           date: string;
-          doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'];
+          doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'] | null;
           email_sent?: boolean;
+          estado_spt?: string | null;
           exam_type: string;
           exchange_rate?: number | null;
           generated_at?: string | null;
@@ -295,6 +308,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           laboratory_id: string;
           number_of_samples: number;
           origin: string;
+          owner_display_code?: string | null;
           patient_id?: string | null;
           payment_amount_1?: number | null;
           payment_amount_2?: number | null;
@@ -310,26 +324,35 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           payment_reference_4?: string | null;
           payment_status?: string;
           pdf_en_ready?: boolean | null;
+          price_type?: string | null;
           relationship?: string | null;
           remaining?: number | null;
           sample_type: string;
           token?: string | null;
-          total_amount: number;
+          total_amount?: number | null;
           treating_doctor: string;
           updated_at?: string | null;
+          uploaded_pdf_url?: string | null;
+          uploaded_pdf_urls?: string[] | null;
+          fecha_entrega?: string | null;
+          fecha_muestra?: string | null;
+          patologo_id?: string | null;
         };
         Update: {
           attachment_url?: string | null;
+          bloques_biopsia?: number | null;
           branch?: string;
           cito_status?: Database['public']['Enums']['cito_status_type'] | null;
           code?: string | null;
           comments?: string | null;
+          consulta?: string | null;
           created_at?: string | null;
           created_by?: string | null;
           created_by_display_name?: string | null;
           date?: string;
-          doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'];
+          doc_aprobado?: Database['public']['Enums']['doc_aprobado_status'] | null;
           email_sent?: boolean;
+          estado_spt?: string | null;
           exam_type?: string;
           exchange_rate?: number | null;
           generated_at?: string | null;
@@ -345,6 +368,7 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           laboratory_id?: string;
           number_of_samples?: number;
           origin?: string;
+          owner_display_code?: string | null;
           patient_id?: string | null;
           payment_amount_1?: number | null;
           payment_amount_2?: number | null;
@@ -360,13 +384,19 @@ export type Database = {  // Allows to automatically instantiate createClient wi
           payment_reference_4?: string | null;
           payment_status?: string;
           pdf_en_ready?: boolean | null;
+          price_type?: string | null;
           relationship?: string | null;
           remaining?: number | null;
           sample_type?: string;
           token?: string | null;
-          total_amount?: number;
+          total_amount?: number | null;
           treating_doctor?: string;
           updated_at?: string | null;
+          uploaded_pdf_url?: string | null;
+          uploaded_pdf_urls?: string[] | null;
+          fecha_entrega?: string | null;
+          fecha_muestra?: string | null;
+          patologo_id?: string | null;
         };
         Relationships: [
           {
@@ -769,7 +799,8 @@ export interface MedicalRecord {
   conclusion_diagnostica?: string | null;
   archivo_adjunto_url?: string | null;
   image_url?: string | null; // URL de imagen para imagenología (DEPRECATED - usar images_urls)
-  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 10)
+  images_urls?: string[] | null; // Array de URLs de imágenes para imagenología (hasta 5 total con videos)
+  video_urls?: string[] | null; // Array de URLs de videos MP4 para imagenología (hasta 5 total con imágenes)
   uploaded_pdf_url?: string | null; // URL del PDF subido manualmente (solo SPT; compatibilidad: primer elemento de uploaded_pdf_urls)
   uploaded_pdf_urls?: string[] | null; // Hasta 5 PDFs por caso (solo SPT)
 }

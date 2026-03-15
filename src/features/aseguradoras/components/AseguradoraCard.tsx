@@ -32,7 +32,7 @@ const AseguradoraCard = ({ aseguradora, onClick }: AseguradoraCardProps) => {
 
 			<div className="grid grid-cols-1 gap-1.5 mb-1.5">
 				<div className="flex items-center gap-2">
-					<Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+					<Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
 					<div className="min-w-0">
 						<p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{aseguradora.nombre}</p>
 					</div>

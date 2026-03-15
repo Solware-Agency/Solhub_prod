@@ -314,7 +314,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 								El tipo y número deben coincidir con la cédula de este paciente en su ficha.
 							</p>
 							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
-								<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+								<div className="col-span-2 sm:col-span-1 min-w-15">
 									<FormDropdown
 										options={createDropdownOptions([
 											{ value: 'V', label: 'V -' },

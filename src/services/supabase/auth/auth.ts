@@ -1,6 +1,7 @@
 import { supabase, REDIRECT_URL } from '../config/config'
 import type { User, AuthError } from '@supabase/supabase-js'
 import { SESSION_TIMEOUT_OPTIONS } from '@shared/hooks/useSessionTimeout'
+import { hasRealChange, formatValueForLog, generateChangeSessionId } from '../shared/change-log-utils'
 
 // Normaliza nombres propios: trim, colapsa espacios y capitaliza cada palabra
 function normalizeDisplayName(rawName?: string | null): string | null {
@@ -545,12 +546,93 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 	}
 }
 
+/**
+ * Registrar cambios de perfil de usuario en change_logs (historial de acciones).
+ * Se ejecuta tras un update exitoso para que cualquier actualización de perfil quede auditada.
+ */
+async function logProfileChanges(
+	userId: string,
+	oldProfile: { display_name?: string | null; phone?: string | null; laboratory_id?: string | null },
+	newUpdates: Partial<Pick<UserProfile, 'display_name' | 'phone'>>,
+	laboratoryId: string,
+): Promise<void> {
+	try {
+		const { data: profile } = await supabase
+			.from('profiles')
+			.select('display_name, email')
+			.eq('id', userId)
+			.maybeSingle()
+		const { data: user } = await supabase.auth.getUser()
+		const userEmail = profile?.email ?? user.user?.email ?? 'unknown'
+		const userDisplayName = profile?.display_name ?? 'Usuario'
+
+		const changeSessionId = generateChangeSessionId()
+		const changedAt = new Date().toISOString()
+		const fieldLabels: Record<string, string> = {
+			display_name: 'Nombre para mostrar',
+			phone: 'Teléfono',
+		}
+
+		const changes: Array<{
+			entity_type: string
+			field_name: string
+			field_label: string
+			old_value: string | null
+			new_value: string | null
+			user_id: string
+			user_email: string
+			user_display_name: string
+			change_session_id: string
+			changed_at: string
+			laboratory_id: string
+		}> = []
+
+		for (const field of ['display_name', 'phone'] as const) {
+			const newVal = newUpdates[field]
+			if (newVal === undefined) continue
+			const oldVal = oldProfile[field]
+			if (!hasRealChange(oldVal, newVal)) continue
+			changes.push({
+				entity_type: 'profile',
+				field_name: field,
+				field_label: fieldLabels[field] ?? field,
+				old_value: formatValueForLog(oldVal),
+				new_value: formatValueForLog(newVal),
+				user_id: userId,
+				user_email: userEmail,
+				user_display_name: userDisplayName,
+				change_session_id: changeSessionId,
+				changed_at: changedAt,
+				laboratory_id: laboratoryId,
+			})
+		}
+
+		if (changes.length > 0) {
+			const { error } = await supabase.from('change_logs').insert(changes)
+			if (error) {
+				console.error('Error registrando cambios de perfil en change_logs:', error)
+			} else {
+				console.log(`✅ ${changes.length} cambio(s) de perfil registrado(s) en historial (session: ${changeSessionId})`)
+			}
+		}
+	} catch (err) {
+		console.error('Error en logProfileChanges:', err)
+	}
+}
+
 // Update user profile
 export const updateUserProfile = async (
 	userId: string,
 	updates: Partial<Omit<UserProfile, 'id' | 'created_at'>>,
 ): Promise<{ error: AuthError | null }> => {
 	try {
+		// Obtener perfil actual antes del update (para historial de acciones)
+		const { data: oldProfile } = await supabase
+			.from('profiles')
+			.select('display_name, phone, laboratory_id')
+			.eq('id', userId)
+			.maybeSingle()
+
 		// Normalizar phone si viene presente
 		let normalizedPhone: string | null | undefined = updates.phone
 		if (typeof normalizedPhone !== 'undefined') {
@@ -575,6 +657,20 @@ export const updateUserProfile = async (
 		if (profileError) {
 			console.error('Error updating profile:', profileError)
 			return { error: profileError as unknown as AuthError }
+		}
+
+		// Registrar cambios en historial de acciones (solo display_name y phone editables por el usuario)
+		const labId = oldProfile?.laboratory_id
+		if (labId && (updates.display_name !== undefined || updates.phone !== undefined)) {
+			await logProfileChanges(
+				userId,
+				{ display_name: oldProfile?.display_name ?? null, phone: oldProfile?.phone ?? null, laboratory_id: labId },
+				{
+					...(normalizedDisplayName !== undefined && { display_name: normalizedDisplayName }),
+					...(typeof normalizedPhone !== 'undefined' && { phone: normalizedPhone }),
+				},
+				labId,
+			)
 		}
 
 		// If display_name or phone is being updated, also update it in auth.users metadata

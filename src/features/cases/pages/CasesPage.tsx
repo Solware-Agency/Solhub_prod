@@ -18,12 +18,16 @@ const CasesPage: React.FC = () => {
     documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
     pdfStatus?: 'pendientes' | 'faltantes';
     citoStatus?: 'positivo' | 'negativo';
+	triageStatus?: 'pendiente' | 'completo';
     branch?: string;
     paymentStatus?: 'Incompleto' | 'Pagado';
     doctorFilter?: string[];
     originFilter?: string[];
     dateFrom?: string;
     dateTo?: string;
+    sampleDateFrom?: string;
+    sampleDateTo?: string;
+    sampleTypeFilter?: string;
     emailSentStatus?: boolean;
     sortField?: string;
     sortDirection?: 'asc' | 'desc';

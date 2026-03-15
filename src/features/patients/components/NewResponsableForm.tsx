@@ -23,6 +23,7 @@ import { UserPlus, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { createPatient, PatientError } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { cn } from '@shared/lib/cn'
 import type { PatientProfile } from './PatientSearchAutocomplete'
 
@@ -55,6 +56,8 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 	const [gender, setGender] = useState<'Masculino' | 'Femenino' | ''>('')
 
 	const { toast } = useToast()
+	const { laboratory } = useLaboratory()
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 
 	// =====================================================================
 	// CALCULAR EDAD DESDE FECHA DE NACIMIENTO
@@ -121,7 +124,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 			return
 		}
 
-		if (!telefono.trim()) {
+		if (!isMarihorgen && !telefono.trim()) {
 			toast({
 				title: 'Error',
 				description: 'El teléfono es obligatorio',
@@ -247,7 +250,9 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 						errorMessage = 'Ya existe un paciente con esta cédula.'
 						break
 					case 'PATIENT_REQUIRED_FIELD':
-						errorMessage = 'Faltan campos obligatorios: nombre, cédula, teléfono, género y fecha de nacimiento o edad.'
+						errorMessage = isMarihorgen
+							? 'Faltan campos obligatorios: nombre, cédula, género y fecha de nacimiento o edad.'
+							: 'Faltan campos obligatorios: nombre, cédula, teléfono, género y fecha de nacimiento o edad.'
 						break
 					case 'DATABASE_ERROR':
 						errorMessage = 'Error al guardar en la base de datos. Por favor, intenta de nuevo.'
@@ -330,7 +335,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="telefono">Teléfono *</Label>
+							<Label htmlFor="telefono">{isMarihorgen ? 'Teléfono' : 'Teléfono *'}</Label>
 							<Input
 								id="telefono"
 								value={telefono}
@@ -352,7 +357,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 						<div className="space-y-2">
 							<Label>Cédula *</Label>
 							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
-								<div className="col-span-2 sm:col-span-1 min-w-[60px]">
+								<div className="col-span-2 sm:col-span-1 min-w-15">
 									<FormDropdown
 										options={createDropdownOptions([
 											{ value: 'V', label: 'V -' },
@@ -411,7 +416,7 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
 										<span className="truncate">
 											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
 										</span>

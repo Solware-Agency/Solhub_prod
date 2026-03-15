@@ -5,7 +5,7 @@ import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts'
 
 export type TriageStatType =
 	| 'totalTriages'
@@ -18,6 +18,8 @@ export type TriageStatType =
 	| 'bloodGlucose'
 	| 'habits'
 
+export type TriageRangeValue = 'low' | 'normal' | 'high' | 'underweight' | 'overweight' | 'obese'
+
 interface TriageDetailPanelProps {
 	isOpen: boolean
 	onClose: () => void
@@ -28,6 +30,7 @@ interface TriageDetailPanelProps {
 	trends?: any[]
 	days: number
 	isLoading?: boolean
+	onRangeClick?: (statType: TriageStatType, rangeValue: TriageRangeValue) => void
 }
 
 const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
@@ -39,6 +42,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 	trends = [],
 	days,
 	isLoading = false,
+	onRangeClick,
 }) => {
 	useBodyScrollLock(isOpen)
 	useGlobalOverlayOpen(isOpen)
@@ -120,12 +124,10 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 		}
 
 		switch (statType) {
-			case 'totalTriages':
+			case 'totalTriages': {
 				const totalTriages = stats.totalTriages || 0
 				const avgDaily = days > 0 ? (totalTriages / days).toFixed(1) : '0'
 				const daysWithData = trends?.filter(t => t.count > 0).length || 0
-				const daysWithoutData = days - daysWithData
-				
 				return (
 					<div className="space-y-6">
 						{/* Resumen General */}
@@ -214,8 +216,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						)}
 					</div>
 				)
-
-			case 'heartRate':
+			}
+			case 'heartRate': {
 				const hrAvg = stats.averages?.heartRate
 				const hrRanges = stats.ranges?.heartRate || { low: 0, normal: 0, high: 0 }
 				const hrTotal = hrRanges.low + hrRanges.normal + hrRanges.high
@@ -306,13 +308,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: 'Baja (< 60 lpm)', value: hrRanges.low, color: '#ef4444' },
-									{ label: 'Normal (60-100 lpm)', value: hrRanges.normal, color: '#22c55e' },
-									{ label: 'Alta (> 100 lpm)', value: hrRanges.high, color: '#eab308' },
+									{ label: 'Baja (< 60 lpm)', value: hrRanges.low, color: '#ef4444', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (60-100 lpm)', value: hrRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: 'Alta (> 100 lpm)', value: hrRanges.high, color: '#eab308', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = hrTotal > 0 ? (item.value / hrTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -330,8 +336,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'respiratoryRate':
+			}
+			case 'respiratoryRate': {
 				const rrAvg = stats.averages?.respiratoryRate
 				const rrRanges = stats.ranges?.respiratoryRate || { low: 0, normal: 0, high: 0 }
 				const rrTotal = rrRanges.low + rrRanges.normal + rrRanges.high
@@ -420,13 +426,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Baja (< 12 rpm)`, value: rrRanges.low, color: '#ef4444' },
-									{ label: 'Normal (12-20 rpm)', value: rrRanges.normal, color: '#22c55e' },
-									{ label: `Alta (> 20 rpm)`, value: rrRanges.high, color: '#eab308' },
+									{ label: `Baja (< 12 rpm)`, value: rrRanges.low, color: '#ef4444', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (12-20 rpm)', value: rrRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: `Alta (> 20 rpm)`, value: rrRanges.high, color: '#eab308', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = rrTotal > 0 ? (item.value / rrTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -444,8 +454,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'oxygenSaturation':
+			}
+			case 'oxygenSaturation': {
 				const osAvg = stats.averages?.oxygenSaturation
 				const osRanges = stats.ranges?.oxygenSaturation || { low: 0, normal: 0, high: 0 }
 				const osTotal = osRanges.low + osRanges.normal + osRanges.high
@@ -530,13 +540,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Baja (< 95%)`, value: osRanges.low, color: '#ef4444' },
-									{ label: 'Normal (95-100%)', value: osRanges.normal, color: '#22c55e' },
-									{ label: `Alta (> 100%)`, value: osRanges.high, color: '#eab308' },
+									{ label: `Baja (< 95%)`, value: osRanges.low, color: '#ef4444', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (95-100%)', value: osRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: `Alta (> 100%)`, value: osRanges.high, color: '#eab308', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = osTotal > 0 ? (item.value / osTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -554,8 +568,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'temperature':
+			}
+			case 'temperature': {
 				const tempAvg = stats.averages?.temperature
 				const tempRanges = stats.ranges?.temperature || { low: 0, normal: 0, high: 0 }
 				const tempTotal = tempRanges.low + tempRanges.normal + tempRanges.high
@@ -640,13 +654,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Baja (< 36°C)`, value: tempRanges.low, color: '#3b82f6' },
-									{ label: 'Normal (36-37.5°C)', value: tempRanges.normal, color: '#22c55e' },
-									{ label: `Alta/Fiebre (> 37.5°C)`, value: tempRanges.high, color: '#ef4444' },
+									{ label: `Baja (< 36°C)`, value: tempRanges.low, color: '#3b82f6', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (36-37.5°C)', value: tempRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: `Alta/Fiebre (> 37.5°C)`, value: tempRanges.high, color: '#ef4444', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = tempTotal > 0 ? (item.value / tempTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -664,8 +682,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bmi':
+			}
+			case 'bmi': {
 				const bmiAvg = stats.averages?.bmi
 				const bmiRanges = stats.ranges?.bmi || { underweight: 0, normal: 0, overweight: 0, obese: 0 }
 				const bmiTotal = bmiRanges.underweight + bmiRanges.normal + bmiRanges.overweight + bmiRanges.obese
@@ -766,14 +784,18 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Bajo peso (< 18.5)`, value: bmiRanges.underweight, color: '#3b82f6' },
-									{ label: 'Normal (18.5-25)', value: bmiRanges.normal, color: '#22c55e' },
-									{ label: 'Sobrepeso (25-30)', value: bmiRanges.overweight, color: '#eab308' },
-									{ label: `Obesidad (> 30)`, value: bmiRanges.obese, color: '#ef4444' },
+									{ label: `Bajo peso (< 18.5)`, value: bmiRanges.underweight, color: '#3b82f6', rangeValue: 'underweight' as TriageRangeValue },
+									{ label: 'Normal (18.5-25)', value: bmiRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: 'Sobrepeso (25-30)', value: bmiRanges.overweight, color: '#eab308', rangeValue: 'overweight' as TriageRangeValue },
+									{ label: `Obesidad (> 30)`, value: bmiRanges.obese, color: '#ef4444', rangeValue: 'obese' as TriageRangeValue },
 								].map((item) => {
 									const percentage = bmiTotal > 0 ? (item.value / bmiTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -791,8 +813,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bloodPressure':
+			}
+			case 'bloodPressure': {
 				const bpAvg = stats.averages?.systolicBP
 				const bpRanges = stats.ranges?.bloodPressure || { low: 0, normal: 0, high: 0 }
 				const bpTotal = bpRanges.low + bpRanges.normal + bpRanges.high
@@ -878,13 +900,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Baja (< 90 mmHg)`, value: bpRanges.low, color: '#3b82f6' },
-									{ label: 'Normal (90-120 mmHg)', value: bpRanges.normal, color: '#22c55e' },
-									{ label: `Alta/Hipertensión (> 120 mmHg)`, value: bpRanges.high, color: '#ef4444' },
+									{ label: `Baja (< 90 mmHg)`, value: bpRanges.low, color: '#3b82f6', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (90-120 mmHg)', value: bpRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: `Alta/Hipertensión (> 120 mmHg)`, value: bpRanges.high, color: '#ef4444', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = bpTotal > 0 ? (item.value / bpTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -902,8 +928,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'bloodGlucose':
+			}
+			case 'bloodGlucose': {
 				const bgAvg = stats.averages?.bloodGlucose
 				const bgRanges = stats.ranges?.bloodGlucose || { low: 0, normal: 0, high: 0 }
 				const bgTotal = bgRanges.low + bgRanges.normal + bgRanges.high
@@ -989,13 +1015,17 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 							</h4>
 							<div className="space-y-4">
 								{[
-									{ label: `Hipoglicemia (< 70 mg/dL)`, value: bgRanges.low, color: '#ef4444' },
-									{ label: 'Normal (70-140 mg/dL)', value: bgRanges.normal, color: '#22c55e' },
-									{ label: `Hiperglicemia (> 140 mg/dL)`, value: bgRanges.high, color: '#eab308' },
+									{ label: `Hipoglicemia (< 70 mg/dL)`, value: bgRanges.low, color: '#ef4444', rangeValue: 'low' as TriageRangeValue },
+									{ label: 'Normal (70-140 mg/dL)', value: bgRanges.normal, color: '#22c55e', rangeValue: 'normal' as TriageRangeValue },
+									{ label: `Hiperglicemia (> 140 mg/dL)`, value: bgRanges.high, color: '#eab308', rangeValue: 'high' as TriageRangeValue },
 								].map((item) => {
 									const percentage = bgTotal > 0 ? (item.value / bgTotal) * 100 : 0
 									return (
-										<div key={item.label} className="space-y-2">
+										<div 
+											key={item.label} 
+											className="space-y-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 -m-2 rounded-md transition-colors"
+											onClick={() => onRangeClick?.(statType, item.rangeValue)}
+										>
 											<div className="flex justify-between text-sm">
 												<span className="text-gray-700 dark:text-gray-300">{item.label}</span>
 												<span className="font-medium">{item.value} ({percentage.toFixed(1)}%)</span>
@@ -1013,8 +1043,8 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						</div>
 					</div>
 				)
-
-			case 'habits':
+			}
+			case 'habits': {
 				const tabacoHabits = stats.habits?.tabaco || {}
 				const cafeHabits = stats.habits?.cafe || {}
 				const alcoholHabits = stats.habits?.alcohol || {}
@@ -1109,7 +1139,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 											fill="#8884d8"
 											dataKey="value"
 										>
-											{data.map((entry, index) => (
+											{data.map((_, index) => (
 												<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
 											))}
 										</Pie>
@@ -1157,7 +1187,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						)}
 					</div>
 				)
-
+			}
 			default:
 				return (
 					<div className="text-center py-8">
@@ -1179,7 +1209,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/50 z-[99999998]"
+						className="fixed inset-0 bg-black/50 z-99999998"
 					/>
 
 					{/* Main Panel */}
@@ -1188,7 +1218,7 @@ const TriageDetailPanel: React.FC<TriageDetailPanelProps> = ({
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-[99999999] overflow-y-auto rounded-lg border-l border-input flex flex-col"
+						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col"
 					>
 						{/* Header */}
 						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">

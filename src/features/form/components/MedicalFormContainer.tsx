@@ -98,6 +98,7 @@ export function MedicalFormContainer() {
 		if (Object.keys(currentErrors).length > 0) {
 			form.trigger()
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- form omitido para no re-ejecutar en cada cambio del formulario
 	}, [dynamicFormSchema])
 
 	const { fields, append, remove } = useFieldArray({
@@ -180,7 +181,7 @@ export function MedicalFormContainer() {
 
 				// Validar datos antes del envío
 				// Pasar configuración completa del módulo para validación
-				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig)
+				const validationResult = validateRegistrationData(normalizedData, exchangeRate, moduleConfig, laboratory?.slug ?? null)
 				
 				// Si hay errores, sincronizarlos con react-hook-form para mostrar campos en rojo
 				if (Object.keys(validationResult.fieldErrors).length > 0) {
@@ -277,6 +278,7 @@ export function MedicalFormContainer() {
 				setIsSubmitting(false)
 			}
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- moduleConfig omitido para evitar recrear callback en cada cambio de config
 		[exchangeRate, form, toast, setUsdValue, setVesValue, setVesInputValue, setUsdFromVes],
 	)
 
@@ -442,7 +444,7 @@ export function MedicalFormContainer() {
 							<Button
 								type="button"
 								onClick={handleButtonClick}
-								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
+								className="w-full font-bold text-sm sm:text-base py-1.5 sm:py-2 bg-linear-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white transition-transform duration-300 transform hover:-translate-y-1"
 								disabled={isSubmitting}
 							>
 								{isSubmitting ? (

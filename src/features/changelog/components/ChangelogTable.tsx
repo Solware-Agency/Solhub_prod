@@ -73,9 +73,23 @@ const ChangelogTable: React.FC = () => {
 			payment_method_4: 'Método de Pago 4',
 			payment_amount_4: 'Monto de Pago 4',
 			payment_reference_4: 'Referencia de Pago 4',
+			display_name: 'Nombre para mostrar',
+			phone: 'Teléfono',
 		}
 
 		return translations[fieldName] || fieldLabel
+	}
+
+	// Para campos de monto: mostrar moneda (USD/Bs) si no viene en el valor (logs antiguos)
+	const formatAmountForDisplay = (fieldName: string, value: string | null): string => {
+		if (value == null || value === '' || value === '(vacío)') return value ?? '(vacío)'
+		const isAmountField =
+			fieldName === 'total_amount' ||
+			fieldName === 'remaining' ||
+			/^payment_amount_\d+$/.test(fieldName)
+		if (!isAmountField) return value
+		const hasCurrency = /\s*(USD|Bs)\s*$/.test(value.trim())
+		return hasCurrency ? value : `${value} (USD)`
 	}
 
 	// Helper: texto de entidad para casos médicos y si debe mostrarse como "Caso eliminado" (badge rojo)
@@ -258,7 +272,7 @@ const ChangelogTable: React.FC = () => {
 
 	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso y no eliminado)
 	const handleOpenCaseDetail = async (log: ChangeLogData) => {
-		if (log.entity_type === 'patient') return
+		if (log.entity_type === 'patient' || log.entity_type === 'profile') return
 		const { text: caseCode, isDeletedCase } = getCaseEntityDisplay(log)
 		if (isDeletedCase) {
 			toast({
@@ -668,10 +682,17 @@ const ChangelogTable: React.FC = () => {
 														</span>
 													</td>
 
-													{/* Entity (Case/Patient) */}
+													{/* Entity (Case/Patient/Profile) */}
 													<td className="px-4 py-4">
 														<div className="flex flex-col">
-															{log.entity_type === 'patient' ? (
+															{log.entity_type === 'profile' ? (
+																<span
+																	className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+																	title="Cambios en perfil de usuario"
+																>
+																	Perfil
+																</span>
+															) : log.entity_type === 'patient' ? (
 																<>
 																	{log.patient_id && log.patients ? (
 																		<button
@@ -681,7 +702,7 @@ const ChangelogTable: React.FC = () => {
 																				handleOpenPatientDetail(log)
 																			}}
 																			disabled={isLoadingPatient}
-																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
 																			title="Ver información del paciente"
 																		>
 																			{log.patients.nombre}
@@ -706,7 +727,7 @@ const ChangelogTable: React.FC = () => {
 																					handleOpenCaseDetail(log)
 																				}}
 																				disabled={isLoadingCase}
-																				className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300`}
+																				className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																				title="Ver detalles del caso"
 																			>
 																				{text}
@@ -747,7 +768,7 @@ const ChangelogTable: React.FC = () => {
 																	})()}
 																</span>
 															) : group.changeCount === 1 ? (
-																// Si solo hay un cambio, mostrar resumen simple
+																// Si solo hay un cambio, mostrar resumen simple (con moneda en montos)
 																<div className="text-sm wrap-break-word">
 																	<p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 																		{translateFieldLabel(log.field_name, log.field_label)}
@@ -756,33 +777,13 @@ const ChangelogTable: React.FC = () => {
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																			<span className="line-through">
 																				Antes:{' '}
-																				{(() => {
-																					const value = log.old_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.old_value)}
 																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																			<span>
 																				Ahora:{' '}
-																				{(() => {
-																					const value = log.new_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.new_value)}
 																			</span>
 																		</div>
 																	</div>
@@ -848,7 +849,14 @@ const ChangelogTable: React.FC = () => {
 														<span className="text-xs text-gray-500">{logTime}</span>
 													</div>
 													<div className="flex flex-col gap-1">
-														{log.entity_type === 'patient' ? (
+														{log.entity_type === 'profile' ? (
+															<span
+																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+																title="Cambios en perfil de usuario"
+															>
+																Perfil
+															</span>
+														) : log.entity_type === 'patient' ? (
 															<>
 																{log.patient_id && log.patients ? (
 																	<button
@@ -858,7 +866,7 @@ const ChangelogTable: React.FC = () => {
 																			handleOpenPatientDetail(log)
 																		}}
 																		disabled={isLoadingPatient}
-																		className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold text-left w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 underline decoration-teal-500 decoration-1 underline-offset-1"
+																		className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold text-left w-fit cursor-pointer transition-all duration-200 hover:opacity-100 hover:decoration-2 hover:decoration-teal-600 dark:hover:decoration-teal-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 underline decoration-teal-500 decoration-1 underline-offset-1"
 																		title="Ver información del paciente"
 																	>
 																		{log.patients.nombre}
@@ -873,7 +881,7 @@ const ChangelogTable: React.FC = () => {
 															(() => {
 																const { text, isDeletedCase } = getCaseEntityDisplay(log)
 																const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
-																const canOpenCase = log.entity_type !== 'patient' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
+																const canOpenCase = log.entity_type !== 'patient' && log.entity_type !== 'profile' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																return (
 																	canOpenCase ? (
 																		<button
@@ -883,7 +891,7 @@ const ChangelogTable: React.FC = () => {
 																				handleOpenCaseDetail(log)
 																			}}
 																			disabled={isLoadingCase}
-																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																			title="Ver detalles del caso"
 																		>
 																			{text}
@@ -938,33 +946,13 @@ const ChangelogTable: React.FC = () => {
 																		<div className="text-xs text-gray-500 dark:text-gray-400 wrap-break-word">
 																			<span className="line-through">
 																				Antes:{' '}
-																				{(() => {
-																					const value = log.old_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.old_value)}
 																			</span>
 																		</div>
 																		<div className="text-xs text-green-600 dark:text-green-400 wrap-break-word">
 																			<span>
 																				Ahora:{' '}
-																				{(() => {
-																					const value = log.new_value || '(vacío)'
-																					if (
-																						typeof value === 'string' &&
-																						value.startsWith('http') &&
-																						value.length > 50
-																					) {
-																						return value.substring(0, 50) + '...'
-																					}
-																					return value
-																				})()}
+																				{formatAmountForDisplay(log.field_name, log.new_value)}
 																			</span>
 																		</div>
 																	</div>

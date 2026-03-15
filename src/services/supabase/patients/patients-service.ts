@@ -1018,7 +1018,15 @@ export const getPatientsCountByBranch = async (): Promise<PatientsCountByBranchR
 		Object.entries(countMap).forEach(([branch, patientIds]) => {
 			byBranch[branch] = [...patientIds].filter((id) => activePatientIds.has(id)).length
 		})
-		const totalUnique = [...allPatientIds].filter((id) => activePatientIds.has(id)).length
+		
+		// Total único: TODOS los pacientes activos (igual que en estadísticas y RPC)
+		const { count: totalUniqueCount } = await supabase
+			.from('patients')
+			.select('*', { count: 'exact', head: true })
+			.eq('laboratory_id', laboratoryId)
+			.eq('is_active', true)
+		
+		const totalUnique = totalUniqueCount || 0
 
 		return { byBranch, totalUnique }
 	} catch (error) {

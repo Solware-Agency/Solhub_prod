@@ -14,6 +14,7 @@ type Breakpoint = keyof typeof breakpoints
 /**
  * Hook to check if the current viewport matches a media query
  */
+// eslint-disable-next-line react-refresh/only-export-components -- hook en mismo archivo que componente
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false)
 
@@ -37,6 +38,7 @@ export function useMediaQuery(query: string): boolean {
 /**
  * Hook to check if the current viewport is at least a certain breakpoint
  */
+// eslint-disable-next-line react-refresh/only-export-components -- hook en mismo archivo
 export function useBreakpoint(breakpoint: Breakpoint): boolean {
   return useMediaQuery(`(min-width: ${breakpoints[breakpoint]}px)`)
 }

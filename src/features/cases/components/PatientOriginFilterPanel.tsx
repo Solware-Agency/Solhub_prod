@@ -68,7 +68,7 @@ const PatientOriginFilterPanel: React.FC<PatientOriginFilterPanelProps> = ({ cas
 				/>
 			</div>
 
-			<div className="max-h-[200px] overflow-y-auto pr-2 border border-gray-200 dark:border-gray-700 rounded-md">
+			<div className="max-h-50 overflow-y-auto pr-2 border border-gray-200 dark:border-gray-700 rounded-md">
 				{filteredOrigins.length > 0 ? (
 					<div className="space-y-1 p-2">
 						{filteredOrigins.map((origin) => (

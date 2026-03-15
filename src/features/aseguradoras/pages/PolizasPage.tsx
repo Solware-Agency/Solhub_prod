@@ -39,7 +39,97 @@ import {
 	MAX_DOCUMENTOS_POLIZA,
 } from '@services/supabase/storage/pagos-poliza-recibos-service'
 
-const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Recordatorios', 'Documentos'] as const
+const STEPS = ['Asegurado', 'Datos póliza', 'Fechas', 'Documentos'] as const
+
+/** Opciones de ramo (desc_ramo) según catálogo de aseguradoras */
+const RAMOS_OPCIONES = [
+	'MAQUINARIA Y EQUIPOS INDUSTRIALES',
+	'AUTOMOVIL',
+	'MILENIO DEL HOGAR',
+	'HCM',
+	'TODO RIESGO DE INCENDIO',
+	'MILENIO INDUSTRIA Y COMERCIO',
+	'SERVICIOS MEDICOS MERCANTIL',
+	'GLOBAL BENEFITS INDIVIDUAL',
+	'HCM COLECTIVO',
+	'INTER INDUSTRIA Y COMERCIO',
+	'SEGURO DE DINERO',
+	'EQUIPOS ELECTRONICOS',
+	'COMBINADO DE RESIDENCIA',
+	'ROBO',
+	'AVIACION',
+	'TRANSPORTE TERRESTRE',
+	'3D',
+	'RESPONSABILIDAD CIVIL GENERAL',
+	'RIESGOS ESPECIALES',
+	'INCENDIO',
+	'TODO RIESGO INCENDIO',
+	'FIANZA',
+	'ACCIDENTES PERSONALES',
+	'TERREMOTO',
+	'VIDA',
+	'RCV EMBARCACIONES',
+	'SEGURO SOLIDARIO SALUD',
+	'SEGURO SOIDARIO FUNERARIO',
+	'SEGURO SOLIDARIO ACCIDENTES PERSONALES',
+	'SEGUROS FUNERARIOS COLECTIVO',
+	'VIDA COLECTIVA',
+	'ACCIDENTES PERSONALES COLECTIVO',
+	'SERVICIOS DE EMERGENCIA MÉDICA',
+	'SEGUROS DE INDUSTRIA Y COMERCIO',
+	'GROUP BENEFITS INTEGRAL',
+	'RESPONSABILIDAD CIVIL PROFESIONAL',
+	'REPONSABILIDAD CIVIL PATRONAL',
+	'REPONSABILIDAD CIVIL EMPRESARIAL',
+	'INCENDIO Y TERREMOTO',
+	'ACCIDENTES PERSONALES ESCOLARES',
+	'PYME',
+	'GLOBAL BENEFITS COLECTIVO',
+	'RCV',
+] as const
+
+/** Construye las 5 columnas de cobro/recordatorios desde los valores del formulario. */
+function buildPaymentColumnsFromForm(form: {
+	fecha_prox_vencimiento: string
+	fecha_vencimiento: string
+	dia_vencimiento: string
+	modalidad_pago: 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
+	suma_asegurada: string
+	estatus_pago: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora'
+}) {
+	const nextPaymentDate = form.fecha_prox_vencimiento || form.fecha_vencimiento || null
+	const renewalDay = form.dia_vencimiento ? Number(form.dia_vencimiento) : null
+	const paymentFrequency =
+		form.modalidad_pago === 'Mensual'
+			? 'monthly'
+			: form.modalidad_pago === 'Trimestral'
+				? 'quarterly'
+				: form.modalidad_pago === 'Semestral'
+					? 'semiannual'
+					: 'yearly'
+	const billingAmount = form.suma_asegurada ? Number(form.suma_asegurada) : null
+	const paymentStatus: 'current' | 'overdue' =
+		form.estatus_pago === 'Pagado'
+			? 'current'
+			: form.estatus_pago === 'En mora'
+				? 'overdue'
+				: (() => {
+						const refDate = nextPaymentDate || form.fecha_vencimiento
+						if (!refDate) return 'current'
+						const ref = new Date(refDate)
+						ref.setHours(0, 0, 0, 0)
+						const today = new Date()
+						today.setHours(0, 0, 0, 0)
+						return ref < today ? 'overdue' : 'current'
+					})()
+	return {
+		next_payment_date: nextPaymentDate || null,
+		renewal_day_of_month: renewalDay,
+		payment_frequency: paymentFrequency,
+		billing_amount: billingAmount,
+		payment_status: paymentStatus,
+	}
+}
 
 const PolizasPage = () => {
 	const queryClient = useQueryClient()
@@ -77,11 +167,6 @@ const PolizasPage = () => {
 		fecha_vencimiento: '',
 		dia_vencimiento: '',
 		fecha_prox_vencimiento: '',
-		tipo_alerta: '',
-		dias_alerta: '',
-		dias_frecuencia: '',
-		dias_frecuencia_post: '',
-		dias_recordatorio: '',
 		notas: '',
 	})
 
@@ -153,11 +238,6 @@ const PolizasPage = () => {
 			fecha_vencimiento: '',
 			dia_vencimiento: '',
 			fecha_prox_vencimiento: '',
-			tipo_alerta: '',
-			dias_alerta: '',
-			dias_frecuencia: '',
-			dias_frecuencia_post: '',
-			dias_recordatorio: '',
 			notas: '',
 		})
 		setDocumentFiles([])
@@ -218,11 +298,6 @@ const PolizasPage = () => {
 			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
 			dia_vencimiento: poliza.dia_vencimiento != null ? String(poliza.dia_vencimiento) : '',
 			fecha_prox_vencimiento: poliza.fecha_prox_vencimiento?.slice(0, 10) ?? '',
-			tipo_alerta: poliza.tipo_alerta ?? '',
-			dias_alerta: poliza.dias_alerta != null ? String(poliza.dias_alerta) : '',
-			dias_frecuencia: poliza.dias_frecuencia != null ? String(poliza.dias_frecuencia) : '',
-			dias_frecuencia_post: poliza.dias_frecuencia_post != null ? String(poliza.dias_frecuencia_post) : '',
-			dias_recordatorio: poliza.dias_recordatorio != null ? String(poliza.dias_recordatorio) : '',
 			notas: poliza.notas ?? '',
 		})
 		setSelectedAsegurado(
@@ -313,6 +388,7 @@ const PolizasPage = () => {
 		if (!editingPoliza) {
 			setSaving(true)
 			try {
+				const paymentCols = buildPaymentColumnsFromForm(form)
 				const newPoliza = await createPoliza({
 					asegurado_id: form.asegurado_id,
 					aseguradora_id: form.aseguradora_id,
@@ -327,13 +403,9 @@ const PolizasPage = () => {
 					fecha_vencimiento: form.fecha_vencimiento,
 					dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
 					fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
-					tipo_alerta: form.tipo_alerta || null,
-					dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
-					dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
-					dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
-					dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
 					pdf_url: null,
 					notas: form.notas || null,
+					...paymentCols,
 				})
 				const documentos: DocumentoPoliza[] = []
 				for (const file of documentFiles.slice(0, MAX_DOCUMENTOS_POLIZA)) {
@@ -373,6 +445,7 @@ const PolizasPage = () => {
 				else if (data) documentos.push({ url: data.url, name: data.name })
 			}
 			const finalDocumentos = documentos.slice(0, MAX_DOCUMENTOS_POLIZA)
+			const paymentCols = buildPaymentColumnsFromForm(form)
 			await updatePoliza(editingPoliza.id, {
 				asegurado_id: form.asegurado_id,
 				aseguradora_id: form.aseguradora_id,
@@ -387,14 +460,10 @@ const PolizasPage = () => {
 				fecha_vencimiento: form.fecha_vencimiento,
 				dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
 				fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
-				tipo_alerta: form.tipo_alerta || null,
-				dias_alerta: form.dias_alerta ? Number(form.dias_alerta) : null,
-				dias_frecuencia: form.dias_frecuencia ? Number(form.dias_frecuencia) : null,
-				dias_frecuencia_post: form.dias_frecuencia_post ? Number(form.dias_frecuencia_post) : null,
-				dias_recordatorio: form.dias_recordatorio ? Number(form.dias_recordatorio) : null,
 				documentos_poliza: finalDocumentos,
 				pdf_url: finalDocumentos[0]?.url ?? null,
 				notas: form.notas || null,
+				...paymentCols,
 			})
 			queryClient.invalidateQueries({ queryKey: ['polizas'] })
 			queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
@@ -501,7 +570,24 @@ const PolizasPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Ramo <span className="text-destructive">*</span></Label>
-							<Input value={form.ramo} onChange={(e) => setForm((prev) => ({ ...prev, ramo: e.target.value }))} />
+							<Select
+								value={form.ramo}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, ramo: value }))}
+							>
+								<SelectTrigger className="min-w-0">
+									<SelectValue placeholder="Seleccionar ramo" />
+								</SelectTrigger>
+								<SelectContent
+									className="max-h-60 max-w-(--radix-select-trigger-width)"
+									position="popper"
+								>
+									{RAMOS_OPCIONES.map((ramo) => (
+										<SelectItem key={ramo} value={ramo} className="min-w-0 [&>span:last-child]:truncate">
+											{ramo}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 						<div className="space-y-2">
 							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
@@ -703,55 +789,6 @@ const PolizasPage = () => {
 				)
 			case 3:
 				return (
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label>Tipo de alerta</Label>
-							<Input
-								placeholder="Ej. Vencimiento"
-								value={form.tipo_alerta}
-								onChange={(e) => setForm((prev) => ({ ...prev, tipo_alerta: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días de alerta</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 30"
-								value={form.dias_alerta}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_alerta: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días frecuencia</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 30"
-								value={form.dias_frecuencia}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Frecuencia post</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 7"
-								value={form.dias_frecuencia_post}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_frecuencia_post: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Días recordatorio</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 7"
-								value={form.dias_recordatorio}
-								onChange={(e) => setForm((prev) => ({ ...prev, dias_recordatorio: e.target.value }))}
-							/>
-						</div>
-					</div>
-				)
-			case 4:
-				return (
 					<div className="space-y-4">
 						<div className="space-y-2">
 							<Label className="flex items-center gap-2">
@@ -903,7 +940,7 @@ const PolizasPage = () => {
 					</div>
 				</div>
 
-				<div className="p-4 min-h-[320px]">
+				<div className="p-4 min-h-80">
 					{isLoading && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
 					{error && <p className="text-sm text-red-500">Error al cargar pólizas</p>}
 					{!isLoading && !error && polizas.length === 0 && (

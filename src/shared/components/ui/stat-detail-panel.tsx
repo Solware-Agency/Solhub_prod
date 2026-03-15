@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, Stethoscope, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
+import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
 import { Button } from '@shared/components/ui/button'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
@@ -51,6 +51,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 	stats,
 	isLoading,
 	selectedMonth,
+	selectedYear,
 	isSpt = false,
 }) => {
 	useBodyScrollLock(isOpen)
@@ -58,6 +59,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 	const [receptionistSort, setReceptionistSort] = useState<'top' | 'alpha'>('top')
 	const [doctorSort, setDoctorSort] = useState<'top' | 'alpha'>('top')
 	const [examTypeSort, setExamTypeSort] = useState<'top' | 'alpha'>('top')
+	const [originSort, setOriginSort] = useState<'top' | 'alpha'>('top')
 	// formatCurrency is now imported from number-utils
 
 	const getStatTitle = () => {
@@ -165,14 +167,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													<div className={`w-3 h-3 ${colors[index % colors.length]} rounded-full`}></div>
 													<span className="text-sm text-gray-600 dark:text-gray-400">{branch.branch}</span>
 												</div>
-												<div className="flex flex-col items-end">
-													<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-														{formatCurrency(branch.revenue)}
-													</span>
-													<span className="text-xs text-gray-500 dark:text-gray-400">
-														{branch.percentage.toFixed(1)}%
-													</span>
-												</div>
+												<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+													{formatCurrency(branch.revenue)}
+												</span>
 											</div>
 										)
 									})}
@@ -195,8 +192,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												key={month.month}
 												className={`flex-1 rounded-t-sm ${
 													isSelected
-														? 'bg-gradient-to-t from-purple-600 to-purple-400'
-														: 'bg-gradient-to-t from-blue-500 to-blue-300'
+														? 'bg-linear-to-t from-purple-600 to-purple-400'
+														: 'bg-linear-to-t from-blue-500 to-blue-300'
 												}`}
 												style={{ height: `${Math.max(height, 10)}%` }}
 												title={`${month.month}: ${formatCurrency(month.revenue)}`}
@@ -669,15 +666,15 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</div>
 							<div className="h-40 flex items-end justify-between gap-1">
 								{stats.salesTrendByMonth &&
-									stats.salesTrendByMonth.map((_month: any, index: number) => {
-										// This is a placeholder - in a real implementation, you'd have actual new patients data per month
-										const height = 20 + Math.random() * 80 // Random height between 20% and 100%
+									stats.salesTrendByMonth.map((month: any) => {
+										const maxVal = Math.max(...stats.salesTrendByMonth.map((m: any) => m.revenue))
+										const height = maxVal > 0 ? (month.revenue / maxVal) * 100 : 0
 
 										return (
 											<div
-												key={index}
-												className="flex-1 rounded-t-sm bg-gradient-to-t from-blue-500 to-blue-300"
-												style={{ height: `${height}%` }}
+												key={month.month}
+												className="flex-1 rounded-t-sm bg-linear-to-t from-blue-500 to-blue-300"
+												style={{ height: `${Math.max(height, 10)}%` }}
 											></div>
 										)
 									})}
@@ -766,8 +763,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													key={month.month}
 													className={`flex-1 rounded-t-sm transition-transform duration-200 ${
 														isSelected
-															? 'bg-gradient-to-t from-purple-600 to-purple-400 shadow-lg'
-															: 'bg-gradient-to-t from-blue-500 to-blue-300'
+															? 'bg-linear-to-t from-purple-600 to-purple-400 shadow-lg'
+															: 'bg-linear-to-t from-blue-500 to-blue-300'
 													}`}
 													style={{ height: `${Math.max(height, 10)}%` }}
 													title={`${month.month}: ${formatTrendVal(month.revenue)}`}
@@ -798,9 +795,13 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												stats.salesTrendByMonth.map((month: any, index: number) => {
 													const totalVal = stats.salesTrendByMonth.reduce((sum: number, m: any) => sum + m.revenue, 0)
 													const percentage = totalVal > 0 ? (month.revenue / totalVal) * 100 : 0
+													const now = new Date()
+													const currentYear = now.getFullYear()
+													const currentMonth = now.getMonth()
+													const isFutureMonth = selectedYear != null && selectedYear === currentYear && month.monthIndex > currentMonth
 													const prevMonth = index > 0 ? stats.salesTrendByMonth[index - 1] : null
-													const growth = prevMonth && prevMonth.revenue > 0 
-														? ((month.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 
+													const growth = !isFutureMonth && prevMonth && prevMonth.revenue > 0
+														? ((month.revenue - prevMonth.revenue) / prevMonth.revenue) * 100
 														: null
 
 													return (
@@ -1081,11 +1082,15 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 					</div>
 				)
 
-			case 'originRevenue':
+			case 'originRevenue': {
+				const allOrigins = stats.revenueByOrigin || []
+				const sortedOrigins =
+					originSort === 'alpha'
+						? [...allOrigins].sort((a: any, b: any) => (a.origin || '').localeCompare(b.origin || '', 'es'))
+						: [...allOrigins].sort((a: any, b: any) => (b.cases || 0) - (a.cases || 0))
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingreso por Procedencia</h3>
 							<div className="overflow-x-auto">
 								<table className="w-full">
 									<thead>
@@ -1097,11 +1102,8 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{stats.revenueByOrigin &&
-											stats.revenueByOrigin
-												.sort((a: any, b: any) => b.revenue - a.revenue)
-												.map((origin: any) => {
-													const maxRevenue = Math.max(...stats.revenueByOrigin.map((o: any) => o.revenue))
+										{sortedOrigins.map((origin: any) => {
+													const maxRevenue = Math.max(...allOrigins.map((o: any) => o.revenue), 1)
 													const percentage = maxRevenue > 0 ? (origin.revenue / maxRevenue) * 100 : 0
 
 													return (
@@ -1145,34 +1147,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								</table>
 							</div>
 						</div>
-
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Procedencias</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{stats.revenueByOrigin?.length || 0}
-									</p>
-								</div>
-								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Casos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{stats.revenueByOrigin?.reduce((sum: number, o: any) => sum + o.cases, 0) || 0}
-									</p>
-								</div>
-								<div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Ingresos</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatCurrency(
-											stats.revenueByOrigin?.reduce((sum: number, o: any) => sum + o.revenue, 0) || 0
-										)}
-									</p>
-								</div>
-							</div>
-						</div>
 					</div>
 				)
+			}
 
 			case 'doctorRevenue': {
 				const rawDoctors = stats.allTreatingDoctors ?? stats.topTreatingDoctors ?? []
@@ -1198,7 +1175,9 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									<tbody>
 										{sortedDoctors.length > 0 &&
 											sortedDoctors.map((doctor: any, index: number) => {
-													const totalVal = isSpt ? (stats.totalCases || 0) : (stats.totalRevenue || stats.monthlyRevenue || 0)
+													const totalVal = isSpt
+														? (stats.totalCases || 0)
+														: (stats.periodTotalRevenue ?? stats.totalRevenue ?? stats.monthlyRevenue ?? 0)
 													const doctorVal = isSpt ? doctor.cases : doctor.revenue
 													const percentageOfTotal = totalVal > 0 ? (doctorVal / totalVal) * 100 : 0
 													const maxVal = sortedDoctors.length ? Math.max(...sortedDoctors.map((d: any) => (isSpt ? d.cases : d.revenue))) : 0
@@ -1211,7 +1190,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 														>
 															<td className="py-2 px-2">
 																<div className="flex items-center gap-2">
-																	<span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 text-xs font-semibold rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+																	<span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 text-xs font-semibold rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
 																		{index + 1}
 																	</span>
 																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1300,7 +1279,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos</p>
 							) : (
 								<div className="space-y-3">
-									{data.slice(0, 5).map((item: any) => (
+									{data.map((item: any) => (
 										<div key={item.id} className="space-y-1">
 											<div className="flex items-center justify-between">
 												<span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
@@ -1318,22 +1297,6 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 									))}
 								</div>
 							)}
-						</div>
-
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-								Todos los recepcionistas
-							</h3>
-							<div className="max-h-72 overflow-auto space-y-2 pr-2">
-								{data.map((item: any) => (
-									<div key={item.id} className="flex items-center justify-between">
-										<span className="text-sm text-gray-600 dark:text-gray-400">{item.name}</span>
-										<span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-											{formatNumber(item.cases)}
-										</span>
-									</div>
-								))}
-							</div>
 						</div>
 					</div>
 				)
@@ -1355,7 +1318,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				const cc = stats?.callCenterStats
 				const totalCalls = cc?.totalCalls ?? 0
 				const topData = cc?.topByAtendidoPor ?? []
-				const maxCalls = Math.max(...topData.map((item) => item.calls), 1)
+				const maxCalls = Math.max(...topData.map((item: any) => item.calls), 1)
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
@@ -1377,7 +1340,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
 							) : (
 								<div className="max-h-72 overflow-auto space-y-3 pr-2">
-									{topData.map((item, index) => (
+									{topData.map((item: any, index: number) => (
 										<div key={item.name} className="space-y-1">
 											<div className="flex items-center justify-between">
 												<span className="text-sm text-gray-700 dark:text-gray-300">
@@ -1612,7 +1575,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										</tr>
 									</thead>
 									<tbody>
-										{sortedExamTypes.map((exam: any, index: number) => {
+										{sortedExamTypes.map((exam: any) => {
 													const totalVal = isSpt
 														? rawExamTypes.reduce((sum: number, e: any) => sum + e.count, 0)
 														: rawExamTypes.reduce((sum: number, e: any) => sum + e.revenue, 0)
@@ -1723,7 +1686,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/50 z-[99999998]"
+						className="fixed inset-0 bg-black/50 z-99999998"
 					/>
 
 					{/* Main Panel */}
@@ -1732,7 +1695,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-[99999999] overflow-y-auto rounded-lg border-l border-input flex flex-col"
+						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col"
 					>
 						{/* Header */}
 						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">
@@ -1760,6 +1723,36 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 													onClick={() => setReceptionistSort('alpha')}
 													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
 														receptionistSort === 'alpha'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar alfabéticamente"
+												>
+													<ArrowDownAZ className="w-4 h-4" />
+													A-Z
+												</button>
+											</div>
+										)}
+										{statType === 'originRevenue' && (
+											<div className="flex rounded-lg border border-input bg-muted/30 overflow-hidden">
+												<button
+													type="button"
+													onClick={() => setOriginSort('top')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														originSort === 'top'
+															? 'bg-primary text-primary-foreground'
+															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													}`}
+													title="Ordenar por cantidad de casos (top)"
+												>
+													<ArrowDownNarrowWide className="w-4 h-4" />
+													Top
+												</button>
+												<button
+													type="button"
+													onClick={() => setOriginSort('alpha')}
+													className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors ${
+														originSort === 'alpha'
 															? 'bg-primary text-primary-foreground'
 															: 'text-muted-foreground hover:bg-muted hover:text-foreground'
 													}`}

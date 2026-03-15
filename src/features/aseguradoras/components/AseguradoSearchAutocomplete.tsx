@@ -174,7 +174,7 @@ export const AseguradoSearchAutocomplete = ({
 					</div>
 				</PopoverTrigger>
 				<PopoverContent
-					className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg rounded-lg"
+					className="w-(--radix-popover-trigger-width) p-0 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg rounded-lg"
 					align="start"
 					sideOffset={4}
 					onOpenAutoFocus={(e) => e.preventDefault()}

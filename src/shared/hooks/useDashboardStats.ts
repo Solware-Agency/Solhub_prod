@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/services/supabase/config/config'
 import { useRealtimeInvalidate } from '@shared/hooks/useRealtimeInvalidate'
 import { getCallCenterStats } from '@/services/supabase/call-center/call-center-registros-service'
@@ -80,6 +80,8 @@ export interface DashboardStats {
 	/** Lista completa de médicos (para modal); ordenada por revenue en el hook. En UI SPT se ordena por cases. */
 	allTreatingDoctors: Array<{ doctor: string; cases: number; revenue: number }>
 	revenueByOrigin: Array<{ origin: string; revenue: number; cases: number; percentage: number }>
+	/** Suma de total_amount del período filtrado (para % del total en tablas por procedencia/médico) */
+	periodTotalRevenue: number
 	totalCases: number
 	/** Total de bloques (bloques_biopsia) del período */
 	totalBlocks: number
@@ -119,8 +121,6 @@ const normalizeExamType = (examType: string): string => {
 }
 
 export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear?: number) => {
-	const queryClient = useQueryClient()
-
 	const query = useQuery({
 		queryKey: ['dashboard-stats', startDate?.toISOString(), endDate?.toISOString(), selectedYear],
 		queryFn: async (): Promise<DashboardStats> => {
@@ -285,7 +285,6 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const receptionistIds = Object.keys(receptionistCounts)
 				const pathologistIds = Object.keys(pathologistCounts)
 				const citotecnoIds = Object.keys(citotecnoCounts)
-				const profileIds = Array.from(new Set([...receptionistIds, ...pathologistIds, ...citotecnoIds]))
 
 				const casesByReceptionist = receptionistIds
 					.map((id) => ({
@@ -663,6 +662,10 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue (UI puede reordenar por cases para SPT)
 				const topTreatingDoctors = allTreatingDoctors.slice(0, 5) // Top 5 para card (no-SPT por revenue; SPT usa allTreatingDoctors ordenado por cases en UI)
 
+				// Total de ingresos del período (total_amount) para % del total en tablas
+				const periodTotalRevenue =
+					transformedFilteredRecords?.reduce((sum, record) => sum + (record.total_amount || 0), 0) || 0
+
 				// Calculate revenue by origin (procedencia) - Use transformedFilteredRecords
 				const originStats = new Map<string, { cases: number; revenue: number }>()
 				transformedFilteredRecords?.forEach((record) => {
@@ -681,10 +684,9 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						origin,
 						cases: stats.cases,
 						revenue: stats.revenue,
-						percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0,
+						percentage: periodTotalRevenue > 0 ? (stats.revenue / periodTotalRevenue) * 100 : 0,
 					}))
-					.sort((a, b) => b.revenue - a.revenue) // Sort by revenue
-					.slice(0, 5) // Top 5 origins
+					.sort((a, b) => b.revenue - a.revenue) // Todas las procedencias (sin límite)
 
 				// Estadísticas del call center (solo SPT con hasCallCenter)
 				let callCenterStats: DashboardStats['callCenterStats'] = undefined
@@ -710,6 +712,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					topTreatingDoctors,
 					allTreatingDoctors,
 					revenueByOrigin,
+					periodTotalRevenue,
 					totalCases,
 					totalBlocks,
 					totalCasesWithPathologist,

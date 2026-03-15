@@ -108,17 +108,19 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 
 ### Situación H: “Marcar como pagado” (dashboard admin)
 
-**H1 – Pagó a tiempo (lab active, ej. 5 abr)**  
+**Marcar como pagado (lab active o inactive)**  
 - Se llama `get_next_payment_date_on_mark_paid(lab_id)`.  
-- La función devuelve próximo día fijo → ej. **2026-04-06**; **renewal_day_of_month_new = NULL**.  
-- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-04-06`, **renewal_day_of_month no se cambia**.  
-- Siguiente ciclo: otra vez el 6 (abril, mayo, etc.).
+- La función devuelve **next_payment_date = fecha actual de vencimiento + 1 período** (ej. 2026-04-08 → 2026-05-08). **renewal_day_of_month_new = NULL**.  
+- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = <valor devuelto>`. **renewal_day_of_month no se cambia**.  
+- Si se marca como pagado otra vez por error, se sumará otro período. El dashboard debe avisar de esto.
+
+_(En ambos casos la función devuelve **fecha actual de vencimiento + 1 período**; el ejemplo numérico de H2 a continuación refleja el mismo criterio.)_
 
 **H2 – Pagó tarde (lab inactive, ej. 15 abr)**  
 - Se llama `get_next_payment_date_on_mark_paid(lab_id)`.  
-- La función devuelve: **next_payment_date = 2026-05-15** (hoy + 1 mes), **renewal_day_of_month_new = 15**.  
-- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-05-15`, **renewal_day_of_month = 15**.  
-- A partir de ahí el “día fijo” es el **15**; próximos recordatorios y vencimientos serán los 15 (mayo, junio, etc.).
+- La función devuelve **next_payment_date = 2026-05-08** (fecha que venció 08/04 + 1 mes), **renewal_day_of_month_new = NULL**.  
+- UPDATE: `status = 'active'`, `payment_status = 'current'`, `next_payment_date = 2026-05-08`. **renewal_day_of_month no se cambia**.  
+- El “día fijo” sigue siendo el **6**; próximos recordatorios y vencimientos serán los 6 (mayo, junio, etc.).
 
 ---
 
@@ -136,7 +138,7 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 | Día 8, 04:00 Caracas (payment-reminder) | **inactive** | - | Pantalla de bloqueo | **Sí: “Servicio desactivado”** (solo ese día) |
 | Día 9+ (sigue inactive) | **inactive** | - | Pantalla de bloqueo | No |
 | Tras “Marcar como pagado” (activo) | active | current | Desaparece aviso / siguiente ciclo el 6 | - |
-| Tras “Marcar como pagado” (inactivo) | active | current | Reactivado; siguiente ciclo el **día que pagó** | - |
+| Tras “Marcar como pagado” (inactivo) | active | current | Reactivado; próxima fecha = **fecha que venció + 1 período** | - |
 
 ---
 
@@ -146,4 +148,4 @@ Supongamos **renewal_day_of_month = 6**, **next_payment_date = 2026-04-06**, **t
 - **Cron 08:00 UTC (04:00 Caracas):** Dispara **payment-reminder**; la función usa la zona del lab para “hoy” en recordatorios activos y, para el correo de desactivado, labs inactive con `next_payment_date = hoy UTC - 2`.  
 - **Correos:** 5 tipos: 15 días, 7 días, 1 día, vence hoy, **servicio desactivado** (cuando el lab acaba de pasar a inactive). Tasa euro solo en los 4 primeros; solo a owners.  
 - **Avisos en app:** Mismo criterio de “hoy” por timezone; modal con monto en USD + Bs (euro).  
-- **Marcar como pagado:** Siempre vía **get_next_payment_date_on_mark_paid**; si estaba inactive se actualiza también **renewal_day_of_month** al día que pagó.
+- **Marcar como pagado:** Siempre vía **get_next_payment_date_on_mark_paid**; la próxima fecha = **fecha actual de vencimiento + 1 período** (mes/semana/año); **renewal_day_of_month** no se modifica. Si se marca como pagado otra vez, se suma otro período.

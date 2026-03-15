@@ -1,7 +1,7 @@
 import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Edit, Activity } from 'lucide-react';
+import { X, Edit } from 'lucide-react';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock';
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen';
@@ -10,7 +10,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getTriageByCase } from '@/services/supabase/triage/triage-service';
 import { Button } from '@shared/components/ui/button';
 import TriajeModalForm from './TriajeModalForm';
-import { supabase } from '@/services/supabase/config/config';
 
 // Error Boundary para capturar errores en el formulario
 class TriajeFormErrorBoundary extends Component<
@@ -196,7 +195,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
   // Si hay un error crítico, mostrar mensaje de error
   if (error || queryError) {
     return ReactDOM.createPortal(
-      <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
+      <div className='fixed inset-0 z-999999 flex items-center justify-center bg-black/50 dark:bg-black/70'>
         <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error
@@ -232,7 +231,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className='fixed inset-0 bg-black/50 dark:bg-black/70 z-[999998] backdrop-blur-sm'
+            className='fixed inset-0 bg-black/50 dark:bg-black/70 z-999998 backdrop-blur-sm'
             onClick={handleClose}
           />
 
@@ -242,7 +241,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className='fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 pointer-events-none'
+            className='fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6 pointer-events-none'
             onClick={(e) => e.stopPropagation()}
           >
             <div
@@ -262,10 +261,11 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
                       <Button
                         onClick={() => setForceEditMode(true)}
                         variant='outline'
-                        className='hidden sm:flex items-center gap-2'
+                        className='flex items-center gap-2 p-2 sm:px-3 sm:py-2'
+                        aria-label='Editar Historia Clínica'
                       >
-                        <Edit className='w-4 h-4' />
-                        Editar Historia Clínica
+                        <Edit className='w-4 h-4 shrink-0' />
+                        <span className='hidden sm:inline'>Editar Historia Clínica</span>
                       </Button>
                     )}
                     <button
@@ -362,7 +362,7 @@ const TriajeModal: React.FC<TriajeModalProps> = ({
     console.error('Error creando portal del modal:', err);
     // Fallback: renderizar sin portal si hay error
     return (
-      <div className='fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70'>
+      <div className='fixed inset-0 z-999999 flex items-center justify-center bg-black/50 dark:bg-black/70'>
         <div className='bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md'>
           <h3 className='text-lg font-semibold text-red-600 dark:text-red-400 mb-2'>
             Error

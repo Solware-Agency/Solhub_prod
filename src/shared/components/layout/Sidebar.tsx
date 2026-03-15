@@ -309,6 +309,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     '/prueba/reports',
     '/prueba/triage-analytics',
     '/prueba/changelog',
+    '/medic/triage-analytics',
+    '/medico-tratante/triage-analytics',
   ];
 
   const [expandedGroups, setExpandedGroups] = React.useState<
@@ -374,6 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         reports: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getExpandedGroupsForCurrentPath omitido para evitar re-ejecutar en cada cambio de ruta
   }, [showFullContent]);
 
   const handleLogout = async () => {
@@ -798,6 +801,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </FeatureGuard>
+              <FeatureGuard feature='hasTriaje'>
+                <NavItem
+                  to='/medic/triage-analytics'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Historia Clínica'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
               <FeatureGuard feature='hasUsers'>
                 <NavItem
                   to='/medic/users'
@@ -1008,6 +1020,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   to='/medico-tratante/cases'
                   icon={<FolderInput className='stroke-2 size-5 shrink-0' />}
                   label='Casos Médicos'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
+              <FeatureGuard feature='hasTriaje'>
+                <NavItem
+                  to='/medico-tratante/triage-analytics'
+                  icon={<Activity className='stroke-2 size-5 shrink-0' />}
+                  label='Historia Clínica'
                   showFullContent={showFullContent}
                   onClick={onClose}
                 />

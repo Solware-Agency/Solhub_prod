@@ -42,7 +42,6 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Resetear al cerrar
   const handleClose = () => {
     setMessages([])
     setInputValue('')
@@ -128,7 +127,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-black/50 z-[99999999999999999]"
           />
 
@@ -152,7 +151,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                   </h2>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-none"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -181,7 +180,7 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                     }`}
                   >
                     {/* Message Text */}
-                    <div className="whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap wrap-break-word">
                       {message.text.split('\n').map((line, i) => (
                         <span key={i}>
                           {line.startsWith('**') && line.endsWith('**') ? (
@@ -201,11 +200,11 @@ export const HelpChatbotModal = ({ isOpen, onClose }: HelpChatbotModalProps) => 
                           <Button
                             key={idx}
                             onClick={() => handleOptionButtonClick(option)}
-                            className="w-full justify-start text-left whitespace-normal break-words hyphens-auto min-h-[3.25rem] py-3 px-4 leading-relaxed text-[0.9375rem] bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
+                            className="w-full justify-start text-left whitespace-normal wrap-break-word hyphens-auto min-h-13 py-3 px-4 leading-relaxed text-[0.9375rem] bg-background hover:bg-accent text-foreground border border-border/30 hover:border-labPrimary/50 transition-all duration-200"
                             variant="outline"
                             size="sm"
                           >
-                            <span className="text-left break-words leading-relaxed">{option}</span>
+                            <span className="text-left wrap-break-word leading-relaxed">{option}</span>
                           </Button>
                         ))}
                       </div>

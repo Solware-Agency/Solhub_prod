@@ -6,7 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
-import { supabase, SEND_EMAIL_FUNCTION_URL } from '@/services/supabase/config/config'
+import {
+	supabase,
+	SEND_EMAIL_FUNCTION_URL,
+	GENERATE_DOC_FUNCTION_URL,
+	GENERATE_PDF_FUNCTION_URL,
+	getDownloadPdfHeaders,
+} from '@/services/supabase/config/config'
 import { updatePatient } from '@/services/supabase/patients/patients-service'
 import { getResponsableByDependiente } from '@/services/supabase/patients/responsabilidades-service'
 import { X, User, ArrowLeft, ArrowRight, Sparkles, Shredder, FileCheck, Download, Send, Mail } from 'lucide-react'
@@ -21,7 +27,7 @@ import { useToast } from '@shared/hooks/use-toast'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
 import { useGlobalOverlayOpen } from '@shared/hooks/useGlobalOverlayOpen'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
-import { getDownloadUrl } from '@/services/utils/download-utils'
+import { getDownloadUrl, isEdgeFunctionDownloadUrl } from '@/services/utils/download-utils'
 import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service'
 import {
 	Dialog,
@@ -80,8 +86,8 @@ interface StepsCaseModalProps {
 
 const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose, onSuccess, isFullscreen = false }) => {
 	const { laboratory } = useLaboratory()
-	const GENERATE_DOC = laboratory?.config?.webhooks?.generateDoc || import.meta.env.VITE_GENERATE_DOC_WEBHOOK
-	const GENERATE_PDF = laboratory?.config?.webhooks?.generatePdf || import.meta.env.VITE_GENERATE_PDF_WEBHOOK
+	const GENERATE_DOC = GENERATE_DOC_FUNCTION_URL
+	const GENERATE_PDF = GENERATE_PDF_FUNCTION_URL
 
 	const [activeStep, setActiveStep] = useState(0)
 	const [isCompleting, setIsCompleting] = useState(false)
@@ -210,6 +216,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		return stepsList
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- isSptAutoApprove omitido intencionalmente para evitar recálculos
 	}, [
 		isResidente,
 		isEmployee,
@@ -344,6 +351,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 		}
 
 		loadPatientInfo()
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- solo cargar al abrir o al cambiar case id
 	}, [isOpen, case_?.id])
 
 	// Actualizar el paso activo cuando el modal se abra y el documento esté aprobado
@@ -352,6 +360,7 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			const initialStep = getInitialStep()
 			setActiveStep(initialStep)
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- getInitialStep omitido para evitar re-ejecución en cada render
 	}, [isOpen, docAprobado, computedSteps.length])
 
 	const handleNext = () => {
@@ -579,12 +588,18 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 				requestBody.templateId = selectedTemplateId
 			}
 
+			const {
+				data: { session },
+			} = await supabase.auth.getSession()
+			const docHeaders: Record<string, string> = {
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			}
+			if (session?.access_token) docHeaders['Authorization'] = `Bearer ${session.access_token}`
+
 			const webhookRes = await fetch(GENERATE_DOC, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-				},
+				headers: docHeaders,
 				body: JSON.stringify(requestBody),
 			})
 
@@ -932,12 +947,18 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			console.log('Webhook URL:', GENERATE_PDF)
 			console.log('Patient ID:', caseData.patient_id)
 
+			const {
+				data: { session: pdfSession },
+			} = await supabase.auth.getSession()
+			const pdfHeaders: Record<string, string> = {
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			}
+			if (pdfSession?.access_token) pdfHeaders['Authorization'] = `Bearer ${pdfSession.access_token}`
+
 			const response = await fetch(GENERATE_PDF, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-				},
+				headers: pdfHeaders,
 				body: JSON.stringify(requestBody),
 			})
 
@@ -1011,8 +1032,12 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			}
 
 			try {
-				// Descargar el archivo usando el endpoint de descarga
-				const response = await fetch(pdfUrl)
+				// Descargar el archivo usando el endpoint de descarga (Edge Function o URL directa)
+				const downloadOptions: RequestInit = {}
+				if (isEdgeFunctionDownloadUrl(pdfUrl)) {
+					downloadOptions.headers = getDownloadPdfHeaders()
+				}
+				const response = await fetch(pdfUrl, downloadOptions)
 				if (!response.ok) {
 					throw new Error(`Error al descargar: ${response.status}`)
 				}

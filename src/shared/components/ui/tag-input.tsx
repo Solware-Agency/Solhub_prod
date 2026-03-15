@@ -75,7 +75,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   return (
     <div
       className={cn(
-        "flex min-h-[40px] w-full flex-wrap gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-none",
+        "flex min-h-10 w-full flex-wrap gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-none",
         "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         disabled && "cursor-not-allowed opacity-50",
         className

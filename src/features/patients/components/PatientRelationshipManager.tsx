@@ -396,6 +396,7 @@ export const PatientRelationshipManager = ({
 		}
 
 		loadDependentData()
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- responsable.telefono omitido para no re-ejecutar en cada edición
 	}, [dependentToEdit?.id, trigger, toast])
 
 	return (
@@ -514,7 +515,7 @@ export const PatientRelationshipManager = ({
 											!fechaNacimiento && 'text-muted-foreground',
 										)}
 									>
-										<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+										<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
 										<span className="truncate">
 											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
 										</span>

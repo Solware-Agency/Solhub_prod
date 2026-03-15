@@ -29,7 +29,7 @@ export function SessionTimeoutWarning() {
 					initial={{ opacity: 0, y: 50 }}
 					animate={{ opacity: 1, y: 0 }}
 					exit={{ opacity: 0, y: 50 }}
-					className="fixed bottom-4 right-4 z-[999999999999] max-w-sm w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+					className="fixed bottom-4 right-4 z-999999999999 max-w-sm w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
 				>
 					<div className="p-4">
 						<div className="flex items-start gap-3">

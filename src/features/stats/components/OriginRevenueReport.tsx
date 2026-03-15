@@ -4,7 +4,7 @@ import { Info, MapPin } from 'lucide-react'
 import { useDashboardStats } from '@shared/hooks/useDashboardStats'
 import { useBreakpoint } from '@shared/components/ui/media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { formatCurrency, formatNumber } from '@shared/utils/number-utils'
+import { formatCurrency } from '@shared/utils/number-utils'
 
 interface OriginRevenueReportProps {
 	startDate?: Date
@@ -17,6 +17,10 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 	const { data: stats, isLoading } = useDashboardStats(startDate, endDate)
 	const isDesktop = useBreakpoint('lg')
 	const totalCases = stats?.revenueByOrigin?.reduce((sum, o) => sum + o.cases, 0) || 0
+	// En la card solo mostramos top 5 por cantidad de casos (mismo criterio que el modal en "Top")
+	const topOrigins = [...(stats?.revenueByOrigin || [])]
+		.sort((a, b) => (b.cases || 0) - (a.cases || 0))
+		.slice(0, 5)
 
 	// formatCurrency is now imported from number-utils
 
@@ -48,7 +52,7 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 						<div className="flex items-center justify-center h-full">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
 						</div>
-					) : stats?.revenueByOrigin && stats.revenueByOrigin.length > 0 ? (
+					) : topOrigins.length > 0 ? (
 						isDesktop ? (
 							<div className="flex-1">
 								<table className="w-full">
@@ -71,7 +75,7 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 										</tr>
 									</thead>
 									<tbody>
-										{stats.revenueByOrigin.map((origin, index) => (
+										{topOrigins.map((origin, index) => (
 											<tr
 												key={index}
 												className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -102,8 +106,8 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 																className="bg-purple-500 h-1 rounded-full transition-all duration-300"
 																style={{
 																	width: `${
-																		stats.revenueByOrigin.length > 0
-																			? (origin.revenue / Math.max(...stats.revenueByOrigin.map((o) => o.revenue))) *
+																		topOrigins.length > 0
+																			? (origin.revenue / Math.max(...topOrigins.map((o) => o.revenue))) *
 																			  100
 																			: 0
 																	}%`,
@@ -121,7 +125,7 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 						) : (
 							// Mobile card view
 							<div className="space-y-3">
-								{stats.revenueByOrigin.map((origin, index) => (
+								{topOrigins.map((origin, index) => (
 									<div
 										key={index}
 										className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow"
@@ -153,10 +157,10 @@ const OriginRevenueReport: React.FC<OriginRevenueReportProps> = ({ startDate, en
 												className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
 												style={{
 													width: `${
-														stats.revenueByOrigin.length > 0
+														topOrigins.length > 0
 															? (isSpt
-																? (origin.cases / Math.max(...stats.revenueByOrigin.map((o) => o.cases))) * 100
-																: (origin.revenue / Math.max(...stats.revenueByOrigin.map((o) => o.revenue))) * 100)
+																? (origin.cases / Math.max(...topOrigins.map((o) => o.cases))) * 100
+																: (origin.revenue / Math.max(...topOrigins.map((o) => o.revenue))) * 100)
 															: 0
 													}%`,
 												}}

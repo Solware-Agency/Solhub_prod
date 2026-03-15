@@ -25,6 +25,31 @@ export interface CodeValidationResult {
   error?: string;
 }
 
+export interface ValidateAndUseCodeResult {
+  success: boolean;
+  laboratory_id?: string;
+  code_id?: string;
+  remaining_uses?: number | null; // null = ilimitado
+  error?: string;
+  error_code?: 'NOT_FOUND' | 'INACTIVE' | 'EXPIRED' | 'EXHAUSTED' | 'INTERNAL_ERROR';
+}
+
+export interface CheckCodeValidityResult {
+  valid: boolean;
+  code?: string;
+  laboratory_name?: string;
+  laboratory_slug?: string;
+  is_active?: boolean;
+  is_expired?: boolean;
+  is_exhausted?: boolean;
+  expires_at?: string | null;
+  current_uses?: number;
+  max_uses?: number | null;
+  remaining_uses?: number | null; // null = ilimitado
+  error?: string;
+  error_code?: 'NOT_FOUND' | 'INACTIVE' | 'EXPIRED' | 'EXHAUSTED' | 'INTERNAL_ERROR';
+}
+
 /**
  * Valida un código de laboratorio y verifica sus límites
  */
@@ -148,6 +173,73 @@ export async function incrementCodeUsage(codeId: string): Promise<void> {
   }
 
   console.log('✅ Uso incrementado correctamente (fallback)');
+}
+
+/**
+ * 🆕 NUEVO: Verifica validez de un código SIN consumirlo (para preview)
+ * Usa el RPC check_code_validity
+ */
+export async function checkCodeValidityRPC(code: string): Promise<CheckCodeValidityResult> {
+  try {
+    console.log('🔍 Verificando código (sin consumir):', code);
+
+    const { data, error } = await (supabase as any).rpc('check_code_validity', {
+      code_text: code.trim().toUpperCase()
+    });
+
+    if (error) {
+      console.error('❌ Error RPC check_code_validity:', error);
+      return {
+        valid: false,
+        error: 'Error al verificar código',
+        error_code: 'INTERNAL_ERROR'
+      };
+    }
+
+    console.log('✅ Código verificado:', data);
+    return data as CheckCodeValidityResult;
+  } catch (error) {
+    console.error('❌ Error verificando código:', error);
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Error al verificar código',
+      error_code: 'INTERNAL_ERROR'
+    };
+  }
+}
+
+/**
+ * 🆕 NUEVO: Valida Y consume un código atómicamente
+ * Usa el RPC validate_and_use_code (incrementa current_uses)
+ * ⚠️ SOLO LLAMAR AL MOMENTO DE REGISTRO REAL
+ */
+export async function validateAndUseCodeRPC(code: string): Promise<ValidateAndUseCodeResult> {
+  try {
+    console.log('🔐 Validando y consumiendo código:', code);
+
+    const { data, error } = await (supabase as any).rpc('validate_and_use_code', {
+      code_text: code.trim().toUpperCase()
+    });
+
+    if (error) {
+      console.error('❌ Error RPC validate_and_use_code:', error);
+      return {
+        success: false,
+        error: 'Error al validar código',
+        error_code: 'INTERNAL_ERROR'
+      };
+    }
+
+    console.log('✅ Código validado y consumido:', data);
+    return data as ValidateAndUseCodeResult;
+  } catch (error) {
+    console.error('❌ Error validando código:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error al validar código',
+      error_code: 'INTERNAL_ERROR'
+    };
+  }
 }
 
 /**

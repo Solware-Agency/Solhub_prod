@@ -1,5 +1,6 @@
 import { supabase } from '@/services/supabase/config/config'
 import type { HabitLevel } from '@/services/supabase/triage/triage-service'
+import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 
 // NOTA: triaje_records no está en los tipos generados de Supabase
 // Ejecutar: npx supabase gen types typescript --local > src/types/supabase.ts
@@ -496,5 +497,196 @@ export async function getTriageTrends(
 	} catch (error) {
 		console.error('Error in getTriageTrends:', error)
 		return { success: false, error: 'Error interno al obtener tendencias' }
+	}
+}
+
+/**
+ * Tipos de estadísticas de triage disponibles
+ */
+export type TriageStatType = 
+	| 'heartRate'
+	| 'respiratoryRate' 
+	| 'oxygenSaturation'
+	| 'temperature'
+	| 'bmi'
+	| 'bloodPressure'
+	| 'bloodGlucose'
+
+/**
+ * Valores de rango para cada tipo de estadística
+ */
+export type TriageRangeValue = 
+	| 'low' | 'normal' | 'high' // Para la mayoría
+	| 'underweight' | 'overweight' | 'obese' // Para BMI
+
+/**
+ * Obtiene casos médicos filtrados por rango de triage
+ * @param statType - Tipo de estadística (heartRate, temperature, etc.)
+ * @param rangeValue - Valor del rango (low, normal, high, etc.)
+ * @param laboratoryId - ID del laboratorio
+ * @param startDate - Fecha inicio (opcional)
+ * @param endDate - Fecha fin (opcional)
+ */
+export async function getCasesByTriageRange(
+	statType: TriageStatType,
+	rangeValue: TriageRangeValue,
+	laboratoryId: string,
+	startDate?: Date,
+	endDate?: Date
+): Promise<{ success: boolean; data?: MedicalCaseWithPatient[]; error?: string }> {
+	try {
+		// Construir query base con JOIN entre medical_records_clean y triaje_records
+		// También hacer JOIN con patients para obtener datos del paciente
+		let query = supabase
+			.from('medical_records_clean')
+			.select(`
+				*,
+				patients!medical_records_clean_patient_id_fkey (
+					cedula,
+					nombre,
+					edad,
+					telefono,
+					email,
+					fecha_nacimiento
+				),
+				triaje_records!inner (
+					heart_rate,
+					respiratory_rate,
+					oxygen_saturation,
+					temperature_celsius,
+					bmi,
+					blood_pressure,
+					blood_glucose
+				)
+			`)
+			.eq('laboratory_id', laboratoryId)
+
+		// Aplicar filtros de fecha si están presentes
+		if (startDate) {
+			query = query.gte('date', startDate.toISOString())
+		}
+		if (endDate) {
+			query = query.lte('date', endDate.toISOString())
+		}
+
+		const { data: rawCases, error } = await query
+
+		if (error) {
+			console.error('Error fetching cases by triage range:', error)
+			return { success: false, error: 'Error al obtener casos por rango de triage' }
+		}
+
+		if (!rawCases || rawCases.length === 0) {
+			return { success: true, data: [] }
+		}
+
+		// Filtrar casos basados en el tipo de estadística y el rango
+		const filteredCases = rawCases.filter((caseItem: any) => {
+			// Obtener el registro de triage (asumiendo que hay uno por caso)
+			const triage = Array.isArray(caseItem.triaje_records) 
+				? caseItem.triaje_records[0] 
+				: caseItem.triaje_records
+
+			if (!triage) return false
+
+			// Aplicar la lógica de clasificación según el tipo de estadística
+			switch (statType) {
+				case 'heartRate': {
+					const hr = triage.heart_rate
+					if (hr === null || hr === undefined) return false
+					
+					if (rangeValue === 'low') return hr < 60
+					if (rangeValue === 'high') return hr > 100
+					if (rangeValue === 'normal') return hr >= 60 && hr <= 100
+					return false
+				}
+
+				case 'respiratoryRate': {
+					const rr = triage.respiratory_rate
+					if (rr === null || rr === undefined) return false
+					
+					if (rangeValue === 'low') return rr < 12
+					if (rangeValue === 'high') return rr > 20
+					if (rangeValue === 'normal') return rr >= 12 && rr <= 20
+					return false
+				}
+
+				case 'oxygenSaturation': {
+					const os = triage.oxygen_saturation
+					if (os === null || os === undefined) return false
+					
+					if (rangeValue === 'low') return os < 95
+					if (rangeValue === 'high') return os > 100
+					if (rangeValue === 'normal') return os >= 95 && os <= 100
+					return false
+				}
+
+				case 'temperature': {
+					const temp = triage.temperature_celsius
+					if (temp === null || temp === undefined) return false
+					
+					if (rangeValue === 'low') return temp < 36
+					if (rangeValue === 'high') return temp > 37.5
+					if (rangeValue === 'normal') return temp >= 36 && temp <= 37.5
+					return false
+				}
+
+				case 'bmi': {
+					const bmi = triage.bmi
+					if (bmi === null || bmi === undefined) return false
+					
+					if (rangeValue === 'underweight') return bmi < 18.5
+					if (rangeValue === 'normal') return bmi >= 18.5 && bmi < 25
+					if (rangeValue === 'overweight') return bmi >= 25 && bmi < 30
+					if (rangeValue === 'obese') return bmi >= 30
+					return false
+				}
+
+				case 'bloodPressure': {
+					const systolic = parseSystolicBP(triage.blood_pressure)
+					if (systolic === null) return false
+					
+					if (rangeValue === 'low') return systolic < 90
+					if (rangeValue === 'high') return systolic > 120
+					if (rangeValue === 'normal') return systolic >= 90 && systolic <= 120
+					return false
+				}
+
+				case 'bloodGlucose': {
+					const glucose = parseBloodGlucose(triage.blood_glucose)
+					if (glucose === null) return false
+					
+					if (rangeValue === 'low') return glucose < 70
+					if (rangeValue === 'high') return glucose > 140
+					if (rangeValue === 'normal') return glucose >= 70 && glucose <= 140
+					return false
+				}
+
+				default:
+					return false
+			}
+		})
+
+		// Mapear los datos al formato MedicalCaseWithPatient
+		const mappedCases: MedicalCaseWithPatient[] = filteredCases.map((caseItem: any) => {
+			const patient = Array.isArray(caseItem.patients) 
+				? caseItem.patients[0] 
+				: caseItem.patients
+
+			return {
+				...caseItem,
+				cedula: patient?.cedula || '',
+				nombre: patient?.nombre || '',
+				edad: patient?.edad || null,
+				telefono: patient?.telefono || null,
+				patient_email: patient?.email || null,
+				fecha_nacimiento: patient?.fecha_nacimiento || null,
+			}
+		})
+
+		return { success: true, data: mappedCases }
+	} catch (error) {
+		console.error('Error in getCasesByTriageRange:', error)
+		return { success: false, error: 'Error interno al obtener casos por rango' }
 	}
 }

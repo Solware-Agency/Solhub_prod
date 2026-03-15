@@ -81,12 +81,16 @@ type ServerFilters = {
   documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
   pdfStatus?: 'pendientes' | 'faltantes';
   citoStatus?: 'positivo' | 'negativo';
+  triageStatus?: 'pendiente' | 'completo';
   branchFilter?: string[];
   paymentStatus?: 'Incompleto' | 'Pagado';
   doctorFilter?: string[];
   originFilter?: string[];
   dateFrom?: string;
   dateTo?: string;
+  sampleDateFrom?: string;
+  sampleDateTo?: string;
+  sampleTypeFilter?: string;
   emailSentStatus?: boolean;
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
@@ -156,6 +160,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const { profile } = useUserProfile();
     const { laboratory } = useLaboratory();
     const isSpt = laboratory?.slug === 'spt';
+    const hasTriaje = laboratory?.features?.hasTriaje ?? false;
     const { toast } = useToast();
     const {
       exportToExcel,
@@ -176,6 +181,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [dateRange, setDateRange] = useState<DateRange | undefined>(
       undefined,
     );
+    const [sampleDateRange, setSampleDateRange] = useState<
+      DateRange | undefined
+    >(undefined);
     // Nuevos filtros reales
     const [pendingCasesFilter, setPendingCasesFilter] = useState<string>('all');
     const [pdfStatusFilter, setPdfStatusFilter] = useState<string>('all');
@@ -185,6 +193,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [emailSentStatusFilter, setEmailSentStatusFilter] =
       useState<string>('all');
     const [consultaFilter, setConsultaFilter] = useState<string>('all');
+    const [triageStatusFilter, setTriageStatusFilter] = useState<string>('all');
     const [sortField, setSortField] = useState<SortField>('created_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedCaseForGenerate, setSelectedCaseForGenerate] =
@@ -238,6 +247,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const [tempDocumentStatusFilter, setTempDocumentStatusFilter] =
       useState<string>('all');
     const [tempConsultaFilter, setTempConsultaFilter] = useState<string>('all');
+    const [tempTriageStatusFilter, setTempTriageStatusFilter] = useState<string>('all');
+    const [tempSampleDateRange, setTempSampleDateRange] = useState<
+      DateRange | undefined
+    >(undefined);
+    const [sampleTypeFilter, setSampleTypeFilter] = useState<string>('all');
+    const [tempSampleTypeFilter, setTempSampleTypeFilter] = useState<string>('all');
 
     // Paginación local (solo se usa si no hay paginación del servidor)
     const [localCurrentPage, setLocalCurrentPage] = useState(1);
@@ -347,12 +362,17 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         setTempConsultaFilter(consultaFilter);
         setTempDocumentStatusFilter(documentStatusFilter);
         setTempEmailSentStatusFilter(emailSentStatusFilter);
+        setTempTriageStatusFilter(triageStatusFilter);
+        setTempSampleDateRange(sampleDateRange);
+        setTempSampleTypeFilter(sampleTypeFilter);
       }
     }, [
       isFiltersModalOpen,
       statusFilter,
       branchFilter,
       dateRange,
+      sampleDateRange,
+      sampleTypeFilter,
       showPdfReadyOnly,
       selectedDoctors,
       selectedOrigins,
@@ -364,6 +384,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       consultaFilter,
       documentStatusFilter,
       emailSentStatusFilter,
+      triageStatusFilter,
     ]);
 
     // Determine if user can edit, delete, or generate cases based on role
@@ -447,6 +468,33 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             currentFilters.dateFrom = fromStr ?? toStr ?? undefined;
             currentFilters.dateTo = toStr ?? fromStr ?? undefined;
           }
+          if (emailSentStatusFilter !== 'all') {
+            currentFilters.emailSentStatus = emailSentStatusFilter === 'true';
+          }
+          if (hasTriaje && triageStatusFilter !== 'all') {
+            currentFilters.triageStatus = triageStatusFilter as
+              | 'pendiente'
+              | 'completo';
+          }
+          if (sampleDateRange?.from || sampleDateRange?.to) {
+            const formatYmd = (d: Date) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            };
+            const fromStr = sampleDateRange.from
+              ? formatYmd(sampleDateRange.from)
+              : null;
+            const toStr = sampleDateRange.to
+              ? formatYmd(sampleDateRange.to)
+              : null;
+            currentFilters.sampleDateFrom = fromStr ?? toStr ?? undefined;
+            currentFilters.sampleDateTo = toStr ?? fromStr ?? undefined;
+          }
+          if (sampleTypeFilter && sampleTypeFilter !== 'all') {
+            currentFilters.sampleTypeFilter = sampleTypeFilter;
+          }
 
           // Agregar el nuevo sort
           currentFilters.sortField = field;
@@ -471,6 +519,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         citologyPositiveFilter,
         citologyNegativeFilter,
         dateRange,
+        emailSentStatusFilter,
+        triageStatusFilter,
+        sampleDateRange,
+        sampleTypeFilter,
+        hasTriaje,
       ],
     );
 
@@ -567,6 +620,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setDocumentStatusFilter('all');
       setConsultaFilter('all');
       setEmailSentStatusFilter('all');
+      setTriageStatusFilter('all');
       // También limpiar los filtros temporales
       setTempStatusFilter('all');
       setTempBranchFilter([]);
@@ -583,6 +637,11 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setTempDocumentStatusFilter('all');
       setTempConsultaFilter('all');
       setTempEmailSentStatusFilter('all');
+      setTempTriageStatusFilter('all');
+      setTempSampleDateRange(undefined);
+      setSampleDateRange(undefined);
+      setTempSampleTypeFilter('all');
+      setSampleTypeFilter('all');
       // Si tenemos paginación del servidor, limpiar filtros del servidor también
       // pero mantener el orden actual
       if (pagination && onFiltersChange) {
@@ -610,6 +669,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       setDocumentStatusFilter(tempDocumentStatusFilter);
       setConsultaFilter(tempConsultaFilter);
       setEmailSentStatusFilter(tempEmailSentStatusFilter);
+      setTriageStatusFilter(tempTriageStatusFilter);
+      setSampleDateRange(tempSampleDateRange);
+      setSampleTypeFilter(tempSampleTypeFilter);
       // Si tenemos paginación del servidor Y la función para cambiar filtros, enviarlos al servidor
       if (pagination && onFiltersChange) {
         const serverFilters: ServerFilters = {};
@@ -667,6 +729,30 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         if (tempEmailSentStatusFilter !== 'all') {
           serverFilters.emailSentStatus = tempEmailSentStatusFilter === 'true';
         }
+        if (hasTriaje && tempTriageStatusFilter !== 'all') {
+          serverFilters.triageStatus = tempTriageStatusFilter as
+            | 'pendiente'
+            | 'completo';
+        }
+        if (tempSampleDateRange?.from || tempSampleDateRange?.to) {
+          const formatYmd = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          };
+          const fromStr = tempSampleDateRange.from
+            ? formatYmd(tempSampleDateRange.from)
+            : null;
+          const toStr = tempSampleDateRange.to
+            ? formatYmd(tempSampleDateRange.to)
+            : null;
+          serverFilters.sampleDateFrom = fromStr ?? toStr ?? undefined;
+          serverFilters.sampleDateTo = toStr ?? fromStr ?? undefined;
+        }
+        if (tempSampleTypeFilter && tempSampleTypeFilter !== 'all') {
+          serverFilters.sampleTypeFilter = tempSampleTypeFilter;
+        }
 
         // Mantener el orden actual
         serverFilters.sortField = sortField;
@@ -678,6 +764,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempStatusFilter,
       tempBranchFilter,
       tempDateRange,
+      tempSampleDateRange,
       tempShowPdfReadyOnly,
       tempSelectedDoctors,
       tempSelectedOrigins,
@@ -689,6 +776,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       tempConsultaFilter,
       tempDocumentStatusFilter,
       tempEmailSentStatusFilter,
+      tempTriageStatusFilter,
+      tempSampleTypeFilter,
+      hasTriaje,
       pagination,
       onFiltersChange,
       sortField,
@@ -707,6 +797,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const handleTempDateRangeChange = useCallback(
       (range: DateRange | undefined) => {
         setTempDateRange(range);
+      },
+      [],
+    );
+    const handleTempSampleDateRangeChange = useCallback(
+      (range: DateRange | undefined) => {
+        setTempSampleDateRange(range);
       },
       [],
     );
@@ -757,6 +853,12 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const handleTempEmailSentStatusFilterChange = useCallback(
       (value: string) => {
         setTempEmailSentStatusFilter(value);
+      },
+      [],
+    );
+    const handleTempTriageStatusFilterChange = useCallback(
+      (value: string) => {
+        setTempTriageStatusFilter(value);
       },
       [],
     );
@@ -835,6 +937,9 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       if (emailSentStatusFilter !== 'all') {
         serverFilters.emailSentStatus = emailSentStatusFilter === 'true';
       }
+      if (triageStatusFilter !== 'all') {
+        serverFilters.triageStatus = triageStatusFilter as 'pendiente' | 'completo';
+      }
 
       // Agregar ordenamiento actual
       serverFilters.sortField = sortField;
@@ -870,12 +975,14 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       citologyPositiveFilter,
       citologyNegativeFilter,
       dateRange,
+      triageStatusFilter,
       sortField,
       sortDirection,
       profile?.role,
       pagination?.totalItems,
       cases.length,
       exportToExcel,
+      emailSentStatusFilter,
     ]);
 
     // Memoize the filtered and sorted cases to improve performance - OPTIMIZED
@@ -1258,6 +1365,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
       emailSentStatusFilter,
       pagination,
       onFiltersChange,
+      isSpt,
     ]);
 
     // Paginación
@@ -1298,7 +1406,7 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
     const handleItemsPerPageChange = useCallback((newItemsPerPage: number) => {
       setItemsPerPage(newItemsPerPage);
       setCurrentPage(1); // Reset to first page when changing items per page
-    }, []);
+    }, [setCurrentPage, setItemsPerPage]);
 
     const SortIcon = useCallback(
       ({ field }: { field: SortField }) => {
@@ -1390,6 +1498,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     onBranchFilterChange={handleTempBranchFilterChange}
                     dateRange={tempDateRange}
                     onDateRangeChange={handleTempDateRangeChange}
+                    sampleDateRange={tempSampleDateRange}
+                    onSampleDateRangeChange={handleTempSampleDateRangeChange}
+                    sampleTypeFilter={tempSampleTypeFilter}
+                    onSampleTypeFilterChange={setTempSampleTypeFilter}
                     showPdfReadyOnly={tempShowPdfReadyOnly}
                     onPdfFilterToggle={handleTempPdfFilterToggle}
                     selectedDoctors={tempSelectedDoctors}
@@ -1421,6 +1533,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                     emailSentStatusFilter={tempEmailSentStatusFilter}
                     onEmailSentStatusFilterChange={
                       handleTempEmailSentStatusFilterChange
+                    }
+                    triageStatusFilter={tempTriageStatusFilter}
+                    onTriageStatusFilterChange={
+                      handleTempTriageStatusFilterChange
                     }
                     statusOptions={statusOptions}
                     branchOptions={branchOptions}
@@ -1618,7 +1734,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
               ?.toLowerCase()
               .includes('inmuno') && (
               <RequestCaseModal
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 case_={selectedCaseForGenerate as any}
                 isOpen={isGenerateModalOpen}
                 onClose={() => {
@@ -1634,7 +1749,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
           {/* Steps Case Modal - Para todos los roles */}
           {selectedCaseForGenerate && (
             <HorizontalLinearStepper
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               case_={selectedCaseForGenerate as any}
               isOpen={isStepsModalOpen}
               onClose={() => {
@@ -1706,6 +1820,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   onBranchFilterChange={handleTempBranchFilterChange}
                   dateRange={tempDateRange}
                   onDateRangeChange={handleTempDateRangeChange}
+                  sampleDateRange={tempSampleDateRange}
+                  onSampleDateRangeChange={handleTempSampleDateRangeChange}
+                  sampleTypeFilter={tempSampleTypeFilter}
+                  onSampleTypeFilterChange={setTempSampleTypeFilter}
                   showPdfReadyOnly={tempShowPdfReadyOnly}
                   onPdfFilterToggle={handleTempPdfFilterToggle}
                   selectedDoctors={tempSelectedDoctors}
@@ -1737,6 +1855,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
                   emailSentStatusFilter={tempEmailSentStatusFilter}
                   onEmailSentStatusFilterChange={
                     handleTempEmailSentStatusFilterChange
+                  }
+                  triageStatusFilter={tempTriageStatusFilter}
+                  onTriageStatusFilterChange={
+                    handleTempTriageStatusFilterChange
                   }
                   statusOptions={statusOptions}
                   branchOptions={branchOptions}
@@ -1922,7 +2044,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
             ?.toLowerCase()
             .includes('inmuno') && (
             <RequestCaseModal
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               case_={selectedCaseForGenerate as any}
               isOpen={isGenerateModalOpen}
               onClose={() => {
@@ -1938,7 +2059,6 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
         {/* Steps Case Modal - Para todos los roles */}
         {selectedCaseForGenerate && (
           <HorizontalLinearStepper
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             case_={selectedCaseForGenerate as any}
             isOpen={isStepsModalOpen}
             onClose={() => {

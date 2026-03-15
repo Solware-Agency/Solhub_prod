@@ -51,17 +51,16 @@ export function PaymentReminderBanner() {
   const [dismissedToday, setDismissedToday] = useState(false)
 
   const isOwner = profile?.role === 'owner' || profile?.role === 'prueba'
-  if (!isOwner || !laboratory) return null
-
-  const nextPaymentDate = laboratory.next_payment_date
-  const paymentStatus = laboratory.payment_status
-  const status = laboratory.status
-  const billingAmount = laboratory.billing_amount ?? null
-  const configRate = (laboratory.config as { defaultExchangeRate?: number })?.defaultExchangeRate ?? 0
+  const nextPaymentDate = laboratory?.next_payment_date
+  const paymentStatus = laboratory?.payment_status
+  const status = laboratory?.status
+  const billingAmount = laboratory?.billing_amount ?? null
+  const configRate = (laboratory?.config as { defaultExchangeRate?: number })?.defaultExchangeRate ?? 0
   const exchangeRate = rateEuro && rateEuro > 0 ? rateEuro : configRate
   const amountVES = billingAmount != null && exchangeRate > 0 ? convertUSDtoVES(billingAmount, exchangeRate) : null
 
   const reminder = useMemo(() => {
+    if (!laboratory || !isOwner) return null
     if (status === 'inactive') {
       return {
         type: 'inactive' as const,
@@ -138,7 +137,7 @@ export function PaymentReminderBanner() {
       }
     }
     return null
-  }, [status, nextPaymentDate, paymentStatus, laboratory?.config])
+  }, [status, nextPaymentDate, paymentStatus, laboratory, isOwner])
 
   const wasDismissedToday = () => {
     try {
@@ -172,6 +171,7 @@ export function PaymentReminderBanner() {
     }
   }
 
+  if (!isOwner || !laboratory) return null
   if (!reminder) return null
 
   const isDestructive = reminder.variant === 'destructive'

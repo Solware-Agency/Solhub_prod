@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SideDetailPanel } from './SideDetailPanel'
 import type { Aseguradora, AseguradoraUpdate } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { useToast } from '@shared/hooks/use-toast'
-import { Building2, Globe, Mail, MapPin, Phone } from 'lucide-react'
+import { Building2, Globe, MapPin, Phone } from 'lucide-react'
 
 interface AseguradoraDetailPanelProps {
 	aseguradora: Aseguradora | null

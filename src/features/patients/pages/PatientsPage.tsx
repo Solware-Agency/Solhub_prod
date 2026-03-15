@@ -150,7 +150,7 @@ const PatientsPage: React.FC = React.memo(() => {
 				</div>
 				
 				{/* Filtro por sede */}
-				<div className="w-full sm:w-auto sm:min-w-[280px]">
+				<div className="w-full sm:w-auto sm:min-w-70">
 					<Select value={selectedBranch} onValueChange={handleBranchChange}>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Filtrar por sede" />

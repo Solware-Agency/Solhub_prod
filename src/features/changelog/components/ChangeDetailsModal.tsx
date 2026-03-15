@@ -72,14 +72,21 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 	}
 
 	const entityName =
-		firstChange.entity_type === 'patient'
-			? firstChange.patients?.nombre || 'Paciente eliminado'
-			: getCaseEntityDisplay(firstChange).text
+		firstChange.entity_type === 'profile'
+			? `Perfil (${firstChange.user_display_name || firstChange.user_email})`
+			: firstChange.entity_type === 'patient'
+				? firstChange.patients?.nombre || 'Paciente eliminado'
+				: getCaseEntityDisplay(firstChange).text
 	const entityId =
-		firstChange.entity_type === 'patient'
-			? firstChange.patients?.cedula
-			: firstChange.medical_records_clean?.code
-	const isCaseDeletedBadge = firstChange.entity_type !== 'patient' && getCaseEntityDisplay(firstChange).isDeletedCase
+		firstChange.entity_type === 'profile'
+			? null
+			: firstChange.entity_type === 'patient'
+				? firstChange.patients?.cedula
+				: firstChange.medical_records_clean?.code
+	const isCaseDeletedBadge =
+		firstChange.entity_type !== 'patient' &&
+		firstChange.entity_type !== 'profile' &&
+		getCaseEntityDisplay(firstChange).isDeletedCase
 
 	// Función para traducir nombres de campos
 	const translateFieldLabel = (fieldName: string, fieldLabel: string): string => {
@@ -99,15 +106,27 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 			payment_method_4: 'Método de Pago 4',
 			payment_amount_4: 'Monto de Pago 4',
 			payment_reference_4: 'Referencia de Pago 4',
+			display_name: 'Nombre para mostrar',
+			phone: 'Teléfono',
 		}
 		return translations[fieldName] || fieldLabel
 	}
 
-	// Función para formatear valores (truncar URLs largas)
-	const formatValue = (value: string | null): string => {
+	// Función para formatear valores (truncar URLs largas, añadir moneda a montos si falta)
+	const formatValue = (value: string | null, fieldName?: string): string => {
 		if (!value || value === '(vacío)') return '(vacío)'
 		if (typeof value === 'string' && value.startsWith('http') && value.length > 60) {
 			return value.substring(0, 60) + '...'
+		}
+		// Para campos de monto: si no tiene USD/Bs, añadir " (USD)" para que siempre se vea la moneda
+		if (fieldName) {
+			const isAmountField =
+				fieldName === 'total_amount' ||
+				fieldName === 'remaining' ||
+				/^payment_amount_\d+$/.test(fieldName)
+			if (isAmountField && !/\s*(USD|Bs)\s*$/.test(value.trim())) {
+				return `${value} (USD)`
+			}
 		}
 		return value
 	}
@@ -169,7 +188,11 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 										Entidad
 									</p>
-									{firstChange.entity_type === 'patient' ? (
+									{firstChange.entity_type === 'profile' ? (
+										<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+											{entityName}
+										</span>
+									) : firstChange.entity_type === 'patient' ? (
 										<>
 											<p className="text-sm text-gray-900 dark:text-gray-100">
 												{entityName}
@@ -229,8 +252,8 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											<p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
 												Antes:
 											</p>
-											<p className="text-sm text-gray-700 dark:text-gray-300 line-through break-words">
-												{formatValue(change.old_value)}
+											<p className="text-sm text-gray-700 dark:text-gray-300 line-through wrap-break-word">
+												{formatValue(change.old_value, change.field_name)}
 											</p>
 										</div>
 
@@ -238,8 +261,8 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 											<p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
 												Ahora:
 											</p>
-											<p className="text-sm text-green-600 dark:text-green-400 font-medium break-words">
-												{formatValue(change.new_value)}
+											<p className="text-sm text-green-600 dark:text-green-400 font-medium wrap-break-word">
+												{formatValue(change.new_value, change.field_name)}
 											</p>
 										</div>
 									</div>

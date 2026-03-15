@@ -71,6 +71,7 @@ export const useUserProfile = () => {
 				channelRef.current = null
 			}
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- query omitido para no re-suscribir en cada cambio de query
 	}, [user?.id, queryClient])
 
 	return {

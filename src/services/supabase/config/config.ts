@@ -8,6 +8,20 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 /** URL de la Edge Function send-email (Supabase). Usar en lugar de /api/send-email. */
 export const SEND_EMAIL_FUNCTION_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/send-email` : ''
 
+/** URLs de Edge Functions (Supabase). */
+const FUNCTIONS_BASE = SUPABASE_URL ? SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' : ''
+export const GENERATE_DOC_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/generate-doc` : ''
+export const GENERATE_PDF_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/generate-pdf` : ''
+export const DOWNLOAD_PDF_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/download-pdf` : ''
+export const CHAT_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/chat` : ''
+
+/** Headers para invocar la Edge Function download-pdf (GET con anon key). */
+export function getDownloadPdfHeaders(): Record<string, string> {
+	return SUPABASE_PUBLISHABLE_KEY
+		? { Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` }
+		: {}
+}
+
 // Verificar que las variables estén definidas
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 	console.error('❌ Variables de Supabase no configuradas correctamente')

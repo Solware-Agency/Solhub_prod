@@ -28,7 +28,7 @@ export interface AseguradoraInsert {
 	activo?: boolean
 }
 
-export interface AseguradoraUpdate extends AseguradoraInsert {}
+export type AseguradoraUpdate = AseguradoraInsert
 
 export const getAseguradoras = async () => {
 	const laboratoryId = await getUserLaboratoryId()

@@ -39,7 +39,7 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
 				<ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
 			</Button>
 
-			<div className="px-2 sm:px-3 py-0.5 sm:py-1 min-w-[40px] sm:min-w-[60px] text-center">
+			<div className="px-2 sm:px-3 py-0.5 sm:py-1 min-w-10 sm:min-w-15 text-center">
 				<span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{selectedYear}</span>
 			</div>
 

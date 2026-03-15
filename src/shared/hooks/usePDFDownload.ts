@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { supabase } from '@/services/supabase/config/config';
+import {
+  supabase,
+  GENERATE_PDF_FUNCTION_URL,
+  getDownloadPdfHeaders,
+} from '@/services/supabase/config/config';
 import { useToast } from '@shared/hooks/use-toast';
-import { getDownloadUrl } from '@/services/utils/download-utils';
-import { useLaboratory } from '@app/providers/LaboratoryContext';
+import { getDownloadUrl, isEdgeFunctionDownloadUrl } from '@/services/utils/download-utils';
 import { useAuth } from '@app/providers/AuthContext';
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service';
 
@@ -45,12 +48,9 @@ export function usePDFDownload(options?: {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { laboratory } = useLaboratory();
   const { user } = useAuth();
 
-  const GENERATE_PDF =
-    laboratory?.config?.webhooks?.generatePdf ||
-    import.meta.env.VITE_GENERATE_PDF_WEBHOOK;
+  const GENERATE_PDF = GENERATE_PDF_FUNCTION_URL;
 
   const downloadPdfFromUrl = async (
     pdfUrl: string,
@@ -69,7 +69,9 @@ export function usePDFDownload(options?: {
         return true;
       }
 
-      const response = await fetch(pdfUrl);
+      const downloadOpts: RequestInit = {};
+      if (isEdgeFunctionDownloadUrl(pdfUrl)) downloadOpts.headers = getDownloadPdfHeaders();
+      const response = await fetch(pdfUrl, downloadOpts);
       if (!response.ok) {
         throw new Error(`Error al descargar: ${response.status}`);
       }
@@ -200,12 +202,18 @@ export function usePDFDownload(options?: {
       console.log('Webhook URL:', GENERATE_PDF);
       console.log('Patient ID:', caseQueryData.patient_id);
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const pdfReqHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+      if (session?.access_token) pdfReqHeaders['Authorization'] = `Bearer ${session.access_token}`;
+
       const response = await fetch(GENERATE_PDF, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+        headers: pdfReqHeaders,
         body: JSON.stringify(requestBody),
       });
 
@@ -448,16 +456,23 @@ export function usePDFDownload(options?: {
           return null;
         }
 
-        // Llamar al webhook para generar PDF
+        const {
+          data: { session: genSession },
+        } = await supabase.auth.getSession();
+        const genHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        };
+        if (genSession?.access_token) genHeaders['Authorization'] = `Bearer ${genSession.access_token}`;
+
+        // Llamar a la Edge Function para generar PDF
         await fetch(GENERATE_PDF, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
+          headers: genHeaders,
           body: JSON.stringify({
             caseId: caseData.id,
             patientId: caseQueryData.patient_id,
+            userId: user?.id ?? null,
           }),
         });
 
@@ -490,8 +505,9 @@ export function usePDFDownload(options?: {
           return null;
         }
 
-        // Descargar el blob
-        const response = await fetch(pdfUrl);
+        const blobOpts: RequestInit = {};
+        if (isEdgeFunctionDownloadUrl(pdfUrl)) blobOpts.headers = getDownloadPdfHeaders();
+        const response = await fetch(pdfUrl, blobOpts);
         if (!response.ok) {
           return null;
         }
@@ -519,7 +535,9 @@ export function usePDFDownload(options?: {
           initialData.informepdf_url || null,
         );
 
-        const response = await fetch(pdfUrl);
+        const directOpts: RequestInit = {};
+        if (isEdgeFunctionDownloadUrl(pdfUrl)) directOpts.headers = getDownloadPdfHeaders();
+        const response = await fetch(pdfUrl, directOpts);
         if (!response.ok) {
           return null;
         }

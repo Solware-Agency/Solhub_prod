@@ -25,7 +25,7 @@ export function SessionTimeoutSettings() {
 		<Card className="w-full mx-auto mt-6">
 			<div className="p-6">
 				<div className="flex items-center space-x-3">
-					<Clock className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+					<Clock className="h-5 w-5 text-primary mt-0.5 shrink-0" />
 					<h3 className="text-lg font-semibold">Tiempo de inactividad</h3>
 					<Tooltip>
 						<TooltipTrigger>
@@ -76,7 +76,7 @@ export function SessionTimeoutSettings() {
 						<div className="space-y-4">
 							<div className="flex flex-col gap-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
 								<p className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-300 font-medium">
-									<Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+									<Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
 									Configuración de seguridad
 								</p>
 								<p className="text-xs text-blue-700 dark:text-blue-400">
