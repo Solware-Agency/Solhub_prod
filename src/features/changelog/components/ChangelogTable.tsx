@@ -727,7 +727,7 @@ const ChangelogTable: React.FC = () => {
 																					handleOpenCaseDetail(log)
 																				}}
 																				disabled={isLoadingCase}
-																				className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																				className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:brightness-90 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																				title="Ver detalles del caso"
 																			>
 																				{text}
@@ -891,7 +891,7 @@ const ChangelogTable: React.FC = () => {
 																				handleOpenCaseDetail(log)
 																			}}
 																			disabled={isLoadingCase}
-																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:brightness-90 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																			title="Ver detalles del caso"
 																		>
 																			{text}
