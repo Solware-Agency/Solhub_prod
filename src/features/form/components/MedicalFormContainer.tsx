@@ -383,14 +383,14 @@ export function MedicalFormContainer() {
 	return (
 		<>
 			{/* Boton sticky fuera del contenedor principal */}
-			<div className="hidden lg:block fixed top-4 right-4 z-50">
+			<div className="fixed top-4 right-16 lg:right-4 z-50">
 				<Button
 					type="button"
 					onClick={handleClearForm}
 					variant="outline"
 					className="flex items-center gap-1 text-xs py-1 px-2 sm:py-1.5 sm:px-2.5 bg-background/95 backdrop-blur-sm border-2 hover:border-primary shadow-lg hover:shadow-xl"
 				>
-					<Trash2 className="h-4 w-4" />
+					<Trash2 className="h-5 w-5" />
 					Limpiar
 				</Button>
 			</div>
