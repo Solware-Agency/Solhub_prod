@@ -1143,12 +1143,25 @@ const StepsCaseModal: React.FC<StepsCaseModalProps> = ({ case_, isOpen, onClose,
 			}
 
 			if (initialData?.informepdf_url && initialData?.informe_qr) {
-				console.log('[1] PDF y QR ya existen, redirigiendo a informe_qr:', initialData.informe_qr)
-				window.open(initialData.informe_qr, '_blank')
-				// Ejecutar handleNext automáticamente después de abrir el QR
-				setTimeout(() => {
-					handleNext()
-				}, 1000)
+				// Usar getDownloadUrl para que en producción se use la Edge Function, no la API legacy
+				const pdfUrl = getDownloadUrl(
+					case_.id,
+					initialData.token ?? null,
+					initialData.informepdf_url ?? null
+				)
+				if (isEdgeFunctionDownloadUrl(pdfUrl)) {
+					const downloadOptions: RequestInit = { headers: getDownloadPdfHeaders() }
+					const response = await fetch(pdfUrl, downloadOptions)
+					if (!response.ok) throw new Error(`Error al obtener PDF: ${response.status}`)
+					const blob = await response.blob()
+					const url = window.URL.createObjectURL(blob)
+					window.open(url, '_blank')
+					// Revocar después de un delay para que la pestaña cargue el blob
+					setTimeout(() => window.URL.revokeObjectURL(url), 5000)
+				} else {
+					window.open(pdfUrl, '_blank')
+				}
+				setTimeout(() => handleNext(), 1000)
 				return
 			}
 
