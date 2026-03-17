@@ -390,8 +390,8 @@ export function MedicalFormContainer() {
 					variant="outline"
 					className="flex items-center gap-1 text-xs py-1 px-2 sm:py-1.5 sm:px-2.5 bg-background/95 backdrop-blur-sm border-2 hover:border-primary shadow-lg hover:shadow-xl"
 				>
-					<Trash2 className="h-5 w-5" />
-					Limpiar
+					<Trash2 className="h-5 w-5 shrink-0" />
+					<span className="hidden sm:inline">Limpiar</span>
 				</Button>
 			</div>
 

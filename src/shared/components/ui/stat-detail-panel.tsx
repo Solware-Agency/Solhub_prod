@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, MapPin, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
+import { X, BarChart3, DollarSign, Users, CheckCircle, XCircle, TrendingUp, TrendingDown, AlertCircle, ArrowDownNarrowWide, ArrowDownAZ } from 'lucide-react'
 import { Button } from '@shared/components/ui/button'
 import { CustomPieChart } from '@shared/components/ui/custom-pie-chart'
 import { CurrencyDonutChart } from '@shared/components/ui/currency-donut-chart'
@@ -1112,10 +1112,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 															className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 														>
 															<td className="py-2 px-2">
-																<div className="flex items-center gap-2">
-																	<MapPin className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-																	<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{origin.origin}</span>
-																</div>
+																<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{origin.origin}</span>
 															</td>
 															<td className="py-2 px-2 text-center">
 																<span className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">

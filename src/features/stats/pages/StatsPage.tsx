@@ -5,9 +5,7 @@ import {
 	DollarSign,
 	ClipboardList,
 	CheckCircle2,
-	ArrowUpRight,
 	AlertTriangle,
-	Clock,
 	Info,
 	Stethoscope,
 	Layers,
@@ -47,6 +45,7 @@ const StatsPage: React.FC = () => {
 	const { laboratory } = useLaboratory()
 	const { data: stats, isLoading, error } = useDashboardStats(dateRange.start, dateRange.end, selectedYear)
 	const isSpt = laboratory?.slug === 'spt'
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 	const hasMedicalTypeRoles =
 		laboratory?.available_roles?.includes('patologo') || laboratory?.available_roles?.includes('citotecno')
 	const totalCasesByMedicalType = (stats?.totalCasesWithPathologist || 0) + (stats?.totalCasesWithCitotecno || 0)
@@ -101,9 +100,6 @@ const StatsPage: React.FC = () => {
 		setSelectedChart(null)
 	}
 
-	// Calculate some additional metrics
-	const completionRate = stats?.totalCases ? (stats.completedCases / stats.totalCases) * 100 : 0
-
 	return (
 		<>
 			<div>
@@ -117,7 +113,7 @@ const StatsPage: React.FC = () => {
 					</div>
 				</div>
 				<div
-					className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}
+					className={`grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}
 				>
 					{/* Total Revenue / Casos del Período Card */}
 					<StatCard
@@ -185,11 +181,6 @@ const StatsPage: React.FC = () => {
 								value={isLoading ? '...' : formatNumber(stats?.completedCases || 0)}
 								description={`Total casos del período: ${isLoading ? '...' : formatNumber(stats?.totalCases || 0)}`}
 								icon={<CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
-								trend={{
-									value: isLoading ? '...' : `${Math.round(completionRate)}%`,
-									icon: <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-									positive: true,
-								}}
 								onClick={() => handleStatCardClick('completedCases')}
 								statType="completedCases"
 								isSelected={selectedStat === 'completedCases' && isDetailPanelOpen}
@@ -201,11 +192,6 @@ const StatsPage: React.FC = () => {
 								value={isLoading ? '...' : formatNumber(stats?.incompleteCases || 0)}
 								description={`Pagos pendientes: ${isLoading ? '...' : formatCurrency(stats?.pendingPayments || 0)}`}
 								icon={<AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />}
-								trend={{
-									value: 'Pendientes',
-									icon: <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />,
-									positive: false,
-								}}
 								onClick={() => handleStatCardClick('incompleteCases')}
 								statType="incompleteCases"
 								isSelected={selectedStat === 'incompleteCases' && isDetailPanelOpen}
@@ -214,10 +200,10 @@ const StatsPage: React.FC = () => {
 					)}
 				</div>
 
-				{/* KPI Cards: Recepcionistas / Bloques / Patólogos - Casos por Recepcionista ya está en primera línea para SPT */}
+				{/* KPI Cards: Recepcionistas / Bloques / Patólogos - en responsive 2 cols (mitad cada uno) */}
 				{(!isSpt || hasMedicalTypeRoles) && (
 					<div
-						className={`grid grid-cols-1 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}
+						className={`grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-5 md:mb-6 ${isSpt ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}
 					>
 						{!isSpt && (
 							<StatCard
@@ -241,7 +227,7 @@ const StatsPage: React.FC = () => {
 							/>
 						)}
 
-						{hasMedicalTypeRoles && (
+						{hasMedicalTypeRoles && !isMarihorgen && (
 							<StatCard
 								title="Casos por tipo de médico"
 								value={isLoading ? '...' : `Total ${formatNumber(totalCasesByMedicalType)}`}

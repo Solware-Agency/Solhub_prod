@@ -374,9 +374,8 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 				const totalBlocks =
 					transformedFilteredRecords?.reduce((sum, record) => sum + Number(record.bloques_biopsia || 0), 0) || 0
 
-				// Calculate revenue for the filtered period (REAL paid amounts in USD)
-				let monthlyRevenue = 0
-				transformedFilteredRecords?.forEach((record) => {
+				// Helper: monto realmente cobrado por caso en USD (igual criterio para ingresos y por sede)
+				const getPaidUSD = (record: MedicalCaseWithPatient): number => {
 					let totalPaidUSD = 0
 					for (let i = 1; i <= 4; i++) {
 						const method = (record as any)[`payment_method_${i}`]
@@ -384,16 +383,20 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						if (method && amount && amount > 0) {
 							if (isVESPaymentMethod(method)) {
 								const rate = record.exchange_rate || 0
-								if (rate > 0) {
-									totalPaidUSD += amount / rate
-								}
+								if (rate > 0) totalPaidUSD += amount / rate
 							} else {
 								totalPaidUSD += amount
 							}
 						}
 					}
-				monthlyRevenue += totalPaidUSD
-			})
+					return totalPaidUSD
+				}
+
+				// Calculate revenue for the filtered period (REAL paid amounts in USD)
+				let monthlyRevenue = 0
+				transformedFilteredRecords?.forEach((record) => {
+					monthlyRevenue += getPaidUSD(record)
+				})
 
 			// Calculate revenue by currency (Bs vs $) for filtered period
 			let monthlyRevenueBolivares = 0
@@ -488,11 +491,12 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : 0
 				const casesGrowthPercentage = previousCases > 0 ? ((totalCases - previousCases) / previousCases) * 100 : 0
 
-				// Calculate revenue by branch (o casos por sede para SPT) - Use transformedFilteredRecords for the selected period
+				// Calculate revenue by branch (o casos por sede para SPT) - mismo criterio que Ingresos del Período: cobrado real por sede
 				const branchRevenue = new Map<string, number>()
 				transformedFilteredRecords?.forEach((record) => {
 					const current = branchRevenue.get(record.branch) || 0
-					branchRevenue.set(record.branch, current + (isSpt ? 1 : (record.total_amount || 0)))
+					const value = isSpt ? 1 : getPaidUSD(record)
+					branchRevenue.set(record.branch, current + value)
 				})
 
 				const branchTotal = isSpt ? totalCases : monthlyRevenue
