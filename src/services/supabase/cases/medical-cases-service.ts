@@ -1090,8 +1090,10 @@ export const getCasesWithPatientInfo = async (
     const needsClientSideProcessing = isRelatedField || !!filters?.triageStatus;
 
     if (needsClientSideProcessing) {
-      // Si el campo de ordenamiento es de la tabla relacionada,
-      // necesitamos obtener todos los datos, ordenarlos en el cliente y luego paginar
+      // Si el campo de ordenamiento es de la tabla relacionada (nombre/cedula) o hay filtro de triaje,
+      // necesitamos traer todos los datos para ordenarlos en el cliente y luego paginar.
+      // La velocidad depende de los índices (idx_medical_records_lab_patient_id, etc.); sin límite
+      // para no ocultar registros cuando hay más de 10k casos.
       const { data: allData, error: allError, count: totalCount } = await query;
 
       if (allError) {
