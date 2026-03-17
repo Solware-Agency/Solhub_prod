@@ -11,6 +11,7 @@ supabase functions deploy generate-doc
 supabase functions deploy generate-pdf
 supabase functions deploy download-pdf
 supabase functions deploy chat
+supabase functions deploy bcv-rates
 ```
 
 ## Secrets en Supabase
@@ -28,6 +29,8 @@ Configurar en **Project Settings → Edge Functions → Secrets** (o con `supaba
 | **`GENERATE_DOC_WEBHOOK_URL`** | URL por defecto del webhook n8n para generar doc (se usa si el lab no tiene `config.webhooks.generateDoc`) | ❌ **Añadir** |
 | **`GENERATE_PDF_WEBHOOK_URL`** | URL por defecto del webhook n8n para generar PDF (se usa si el lab no tiene `config.webhooks.generatePdf`) | ❌ **Añadir** |
 | `N8N_WEBHOOK_SECRET` | (Opcional) Header que n8n valida para aceptar la petición | Opcional |
+| **`BCV_API_URL`** | URL base de la API BCV (ej. `https://bcv.solware.agency`) para tasas USD/EUR | ✅ |
+| **`BCV_API_KEY`** | API key para llamar a la API BCV (header `x-api-key`) | ✅ |
 
 **Comportamiento:** Las funciones `generate-doc` y `generate-pdf` leen la config del laboratorio del caso (`laboratories.config.webhooks.generateDoc` / `generatePdf`). Si el lab tiene esa URL configurada, se usa; si no, se usa el secret correspondiente. Así cada lab puede tener su propio webhook n8n.
 
@@ -38,7 +41,7 @@ Valores sugeridos para los dos secrets (URL por defecto cuando el lab no define 
 
 ## verify_jwt por función
 
-- **generate-doc**, **generate-pdf**, **chat**: deben tener **verify_jwt: true** (por defecto). El frontend envía `Authorization: Bearer <session.access_token>`.
+- **generate-doc**, **generate-pdf**, **chat**, **bcv-rates**: deben tener **verify_jwt: true** (por defecto). El frontend envía `Authorization: Bearer <session.access_token>`.
 - **download-pdf**: debe tener **verify_jwt: false** para que el cliente pueda llamarla con la anon key y los query params `caseId` y `token` (sin sesión de usuario).
 
 En el dashboard de Supabase: **Edge Functions → download-pdf → Settings → Verify JWT** = Off.
