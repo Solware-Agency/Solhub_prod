@@ -8,8 +8,7 @@ export interface CallCenterRegistro {
   id: string
   laboratory_id: string
   nombre_apellido: string
-  telefono_1: string | null
-  telefono_2: string | null
+  telefono: string | null
   motivo_llamada: string
   respuesta_observaciones: string | null
   referido_sede: string | null
@@ -20,8 +19,7 @@ export interface CallCenterRegistro {
 
 export interface CreateCallCenterRegistroParams {
   nombre_apellido: string
-  telefono_1?: string
-  telefono_2?: string
+  telefono?: string
   motivo_llamada: string
   respuesta_observaciones?: string
   referido_sede?: string
@@ -57,8 +55,7 @@ export async function createCallCenterRegistro(
       .insert({
         laboratory_id: laboratoryId,
         nombre_apellido: params.nombre_apellido.trim(),
-        telefono_1: params.telefono_1?.trim() || null,
-        telefono_2: params.telefono_2?.trim() || null,
+        telefono: params.telefono?.trim() || null,
         motivo_llamada: params.motivo_llamada.trim(),
         respuesta_observaciones: params.respuesta_observaciones?.trim() || null,
         referido_sede: params.referido_sede?.trim() || null,

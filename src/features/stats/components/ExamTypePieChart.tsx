@@ -86,9 +86,9 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 				</h3>
 
 				{pieData.length > 0 ? (
-					<div className="w-full lg:grid grid-cols-2 gap-4 justify-center items-center">
+					<div className="w-full flex flex-col gap-4 justify-center items-center">
 						{/* Pie Chart */}
-						<div className="h-48 sm:h-56 relative">
+						<div className="h-48 sm:h-56 relative w-full max-w-xs mx-auto">
 							<ResponsiveContainer width="100%" height="100%">
 								<PieChart>
 									<Pie
@@ -141,8 +141,8 @@ const ExamTypePieChart: React.FC<ExamTypePieChartProps> = ({ startDate, endDate,
 							</div>
 						</div>
 
-						{/* Leyenda - compacta como Distribución por Sede */}
-						<div className="flex flex-col">
+						{/* Leyenda - debajo del chart */}
+						<div className="flex flex-col w-full">
 							{displayedData.map((entry) => {
 								const originalIndex = pieData.findIndex(item => item.examType === entry.examType)
 								return (

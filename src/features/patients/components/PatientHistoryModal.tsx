@@ -1007,6 +1007,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
 							onClick={onClose}
 							className={`fixed inset-0 bg-black/50 ${elevatedZIndex ? 'z-100000000000000000' : 'z-99999998'}`}
 						/>
@@ -1026,11 +1027,11 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 								className="fixed inset-0 bg-black/50"
 								onClick={onClose}
 							/>
-							{/* Contenido del modal con animación */}
+							{/* Contenido del modal: entrada = scale 0.95→1 + opacidad; salida = misma animación en reversa */}
 							<motion.div
-								initial={{ scale: 0.95 }}
-								animate={{ scale: 1 }}
-								exit={{ scale: 0.95 }}
+								initial={{ opacity: 0, scale: 0.95 }}
+								animate={{ opacity: 1, scale: 1 }}
+								exit={{ opacity: 0, scale: 0.95 }}
 								transition={{ type: 'spring', damping: 25, stiffness: 200 }}
 								className="bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input relative z-10"
 								onClick={(e) => e.stopPropagation()}

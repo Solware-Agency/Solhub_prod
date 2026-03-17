@@ -275,7 +275,7 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 											</div>
 											<div>
 												<p className="text-xs text-gray-500 dark:text-gray-400">Web</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.web || 'Sin web'}</p>
+												<a href={aseguradora.web ?? ''} target="_blank" className="text-sm font-medium text-gray-900 dark:text-gray-100 underline">{aseguradora.web || 'Sin web'}</a>
 											</div>
 										</div>
 									</InfoSection>

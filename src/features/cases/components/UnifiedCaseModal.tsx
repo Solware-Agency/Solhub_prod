@@ -2725,15 +2725,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 										<div className="space-y-2 py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 											<div className="flex flex-col sm:flex-row sm:justify-between">
 												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-													Tasa del caso (USD/VES):
-												</span>
-												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
-													{caseExchangeRate.toFixed(2)}
-												</span>
-											</div>
-											<div className="flex flex-col sm:flex-row sm:justify-between">
-												<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-													Tasa del día (usada para cálculos):
+													Tasa del día:
 												</span>
 												<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
 													{dailyRate != null ? rateForCalculations.toFixed(2) : caseExchangeRate.toFixed(2)}

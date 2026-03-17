@@ -727,7 +727,7 @@ const ChangelogTable: React.FC = () => {
 																					handleOpenCaseDetail(log)
 																				}}
 																				disabled={isLoadingCase}
-																				className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																				className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:brightness-90 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																				title="Ver detalles del caso"
 																			>
 																				{text}
@@ -866,13 +866,13 @@ const ChangelogTable: React.FC = () => {
 																			handleOpenPatientDetail(log)
 																		}}
 																		disabled={isLoadingPatient}
-																		className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold text-left w-fit cursor-pointer transition-all duration-200 hover:opacity-100 hover:decoration-2 hover:decoration-teal-600 dark:hover:decoration-teal-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 underline decoration-teal-500 decoration-1 underline-offset-1"
+																		className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
 																		title="Ver información del paciente"
 																	>
 																		{log.patients.nombre}
 																	</button>
 																) : (
-																	<span className="text-xs text-gray-900 dark:text-gray-100 truncate font-semibold">
+																	<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
 																		{log.patients?.nombre || log.deleted_record_info || 'Paciente eliminado'}
 																	</span>
 																)}
@@ -891,7 +891,7 @@ const ChangelogTable: React.FC = () => {
 																				handleOpenCaseDetail(log)
 																			}}
 																			disabled={isLoadingCase}
-																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 disabled:opacity-50 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+																			className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:brightness-90 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
 																			title="Ver detalles del caso"
 																		>
 																			{text}

@@ -195,7 +195,6 @@ function MainHome() {
 						<StatCard
 							title="Ingresos del Período"
 							value={isLoading ? '...' : formatCurrency(stats?.monthlyRevenue || 0)}
-							description={`Total histórico: ${formatCurrency(stats?.totalRevenue || 0)}`}
 							icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />}
 							trend={{
 								value: isLoading
@@ -365,12 +364,12 @@ function MainHome() {
 												key={doctor.doctor}
 												className="flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-3 hover:bg-gray-50 dark:hover:bg-card rounded-lg cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-transform duration-300"
 											>
-												<div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${colors[index % colors.length]}`}></div>
+												<div className={`hidden sm:block w-2 h-2 sm:w-3 sm:h-3 rounded-full ${colors[index % colors.length]}`}></div>
 												<div className="flex-1 min-w-0">
 													<p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
 														{doctor.doctor}
 													</p>
-													<p className="text-xs text-gray-500 dark:text-gray-400">
+													<p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
 														{formatNumber(doctor.cases)} caso{doctor.cases !== 1 ? 's' : ''}
 														{!isSpt && (
 															<>
@@ -448,7 +447,7 @@ function MainHome() {
 											>
 												<div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
 													<div
-														className={`w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 ${color.badge} rounded-lg flex items-center justify-center`}
+														className={`hidden sm:flex w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 ${color.badge} rounded-lg items-center justify-center`}
 													>
 														<span className="text-white font-bold text-[10px] sm:text-xs md:text-sm">{index + 1}</span>
 													</div>
@@ -457,13 +456,13 @@ function MainHome() {
 															{exam.examType}
 														</p>
 														{!isSpt && (
-															<p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+															<p className="hidden sm:block text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
 																{formatCurrency(exam.revenue)}
 															</p>
 														)}
 													</div>
 												</div>
-												<span className={`text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
+												<span className={`hidden sm:inline text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
 													{formatNumber(exam.count)}
 												</span>
 											</div>

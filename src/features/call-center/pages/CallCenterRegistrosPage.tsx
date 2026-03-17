@@ -16,16 +16,15 @@ function downloadExcel(registros: CallCenterRegistro[]) {
 	const rows = registros.map((r) => ({
 		Fecha: format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es }),
 		'Nombre y apellido': r.nombre_apellido ?? '',
-		'Teléfono 1': r.telefono_1 ?? '',
-		'Teléfono 2': r.telefono_2 ?? '',
+		Teléfono: r.telefono ?? '',
 		Motivo: r.motivo_llamada ?? '',
 		'Respuesta/Observaciones': r.respuesta_observaciones ?? '',
 		'Referido a sede': r.referido_sede ?? '',
-		'Atendido por': r.atendido_por ?? '',
+		Asignado: r.atendido_por ?? '',
 	}))
 	const wb = XLSX.utils.book_new()
 	const ws = XLSX.utils.json_to_sheet(rows)
-	ws['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 35 }, { wch: 40 }, { wch: 20 }, { wch: 14 }]
+	ws['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 35 }, { wch: 40 }, { wch: 20 }, { wch: 14 }]
 	XLSX.utils.book_append_sheet(wb, ws, 'Registros Call Center')
 	const fileName = `call-center-registros-${format(new Date(), 'yyyy-MM-dd')}.xlsx`
 	XLSX.writeFile(wb, fileName)
@@ -183,8 +182,7 @@ const CallCenterRegistrosPage: React.FC = () => {
 												)}
 											</button>
 										</th>
-										<th className="text-left py-2 px-2 font-medium">Tel 1</th>
-										<th className="text-left py-2 px-2 font-medium">Tel 2</th>
+										<th className="text-left py-2 px-2 font-medium">Teléfono</th>
 										<th className="text-left py-2 px-2 font-medium">
 											<button
 												type="button"
@@ -229,9 +227,9 @@ const CallCenterRegistrosPage: React.FC = () => {
 												type="button"
 												onClick={() => handleSort('atendido_por')}
 												className="inline-flex items-center gap-1 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 rounded px-1 -ml-1"
-												title="Ordenar por atendido por (alfabético)"
+												title="Ordenar por asignado (alfabético)"
 											>
-												Atendido por
+												Asignado
 												{sortBy === 'atendido_por' ? (
 													sortDir === 'asc' ? (
 														<ArrowUp className="h-3.5 w-3.5" />
@@ -252,8 +250,7 @@ const CallCenterRegistrosPage: React.FC = () => {
 												{format(new Date(r.created_at), 'dd/MM/yyyy', { locale: es })}
 											</td>
 											<td className="py-2 px-2">{r.nombre_apellido}</td>
-											<td className="py-2 px-2">{r.telefono_1 ?? '—'}</td>
-											<td className="py-2 px-2">{r.telefono_2 ?? '—'}</td>
+											<td className="py-2 px-2">{r.telefono ?? '—'}</td>
 											<td className="py-2 px-2">{r.motivo_llamada}</td>
 											<td className="py-2 px-2 max-w-50 truncate" title={r.respuesta_observaciones ?? ''}>
 												{r.respuesta_observaciones ?? '—'}

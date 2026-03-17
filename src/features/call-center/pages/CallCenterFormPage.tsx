@@ -44,8 +44,7 @@ const CallCenterFormPage: React.FC = () => {
   const { profile } = useUserProfile()
   const { toast } = useToast()
   const [nombreApellido, setNombreApellido] = useState('')
-  const [telefono1, setTelefono1] = useState('')
-  const [telefono2, setTelefono2] = useState('')
+  const [telefono, setTelefono] = useState('')
   const [motivoLlamada, setMotivoLlamada] = useState('')
   const [respuestaObservaciones, setRespuestaObservaciones] = useState('')
   const [referidoSede, setReferidoSede] = useState('')
@@ -69,8 +68,7 @@ const CallCenterFormPage: React.FC = () => {
     setSaving(true)
     const result = await createCallCenterRegistro(laboratory.id, {
       nombre_apellido: nombreApellido.trim(),
-      telefono_1: telefono1.trim() || undefined,
-      telefono_2: telefono2.trim() || undefined,
+      telefono: telefono.trim() || undefined,
       motivo_llamada: motivoLlamada,
       respuesta_observaciones: respuestaObservaciones.trim() || undefined,
       referido_sede: referidoSede || undefined,
@@ -80,8 +78,7 @@ const CallCenterFormPage: React.FC = () => {
     if (result.success) {
       toast({ title: 'Registro guardado correctamente' })
       setNombreApellido('')
-      setTelefono1('')
-      setTelefono2('')
+      setTelefono('')
       setMotivoLlamada('')
       setRespuestaObservaciones('')
       setReferidoSede('')
@@ -137,27 +134,14 @@ const CallCenterFormPage: React.FC = () => {
               />
             </div>
             <div className="min-w-45 flex-1 space-y-1.5">
-              <Label htmlFor="tel1">Número de teléfono 1</Label>
+              <Label htmlFor="telefono">Teléfono</Label>
               <Input
-                id="tel1"
+                id="telefono"
                 type="tel"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={telefono1}
-                onChange={(e) => setTelefono1(onlyNumbers(e.target.value))}
-                placeholder="04121234567"
-                className={inputStyles}
-              />
-            </div>
-            <div className="min-w-45 flex-1 space-y-1.5">
-              <Label htmlFor="tel2">Número de teléfono 2</Label>
-              <Input
-                id="tel2"
-                type="tel"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={telefono2}
-                onChange={(e) => setTelefono2(onlyNumbers(e.target.value))}
+                value={telefono}
+                onChange={(e) => setTelefono(onlyNumbers(e.target.value))}
                 placeholder="04121234567"
                 className={inputStyles}
               />
