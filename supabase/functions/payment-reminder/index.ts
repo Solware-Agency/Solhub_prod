@@ -35,7 +35,7 @@ function getReminderSubject(type: ReminderType): string {
 	}
 }
 
-const BCV_RATE_URL = 'https://ve.dolarapi.com/v1/euros/oficial'
+const DOLARAPI_EUR_URL = 'https://ve.dolarapi.com/v1/euros/oficial'
 const DEFAULT_TZ = 'America/Caracas'
 
 function getTodayInTimezone(tz: string): string {
@@ -55,9 +55,25 @@ function addCalendarDays(dateStr: string, days: number): string {
 	return `${yy}-${mm}-${dd}`
 }
 
+/** Tasa euro → Bs. Primero intenta la API BCV propia (BCV_API_URL + BCV_API_KEY), luego fallback a dolarapi. */
 async function fetchBcvRate(): Promise<number | null> {
+	const bcvUrl = Deno.env.get('BCV_API_URL') ?? ''
+	const bcvKey = Deno.env.get('BCV_API_KEY') ?? ''
+	if (bcvUrl && bcvKey) {
+		try {
+			const url = bcvUrl.replace(/\/$/, '') + '/get_bcv_exchange_rates'
+			const res = await fetch(url, { headers: { 'x-api-key': bcvKey } })
+			if (res.ok) {
+				const body = (await res.json()) as { data?: { euro?: { value?: number } } }
+				const eur = body?.data?.euro?.value
+				if (typeof eur === 'number' && eur > 0) return eur
+			}
+		} catch {
+			// fallback below
+		}
+	}
 	try {
-		const res = await fetch(BCV_RATE_URL)
+		const res = await fetch(DOLARAPI_EUR_URL)
 		if (!res.ok) return null
 		const data = (await res.json()) as { promedio?: number }
 		const rate = data?.promedio
