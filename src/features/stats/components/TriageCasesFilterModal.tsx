@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Loader2, Heart, Wind, Droplets, Thermometer, Activity, FlaskConical } from 'lucide-react'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
@@ -8,7 +9,11 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { TriageStatType, TriageRangeValue } from '@/features/stats/services/triage-stats-service'
 import { getCasesByTriageRange } from '@/features/stats/services/triage-stats-service'
+import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import CaseCard from '@/features/cases/components/CaseCard'
+import UnifiedCaseModal from '@/features/cases/components/UnifiedCaseModal'
+import TriajeModal from '@/features/cases/components/TriajeModal'
+import { useUserProfile } from '@shared/hooks/useUserProfile'
 
 interface TriageCasesFilterModalProps {
 	isOpen: boolean
@@ -31,6 +36,28 @@ const TriageCasesFilterModal: React.FC<TriageCasesFilterModalProps> = ({
 }) => {
 	useBodyScrollLock(isOpen)
 	useGlobalOverlayOpen(isOpen)
+	const { profile } = useUserProfile()
+
+	// Bloquear scroll del contenedor principal (Layout: el scroll está en [data-main-scroll], no en body)
+	useEffect(() => {
+		if (!isOpen) return
+		const el = document.querySelector<HTMLElement>('[data-main-scroll]')
+		if (!el) return
+		const scrollTop = el.scrollTop
+		el.style.overflow = 'hidden'
+		el.style.touchAction = 'none'
+		return () => {
+			const target = document.querySelector<HTMLElement>('[data-main-scroll]')
+			if (target) {
+				target.style.overflow = ''
+				target.style.touchAction = ''
+				target.scrollTop = scrollTop
+			}
+		}
+	}, [isOpen])
+
+	const [selectedCaseForView, setSelectedCaseForView] = useState<MedicalCaseWithPatient | null>(null)
+	const [selectedCaseForTriaje, setSelectedCaseForTriaje] = useState<MedicalCaseWithPatient | null>(null)
 
 	// Consultar casos filtrados
 	const { data, isLoading, error } = useQuery({
@@ -83,30 +110,30 @@ const TriageCasesFilterModal: React.FC<TriageCasesFilterModalProps> = ({
 		return icons[statType]
 	}
 
-	return (
+	const modalContent = (
 		<AnimatePresence mode="wait">
 			{isOpen && (
 				<>
-					{/* Overlay */}
+					{/* Overlay: z-index alto para quedar por encima del sidebar (z-50) */}
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.2 }}
-						className="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4"
+						className="fixed inset-0 bg-black/50 z-[99999] flex items-center justify-center p-4"
 						onClick={onClose}
 					>
-						{/* Modal Centrado */}
+						{/* Modal traslúcido (mismo estilo que historial médico) */}
 						<motion.div
 							initial={{ scale: 0.95, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.95, opacity: 0 }}
 							transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-							className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col"
+							className="bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col border border-input"
 							onClick={(e) => e.stopPropagation()}
 						>
 							{/* Header */}
-							<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
+							<div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-input bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] z-10 rounded-t-lg">
 								<div className="flex items-center gap-3">
 									{getIcon()}
 									<div>
@@ -165,60 +192,51 @@ const TriageCasesFilterModal: React.FC<TriageCasesFilterModalProps> = ({
 										</div>
 									</div>
 								) : (
-									<>
-										{/* Grid de tarjetas de casos */}
-										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-											{data.map((caseItem) => (
-												<CaseCard
-													key={caseItem.id}
-													case_={caseItem}
-													onView={() => {}}
-													onGenerate={() => {}}
-													canRequest={false}
-													userRole="employee"
-												/>
-											))}
-										</div>
-
-										{/* Resumen al final */}
-										<div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-											<div className="flex items-start gap-3">
-												<div className="flex-shrink-0 mt-0.5">
-													{getIcon()}
-												</div>
-												<div className="flex-1">
-													<h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-														Resumen del filtro
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-400">
-														Mostrando <strong>{data.length}</strong> casos con{' '}
-														<strong>{getTitle().toLowerCase()}</strong>
-														{startDate && endDate && (
-															<>
-																{' '}
-																entre el{' '}
-																<strong>
-																	{format(startDate, 'dd MMM yyyy', { locale: es })}
-																</strong>{' '}
-																y el{' '}
-																<strong>
-																	{format(endDate, 'dd MMM yyyy', { locale: es })}
-																</strong>
-															</>
-														)}
-													</p>
-												</div>
-											</div>
-										</div>
-									</>
+									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+										{data.map((caseItem) => (
+											<CaseCard
+												key={caseItem.id}
+												case_={caseItem}
+												onView={(case_) => setSelectedCaseForView(case_)}
+												onGenerate={() => {}}
+												onTriaje={(case_) => setSelectedCaseForTriaje(case_)}
+												canRequest={false}
+												userRole={profile?.role ?? 'employee'}
+											/>
+										))}
+									</div>
 								)}
 							</div>
 						</motion.div>
 					</motion.div>
+					{/* Modal de detalles del caso (al hacer clic en una tarjeta) */}
+					<UnifiedCaseModal
+						case_={selectedCaseForView}
+						isOpen={selectedCaseForView !== null}
+						onClose={() => setSelectedCaseForView(null)}
+						onCloseComplete={() => setSelectedCaseForView(null)}
+						onCaseSelect={(case_) => setSelectedCaseForView(case_)}
+						onTriaje={(case_) => {
+							setSelectedCaseForView(null)
+							setSelectedCaseForTriaje(case_)
+						}}
+					/>
+
+					{/* Modal de triaje (desde menú de 3 puntos; visible solo si el usuario tiene acceso hasTriaje) */}
+					<TriajeModal
+						case_={selectedCaseForTriaje}
+						isOpen={selectedCaseForTriaje !== null}
+						onClose={() => setSelectedCaseForTriaje(null)}
+						openKey={selectedCaseForTriaje ? 1 : 0}
+					/>
 				</>
 			)}
 		</AnimatePresence>
 	)
+
+	return typeof document !== 'undefined'
+		? ReactDOM.createPortal(modalContent, document.body)
+		: modalContent
 }
 
 export default TriageCasesFilterModal

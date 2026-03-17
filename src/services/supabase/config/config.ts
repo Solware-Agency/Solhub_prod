@@ -14,6 +14,8 @@ export const GENERATE_DOC_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/gen
 export const GENERATE_PDF_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/generate-pdf` : ''
 export const DOWNLOAD_PDF_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/download-pdf` : ''
 export const CHAT_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/chat` : ''
+/** Proxy seguro de tasas BCV (USD/EUR). Requiere JWT. */
+export const BCV_RATES_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/bcv-rates` : ''
 
 /** Headers para invocar la Edge Function download-pdf (GET con anon key). */
 export function getDownloadPdfHeaders(): Record<string, string> {

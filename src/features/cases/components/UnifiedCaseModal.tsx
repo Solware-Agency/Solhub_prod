@@ -23,6 +23,7 @@ import {
 	CalendarIcon,
 	Download,
 	Phone,
+	ClipboardList,
 } from 'lucide-react'
 import type { MedicalCaseWithPatient, MedicalCaseUpdate } from '@/services/supabase/cases/medical-cases-service'
 import { updateMedicalCase, deleteMedicalCase, findCaseByCode } from '@/services/supabase/cases/medical-cases-service'
@@ -111,6 +112,8 @@ interface CaseDetailPanelProps {
 	onSave?: () => void
 	onDelete?: () => void
 	onCaseSelect: (case_: MedicalCaseWithPatient) => void
+	/** Si se pasa, se muestra el botón "Historia" (triaje) en la barra de acciones (respetando FeatureGuard hasTriaje) */
+	onTriaje?: (case_: MedicalCaseWithPatient) => void
 	isFullscreen?: boolean
 	modalTitle?: string
 }
@@ -250,6 +253,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		onCloseComplete,
 		onSave,
 		onDelete,
+		onTriaje,
 		isFullscreen = false,
 		modalTitle = 'Detalles Del Caso',
 	}) => {
@@ -1915,6 +1919,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 										>
 											<History className="w-4 h-4" />
 										</button>
+										{onTriaje && (
+											<FeatureGuard feature="hasTriaje">
+												<button
+													onClick={() => onTriaje(caseData)}
+													title="Ver o editar historia clínica (triaje)"
+													className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors duration-200 shrink-0"
+													aria-label="Ver triaje"
+												>
+													<ClipboardList className="w-4 h-4" />
+													Historia
+												</button>
+											</FeatureGuard>
+										)}
 										<button
 											onClick={handleSendEmail}
 											disabled={isSaving || isUploadingPdf || isUploadingImages}
@@ -2424,9 +2441,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								)}
 
 								{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
-								<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-									<span className="text-sm font-medium text-gray-600 dark:text-gray-400">PDF Adjuntos:</span>
-									<div className="sm:flex sm:justify-end sm:flex-1">
+								<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2 min-w-0">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 shrink-0">PDF Adjuntos:</span>
+									<div className="sm:flex sm:justify-end sm:flex-1 min-w-0 w-full sm:w-auto">
 										{(() => {
 											const pdfUrls: string[] =
 												Array.isArray((caseData as any).uploaded_pdf_urls) &&

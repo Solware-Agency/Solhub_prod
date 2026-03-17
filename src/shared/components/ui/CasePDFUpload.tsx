@@ -20,6 +20,12 @@ import {
 import { PDFButton } from '@shared/components/ui/PDFButton'
 
 const MAX_PDFS = 5
+const MAX_FILENAME_DISPLAY = 28
+
+function truncateFileName(name: string): string {
+	if (name.length <= MAX_FILENAME_DISPLAY) return name
+	return `${name.slice(0, MAX_FILENAME_DISPLAY)}...`
+}
 
 interface CasePDFUploadProps {
 	caseId: string
@@ -271,10 +277,10 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			)}
 
 			{selectedFile && (
-				<div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-					<FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-					<span className="text-sm text-blue-800 dark:text-blue-200 flex-1 truncate">
-						{selectedFile.name}
+				<div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg min-w-0">
+					<FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+					<span className="text-sm text-blue-800 dark:text-blue-200 shrink-0" title={selectedFile.name}>
+						{truncateFileName(selectedFile.name)}
 					</span>
 					<Button
 						variant="ghost"
@@ -289,7 +295,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			)}
 
 			{canAddMore && (
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 min-w-0">
 					<input
 						ref={fileInputRef}
 						type="file"
@@ -299,7 +305,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 						className="hidden"
 						id={`case-pdf-upload-${caseId}`}
 					/>
-					<label htmlFor={`case-pdf-upload-${caseId}`} className="flex-1">
+					<label htmlFor={`case-pdf-upload-${caseId}`} className="flex-1 min-w-0">
 						<Button
 							type="button"
 							variant="outline"
