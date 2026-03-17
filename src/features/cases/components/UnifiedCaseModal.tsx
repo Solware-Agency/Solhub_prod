@@ -2623,7 +2623,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											<MultipleMediaUrls
 												media={mediaItems}
 												onChange={setMediaItems}
-												maxItems={5}
+												maxItems={10}
 												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
 												onUploadFile={
 													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined) ||

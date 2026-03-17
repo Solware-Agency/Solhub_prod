@@ -508,7 +508,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					}))
 					.sort((a, b) => b.revenue - a.revenue)
 
-				// Calculate revenue by exam type (with normalization) - Use transformedFilteredRecords
+				// Calculate revenue by exam type (with normalization) - mismo criterio que Ingresos del Período: cobrado real en USD
 				const examTypeRevenue = new Map<string, { revenue: number; count: number; originalName: string }>()
 				transformedFilteredRecords?.forEach((record) => {
 					const normalizedType = normalizeExamType(record.exam_type)
@@ -518,7 +518,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 						originalName: record.exam_type,
 					}
 					examTypeRevenue.set(normalizedType, {
-						revenue: current.revenue + (record.total_amount || 0),
+						revenue: current.revenue + (isSpt ? (record.total_amount || 0) : getPaidUSD(record)),
 						count: current.count + 1,
 						originalName: current.originalName, // Keep the first occurrence as display name
 					})

@@ -29,7 +29,7 @@ interface MultipleMediaUrlsProps {
 export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 	media,
 	onChange,
-	maxItems = 5,
+	maxItems = 10,
 	isEditing = false,
 	className,
 	onUploadFile,

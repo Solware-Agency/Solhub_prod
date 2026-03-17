@@ -67,7 +67,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 			case 'totalRevenue':
 				return 'Ingresos Totales'
 			case 'monthlyRevenue':
-				return 'Ingresos Mensuales'
+				return 'Ingresos del Período'
 			case 'totalCases':
 				return 'Total de Casos'
 			case 'completedCases':
@@ -136,18 +136,18 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 							</div>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos Totales</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos del período</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 										{formatCurrency(stats.monthlyRevenue)}
 									</p>
 								</div>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos Mensuales</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos (período seleccionado)</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 										{formatCurrency(stats.monthlyRevenue)}
 									</p>
 									<p className="text-xs text-gray-500 dark:text-gray-400">
-										{selectedMonth ? format(selectedMonth, 'MMMM yyyy', { locale: es }) : 'Este mes'}
+										{selectedMonth ? format(selectedMonth, 'MMMM yyyy', { locale: es }) : 'Según rango de fechas'}
 									</p>
 								</div>
 							</div>
@@ -214,24 +214,17 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<div>
-								<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Ingresos Mensuales</h3>
-							</div>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos del Mes</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Ingresos</p>
 									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 										{formatCurrency(stats.monthlyRevenue)}
 									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400">
-										{selectedMonth ? format(selectedMonth, 'MMMM yyyy', { locale: es }) : 'Este mes'}
-									</p>
 								</div>
 								<div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Comparación con Mes Anterior</p>
+									<p className="text-sm text-gray-500 dark:text-gray-400">Comparación con período anterior</p>
 									<div className="flex items-center gap-2">
 										<p className="text-2xl font-bold text-green-600 dark:text-green-400">+12.5%</p>
-										<span className="text-xs text-gray-500 dark:text-gray-400">estimado</span>
 									</div>
 								</div>
 							</div>
@@ -279,7 +272,6 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.newPatientsThisMonth}</p>
 									</div>
 								</div>
-								<div className="text-sm text-green-600 dark:text-green-400">+{stats.newPatientsThisMonth} este mes</div>
 							</div>
 						</div>
 					</div>
@@ -613,7 +605,7 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 										></div>
 									</div>
 									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										Del total de ingresos del mes: {formatCurrency(stats.monthlyRevenue)}
+										Del total de ingresos del período: {formatCurrency(stats.monthlyRevenue)}
 									</p>
 								</div>
 							</div>
