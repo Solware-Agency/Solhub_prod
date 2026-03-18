@@ -1,5 +1,10 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
+import {
+	buildChangeRows,
+	insertAseguradorasChangeLog,
+	logAseguradorasCreated,
+} from './aseguradoras-change-log'
 
 const MAX_ATTACHMENTS = 3
 
@@ -178,6 +183,17 @@ export const searchAsegurados = async (searchTerm: string, limit = 10): Promise<
 	return (data || []) as Asegurado[]
 }
 
+const ASEGURADO_FIELD_LABELS: Record<string, string> = {
+	full_name: 'Nombre completo',
+	document_id: 'Cédula/RIF',
+	phone: 'Teléfono',
+	email: 'Email',
+	address: 'Dirección',
+	notes: 'Notas',
+	tipo_asegurado: 'Tipo asegurado',
+	fecha_nacimiento: 'Fecha de nacimiento',
+}
+
 export const createAsegurado = async (payload: AseguradoInsert): Promise<Asegurado> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase
@@ -190,11 +206,14 @@ export const createAsegurado = async (payload: AseguradoInsert): Promise<Asegura
 		throw error
 	}
 
-	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
+	const asegurado = { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
+	await logAseguradorasCreated('asegurado', asegurado.id, laboratoryId, `Asegurado creado: ${asegurado.full_name}`)
+	return asegurado
 }
 
 export const updateAsegurado = async (id: string, payload: AseguradoUpdate): Promise<Asegurado> => {
 	const laboratoryId = await getUserLaboratoryId()
+	const { data: oldRow } = await supabase.from('asegurados').select('*').eq('id', id).eq('laboratory_id', laboratoryId).single()
 	const { data, error } = await supabase
 		.from('asegurados')
 		.update({ ...payload, updated_at: new Date().toISOString() })
@@ -204,7 +223,16 @@ export const updateAsegurado = async (id: string, payload: AseguradoUpdate): Pro
 		.single()
 
 	if (error) throw error
-	return { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
+	const asegurado = { ...data, attachments: normalizeAttachments((data as any).attachments) } as Asegurado
+	if (oldRow) {
+		const changes = buildChangeRows(
+			oldRow as Record<string, unknown>,
+			payload as Record<string, unknown>,
+			ASEGURADO_FIELD_LABELS,
+		)
+		await insertAseguradorasChangeLog('asegurado', id, laboratoryId, changes)
+	}
+	return asegurado
 }
 
 /** Soft delete: marca asegurado como inactivo; deja de mostrarse en listados pero se conserva en BD */

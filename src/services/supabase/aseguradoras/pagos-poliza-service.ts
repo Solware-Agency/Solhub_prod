@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
+import { logAseguradorasCreated } from './aseguradoras-change-log'
 
 export interface PagoPoliza {
 	id: string
@@ -91,5 +92,12 @@ export const createPagoPoliza = async (payload: PagoPolizaInsert): Promise<PagoP
 		.single()
 
 	if (error) throw error
-	return data as PagoPoliza
+	const pago = data as PagoPoliza
+	await logAseguradorasCreated(
+		'pago_poliza',
+		pago.id,
+		laboratoryId,
+		`Pago registrado: ${payload.monto} - ${payload.fecha_pago}`,
+	)
+	return pago
 }

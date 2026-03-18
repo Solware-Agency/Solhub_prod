@@ -34,8 +34,14 @@ import React, { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal'
 import PatientHistoryModal from '@features/patients/components/PatientHistoryModal'
+import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
+import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
+import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
 import type { Patient } from '@/services/supabase/patients/patients-service'
+import { getPolizaById } from '@services/supabase/aseguradoras/polizas-service'
+import { findAseguradoById } from '@services/supabase/aseguradoras/asegurados-service'
+import { findAseguradoraById } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { ChangeDetailsModal } from './ChangeDetailsModal'
 
 // Type for the actual data returned from the query - updated for new structure
@@ -113,6 +119,17 @@ const ChangelogTable: React.FC = () => {
 		return { text: displayText, isDeletedCase }
 	}
 
+	// Texto de entidad para cualquier tipo (caso, paciente, perfil, póliza, asegurado, compañía, pago)
+	const getEntityDisplayText = (log: ChangeLogData): string => {
+		if (log.entity_type === 'profile') return `Perfil (${log.user_display_name || log.user_email})`
+		if (log.entity_type === 'patient') return log.patients?.nombre || 'Paciente'
+		if (log.entity_type === 'poliza') return log.polizas?.numero_poliza || 'Póliza'
+		if (log.entity_type === 'asegurado') return log.asegurados?.full_name || 'Asegurado'
+		if (log.entity_type === 'aseguradora') return log.aseguradoras?.nombre || 'Compañía'
+		if (log.entity_type === 'pago_poliza') return 'Pago'
+		return getCaseEntityDisplay(log).text
+	}
+
 	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
 
@@ -143,6 +160,10 @@ const ChangelogTable: React.FC = () => {
 	const [isLoadingCase, setIsLoadingCase] = useState(false)
 	const [selectedPatientForView, setSelectedPatientForView] = useState<Patient | null>(null)
 	const [isLoadingPatient, setIsLoadingPatient] = useState(false)
+	// Aseguradoras: abrir detalle desde historial (póliza, asegurado, compañía)
+	const [selectedPolizaId, setSelectedPolizaId] = useState<string | null>(null)
+	const [selectedAseguradoId, setSelectedAseguradoId] = useState<string | null>(null)
+	const [selectedAseguradoraId, setSelectedAseguradoraId] = useState<string | null>(null)
 
 	// Resetear página cuando cambian los filtros de fecha o la búsqueda
 	React.useEffect(() => {
@@ -217,7 +238,14 @@ const ChangelogTable: React.FC = () => {
 				// Para data vieja sin change_session_id, crear un ID de sesión basado en:
 				// user_id + entity_type + patient_id/medical_record_id + changed_at (redondeado a segundo)
 				// Esto agrupa cambios del mismo usuario, misma entidad, mismo momento
-				const entityId = log.patient_id || log.medical_record_id || 'unknown'
+				const entityId =
+					log.patient_id ||
+					log.medical_record_id ||
+					log.polizas?.id ||
+					log.asegurados?.id ||
+					log.aseguradoras?.id ||
+					log.pagos_poliza?.id ||
+					'unknown'
 				const changedAtDate = new Date(log.changed_at)
 				// Redondear a segundo para agrupar cambios en la misma ventana de tiempo (±1 segundo)
 				const roundedTime = new Date(Math.floor(changedAtDate.getTime() / 1000) * 1000).toISOString()
@@ -270,9 +298,10 @@ const ChangelogTable: React.FC = () => {
 		setIsDetailsModalOpen(true)
 	}
 
-	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso y no eliminado)
+	// Abrir modal de detalles del caso al hacer clic en el código (solo si es caso médico y no eliminado)
 	const handleOpenCaseDetail = async (log: ChangeLogData) => {
-		if (log.entity_type === 'patient' || log.entity_type === 'profile') return
+		const aseguradorasTypes = ['poliza', 'asegurado', 'aseguradora', 'pago_poliza']
+		if (log.entity_type === 'patient' || log.entity_type === 'profile' || aseguradorasTypes.includes(log.entity_type ?? '')) return
 		const { text: caseCode, isDeletedCase } = getCaseEntityDisplay(log)
 		if (isDeletedCase) {
 			toast({
@@ -359,6 +388,40 @@ const ChangelogTable: React.FC = () => {
 			setIsLoadingPatient(false)
 		}
 	}
+
+	// Aseguradoras: abrir detalle al hacer clic en la entidad (póliza, asegurado, compañía, pago)
+	const handleOpenPolizaDetail = (log: ChangeLogData) => {
+		const id = log.entity_type === 'pago_poliza' ? log.pagos_poliza?.poliza_id : log.polizas?.id
+		if (id) setSelectedPolizaId(id)
+	}
+	const handleOpenAseguradoDetail = (log: ChangeLogData) => {
+		const id = log.asegurados?.id
+		if (id) setSelectedAseguradoId(id)
+	}
+	const handleOpenAseguradoraDetail = (log: ChangeLogData) => {
+		const id = log.aseguradoras?.id
+		if (id) setSelectedAseguradoraId(id)
+	}
+
+	// Fetch entidades aseguradoras cuando hay id seleccionado
+	const { data: selectedPoliza } = useQuery({
+		queryKey: ['poliza-detail-changelog', selectedPolizaId],
+		queryFn: () => (selectedPolizaId ? getPolizaById(selectedPolizaId) : Promise.resolve(null)),
+		enabled: !!selectedPolizaId,
+		staleTime: 1000 * 60 * 2,
+	})
+	const { data: selectedAsegurado } = useQuery({
+		queryKey: ['asegurado-detail-changelog', selectedAseguradoId],
+		queryFn: () => (selectedAseguradoId ? findAseguradoById(selectedAseguradoId) : Promise.resolve(null)),
+		enabled: !!selectedAseguradoId,
+		staleTime: 1000 * 60 * 2,
+	})
+	const { data: selectedAseguradora } = useQuery({
+		queryKey: ['aseguradora-detail-changelog', selectedAseguradoraId],
+		queryFn: () => (selectedAseguradoraId ? findAseguradoraById(selectedAseguradoraId) : Promise.resolve(null)),
+		enabled: !!selectedAseguradoraId,
+		staleTime: 1000 * 60 * 2,
+	})
 
 	// Obtener cambios del grupo seleccionado
 	const selectedGroupChanges = React.useMemo(() => {
@@ -713,11 +776,49 @@ const ChangelogTable: React.FC = () => {
 																		</span>
 																	)}
 																</>
+															) : (log.entity_type === 'poliza' || log.entity_type === 'pago_poliza') && (log.polizas?.id || log.pagos_poliza?.poliza_id) ? (
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		handleOpenPolizaDetail(log)
+																	}}
+																	className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+																	title={log.entity_type === 'pago_poliza' ? 'Ver póliza del pago' : 'Ver detalles de la póliza'}
+																>
+																	{getEntityDisplayText(log)}
+																</button>
+															) : log.entity_type === 'asegurado' && log.asegurados?.id ? (
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		handleOpenAseguradoDetail(log)
+																	}}
+																	className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+																	title="Ver detalles del asegurado"
+																>
+																	{getEntityDisplayText(log)}
+																</button>
+															) : log.entity_type === 'aseguradora' && log.aseguradoras?.id ? (
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		handleOpenAseguradoraDetail(log)
+																	}}
+																	className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:brightness-90 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+																	title="Ver detalles de la compañía"
+																>
+																	{getEntityDisplayText(log)}
+																</button>
 															) : (
 																(() => {
-																	const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																	const text = getEntityDisplayText(log)
+																	const isMedicalCase = log.entity_type === 'medical_case' || !!log.medical_record_id
+																	const { isDeletedCase } = getCaseEntityDisplay(log)
 																	const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
-																	const canOpenCase = log.entity_type !== 'patient' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
+																	const canOpenCase = isMedicalCase && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																	return (
 																		canOpenCase ? (
 																			<button
@@ -754,7 +855,9 @@ const ChangelogTable: React.FC = () => {
 														<div className="max-w-xs wrap-break-word overflow-wrap-anywhere">
 															{log.field_name === 'created_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																	Creación de nuevo registro médico
+																	{['poliza', 'asegurado', 'aseguradora', 'pago_poliza'].includes(log.entity_type ?? '')
+																		? (log.new_value || 'Registro creado')
+																		: 'Creación de nuevo registro médico'}
 																</span>
 															) : log.field_name === 'deleted_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
@@ -877,11 +980,40 @@ const ChangelogTable: React.FC = () => {
 																	</span>
 																)}
 															</>
+														) : (log.entity_type === 'poliza' || log.entity_type === 'pago_poliza') && (log.polizas?.id || log.pagos_poliza?.poliza_id) ? (
+															<button
+																type="button"
+																onClick={(e) => { e.stopPropagation(); handleOpenPolizaDetail(log) }}
+																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:brightness-90 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+																title={log.entity_type === 'pago_poliza' ? 'Ver póliza del pago' : 'Ver detalles de la póliza'}
+															>
+																{getEntityDisplayText(log)}
+															</button>
+														) : log.entity_type === 'asegurado' && log.asegurados?.id ? (
+															<button
+																type="button"
+																onClick={(e) => { e.stopPropagation(); handleOpenAseguradoDetail(log) }}
+																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:brightness-90 bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+																title="Ver detalles del asegurado"
+															>
+																{getEntityDisplayText(log)}
+															</button>
+														) : log.entity_type === 'aseguradora' && log.aseguradoras?.id ? (
+															<button
+																type="button"
+																onClick={(e) => { e.stopPropagation(); handleOpenAseguradoraDetail(log) }}
+																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full w-fit cursor-pointer hover:brightness-90 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+																title="Ver detalles de la compañía"
+															>
+																{getEntityDisplayText(log)}
+															</button>
 														) : (
 															(() => {
-																const { text, isDeletedCase } = getCaseEntityDisplay(log)
+																const text = getEntityDisplayText(log)
+																const isMedicalCase = log.entity_type === 'medical_case' || !!log.medical_record_id
+																const { isDeletedCase } = getCaseEntityDisplay(log)
 																const hasValidCode = text && text !== 'Caso eliminado' && text !== 'Nuevo registro'
-																const canOpenCase = log.entity_type !== 'patient' && log.entity_type !== 'profile' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
+																const canOpenCase = isMedicalCase && log.entity_type !== 'profile' && !isDeletedCase && (!!log.medical_record_id || !!hasValidCode)
 																return (
 																	canOpenCase ? (
 																		<button
@@ -931,7 +1063,9 @@ const ChangelogTable: React.FC = () => {
 														<div className="mt-1 wrap-break-word overflow-wrap-anywhere">
 															{log.field_name === 'created_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
-																	Creación de nuevo registro médico
+																	{['poliza', 'asegurado', 'aseguradora', 'pago_poliza'].includes(log.entity_type ?? '')
+																		? (log.new_value || 'Registro creado')
+																		: 'Creación de nuevo registro médico'}
 																</span>
 															) : log.field_name === 'deleted_record' ? (
 																<span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
@@ -1089,6 +1223,23 @@ const ChangelogTable: React.FC = () => {
 				patient={selectedPatientForView}
 				isOpen={!!selectedPatientForView}
 				onClose={() => setSelectedPatientForView(null)}
+			/>
+
+			{/* Aseguradoras: panel/modal al hacer clic en póliza, asegurado o compañía en Entidad */}
+			<PolizaDetailPanel
+				poliza={selectedPoliza ?? null}
+				isOpen={!!selectedPolizaId}
+				onClose={() => setSelectedPolizaId(null)}
+			/>
+			<AseguradoHistoryModal
+				isOpen={!!selectedAseguradoId}
+				onClose={() => setSelectedAseguradoId(null)}
+				asegurado={selectedAsegurado ?? null}
+			/>
+			<AseguradoraHistoryModal
+				isOpen={!!selectedAseguradoraId}
+				onClose={() => setSelectedAseguradoraId(null)}
+				aseguradora={selectedAseguradora ?? null}
 			/>
 		</div>
 	)

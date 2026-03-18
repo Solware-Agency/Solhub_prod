@@ -32,6 +32,10 @@ export type ChangeLogData = {
 		nombre: string | null
 		cedula: string | null
 	} | null
+	polizas?: { id: string | null; numero_poliza: string | null } | null
+	asegurados?: { id: string | null; full_name: string | null } | null
+	aseguradoras?: { id: string | null; nombre: string | null } | null
+	pagos_poliza?: { id: string | null; poliza_id: string | null } | null
 }
 
 interface ChangeDetailsModalProps {
@@ -71,21 +75,28 @@ export const ChangeDetailsModal: React.FC<ChangeDetailsModalProps> = ({
 		return { text, isDeletedCase: raw === 'Caso eliminado' }
 	}
 
-	const entityName =
-		firstChange.entity_type === 'profile'
-			? `Perfil (${firstChange.user_display_name || firstChange.user_email})`
-			: firstChange.entity_type === 'patient'
-				? firstChange.patients?.nombre || 'Paciente eliminado'
-				: getCaseEntityDisplay(firstChange).text
+	const getEntityDisplayName = (c: ChangeLogData) => {
+		if (c.entity_type === 'profile') return `Perfil (${c.user_display_name || c.user_email})`
+		if (c.entity_type === 'patient') return c.patients?.nombre || 'Paciente eliminado'
+		if (c.entity_type === 'poliza') return c.polizas?.numero_poliza || 'Póliza'
+		if (c.entity_type === 'asegurado') return c.asegurados?.full_name || 'Asegurado'
+		if (c.entity_type === 'aseguradora') return c.aseguradoras?.nombre || 'Compañía'
+		if (c.entity_type === 'pago_poliza') return 'Pago'
+		return getCaseEntityDisplay(c).text
+	}
+	const entityName = getEntityDisplayName(firstChange)
 	const entityId =
 		firstChange.entity_type === 'profile'
 			? null
 			: firstChange.entity_type === 'patient'
 				? firstChange.patients?.cedula
-				: firstChange.medical_records_clean?.code
+				: firstChange.entity_type === 'poliza' || firstChange.entity_type === 'asegurado' || firstChange.entity_type === 'aseguradora' || firstChange.entity_type === 'pago_poliza'
+					? null
+					: firstChange.medical_records_clean?.code
 	const isCaseDeletedBadge =
 		firstChange.entity_type !== 'patient' &&
 		firstChange.entity_type !== 'profile' &&
+		!['poliza', 'asegurado', 'aseguradora', 'pago_poliza'].includes(firstChange.entity_type ?? '') &&
 		getCaseEntityDisplay(firstChange).isDeletedCase
 
 	// Función para traducir nombres de campos

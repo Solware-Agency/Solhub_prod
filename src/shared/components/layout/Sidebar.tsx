@@ -494,6 +494,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </div>
+              <FeatureGuard feature='hasChangeHistory'>
+                <NavItem
+                  to='/aseguradoras/changelog'
+                  icon={<History className='stroke-2 size-5 shrink-0' />}
+                  label='Historial'
+                  showFullContent={showFullContent}
+                  onClick={onClose}
+                />
+              </FeatureGuard>
             </>
           )}
           {isOwner && !isInntegras && (

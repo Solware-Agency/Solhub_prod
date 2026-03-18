@@ -1,5 +1,10 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
+import {
+	buildChangeRows,
+	insertAseguradorasChangeLog,
+	logAseguradorasCreated,
+} from './aseguradoras-change-log'
 
 export interface Aseguradora {
 	id: string
@@ -64,6 +69,17 @@ export const findAseguradoraById = async (id: string): Promise<Aseguradora | nul
 	return data as Aseguradora
 }
 
+const ASEGURADORA_FIELD_LABELS: Record<string, string> = {
+	nombre: 'Nombre',
+	codigo_interno: 'Código interno',
+	rif: 'RIF',
+	telefono: 'Teléfono',
+	email: 'Email',
+	web: 'Web',
+	direccion: 'Dirección',
+	activo: 'Activo',
+}
+
 export const createAseguradora = async (payload: AseguradoraInsert): Promise<Aseguradora> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase
@@ -73,11 +89,14 @@ export const createAseguradora = async (payload: AseguradoraInsert): Promise<Ase
 		.single()
 
 	if (error) throw error
-	return data as Aseguradora
+	const aseguradora = data as Aseguradora
+	await logAseguradorasCreated('aseguradora', aseguradora.id, laboratoryId, `Compañía creada: ${aseguradora.nombre}`)
+	return aseguradora
 }
 
 export const updateAseguradora = async (id: string, payload: AseguradoraUpdate): Promise<Aseguradora> => {
 	const laboratoryId = await getUserLaboratoryId()
+	const { data: oldRow } = await supabase.from('aseguradoras').select('*').eq('id', id).eq('laboratory_id', laboratoryId).single()
 	const { data, error } = await supabase
 		.from('aseguradoras')
 		.update({ ...payload, updated_at: new Date().toISOString() })
@@ -87,7 +106,16 @@ export const updateAseguradora = async (id: string, payload: AseguradoraUpdate):
 		.single()
 
 	if (error) throw error
-	return data as Aseguradora
+	const aseguradora = data as Aseguradora
+	if (oldRow) {
+		const changes = buildChangeRows(
+			oldRow as Record<string, unknown>,
+			payload as Record<string, unknown>,
+			ASEGURADORA_FIELD_LABELS,
+		)
+		await insertAseguradorasChangeLog('aseguradora', id, laboratoryId, changes)
+	}
+	return aseguradora
 }
 
 export const deleteAseguradora = async (id: string) => {

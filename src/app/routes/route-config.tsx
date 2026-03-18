@@ -476,4 +476,9 @@ export const aseguradorasRoutes: RouteConfig[] = [
     feature: 'hasAseguradoras',
     component: CompaniasPage,
   },
+  {
+    path: 'changelog',
+    feature: 'hasChangeHistory',
+    component: ChangelogPage,
+  },
 ];

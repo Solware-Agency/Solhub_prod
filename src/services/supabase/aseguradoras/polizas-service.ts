@@ -1,5 +1,10 @@
 import { supabase } from '@services/supabase/config/config'
 import { getUserLaboratoryId } from './aseguradoras-utils'
+import {
+	buildChangeRows,
+	insertAseguradorasChangeLog,
+	logAseguradorasCreated,
+} from './aseguradoras-change-log'
 
 const MAX_DOCUMENTOS_POLIZA = 3
 
@@ -340,6 +345,20 @@ export const getPolizaById = async (id: string): Promise<Poliza | null> => {
 	return { ...poliza, documentos_poliza: normalizeDocumentosPoliza(poliza as Record<string, unknown>) } as Poliza
 }
 
+const POLIZA_FIELD_LABELS: Record<string, string> = {
+	numero_poliza: 'Número de póliza',
+	ramo: 'Ramo',
+	suma_asegurada: 'Suma asegurada',
+	modalidad_pago: 'Modalidad de pago',
+	estatus_poliza: 'Estatus póliza',
+	estatus_pago: 'Estatus de pago',
+	fecha_inicio: 'Fecha inicio',
+	fecha_vencimiento: 'Fecha vencimiento',
+	fecha_prox_vencimiento: 'Próximo vencimiento',
+	agente_nombre: 'Agente',
+	notas: 'Notas',
+}
+
 export const createPoliza = async (payload: PolizaInsert): Promise<Poliza> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase
@@ -352,11 +371,14 @@ export const createPoliza = async (payload: PolizaInsert): Promise<Poliza> => {
 		.single()
 
 	if (error) throw error
-	return { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
+	const poliza = { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
+	await logAseguradorasCreated('poliza', poliza.id, laboratoryId, `Póliza creada: ${poliza.numero_poliza}`)
+	return poliza
 }
 
 export const updatePoliza = async (id: string, payload: PolizaUpdate): Promise<Poliza> => {
 	const laboratoryId = await getUserLaboratoryId()
+	const oldPoliza = await getPolizaById(id)
 	const { data, error } = await supabase
 		.from('polizas')
 		.update({ ...payload, updated_at: new Date().toISOString() })
@@ -366,7 +388,16 @@ export const updatePoliza = async (id: string, payload: PolizaUpdate): Promise<P
 		.single()
 
 	if (error) throw error
-	return { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
+	const poliza = { ...data, documentos_poliza: normalizeDocumentosPoliza(data as Record<string, unknown>) } as Poliza
+	if (oldPoliza) {
+		const changes = buildChangeRows(
+			oldPoliza as unknown as Record<string, unknown>,
+			payload as Record<string, unknown>,
+			POLIZA_FIELD_LABELS,
+		)
+		await insertAseguradorasChangeLog('poliza', id, laboratoryId, changes)
+	}
+	return poliza
 }
 
 /** Soft delete: marca póliza como inactiva; deja de mostrarse en listados pero se conserva en BD */

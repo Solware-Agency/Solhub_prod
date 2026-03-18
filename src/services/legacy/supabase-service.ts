@@ -32,7 +32,7 @@ export interface ChangeLogJoined {
 	id: string
 	medical_record_id: string | null
 	patient_id: string | null // Nueva columna
-	entity_type: string | null // Nueva columna: 'patient' o 'medical_case'
+	entity_type: string | null // 'patient' | 'medical_case' | 'poliza' | 'asegurado' | 'aseguradora' | 'pago_poliza' | 'profile'
 	user_id: string
 	user_email: string
 	user_display_name: string | null
@@ -54,6 +54,11 @@ export interface ChangeLogJoined {
 		nombre: string | null
 		cedula: string | null
 	} | null
+	// Módulo aseguradoras (Inntegras)
+	polizas?: { id: string | null; numero_poliza: string | null } | null
+	asegurados?: { id: string | null; full_name: string | null } | null
+	aseguradoras?: { id: string | null; nombre: string | null } | null
+	pagos_poliza?: { id: string | null; poliza_id: string | null } | null
 }
 
 // Helper function to format age display
@@ -568,6 +573,9 @@ function filterChangeLogsBySearch(logs: ChangeLogJoined[], search: string): Chan
     const code = (log.medical_records_clean as { code?: string } | null)?.code ?? '';
     const nombre = (log.patients as { nombre?: string } | null)?.nombre ?? '';
     const cedula = (log.patients as { cedula?: string } | null)?.cedula ?? '';
+    const numeroPoliza = (log.polizas as { numero_poliza?: string } | null)?.numero_poliza ?? '';
+    const aseguradoName = (log.asegurados as { full_name?: string } | null)?.full_name ?? '';
+    const aseguradoraName = (log.aseguradoras as { nombre?: string } | null)?.nombre ?? '';
     return (
       (log.user_display_name ?? '').toLowerCase().includes(term) ||
       (log.user_email ?? '').toLowerCase().includes(term) ||
@@ -575,6 +583,9 @@ function filterChangeLogsBySearch(logs: ChangeLogJoined[], search: string): Chan
       code.toLowerCase().includes(term) ||
       nombre.toLowerCase().includes(term) ||
       cedula.toLowerCase().includes(term) ||
+      numeroPoliza.toLowerCase().includes(term) ||
+      aseguradoName.toLowerCase().includes(term) ||
+      aseguradoraName.toLowerCase().includes(term) ||
       (log.deleted_record_info ?? '').toLowerCase().includes(term) ||
       (log.old_value ?? '').toLowerCase().includes(term) ||
       (log.new_value ?? '').toLowerCase().includes(term)
@@ -635,6 +646,22 @@ export const getAllChangeLogs = async (
 					id,
 					nombre,
 					cedula
+				),
+				polizas(
+					id,
+					numero_poliza
+				),
+				asegurados(
+					id,
+					full_name
+				),
+				aseguradoras(
+					id,
+					nombre
+				),
+				pagos_poliza(
+					id,
+					poliza_id
 				)
 			`,
       )
@@ -791,6 +818,14 @@ export const getAllChangeLogs = async (
                 }
               | null
               | undefined) ?? undefined,
+          polizas:
+            (log['polizas'] as { id: string | null; numero_poliza: string | null } | null | undefined) ?? undefined,
+          asegurados:
+            (log['asegurados'] as { id: string | null; full_name: string | null } | null | undefined) ?? undefined,
+          aseguradoras:
+            (log['aseguradoras'] as { id: string | null; nombre: string | null } | null | undefined) ?? undefined,
+          pagos_poliza:
+            (log['pagos_poliza'] as { id: string | null; poliza_id: string | null } | null | undefined) ?? undefined,
         };
 
         if (
