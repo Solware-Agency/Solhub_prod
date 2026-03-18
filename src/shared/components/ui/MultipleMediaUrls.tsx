@@ -88,10 +88,37 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 	};
 
 	const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file || !onUploadFile || media.length >= maxItems) return;
-		const result = await onUploadFile(file);
-		if (result) onChange([...media, result]);
+		const files = e.target.files;
+		if (!files || files.length === 0 || !onUploadFile) return;
+		
+		console.log(`🖼️ Imágenes/Videos seleccionados: ${files.length}`, files);
+		
+		const availableSlots = maxItems - media.length;
+		if (availableSlots <= 0) {
+			alert(`Máximo ${maxItems} archivos permitidos`);
+			return;
+		}
+
+		const filesToUpload = Math.min(files.length, availableSlots);
+		const uploadedMedia: MediaItem[] = [];
+
+		// Subir archivos secuencialmente
+		for (let i = 0; i < filesToUpload; i++) {
+			const file = files[i];
+			try {
+				const result = await onUploadFile(file);
+				if (result) {
+					uploadedMedia.push(result);
+				}
+			} catch (error) {
+				console.error(`Error uploading ${file.name}:`, error);
+			}
+		}
+
+		if (uploadedMedia.length > 0) {
+			onChange([...media, ...uploadedMedia]);
+		}
+
 		e.target.value = '';
 	};
 
@@ -191,6 +218,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 								type='file'
 								accept='image/jpeg,image/png,.jpg,.jpeg,.png,video/mp4,.mp4'
 								capture='environment'
+								multiple
 								className='hidden'
 								onChange={handleFileSelect}
 								aria-label='Capturar foto o video con cámara'
@@ -199,6 +227,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 								ref={galleryInputRef}
 								type='file'
 								accept='image/jpeg,image/png,.jpg,.jpeg,.png,video/mp4,.mp4'
+								multiple
 								className='hidden'
 								onChange={handleFileSelect}
 								aria-label='Elegir imagen o video de galería'
@@ -247,6 +276,9 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 									</div>
 								</PopoverContent>
 							</Popover>
+							<p className='text-xs text-gray-500 dark:text-gray-400 italic mt-1'>
+								💡 Puedes seleccionar múltiples archivos a la vez
+							</p>
 						</>
 					)}
 					<div className='flex gap-2'>

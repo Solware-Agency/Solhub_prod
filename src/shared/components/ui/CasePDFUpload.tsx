@@ -16,6 +16,7 @@ import {
 	FileText,
 	Loader2,
 	Trash2,
+	Plus,
 } from 'lucide-react'
 import { PDFButton } from '@shared/components/ui/PDFButton'
 
@@ -38,6 +39,7 @@ interface CasePDFUploadProps {
 
 /**
  * Componente para subir y eliminar hasta 5 PDFs por caso.
+ * Soporta selección múltiple de archivos.
  * SPT: roles laboratorio, coordinador, owner, prueba, imagenologia, call_center.
  * Conspat: todos los roles.
  */
@@ -53,8 +55,10 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	const { laboratory } = useLaboratory()
 	const { user } = useAuth()
 	const fileInputRef = useRef<HTMLInputElement>(null)
-	const [selectedFile, setSelectedFile] = useState<File | null>(null)
+	const addMoreInputRef = useRef<HTMLInputElement>(null)
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 	const [isUploading, setIsUploading] = useState(false)
+	const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
 	const [isDeletingIndex, setIsDeletingIndex] = useState<number | null>(null)
 	const [error, setError] = useState<string | null>(null)
 
@@ -79,23 +83,54 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		return null
 	}
 
-	const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0]
-		if (!file) return
+	const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, mode: 'replace' | 'add' = 'replace') => {
+		const files = event.target.files
+		if (!files || files.length === 0) return
 
-		const validation = validateCasePDF(file)
-		if (!validation.valid) {
-			setError(validation.error || 'Archivo inválido')
-			toast({
-				title: '❌ Error de validación',
-				description: validation.error || 'El archivo no es válido',
-				variant: 'destructive',
-			})
-			return
+		console.log(`📎 Archivos seleccionados: ${files.length} (modo: ${mode})`, files)
+
+		const validFiles: File[] = []
+		const errors: string[] = []
+
+		// Verificar límite total (considerar archivos ya seleccionados en modo add)
+		const currentlySelected = mode === 'add' ? selectedFiles.length : 0
+		const availableSlots = MAX_PDFS - urls.length - currentlySelected
+		const filesToProcess = Math.min(files.length, availableSlots)
+
+		if (files.length > availableSlots) {
+			errors.push(`Solo puedes agregar ${availableSlots} PDF(s) más. Se procesarán los primeros ${filesToProcess}.`)
 		}
 
-		setError(null)
-		setSelectedFile(file)
+		// Validar cada archivo
+		for (let i = 0; i < filesToProcess; i++) {
+			const file = files[i]
+			const validation = validateCasePDF(file)
+			if (validation.valid) {
+				validFiles.push(file)
+			} else {
+				errors.push(`${file.name}: ${validation.error}`)
+			}
+		}
+
+		if (errors.length > 0) {
+			setError(errors.join(' | '))
+			toast({
+				title: '⚠️ Algunos archivos no son válidos',
+				description: `${validFiles.length} de ${filesToProcess} archivo(s) válido(s)`,
+				variant: validFiles.length > 0 ? 'default' : 'destructive',
+			})
+		}
+
+		if (validFiles.length > 0) {
+			setError(null)
+			if (mode === 'add') {
+				setSelectedFiles([...selectedFiles, ...validFiles])
+			} else {
+				setSelectedFiles(validFiles)
+			}
+		} else {
+			setError('No se seleccionó ningún archivo válido')
+		}
 	}
 
 	const persistPdfUrls = async (newUrls: string[]) => {
@@ -112,7 +147,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	}
 
 	const handleUpload = async () => {
-		if (!selectedFile || !user || !profile?.laboratory_id) {
+		if (selectedFiles.length === 0 || !user || !profile?.laboratory_id) {
 			setError('Faltan datos necesarios para subir el PDF')
 			return
 		}
@@ -129,59 +164,92 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 		setIsUploading(true)
 		onUploadingChange?.(true)
 		setError(null)
+		setUploadProgress({ current: 0, total: selectedFiles.length })
 
-		let pdfUrl: string | null = null
+		const uploadedUrls: string[] = []
+		const errors: string[] = []
 
 		try {
-			const nextIndex = urls.length
-			const { data, error: uploadError } = await uploadCasePDF(
-				caseId,
-				selectedFile,
-				profile.laboratory_id,
-				nextIndex,
-			)
+			// Subir cada archivo secuencialmente
+			for (let i = 0; i < selectedFiles.length; i++) {
+				const file = selectedFiles[i]
+				setUploadProgress({ current: i + 1, total: selectedFiles.length })
 
-			pdfUrl = data
+				try {
+					const nextIndex = urls.length + uploadedUrls.length
+					const { data, error: uploadError } = await uploadCasePDF(
+						caseId,
+						file,
+						profile.laboratory_id,
+						nextIndex,
+					)
 
-			if (uploadError || !pdfUrl) {
-				if (uploadError instanceof Error) throw uploadError
-				if (uploadError && typeof uploadError === 'object') {
-					const message =
-						('message' in uploadError && typeof uploadError.message === 'string' ? uploadError.message : null) ||
-						('error' in uploadError && typeof uploadError.error === 'string' ? uploadError.error : null) ||
-						('details' in uploadError && typeof uploadError.details === 'string' ? uploadError.details : null) ||
-						JSON.stringify(uploadError)
-					throw new Error(message || 'No se pudo obtener la URL del PDF')
+					const pdfUrl = data
+
+					if (uploadError || !pdfUrl) {
+						if (uploadError instanceof Error) throw uploadError
+						if (uploadError && typeof uploadError === 'object') {
+							const message =
+								('message' in uploadError && typeof uploadError.message === 'string' ? uploadError.message : null) ||
+								('error' in uploadError && typeof uploadError.error === 'string' ? uploadError.error : null) ||
+								('details' in uploadError && typeof uploadError.details === 'string' ? uploadError.details : null) ||
+								JSON.stringify(uploadError)
+							throw new Error(message || 'No se pudo obtener la URL del PDF')
+						}
+						throw new Error('No se pudo obtener la URL del PDF')
+					}
+
+					uploadedUrls.push(pdfUrl)
+				} catch (err) {
+					console.error(`Error uploading file ${file.name}:`, err)
+					const errorMsg = err instanceof Error ? err.message : 'Error desconocido'
+					errors.push(`${file.name}: ${errorMsg}`)
 				}
-				throw new Error('No se pudo obtener la URL del PDF')
 			}
 
-			const newUrls = [...urls, pdfUrl]
-			await persistPdfUrls(newUrls)
+			// Persistir todas las URLs subidas exitosamente
+			if (uploadedUrls.length > 0) {
+				const newUrls = [...urls, ...uploadedUrls]
+				await persistPdfUrls(newUrls)
+			}
 
-			setSelectedFile(null)
+			setSelectedFiles([])
 			if (fileInputRef.current) fileInputRef.current.value = ''
+			if (addMoreInputRef.current) addMoreInputRef.current.value = ''
 
-			toast({
-				title: '✅ PDF subido',
-				description: 'El PDF se ha subido correctamente.',
-				className: 'bg-green-100 border-green-400 text-green-800',
-			})
+			// Mostrar resultado
+			if (errors.length === 0) {
+				toast({
+					title: '✅ PDFs subidos',
+					description: `${uploadedUrls.length} PDF(s) subido(s) correctamente.`,
+					className: 'bg-green-100 border-green-400 text-green-800',
+				})
+			} else if (uploadedUrls.length > 0) {
+				toast({
+					title: '⚠️ Subida parcial',
+					description: `${uploadedUrls.length} exitoso(s), ${errors.length} fallido(s).`,
+					variant: 'default',
+				})
+				setError(errors.join(' | '))
+			} else {
+				throw new Error(errors.join(' | '))
+			}
 		} catch (err) {
-			console.error('Error uploading case PDF:', err)
-			let errorMessage = 'Error al subir el PDF. Inténtalo de nuevo.'
+			console.error('Error uploading case PDFs:', err)
+			let errorMessage = 'Error al subir los PDFs. Inténtalo de nuevo.'
 			if (err instanceof Error) errorMessage = err.message
 			else if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string')
 				errorMessage = (err as any).message
 			setError(errorMessage)
 			toast({
-				title: '❌ Error al subir PDF',
+				title: '❌ Error al subir PDFs',
 				description: errorMessage,
 				variant: 'destructive',
 			})
 		} finally {
 			setIsUploading(false)
 			onUploadingChange?.(false)
+			setUploadProgress(null)
 		}
 	}
 
@@ -225,9 +293,10 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	}
 
 	const handleCancel = () => {
-		setSelectedFile(null)
+		setSelectedFiles([])
 		setError(null)
 		if (fileInputRef.current) fileInputRef.current.value = ''
+		if (addMoreInputRef.current) addMoreInputRef.current.value = ''
 	}
 
 	return (
@@ -276,52 +345,104 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 				</div>
 			)}
 
-			{selectedFile && (
-				<div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg min-w-0">
-					<FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-					<span className="text-sm text-blue-800 dark:text-blue-200 shrink-0" title={selectedFile.name}>
-						{truncateFileName(selectedFile.name)}
-					</span>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={handleCancel}
-						disabled={isUploading}
-						className="h-6 px-2"
-					>
-						<X className="h-3 w-3" />
-					</Button>
+			{selectedFiles.length > 0 && (
+				<div className="space-y-1.5">
+					{selectedFiles.map((file, idx) => (
+						<div key={idx} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg min-w-0">
+							<FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+							<span className="text-sm text-blue-800 dark:text-blue-200 flex-1" title={file.name}>
+								{truncateFileName(file.name)}
+							</span>
+							{!isUploading && (
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => {
+										const newFiles = selectedFiles.filter((_, i) => i !== idx)
+										setSelectedFiles(newFiles)
+									}}
+									className="h-6 px-2"
+								>
+									<X className="h-3 w-3" />
+								</Button>
+							)}
+						</div>
+					))}
+					{uploadProgress && (
+						<div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+							Subiendo {uploadProgress.current} de {uploadProgress.total}...
+						</div>
+					)}
 				</div>
 			)}
 
 			{canAddMore && (
-				<div className="flex items-center gap-2 min-w-0">
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept=".pdf"
-						onChange={handleFileSelect}
-						disabled={isUploading || isDeletingIndex !== null}
-						className="hidden"
-						id={`case-pdf-upload-${caseId}`}
-					/>
-					<label htmlFor={`case-pdf-upload-${caseId}`} className="flex-1 min-w-0">
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
+				<div className="space-y-1.5">
+					<div className="flex items-center gap-2 min-w-0">
+						{/* Input para reemplazar selección */}
+						<input
+							ref={fileInputRef}
+							type="file"
+							accept=".pdf"
+							multiple
+							onChange={(e) => handleFileSelect(e, 'replace')}
 							disabled={isUploading || isDeletingIndex !== null}
-							className="w-full cursor-pointer"
-							asChild
-						>
-							<span>
-								<Upload className="h-4 w-4 mr-2" />
-								{selectedFile ? 'Cambiar archivo' : `Subir PDF${urls.length > 0 ? ` (${urls.length}/${MAX_PDFS})` : ''}`}
-							</span>
-						</Button>
-					</label>
+							className="hidden"
+							id={`case-pdf-upload-${caseId}`}
+						/>
+						{/* Input para agregar más archivos */}
+						<input
+							ref={addMoreInputRef}
+							type="file"
+							accept=".pdf"
+							multiple
+							onChange={(e) => handleFileSelect(e, 'add')}
+							disabled={isUploading || isDeletingIndex !== null}
+							className="hidden"
+							id={`case-pdf-upload-add-${caseId}`}
+						/>
 
-					{selectedFile && (
+						{/* Botón principal: Seleccionar/Cambiar */}
+						<label htmlFor={`case-pdf-upload-${caseId}`} className="flex-1 min-w-0">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								disabled={isUploading || isDeletingIndex !== null}
+								className="w-full cursor-pointer"
+								asChild
+							>
+								<span>
+									<Upload className="h-4 w-4 mr-2" />
+									{selectedFiles.length > 0 
+										? `Cambiar archivos (${selectedFiles.length})` 
+										: `Seleccionar PDF${urls.length > 0 ? ` (${urls.length}/${MAX_PDFS})` : 's'} ${urls.length < MAX_PDFS ? '(múltiple)' : ''}`
+									}
+								</span>
+							</Button>
+						</label>
+
+						{/* Botón para agregar más (solo visible si ya hay archivos seleccionados) */}
+						{selectedFiles.length > 0 && (
+							<label htmlFor={`case-pdf-upload-add-${caseId}`}>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={isUploading || isDeletingIndex !== null}
+									className="cursor-pointer"
+									asChild
+								>
+									<span>
+										<Plus className="h-4 w-4 mr-1" />
+										Agregar más
+									</span>
+								</Button>
+							</label>
+						)}
+
+						{/* Botón de subir */}
+						{selectedFiles.length > 0 && (
 						<Button
 							type="button"
 							variant="default"
@@ -333,7 +454,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 							{isUploading ? (
 								<>
 									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-									Subiendo...
+									{uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}` : 'Subiendo...'}
 								</>
 							) : (
 								<>
@@ -342,6 +463,15 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 								</>
 							)}
 						</Button>
+					)}
+					</div>
+					{urls.length < MAX_PDFS && (
+						<p className="text-xs text-gray-500 dark:text-gray-400 italic">
+							💡 Tip: {selectedFiles.length > 0 
+								? 'Puedes cambiar toda la selección o agregar más archivos' 
+								: 'Mantén Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples PDFs'
+							}
+						</p>
 					)}
 				</div>
 			)}
