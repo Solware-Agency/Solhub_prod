@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { signIn } from '@services/supabase/auth/auth';
 import { useAuth } from '@app/providers/AuthContext';
 import { useSecureRedirect } from '@shared/hooks/useSecureRedirect';
+import { preloadDashboardRoute } from '@app/routes/lazy-routes';
 import Aurora from '@shared/components/ui/Aurora';
 import FadeContent from '@shared/components/ui/FadeContent';
 import { supabase } from '@services/supabase/config/config';
@@ -14,6 +15,11 @@ import { useDynamicBranding } from '@shared/hooks/useDynamicBranding';
 const LABORATORY_INACTIVE_MESSAGE =
   'Cuenta inactiva. Por favor, pague para continuar utilizando el servicio.';
 const STORAGE_KEY_LAB_INACTIVE = 'login_error_laboratory_inactive';
+
+// Constantes fuera del componente para evitar nuevas referencias en cada render.
+// Si colorStops fuera inline JSX, Aurora destruiría y recrearía su canvas WebGL
+// en cada re-render (keystroke, state change), causando un flash blanco visible.
+const AURORA_COLOR_STOPS = ['#3d84f5', '#06337b', '#3d84f5'];
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -26,7 +32,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Hook para branding dinámico
-  const { branding, isLoading: isBrandingLoading, hasBranding, saveBranding } = useDynamicBranding();
+  const { branding, isLoading: isBrandingLoading, hasBranding } = useDynamicBranding();
 
   // Use secure redirect hook for role-based navigation
   const { isRedirecting } = useSecureRedirect({
@@ -200,6 +206,10 @@ function LoginForm() {
       console.log('User signed in successfully:', user.email);
       console.log('Email confirmed at:', user.email_confirmed_at);
 
+      // Precargar Layout para que al redirigir no aparezca destello blanco de Suspense
+      // Precargar chunks del dashboard en cuanto el login es exitoso (fire-and-forget)
+      preloadDashboardRoute();
+
       // ⚠️ CRÍTICO: Limpiar el flag de logout si existe
       if (localStorage.getItem('is_logging_out') === 'true') {
         localStorage.removeItem('is_logging_out');
@@ -215,71 +225,8 @@ function LoginForm() {
       // Refresh user data and let the secure redirect handle the navigation
       await refreshUser();
 
-      // 🎨 Guardar branding del laboratorio después de login exitoso
-      try {
-        console.log('🎨 Intentando obtener branding del laboratorio...');
-        
-        // Primero obtener el profile con laboratory_id
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('laboratory_id')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error obteniendo profile:', profileError);
-        } else {
-          console.log('Profile obtenido:', profile);
-        }
-
-        if (profile?.laboratory_id) {
-          console.log('Laboratory ID encontrado:', profile.laboratory_id);
-          
-          // Luego obtener el laboratorio con su branding
-          const { data: lab, error: labError } = await supabase
-            .from('laboratories')
-            .select('name, branding, slug')
-            .eq('id', profile.laboratory_id)
-            .single();
-
-          if (labError) {
-            console.error('Error obteniendo laboratory:', labError);
-          } else {
-            console.log('Laboratory obtenido:', lab);
-          }
-
-          if (lab?.branding) {
-            const brandingData = {
-              logo: lab.branding.logo || '',
-              primaryColor: lab.branding.primaryColor || '#3d84f5',
-              laboratoryName: lab.name,
-              icon: lab.branding.icon || lab.slug,
-            };
-            
-            console.log('🎨 Guardando branding:', brandingData);
-            saveBranding(brandingData);
-            console.log('✅ Branding guardado exitosamente');
-          } else {
-            console.log('⚠️ Laboratorio sin branding configurado');
-          }
-        } else {
-          console.log('⚠️ Usuario sin laboratory_id asignado');
-        }
-      } catch (brandingError) {
-        console.error('❌ Error guardando branding:', brandingError);
-        // No bloquear el login si falla el branding
-      }
-
-      // Debug: Verificar si la sesión se mantiene después del refresh
-      setTimeout(async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        console.log('Session after refresh:', session ? 'EXISTS' : 'NULL');
-        if (session) {
-          console.log('Session user:', session.user.email);
-        }
-      }, 1000);
+      // El branding se guarda automáticamente en LaboratoryThemeProvider cuando el lab carga,
+      // no es necesario hacer fetches adicionales aquí.
 
       // No mostrar ningún error ni mensaje aquí. El hook useSecureRedirect se encargará de la redirección.
     } catch (err: unknown) {
@@ -297,7 +244,7 @@ function LoginForm() {
     <div className='w-screen h-screen relative overflow-hidden bg-linear-to-br from-black via-black to-black'>
       {/* Aurora Background with Default Color Palette */}
       <Aurora
-        colorStops={['#3d84f5', '#06337b', '#3d84f5']}
+        colorStops={AURORA_COLOR_STOPS}
         blend={0.7}
         amplitude={1.3}
         speed={0.3}

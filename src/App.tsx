@@ -5,12 +5,14 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { Toaster } from '@shared/components/ui/toaster';
 import { DateRangeProvider } from '@app/providers/DateRangeContext';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import { LoginPage } from '@features/auth/pages/LoginPage';
+// PrivateRoute se importa directamente (no lazy) para evitar el Suspense flash
+// al hacer el primer navigate() desde el login
+import PrivateRouteComponent from '@app/routes/PrivateRoute';
 import {
   RegisterPage,
   ForgotPasswordPage,
@@ -24,10 +26,12 @@ import {
   HomePage,
   ReceptionistHomePage,
   CasesPage,
-  PrivateRoute,
   StandaloneChatPage,
   AseguradorasHomePage,
 } from '@app/routes/lazy-routes';
+
+// Alias para que el JSX siga usando <PrivateRoute>
+const PrivateRoute = PrivateRouteComponent;
 import { imagenologiaRoutes, laboratorioRoutes, aseguradorasRoutes } from '@app/routes/route-config';
 import { FeatureRoute } from '@shared/components/FeatureRoute';
 import {
@@ -42,15 +46,13 @@ import {
   pruebaRoutes,
 } from '@app/routes/route-config';
 
-// Loading component for Suspense fallback
+// Loading component for Suspense fallback (fondo oscuro para evitar destello blanco al cargar Layout)
 const LoadingSpinner = () => (
-  <div className='flex items-center justify-center min-h-screen'>
+  <div className='flex items-center justify-center min-h-screen bg-background text-foreground'>
     <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary'></div>
   </div>
 );
 
-// Create a client instance
-const queryClient = new QueryClient();
 
 function RecoveryGate() {
   const location = useLocation();
@@ -96,8 +98,7 @@ function RecoveryGate() {
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter
+      <BrowserRouter
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true,
@@ -538,7 +539,6 @@ function App() {
           </DateRangeProvider>
         </div>
       </BrowserRouter>
-    </QueryClientProvider>
     </ErrorBoundary>
   );
 }

@@ -18,6 +18,8 @@
 import { useEffect } from 'react';
 import { useLaboratory } from './LaboratoryContext';
 
+const BRANDING_STORAGE_KEY = 'last_lab_branding';
+
 interface LaboratoryThemeProviderProps {
   children: React.ReactNode;
 }
@@ -30,6 +32,20 @@ export function LaboratoryThemeProvider({
   useEffect(() => {
     if (laboratory?.branding) {
       const { primaryColor, secondaryColor } = laboratory.branding;
+
+      // Persistir branding en localStorage para que LoginForm lo muestre en el próximo inicio
+      // Esto reemplaza el fetch manual que hacía LoginForm después de cada login
+      try {
+        const brandingData = {
+          logo: laboratory.branding.logo || '',
+          primaryColor: primaryColor || '#3d84f5',
+          laboratoryName: laboratory.name,
+          icon: laboratory.branding.icon || laboratory.slug,
+        };
+        localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(brandingData));
+      } catch {
+        // Ignorar errores de localStorage
+      }
 
       // Inyectar variables CSS en el :root (formato camelCase)
       document.documentElement.style.setProperty(

@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/services/supabase/config/config';
 import { useAuth } from './AuthContext';
+import { useUserProfile } from '@/shared/hooks/useUserProfile';
 import type { Laboratory } from '@/shared/types/types';
-import { extractLaboratoryId } from '@/services/supabase/types/helpers';
 import { updateFavicon } from '@/shared/utils/favicon-utils';
 
 interface LaboratoryContextType {
@@ -21,50 +21,17 @@ export function LaboratoryProvider({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
+  // Reutiliza el perfil ya cacheado por React Query (useUserProfile en useSecureRedirect/LoginForm)
+  // para obtener laboratory_id sin hacer un fetch extra a Supabase
+  const { profile, isLoading: profileLoading } = useUserProfile();
   const [laboratory, setLaboratory] = useState<Laboratory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Guard: evita recargar el laboratorio si ya está cargado para el mismo ID
+  const loadedForLabIdRef = useRef<string | null>(null);
 
-  const loadLaboratory = async () => {
-    if (!user) {
-      setLaboratory(null);
-      setIsLoading(false);
-      return;
-    }
-
+  const loadLaboratory = async (laboratoryId: string) => {
+    loadedForLabIdRef.current = laboratoryId;
     try {
-      // Obtener laboratory_id del perfil del usuario
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('laboratory_id')
-        .eq('id', user.id)
-        .single();
-
-      const laboratoryId = extractLaboratoryId(profile);
-
-      if (profileError || !laboratoryId) {
-        console.error('Error loading user profile:', profileError);
-        
-        // Si el error es PGRST116 (no rows returned), significa que el perfil fue eliminado
-        // Hacer logout automático
-        if (profileError?.code === 'PGRST116') {
-          console.warn('⚠️ Perfil eliminado detectado en LaboratoryContext (PGRST116) - haciendo logout automático');
-          try {
-            await supabase.auth.signOut();
-            setTimeout(() => {
-              window.location.href = '/';
-            }, 500);
-          } catch (logoutError) {
-            console.error('Error durante logout automático:', logoutError);
-            window.location.href = '/';
-          }
-        }
-        
-        setLaboratory(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // Cargar datos completos del laboratorio
       const { data: lab, error: labError } = await supabase
         .from('laboratories' as never)
         .select('*')
@@ -74,26 +41,18 @@ export function LaboratoryProvider({
       if (labError || !lab) {
         console.error('Error loading laboratory:', labError);
         setLaboratory(null);
-        setIsLoading(false);
         return;
       }
 
       setLaboratory(lab as unknown as Laboratory);
 
-      // DEBUG: Log features
       const labData = lab as unknown as Laboratory;
       console.log('🏥 Laboratory loaded:', labData?.name, '(', labData?.slug, ')');
       console.log('🎯 Features:', labData?.features);
       console.log('💬 hasChatbot:', labData?.features?.hasChatbot);
 
-      // Aplicar favicon si existe en el branding
-      console.log('🔍 Laboratory branding data:', labData?.branding);
-      
-      // Prioridad: favicon > logo
       const faviconUrl = labData?.branding?.favicon || labData?.branding?.logo;
-      
       if (faviconUrl) {
-        console.log('✅ Updating favicon to:', faviconUrl);
         updateFavicon(faviconUrl);
       } else {
         console.warn('⚠️ No favicon or logo found in laboratory branding');
@@ -107,18 +66,57 @@ export function LaboratoryProvider({
   };
 
   useEffect(() => {
-    loadLaboratory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intencional: solo recargar cuando cambie user
-  }, [user]);
+    if (!user?.id) {
+      loadedForLabIdRef.current = null;
+      setLaboratory(null);
+      setIsLoading(false);
+      return;
+    }
 
-  const refreshLaboratory = async () => {
+    // Esperar a que el perfil esté disponible (viene del caché de React Query)
+    if (profileLoading) return;
+
+    const laboratoryId = (profile as any)?.laboratory_id as string | undefined;
+
+    if (!laboratoryId) {
+      // Perfil cargado pero sin laboratory_id (perfil eliminado u otro error)
+      setLaboratory(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // Si el ref ya apunta a este mismo laboratoryId, el lab está siendo cargado o ya fue cargado.
+    // Evita re-fetches innecesarios causados por background refetches de React Query
+    // que cambian la referencia del objeto profile sin cambiar el laboratory_id.
+    if (loadedForLabIdRef.current === laboratoryId) {
+      return;
+    }
+
+    loadLaboratory(laboratoryId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, profileLoading, (profile as any)?.laboratory_id]);
+
+  const refreshLaboratory = useCallback(async () => {
+    const laboratoryId = (profile as any)?.laboratory_id as string | undefined;
+    if (!laboratoryId) return;
+    // Resetear el guard para forzar un re-fetch en recarga explícita
+    loadedForLabIdRef.current = null;
     setIsLoading(true);
-    await loadLaboratory();
-  };
+    await loadLaboratory(laboratoryId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(profile as any)?.laboratory_id]);
+
+  // useMemo evita que los consumidores de useLaboratory() re-rendericen cuando
+  // LaboratoryContext re-renderiza por razones internas (ej: React Query subscription)
+  // pero laboratory/isLoading no han cambiado realmente.
+  const contextValue = useMemo(
+    () => ({ laboratory, isLoading, refreshLaboratory }),
+    [laboratory, isLoading, refreshLaboratory],
+  );
 
   return (
     <LaboratoryContext.Provider
-      value={{ laboratory, isLoading, refreshLaboratory }}
+      value={contextValue}
     >
       {children}
     </LaboratoryContext.Provider>

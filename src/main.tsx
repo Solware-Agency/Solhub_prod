@@ -11,6 +11,8 @@ if (import.meta.env.PROD && typeof window !== 'undefined') {
     window.location.reload()
   })
 }
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@shared/utils/queryClient';
 import { AuthProvider } from '@app/providers/AuthContext.tsx'
 import { LaboratoryProvider } from '@app/providers/LaboratoryContext.tsx';
 import { LaboratoryThemeProvider } from '@app/providers/LaboratoryThemeProvider.tsx';
@@ -49,6 +51,7 @@ if (typeof document !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <ThemeProvider defaultTheme='system' storageKey='ui-theme'>
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <LaboratoryProvider>
         <SptThemeEnforcer />
@@ -60,5 +63,6 @@ createRoot(document.getElementById('root')!).render(
         </LaboratoryThemeProvider>
       </LaboratoryProvider>
     </AuthProvider>
+    </QueryClientProvider>
   </ThemeProvider>,
 );

@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { useLaboratory } from '@app/providers/LaboratoryContext'
 import type { JSX } from 'react'
 
 interface PrivateRouteProps {
@@ -15,16 +16,19 @@ interface PrivateRouteProps {
 const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 	const { user, loading: authLoading, signOut } = useAuth()
 	const { profile, isLoading: profileLoading, error: profileError } = useUserProfile()
+	const { laboratory, isLoading: labLoading } = useLaboratory()
 
-	// Show loading spinner while checking authentication and profile
-	if (authLoading || profileLoading) {
+	// Mostrar spinner mientras:
+	// 1. Auth todavía resuelve
+	// 2. Profile se está cargando por primera vez (no está en caché)
+	// 3. Laboratory se está cargando por primera vez (para que las CSS variables estén listas antes de renderizar)
+	const isInitialLoad = authLoading || (profileLoading && !profile) || (labLoading && !laboratory)
+
+	if (isInitialLoad) {
 		return (
-			<div className="w-screen h-screen bg-dark flex items-center justify-center">
-				<div className="bg-white p-8 rounded-lg">
-					<div className="flex items-center gap-3">
-						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-						<p className="text-lg">Verificando permisos...</p>
-					</div>
+			<div className="w-screen h-screen bg-background flex items-center justify-center">
+				<div className="flex items-center gap-3">
+					<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
 				</div>
 			</div>
 		)
@@ -64,10 +68,10 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 				window.location.href = '/'
 			})
 			return (
-				<div className="w-screen h-screen bg-dark flex items-center justify-center">
-					<div className="bg-white p-8 rounded-lg max-w-md text-center">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-						<p className="text-gray-600">Cerrando sesión...</p>
+				<div className="w-screen h-screen bg-background flex items-center justify-center">
+					<div className="bg-card text-card-foreground p-8 rounded-lg border border-border max-w-md text-center">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+						<p className="text-muted-foreground">Cerrando sesión...</p>
 					</div>
 				</div>
 			)
@@ -75,9 +79,9 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 		
 		// Para otros errores, mostrar mensaje de error con opción de reintentar
 		return (
-			<div className="w-screen h-screen bg-dark flex items-center justify-center">
-				<div className="bg-white p-8 rounded-lg max-w-md text-center">
-					<div className="text-red-500 mb-4">
+			<div className="w-screen h-screen bg-background flex items-center justify-center">
+				<div className="bg-card text-card-foreground p-8 rounded-lg border border-border max-w-md text-center">
+					<div className="text-destructive mb-4">
 						<svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								strokeLinecap="round"
@@ -87,13 +91,13 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
 							/>
 						</svg>
 					</div>
-					<h3 className="text-lg font-semibold text-gray-900 mb-2">Error de Perfil</h3>
-					<p className="text-gray-600 mb-4">
+					<h3 className="text-lg font-semibold mb-2">Error de Perfil</h3>
+					<p className="text-muted-foreground mb-4">
 						No se pudo cargar tu perfil de usuario. Esto puede ser un problema temporal.
 					</p>
 					<button
 						onClick={() => window.location.reload()}
-						className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-none"
+						className="bg-primary text-primary-foreground px-4 py-2 rounded hover:opacity-90 transition-none"
 					>
 						Reintentar
 					</button>

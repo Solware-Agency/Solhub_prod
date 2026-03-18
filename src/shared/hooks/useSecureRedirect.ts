@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, startTransition } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@app/providers/AuthContext'
 import { useUserProfile } from './useUserProfile'
-import { supabase } from '@services/supabase/config/config'
+import { useLaboratory } from '@app/providers/LaboratoryContext'
+import { preloadDashboardRoute } from '@app/routes/lazy-routes'
 
 interface UseSecureRedirectOptions {
 	/** Whether to redirect immediately on mount */
@@ -42,12 +43,20 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 	const location = useLocation()
 	const { user, loading: authLoading } = useAuth()
 	const { profile, isLoading: profileLoading, error: profileError } = useUserProfile()
+	const { laboratory } = useLaboratory()
 	const [isRedirecting, setIsRedirecting] = useState(false)
+	/** Evita doble redirect por Strict Mode o múltiples ejecuciones del effect */
+	const hasRedirectedRef = useRef(false)
 
 	/**
 	 * Performs the actual redirect based on user role
 	 */
 	const redirectUser = async () => {
+		// Evitar múltiples redirects (p. ej. por React Strict Mode o re-ejecución del effect)
+		if (hasRedirectedRef.current) {
+			return
+		}
+
 		// ⚠️ CRÍTICO: No redirigir si estamos en proceso de logout
 		const isLoggingOut = localStorage.getItem('is_logging_out') === 'true'
 		if (isLoggingOut) {
@@ -75,9 +84,10 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 
 		// Check if email is verified
 		if (!user.email_confirmed_at) {
+			hasRedirectedRef.current = true
 			console.log('Email not confirmed, redirecting to verification notice')
 			setIsRedirecting(true)
-			navigate('/email-verification-notice', { replace: true })
+			startTransition(() => navigate('/email-verification-notice', { replace: true }))
 			setTimeout(() => setIsRedirecting(false), 500)
 			return
 		}
@@ -90,22 +100,15 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 
 		// Check if user is approved - FIXED: Only redirect to pending approval if estado is explicitly "pendiente"
 		if (profile.estado === 'pendiente') {
+			hasRedirectedRef.current = true
 			console.log('User not approved, redirecting to pending approval page')
 			setIsRedirecting(true)
-			// Hard refresh of profile to avoid stale read after recent approval
-			// The hook useUserProfile already refetches on mount, but in case of a race we refetch explicitly
-			// and only if sigue pendiente, entonces sí redirigimos
-			setTimeout(async () => {
-				try {
-					// leverages useUserProfile's refetch via navigation side-effects; no direct call here
-					navigate('/pending-approval', { replace: true })
-				} finally {
-					setTimeout(() => setIsRedirecting(false), 500)
-				}
-			}, 0)
+			startTransition(() => navigate('/pending-approval', { replace: true }))
+			setTimeout(() => setIsRedirecting(false), 500)
 			return
 		}
 
+		hasRedirectedRef.current = true
 		setIsRedirecting(true)
 
 		// Determine redirect path based on role
@@ -157,35 +160,31 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		}
 
 		// Inntegras: enviar a módulo aseguradoras si corresponde
-		try {
-			const laboratoryId = (profile as { laboratory_id?: string }).laboratory_id
-			if (laboratoryId) {
-				const { data: laboratory } = await supabase
-					.from('laboratories' as any)
-					.select('slug, features')
-					.eq('id', laboratoryId)
-					.single()
-
-				const hasAseguradoras = (laboratory as any)?.features?.hasAseguradoras === true
-				const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'coordinador' || profile.role === 'owner' || profile.role === 'prueba'
-				if (hasAseguradoras && canSeeAseguradoras) {
-					redirectPath = '/aseguradoras/home'
-				}
+		// Usa el laboratorio ya cargado en contexto (sin fetch adicional)
+		if (laboratory) {
+			const hasAseguradoras = (laboratory as any)?.features?.hasAseguradoras === true
+			const canSeeAseguradoras = profile.role === 'employee' || profile.role === 'coordinador' || profile.role === 'owner' || profile.role === 'prueba'
+			if (hasAseguradoras && canSeeAseguradoras) {
+				redirectPath = '/aseguradoras/home'
 			}
-		} catch (error) {
-			console.warn('⚠️ No se pudo obtener laboratorio para redirect:', error)
 		}
 
 		console.log(`Redirecting user with role "${profile.role}" to: ${redirectPath}`)
 
+		// Precargar los chunks necesarios ANTES de navegar para evitar el destello blanco de Suspense
+		await preloadDashboardRoute(profile.role)
+
 		// Call callback if provided
 		onRedirect?.(profile.role, redirectPath)
 
-		// Perform redirect
-		navigate(redirectPath, { replace: true })
+		// startTransition: React mantiene la UI actual visible mientras renderiza la nueva ruta
+		// en segundo plano. Si algún lazy component suspende, NO muestra el fallback de Suspense
+		// (sin parpadeo blanco). Solo hace el swap cuando la nueva UI está completamente lista.
+		startTransition(() => {
+			navigate(redirectPath, { replace: true })
+		})
 
-		// Reset redirecting state after a short delay
-		setTimeout(() => setIsRedirecting(false), 500)
+		setIsRedirecting(false)
 	}
 
 	/**
@@ -213,6 +212,13 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 		return profile.role === requiredRole
 	}
 
+	// Reset ref cuando no hay usuario (logout) para permitir redirect en el próximo login
+	useEffect(() => {
+		if (!user) {
+			hasRedirectedRef.current = false
+		}
+	}, [user])
+
 	// Auto-redirect on mount if enabled and all data is ready
 	useEffect(() => {
 		// ⚠️ CRÍTICO: No redirigir si estamos en proceso de logout
@@ -222,22 +228,20 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			return
 		}
 
-		console.log('useSecureRedirect effect:', {
-			redirectOnMount,
-			authLoading,
-			profileLoading,
-			isRedirecting,
-			hasUser: !!user,
-			hasProfile: !!profile,
-			profileError,
-			userEmail: user?.email,
-			profileRole: profile?.role,
-			profileEstado: profile?.estado,
-			isLoggingOut,
-		})
+		if (process.env.NODE_ENV === 'development') {
+			console.log('useSecureRedirect effect:', {
+				redirectOnMount,
+				authLoading,
+				profileLoading,
+				isRedirecting,
+				hasUser: !!user,
+				hasProfile: !!profile,
+			})
+		}
 
 		const checkingLab = localStorage.getItem('auth_checking_lab_status') === '1'
-		if (redirectOnMount && !authLoading && !profileLoading && !isRedirecting && user && profile && !profileError && !isLoggingOut && !checkingLab) {
+		// Usamos hasRedirectedRef (no isRedirecting) como guard para evitar re-ejecuciones innecesarias
+		if (redirectOnMount && !authLoading && !profileLoading && !hasRedirectedRef.current && user && profile && !profileError && !isLoggingOut && !checkingLab) {
 			const currentPath = location.pathname
 
 			// No redirigir en flujo de restablecimiento de contraseña: el usuario debe poder ver /new-password
@@ -294,8 +298,8 @@ export const useSecureRedirect = (options: UseSecureRedirectOptions = {}): UseSe
 			console.log('Calling redirectUser from useEffect')
 			redirectUser()
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- location.hash/search y redirectUser omitidos para evitar loops
-	}, [redirectOnMount, authLoading, profileLoading, user, profile, profileError, isRedirecting, location.pathname])
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- isRedirecting y redirectUser omitidos intencionalmente: usamos hasRedirectedRef como guard
+	}, [redirectOnMount, authLoading, profileLoading, user, profile, profileError, location.pathname])
 
 	return {
 		isRedirecting,

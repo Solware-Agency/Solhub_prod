@@ -91,29 +91,40 @@ export const AuthCallback = lazy(() =>
 )
 
 // Dashboard pages - lazy loaded
-export const Layout = lazy(() => 
-  lazyRetry(
-    () => import('@shared/components/layout/Layout'),
-    'Layout'
-  )
-)
 
-export const HomePage = lazy(() => 
-  lazyRetry(
-    () => import('@features/dashboard/components/HomePage'),
-    'HomePage'
-  )
-)
+// Loaders individuales reutilizados por lazy() y por preloadDashboardRoute()
+const _layoutLoader = () => import('@shared/components/layout/Layout')
+const _homePageLoader = () => import('@features/dashboard/components/HomePage')
+const _receptionistLoader = () => import('@features/dashboard/components/ReceptionistHomePage')
+
+export const Layout = lazy(() => lazyRetry(_layoutLoader, 'Layout'))
+export const HomePage = lazy(() => lazyRetry(_homePageLoader, 'HomePage'))
+export const ReceptionistHomePage = lazy(() => lazyRetry(_receptionistLoader, 'ReceptionistHomePage'))
+
+/**
+ * Precarga los chunks necesarios para la ruta de dashboard según el rol.
+ * Debe awaitearse antes de llamar navigate() para evitar destellos blancos de Suspense.
+ */
+export async function preloadDashboardRoute(role?: string): Promise<void> {
+  const loads: Promise<unknown>[] = [_layoutLoader()]
+
+  const ownerRoles = ['owner', 'medicowner', 'prueba']
+  const employeeRoles = ['employee', 'coordinador', 'residente', 'citotecno', 'patologo',
+    'medico_tratante', 'enfermero', 'call_center', 'admin', 'imagenologia', 'laboratorio']
+
+  if (role && ownerRoles.includes(role)) {
+    loads.push(_homePageLoader())
+  } else if (role && employeeRoles.includes(role)) {
+    loads.push(_receptionistLoader())
+  }
+
+  await Promise.allSettled(loads)
+}
+
 export const StatsPage = lazy(() => 
   lazyRetry(
     () => import('@features/stats/pages/StatsPage'),
     'StatsPage'
-  )
-)
-export const ReceptionistHomePage = lazy(() => 
-  lazyRetry(
-    () => import('@features/dashboard/components/ReceptionistHomePage'),
-    'ReceptionistHomePage'
   )
 )
 export const ReportsPage = lazy(() => 
