@@ -30,7 +30,7 @@ import { updateMedicalCase, deleteMedicalCase, findCaseByCode } from '@/services
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useQuery } from '@tanstack/react-query'
-import { supabase, SEND_EMAIL_FUNCTION_URL } from '@/services/supabase/config/config'
+import { supabase, SEND_EMAIL_FUNCTION_URL, getDownloadPdfHeaders } from '@/services/supabase/config/config'
 import { useToast } from '@shared/hooks/use-toast'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { Calendar } from '@shared/components/ui/calendar'
 import { Textarea } from '@shared/components/ui/textarea'
 import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service'
+import { getDownloadUrl, isEdgeFunctionDownloadUrl } from '@/services/utils/download-utils'
 import { createDropdownOptions, FormDropdown } from '@shared/components/ui/form-dropdown'
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
 import { AutocompleteInput } from '@shared/components/ui/autocomplete-input'
@@ -1275,38 +1276,95 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 				return
 			}
 
+			if (!currentCase?.id) {
+				toast({
+					title: '❌ Error',
+					description: 'No se encontró el ID del caso.',
+					variant: 'destructive',
+				})
+				return
+			}
+
 			try {
 				setIsDownloadingPDF(true)
-				const response = await fetch(informeQrUrl)
-				if (!response.ok) {
-					throw new Error(`Error al descargar: ${response.status}`)
+
+				// Obtener el token del caso
+				const { data: caseData, error: caseError } = await supabase
+					.from('medical_records_clean')
+					.select('token, informepdf_url, informe_qr')
+					.eq('id', currentCase.id)
+					.single()
+
+				if (caseError) {
+					console.error('Error al obtener datos del caso:', caseError)
+					throw new Error('No se pudo obtener la información del caso')
 				}
-				const blob = await response.blob()
-				const url = window.URL.createObjectURL(blob)
-				const link = document.createElement('a')
-				link.href = url
-				const sanitizedName = (currentCase?.nombre || 'Paciente')
-					.normalize('NFD')
-					.replace(/[\u0300-\u036f]/g, '')
-					.replace(/[^a-zA-Z0-9\s]/g, '')
-					.replace(/\s+/g, '_')
-					.trim()
-				link.download = `${currentCase?.code || 'informe'}-${sanitizedName}.pdf`
-				document.body.appendChild(link)
-				link.click()
-				document.body.removeChild(link)
-				window.URL.revokeObjectURL(url)
-				toast({
-					title: '✅ PDF descargado',
-					description: 'El informe se ha descargado correctamente.',
-				})
+
+				// Usar getDownloadUrl para construir la URL correcta (con token en producción)
+				const pdfUrl = getDownloadUrl(
+					currentCase.id,
+					caseData.token ?? null,
+					caseData.informepdf_url ?? informeQrUrl
+				)
+
+				// Si es una Edge Function URL, usar fetch con headers de autorización
+				if (isEdgeFunctionDownloadUrl(pdfUrl)) {
+					const downloadOptions: RequestInit = { headers: getDownloadPdfHeaders() }
+					const response = await fetch(pdfUrl, downloadOptions)
+					if (!response.ok) {
+						throw new Error(`Error al descargar: ${response.status}`)
+					}
+					const blob = await response.blob()
+					const url = window.URL.createObjectURL(blob)
+					const link = document.createElement('a')
+					link.href = url
+					const sanitizedName = (currentCase?.nombre || 'Paciente')
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.replace(/[^a-zA-Z0-9\s]/g, '')
+						.replace(/\s+/g, '_')
+						.trim()
+					link.download = `${currentCase?.code || 'informe'}-${sanitizedName}.pdf`
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
+					window.URL.revokeObjectURL(url)
+					toast({
+						title: '✅ PDF descargado',
+						description: 'El informe se ha descargado correctamente.',
+					})
+				} else {
+					// En desarrollo o URL directa, usar fetch normal
+					const response = await fetch(pdfUrl)
+					if (!response.ok) {
+						throw new Error(`Error al descargar: ${response.status}`)
+					}
+					const blob = await response.blob()
+					const url = window.URL.createObjectURL(blob)
+					const link = document.createElement('a')
+					link.href = url
+					const sanitizedName = (currentCase?.nombre || 'Paciente')
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.replace(/[^a-zA-Z0-9\s]/g, '')
+						.replace(/\s+/g, '_')
+						.trim()
+					link.download = `${currentCase?.code || 'informe'}-${sanitizedName}.pdf`
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
+					window.URL.revokeObjectURL(url)
+					toast({
+						title: '✅ PDF descargado',
+						description: 'El informe se ha descargado correctamente.',
+					})
+				}
 			} catch (err) {
 				console.error('Error al descargar el PDF:', err)
-				// Fallback: abrir en nueva pestaña si fetch falla (ej. CORS)
-				window.open(informeQrUrl, '_blank')
 				toast({
-					title: 'ℹ️ Abriendo informe',
-					description: 'El PDF se abrió en una nueva pestaña. Puedes descargarlo desde allí.',
+					title: '❌ Error al descargar',
+					description: err instanceof Error ? err.message : 'No se pudo descargar el informe. Intenta nuevamente.',
+					variant: 'destructive',
 				})
 			} finally {
 				setIsDownloadingPDF(false)
