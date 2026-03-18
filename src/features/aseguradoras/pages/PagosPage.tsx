@@ -282,26 +282,6 @@ const PagosPage = () => {
 								}}
 							/>
 						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<span>Filas:</span>
-							<Select
-								value={String(polizaItemsPerPage)}
-								onValueChange={(v) => {
-									const n = Number(v)
-									if (!Number.isNaN(n)) setPolizaItemsPerPage(n)
-									setPolizaPage(1)
-								}}
-							>
-								<SelectTrigger className="w-20">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="4">4</SelectItem>
-									<SelectItem value="8">8</SelectItem>
-									<SelectItem value="16">16</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
 					</div>
 				</div>
 				<div className="p-4 min-h-55 flex-1 flex flex-col">
@@ -413,26 +393,6 @@ const PagosPage = () => {
 							/>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="flex items-center gap-2 text-sm text-gray-500">
-								<span>Filas:</span>
-								<Select
-									value={String(historialItemsPerPage)}
-									onValueChange={(v) => {
-										const n = Number(v)
-										if (!Number.isNaN(n)) setHistorialItemsPerPage(n)
-										setHistorialPage(1)
-									}}
-								>
-									<SelectTrigger className="w-20">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="4">4</SelectItem>
-										<SelectItem value="8">8</SelectItem>
-										<SelectItem value="16">16</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
 							<Button
 								variant="outline"
 								size="sm"

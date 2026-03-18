@@ -185,18 +185,18 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 				</InfoSection>
 
 				<InfoSection title="Fechas" icon={CalendarDays}>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
 						<div>
 							<p className="text-xs text-gray-500">Fecha de emisión</p>
 							<p className="text-sm font-medium">{formatDate(poliza.fecha_inicio)}</p>
 						</div>
 						<div>
-							<p className="text-xs text-gray-500">Fecha vencimiento</p>
-							<p className="text-sm font-medium">{formatDate(poliza.fecha_vencimiento)}</p>
-						</div>
-						<div>
 							<p className="text-xs text-gray-500">Día vencimiento</p>
 							<p className="text-sm font-medium">{poliza.dia_vencimiento ?? 'Sin día'}</p>
+						</div>
+						<div>
+							<p className="text-xs text-gray-500">Fecha vencimiento</p>
+							<p className="text-sm font-medium">{formatDate(poliza.fecha_vencimiento)}</p>
 						</div>
 						<div>
 							<p className="text-xs text-gray-500">Próximo pago</p>

@@ -74,14 +74,6 @@ const AseguradosPage = () => {
 		setCurrentPage(page)
 	}, [])
 
-	const handleItemsPerPage = useCallback((value: string) => {
-		const parsed = Number(value)
-		if (!Number.isNaN(parsed)) {
-			setItemsPerPage(parsed)
-			setCurrentPage(1)
-		}
-	}, [])
-
 	const resetForm = () => {
 		setForm({
 			full_name: '',
@@ -235,17 +227,6 @@ const AseguradosPage = () => {
 							/>
 						</div>
 						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
-							<span>Filas:</span>
-							<Select value={String(itemsPerPage)} onValueChange={handleItemsPerPage}>
-								<SelectTrigger className="w-20">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="16">16</SelectItem>
-									<SelectItem value="32">32</SelectItem>
-									<SelectItem value="50">50</SelectItem>
-								</SelectContent>
-							</Select>
 							<Button
 								variant="outline"
 								size="sm"

@@ -275,7 +275,11 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 											</div>
 											<div>
 												<p className="text-xs text-gray-500 dark:text-gray-400">Web</p>
-												<a href={aseguradora.web ?? ''} target="_blank" className="text-sm font-medium text-gray-900 dark:text-gray-100 underline">{aseguradora.web || 'Sin web'}</a>
+												{aseguradora.web?.trim() ? (
+													<a href={aseguradora.web.trim()} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">{aseguradora.web.trim()}</a>
+												) : (
+													<p className="text-sm font-medium text-gray-900 dark:text-gray-100">Sin web</p>
+												)}
 											</div>
 										</div>
 									</InfoSection>
