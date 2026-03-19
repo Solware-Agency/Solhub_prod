@@ -23,7 +23,7 @@ import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import { getSampleTypeCostsByLaboratory, type SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service';
 import { findPatientByCedula } from '@services/supabase/patients/patients-service';
-import { getCasesByPatientIdWithInfo } from '@services/supabase/cases/medical-cases-service';
+import { getCasesByPatientIdWithInfo, type MedicalCaseWithPatient } from '@services/supabase/cases/medical-cases-service';
 import { formatCedulaCanonical } from '@services/supabase/patients/identificaciones-service';
 
 const getInitialFormValues = (): FormValues => ({
@@ -393,12 +393,12 @@ export function MedicalFormContainer() {
 		idType && idNumber && idType !== 'S/C' && String(idNumber).trim().length > 0
 			? (formatCedulaCanonical(`${idType}-${idNumber}`) ?? `${idType}-${idNumber}`)
 			: '';
-	const { data: patientFinancialSummary = { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> } } = useQuery({
+	const { data: patientFinancialSummary = { credit: 0, debt: 0, debtCases: [] as MedicalCaseWithPatient[] } } = useQuery({
 		queryKey: ['patient-financial-summary', cedulaForCredit, laboratory?.id],
 		queryFn: async () => {
-			if (!cedulaForCredit) return { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> };
+			if (!cedulaForCredit) return { credit: 0, debt: 0, debtCases: [] as MedicalCaseWithPatient[] };
 			const patient = await findPatientByCedula(cedulaForCredit);
-			if (!patient?.id) return { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> };
+			if (!patient?.id) return { credit: 0, debt: 0, debtCases: [] as MedicalCaseWithPatient[] };
 			const cases = await getCasesByPatientIdWithInfo(patient.id);
 			const summary = (cases || []).reduce(
 				(acc, c) => {
@@ -407,15 +407,11 @@ export function MedicalFormContainer() {
 					acc.credit += Math.max(0, credit);
 					acc.debt += Math.max(0, remaining);
 					if (remaining > 0) {
-						acc.debtCases.push({
-							code: String((c as any).code ?? 'SIN-CODIGO'),
-							date: String((c as any).date ?? (c as any).created_at ?? ''),
-							remaining,
-						});
+						acc.debtCases.push(c);
 					}
 					return acc;
 				},
-				{ credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> },
+				{ credit: 0, debt: 0, debtCases: [] as MedicalCaseWithPatient[] },
 			);
 			return summary;
 		},

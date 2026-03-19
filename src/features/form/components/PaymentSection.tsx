@@ -23,9 +23,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/t
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@shared/components/ui/dialog'
 import { Input } from '@shared/components/ui/input'
 import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
-import { Copy, Info } from 'lucide-react'
+import { Copy, Eye, Info } from 'lucide-react'
 import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service'
+import type { MedicalCaseWithPatient } from '@services/supabase/cases/medical-cases-service'
 import { cn } from '@shared/lib/cn'
+import UnifiedCaseModal from '@features/cases/components/UnifiedCaseModal'
 
 export type PriceTypeOption = 'taquilla' | 'convenios' | 'descuento'
 
@@ -57,7 +59,7 @@ interface PaymentSectionProps {
 	/** Deuda total acumulada del paciente (suma de remaining > 0 en sus casos). */
 	patientTotalDebt?: number
 	/** Lista de casos con deuda para mostrar en modal. */
-	patientDebtCases?: Array<{ code: string; date: string; remaining: number }>
+	patientDebtCases?: MedicalCaseWithPatient[]
 	hasPositiveBalance?: boolean
 }
 
@@ -87,6 +89,8 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 	} = props
 	const { toast } = useToast()
 	const [isDebtModalOpen, setIsDebtModalOpen] = useState(false)
+	const [selectedCaseForModal, setSelectedCaseForModal] = useState<MedicalCaseWithPatient | null>(null)
+	const [reopenDebtModalOnCaseClose, setReopenDebtModalOnCaseClose] = useState(false)
 	const { setValue } = useFormContext<FormValues>()
 	const creditApplied = useWatch({ control, name: 'creditApplied', defaultValue: 0 }) ?? 0
 	const factorConvenios = (100 - convenioDiscountPercent) / 100
@@ -224,7 +228,22 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		}
 	}
 
+	const openCaseFromDebtModal = (caseItem: MedicalCaseWithPatient) => {
+		setReopenDebtModalOnCaseClose(true)
+		setIsDebtModalOpen(false)
+		setSelectedCaseForModal(caseItem)
+	}
+
+	const handleCloseUnifiedCaseModal = () => {
+		setSelectedCaseForModal(null)
+		if (reopenDebtModalOnCaseClose) {
+			setIsDebtModalOpen(true)
+			setReopenDebtModalOnCaseClose(false)
+		}
+	}
+
 	return (
+		<>
 		<Card className="transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 			<CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
 				<CardTitle className="text-lg sm:text-xl">Pago</CardTitle>
@@ -244,27 +263,29 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 									Codigo, fecha y monto pendiente por caso. Puedes copiar el codigo con click.
 								</DialogDescription>
 							</DialogHeader>
-							<div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
+							<div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1 mt-2">
 								{patientDebtCases.length === 0 ? (
 									<div className="text-sm text-muted-foreground">No hay casos con deuda para este paciente.</div>
 								) : (
 									patientDebtCases.map((item) => (
 										<div
-											key={`${item.code}-${item.date}-${item.remaining}`}
+											key={item.id || `${item.code}-${item.date}-${item.remaining}`}
 											className="rounded-md border bg-muted/30 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
 										>
 											<div className="space-y-1">
 												<button
 													type="button"
-													className="inline-flex items-center rounded bg-background px-2 py-1 text-xs font-semibold border hover:bg-accent"
-													onClick={() => copyCaseCode(item.code)}
+													className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-pointer"
+													onClick={() => copyCaseCode(item.code || 'SIN-CODIGO')}
 													title="Copiar codigo"
 												>
-													{item.code}
+													{item.code || 'SIN-CODIGO'}
 												</button>
-												<p className="text-xs text-muted-foreground">Fecha: {formatCaseDate(item.date)}</p>
+												<p className="text-xs text-muted-foreground">
+													Fecha: {formatCaseDate(item.created_at || item.date)}
+												</p>
 											</div>
-											<div className="flex items-center gap-2">
+											<div className="flex items-center gap-2 flex-wrap justify-end">
 												<p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
 													${Number(item.remaining || 0).toFixed(2)} USD
 												</p>
@@ -272,11 +293,19 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 													type="button"
 													variant="outline"
 													size="sm"
-													className="h-8 px-2"
-													onClick={() => copyCaseCode(item.code)}
+													className="h-8 px-2 cursor-pointer"
+													onClick={() => openCaseFromDebtModal(item)}
 												>
-													<Copy className="size-3.5 mr-1" />
-													Copiar
+													<Eye className="size-4" />
+												</Button>
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="h-8 px-2 cursor-pointer"
+													onClick={() => copyCaseCode(item.code || 'SIN-CODIGO')}
+												>
+													<Copy className="size-4" />
 												</Button>
 											</div>
 										</div>
@@ -465,6 +494,16 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 				/>
 			</CardContent>
 		</Card>
+			<UnifiedCaseModal
+				case_={selectedCaseForModal}
+				isOpen={selectedCaseForModal !== null}
+				onClose={handleCloseUnifiedCaseModal}
+				onSave={() => {
+					// Sin refetch por ahora; los datos de deuda se actualizan por query del contenedor.
+				}}
+				onCaseSelect={() => { }}
+			/>
+		</>
 	)
 })
 

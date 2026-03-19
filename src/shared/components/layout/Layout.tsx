@@ -27,23 +27,25 @@ const Layout: React.FC = () => {
 		const checkOverlay = () => {
 			// Verificar clase has-overlay-open (para ocultar hamburguesa: sidebar o modal)
 			const hasOverlayClass = document.body.classList.contains('has-overlay-open')
-			
+
 			// Verificar si hay algún Dialog de Radix abierto
-			const hasRadixDialog = document.querySelector('[data-radix-dialog-content][data-state="open"]') !== null ||
-			                         document.querySelector('[data-state="open"][role="dialog"]') !== null
-			
+			const hasRadixDialog =
+				document.querySelector('[data-radix-dialog-content][data-state="open"]') !== null ||
+				document.querySelector('[data-state="open"][role="dialog"]') !== null
+
 			// Verificar si el modal de detalles del caso está visible (buscar el panel con z-index muy alto)
-			const hasCaseModal = document.querySelector('[class*="z-[9999999999999999"]') !== null ||
-			                      document.querySelector('[class*="z-\\[99999999999999999\\]"]') !== null
-			
+			const hasCaseModal =
+				document.querySelector('[class*="z-[9999999999999999"]') !== null ||
+				document.querySelector('[class*="z-\\[99999999999999999\\]"]') !== null
+
 			setHasOverlayOpen(hasOverlayClass || hasRadixDialog || hasCaseModal)
 			// Solo modal/dialog: así el sidebar sigue recibiendo clics cuando solo está abierto el sidebar
 			setHasModalOrDialogOpen(hasRadixDialog || hasCaseModal)
 		}
-		
+
 		// Verificar inicialmente
 		checkOverlay()
-		
+
 		// Observar cambios en las clases del body y en el DOM para detectar cambios en modales
 		const observer = new MutationObserver(() => {
 			// Usar setTimeout para asegurar que se detecte después de que se actualice la clase
@@ -53,12 +55,12 @@ const Layout: React.FC = () => {
 			attributes: true,
 			attributeFilter: ['class'],
 			subtree: true,
-			childList: true
+			childList: true,
 		})
-		
+
 		// También verificar periódicamente como fallback
 		const interval = setInterval(checkOverlay, 100)
-		
+
 		return () => {
 			observer.disconnect()
 			clearInterval(interval)
@@ -128,17 +130,15 @@ const Layout: React.FC = () => {
 			</div>
 
 			{/* Mobile menu button - hidden in fullscreen mode and when overlay is open */}
-			{!isFullscreenMode && !hasOverlayOpen && (
-				<button
-					onClick={toggleSidebar}
-					className="mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-20 cursor-pointer"
-				>
-					<Menu className="h-5 w-5 text-gray-600 dark:text-gray-400 " />
-				</button>
-			)}
+			<button
+				onClick={toggleSidebar}
+				className={`mobile-hamburger lg:hidden flex fixed items-center justify-center p-2 bg-white/80 dark:bg-background/80 backdrop-blur-sm border border-input rounded-lg shadow-lg top-4 right-4 z-20 cursor-pointer ${!isFullscreenMode && !hasOverlayOpen ? 'visible' : 'hidden'}`}
+			>
+				<Menu className="h-5 w-5 text-gray-600 dark:text-gray-400 " />
+			</button>
 
 			{/* Main content - Adjusted z-index and positioning */}
-			<main className={`min-h-screen flex flex-col relative z-10 ${!isFullscreenMode ? 'lg:pl-16' : ''}`}>
+			<main className={`min-h-screen flex flex-col relative z-10`}>
 				<InactiveLaboratoryGate>
 					<div className="flex-1 overflow-x-hidden overflow-y-auto" data-main-scroll>
 						<div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
@@ -148,16 +148,13 @@ const Layout: React.FC = () => {
 					</div>
 				</InactiveLaboratoryGate>
 			</main>
-		<FeatureGuard feature='hasChatAI'>
-			<ChatButton />
+			<FeatureGuard feature="hasChatAI">
+				<ChatButton />
 			</FeatureGuard>
 
 			{/* Modal de Ayuda / Solwy (chatbot) - feature hasChatbot en dashboard */}
-			<FeatureGuard feature='hasChatbot'>
-				<HelpChatbotModal
-					isOpen={isHelpModalOpen}
-					onClose={() => setIsHelpModalOpen(false)}
-				/>
+			<FeatureGuard feature="hasChatbot">
+				<HelpChatbotModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
 			</FeatureGuard>
 		</div>
 	)
