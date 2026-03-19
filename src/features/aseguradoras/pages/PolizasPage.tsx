@@ -961,7 +961,7 @@ const PolizasPage = () => {
 
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
-					className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90dvh] flex flex-col p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90dvh] flex flex-col rounded-2xl sm:rounded-xl p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 					overlayClassName="bg-black/60"
 				>
 					<DialogHeader className="shrink-0">

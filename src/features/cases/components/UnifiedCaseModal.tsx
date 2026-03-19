@@ -2404,13 +2404,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													placeholder="Hospital o Clínica"
 													value={editedCase.origin ?? caseData.origin ?? ''}
 													onChange={(e) => {
-														const { value } = e.target
-														const current = editedCase.origin ?? caseData.origin ?? ''
-														const isDeleting = value.length < current.length
-														const allowedChars = /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9\-.,()/&']*$/
-														if (isDeleting || allowedChars.test(value)) {
-															handleInputChange('origin', value)
-														}
+														handleInputChange('origin', e.target.value)
 													}}
 													className="text-sm border-dashed focus:border-primary focus:ring-primary bg-gray-50 dark:bg-gray-800/50"
 												/>

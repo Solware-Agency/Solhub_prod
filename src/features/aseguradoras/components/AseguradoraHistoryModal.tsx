@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Building2, FileText, MapPin, Phone, Edit, Globe, Send, Trash2 } from 'lucide-react'
+import { X, Building2, FileText, MapPin, Phone, Edit, Send, Trash2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { deactivateAseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
@@ -159,7 +159,6 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
 						transition={{ duration: 0.2 }}
 						className="fixed inset-0 bg-black/50"
 						onClick={onClose}
@@ -167,7 +166,6 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 					<motion.div
 						initial={{ scale: 0.95 }}
 						animate={{ scale: 1 }}
-						exit={{ scale: 0.95 }}
 						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
 						className="bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-input relative z-10"
 						onClick={(e) => e.stopPropagation()}
@@ -246,50 +244,42 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 									</button>
 								</div>
 
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-									<InfoSection title="Información general" icon={Building2}>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Nombre</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.nombre}</p>
-											</div>
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">RIF</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.rif || 'Sin RIF'}</p>
-											</div>
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Código interno</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.codigo_interno || 'Sin código'}</p>
-											</div>
+								<InfoSection title="Información" icon={Building2}>
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Nombre</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.nombre}</p>
 										</div>
-									</InfoSection>
-									<InfoSection title="Contacto" icon={Phone}>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.telefono || 'Sin teléfono'}</p>
-											</div>
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-												<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.email || 'Sin email'}</p>
-											</div>
-											<div>
-												<p className="text-xs text-gray-500 dark:text-gray-400">Web</p>
-												{aseguradora.web?.trim() ? (
-													<a href={aseguradora.web.trim()} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">{aseguradora.web.trim()}</a>
-												) : (
-													<p className="text-sm font-medium text-gray-900 dark:text-gray-100">Sin web</p>
-												)}
-											</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">RIF</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.rif || 'Sin RIF'}</p>
 										</div>
-									</InfoSection>
-									<InfoSection title="Dirección" icon={MapPin}>
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.direccion || 'Sin dirección'}</p>
-									</InfoSection>
-									<InfoSection title="Estado" icon={Globe}>
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.activo ? 'Activo' : 'Inactivo'}</p>
-									</InfoSection>
-								</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Código interno</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.codigo_interno || 'Sin código'}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.telefono || 'Sin teléfono'}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.email || 'Sin email'}</p>
+										</div>
+										<div>
+											<p className="text-xs text-gray-500 dark:text-gray-400">Web</p>
+											{aseguradora.web?.trim() ? (
+												<a href={aseguradora.web.trim()} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">{aseguradora.web.trim()}</a>
+											) : (
+												<p className="text-sm font-medium text-gray-900 dark:text-gray-100"></p>
+											)}
+										</div>
+										<div className="sm:col-span-2">
+											<p className="text-xs text-gray-500 dark:text-gray-400">Dirección</p>
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{aseguradora.direccion || 'Sin dirección'}</p>
+										</div>
+									</div>
+								</InfoSection>
 							</div>
 
 							<div className="p-4 sm:p-6 pt-0 flex-1 min-h-0">

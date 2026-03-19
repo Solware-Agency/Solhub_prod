@@ -40,7 +40,7 @@ const CompaniasPage = () => {
 		email: '',
 		web: '',
 		direccion: '',
-		activo: true,
+		estado: '' as '' | 'activo' | 'inactivo',
 	})
 	const [saving, setSaving] = useState(false)
 
@@ -86,7 +86,7 @@ const CompaniasPage = () => {
 			email: '',
 			web: '',
 			direccion: '',
-			activo: true,
+			estado: '',
 		})
 	}
 
@@ -135,6 +135,7 @@ const CompaniasPage = () => {
 		}
 		if (!form.web?.trim()) err.push('Web')
 		if (!form.direccion?.trim()) err.push('Dirección')
+		if (!form.estado) err.push('Estado')
 		return err
 	}
 
@@ -158,7 +159,7 @@ const CompaniasPage = () => {
 				email: form.email,
 				web: form.web,
 				direccion: form.direccion,
-				activo: form.activo,
+				activo: form.estado === 'activo',
 			})
 			toast({ title: 'Aseguradora creada' })
 			queryClient.invalidateQueries({ queryKey: ['aseguradoras-catalogo'] })
@@ -264,7 +265,7 @@ const CompaniasPage = () => {
 
 			<Dialog open={openModal} onOpenChange={setOpenModal}>
 				<DialogContent
-					className="w-[calc(100vw-2rem)] max-w-xl max-h-[90dvh] flex flex-col p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+					className="w-[calc(100vw-2rem)] max-w-xl max-h-[90dvh] flex flex-col rounded-2xl sm:rounded-xl p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 					overlayClassName="bg-black/60"
 				>
 					<DialogHeader className="shrink-0">
@@ -348,19 +349,17 @@ const CompaniasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Activo <span className="text-destructive">*</span></Label>
+							<Label>Estado <span className="text-destructive">*</span></Label>
 							<Select
-								value={form.activo ? 'true' : 'false'}
-								onValueChange={(value) =>
-									setForm((prev) => ({ ...prev, activo: value === 'true' }))
-								}
+								value={form.estado}
+								onValueChange={(value) => setForm((prev) => ({ ...prev, estado: value as 'activo' | 'inactivo' }))}
 							>
 								<SelectTrigger>
-									<SelectValue />
+									<SelectValue placeholder="Seleccione" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="true">Activo</SelectItem>
-									<SelectItem value="false">Inactivo</SelectItem>
+									<SelectItem value="activo">Activo</SelectItem>
+									<SelectItem value="inactivo">Inactivo</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

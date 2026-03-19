@@ -224,7 +224,7 @@ export const AseguradoraDetailPanel = ({
 							</div>
 							<div>
 								<p className="text-xs text-gray-500">Web</p>
-								<p className="text-sm font-medium">{aseguradora.web || 'Sin web'}</p>
+								<p className="text-sm font-medium">{aseguradora.web || ''}</p>
 							</div>
 						</div>
 					</InfoSection>

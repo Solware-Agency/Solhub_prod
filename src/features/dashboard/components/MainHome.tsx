@@ -371,14 +371,16 @@ function MainHome() {
 													</p>
 													<p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
 														{formatNumber(doctor.cases)} caso{doctor.cases !== 1 ? 's' : ''}
-														{!isSpt && (
-															<>
-																{' • '}
-																{formatCurrency(doctor.revenue)}
-															</>
-														)}
 													</p>
+													{!isSpt && (
+														<p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
+															{formatCurrency(doctor.revenue)}
+														</p>
+													)}
 												</div>
+												<span className="sm:hidden text-xs font-bold text-purple-600 dark:text-purple-500">
+													{formatNumber(doctor.cases)}
+												</span>
 											</div>
 										)
 									})
@@ -462,7 +464,7 @@ function MainHome() {
 														)}
 													</div>
 												</div>
-												<span className={`hidden sm:inline text-sm sm:text-base md:text-lg font-bold ${color.text}`}>
+												<span className={`text-xs sm:text-base md:text-lg font-bold ${color.text}`}>
 													{formatNumber(exam.count)}
 												</span>
 											</div>
