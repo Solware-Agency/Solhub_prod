@@ -7,19 +7,23 @@ import {
 	useFormContext,
 } from 'react-hook-form'
 import { type FormValues } from '@features/form/lib/form-schema'
+import { useLaboratory } from '@/app/providers/LaboratoryContext'
+import { useToast } from '@shared/hooks/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
+import { Button } from '@shared/components/ui/button'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { FormField, FormLabel, FormItem, FormControl, FormMessage } from '@shared/components/ui/form'
-import { useMemo, memo, useCallback, useEffect } from 'react'
+import { useMemo, memo, useCallback, useEffect, useState } from 'react'
 import { PaymentHeader } from './payment/PaymentHeader'
 import { ConverterUSDtoVES } from './payment/ConverterUSDtoVES'
 import { PaymentMethodsList } from './payment/PaymentMethodsList'
 import { PaymentSectionSkeleton } from './payment/PaymentSectionSkeleton'
 import { calculatePaymentDetails, calculatePaymentDetailsWithCredit } from '@features/form/lib/payment/payment-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@shared/components/ui/dialog'
 import { Input } from '@shared/components/ui/input'
 import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
-import { Info } from 'lucide-react'
+import { Copy, Info } from 'lucide-react'
 import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service'
 import { cn } from '@shared/lib/cn'
 
@@ -50,10 +54,16 @@ interface PaymentSectionProps {
 	descuentoDiscountPercent?: number
 	/** Crédito disponible del paciente (saldo a favor) para labs con hasPositiveBalance. */
 	patientCredit?: number
+	/** Deuda total acumulada del paciente (suma de remaining > 0 en sus casos). */
+	patientTotalDebt?: number
+	/** Lista de casos con deuda para mostrar en modal. */
+	patientDebtCases?: Array<{ code: string; date: string; remaining: number }>
 	hasPositiveBalance?: boolean
 }
 
 export const PaymentSection = memo((props: PaymentSectionProps) => {
+	const { laboratory } = useLaboratory()
+	const isSpt = laboratory?.slug === 'spt'
 	const {
 		control,
 		fields,
@@ -71,8 +81,12 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		convenioDiscountPercent = 5,
 		descuentoDiscountPercent = 10,
 		patientCredit = 0,
+		patientTotalDebt = 0,
+		patientDebtCases = [],
 		hasPositiveBalance = false,
 	} = props
+	const { toast } = useToast()
+	const [isDebtModalOpen, setIsDebtModalOpen] = useState(false)
 	const { setValue } = useFormContext<FormValues>()
 	const creditApplied = useWatch({ control, name: 'creditApplied', defaultValue: 0 }) ?? 0
 	const factorConvenios = (100 - convenioDiscountPercent) / 100
@@ -97,7 +111,7 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 
 	const onlyTaquilla = useMemo(
 		() => selectedCost?.price_convenios == null && selectedCost?.price_descuento == null,
-		[selectedCost]
+		[selectedCost],
 	)
 
 	const round2 = useCallback((value: number) => Number(value.toFixed(2)), [])
@@ -115,8 +129,12 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 				option === 'taquilla'
 					? taquilla
 					: option === 'convenios'
-						? taquilla != null ? round2(taquilla * factorConvenios) : null
-						: taquilla != null ? round2(taquilla * factorDescuento) : null
+						? taquilla != null
+							? round2(taquilla * factorConvenios)
+							: null
+						: taquilla != null
+							? round2(taquilla * factorDescuento)
+							: null
 			if (amount != null) {
 				const total = round2(amount * getMultiplier())
 				setValue('totalAmount', total, { shouldValidate: true })
@@ -124,7 +142,7 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 				setUsdValue(String(total))
 			}
 		},
-		[selectedCost, setValue, setUsdValue, getMultiplier, round2, factorConvenios, factorDescuento]
+		[selectedCost, setValue, setUsdValue, getMultiplier, round2, factorConvenios, factorDescuento],
 	)
 
 	// When sample type changes in Marihorgen, clear price selection so user picks again
@@ -143,13 +161,28 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 			priceType === 'taquilla'
 				? taquilla
 				: priceType === 'convenios'
-					? taquilla != null ? round2(taquilla * factorConvenios) : null
-					: taquilla != null ? round2(taquilla * factorDescuento) : null
+					? taquilla != null
+						? round2(taquilla * factorConvenios)
+						: null
+					: taquilla != null
+						? round2(taquilla * factorDescuento)
+						: null
 		if (base == null) return
 		const total = round2(base * getMultiplier())
 		setValue('totalAmount', total, { shouldValidate: true })
 		setUsdValue(String(total))
-	}, [numberOfSamples, priceType, selectedCost, isSampleTypeCostsEnabled, getMultiplier, round2, setValue, setUsdValue, factorConvenios, factorDescuento])
+	}, [
+		numberOfSamples,
+		priceType,
+		selectedCost,
+		isSampleTypeCostsEnabled,
+		getMultiplier,
+		round2,
+		setValue,
+		setUsdValue,
+		factorConvenios,
+		factorDescuento,
+	])
 
 	// Use useMemo to prevent recalculation on every render (consider creditApplied when hasPositiveBalance)
 	const { paymentStatus, isPaymentComplete, missingAmount } = useMemo(() => {
@@ -164,20 +197,103 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		return <PaymentSectionSkeleton />
 	}
 
+	const formatCaseDate = (value: string) => {
+		if (!value) return 'Sin fecha'
+		const date = new Date(value)
+		if (Number.isNaN(date.getTime())) return 'Sin fecha'
+		return date.toLocaleDateString('es-VE', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+		})
+	}
+
+	const copyCaseCode = async (code: string) => {
+		try {
+			await navigator.clipboard.writeText(code)
+			toast({
+				title: '✅ Código copiado',
+				description: `Se copió ${code} al portapapeles`,
+			})
+		} catch {
+			toast({
+				title: '❌ No se pudo copiar',
+				description: 'Verifica permisos del navegador e intenta nuevamente',
+				variant: 'destructive',
+			})
+		}
+	}
+
 	return (
 		<Card className="transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 			<CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
 				<CardTitle className="text-lg sm:text-xl">Pago</CardTitle>
+				{!isSpt && patientTotalDebt > 0 && (
+					<Dialog open={isDebtModalOpen} onOpenChange={setIsDebtModalOpen}>
+						<DialogTrigger asChild>
+							<button type="button" className="rounded-full border border-amber-600/30 bg-amber-500/10 px-3 py-1 cursor-pointer">
+								<p className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+									Deuda acumulada: ${patientTotalDebt.toFixed(2)} USD (Da click para ver codigos de casos)
+								</p>
+							</button>
+						</DialogTrigger>
+						<DialogContent className="max-w-2xl">
+							<DialogHeader>
+								<DialogTitle>Casos con deuda del paciente</DialogTitle>
+								<DialogDescription>
+									Codigo, fecha y monto pendiente por caso. Puedes copiar el codigo con click.
+								</DialogDescription>
+							</DialogHeader>
+							<div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
+								{patientDebtCases.length === 0 ? (
+									<div className="text-sm text-muted-foreground">No hay casos con deuda para este paciente.</div>
+								) : (
+									patientDebtCases.map((item) => (
+										<div
+											key={`${item.code}-${item.date}-${item.remaining}`}
+											className="rounded-md border bg-muted/30 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+										>
+											<div className="space-y-1">
+												<button
+													type="button"
+													className="inline-flex items-center rounded bg-background px-2 py-1 text-xs font-semibold border hover:bg-accent"
+													onClick={() => copyCaseCode(item.code)}
+													title="Copiar codigo"
+												>
+													{item.code}
+												</button>
+												<p className="text-xs text-muted-foreground">Fecha: {formatCaseDate(item.date)}</p>
+											</div>
+											<div className="flex items-center gap-2">
+												<p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+													${Number(item.remaining || 0).toFixed(2)} USD
+												</p>
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="h-8 px-2"
+													onClick={() => copyCaseCode(item.code)}
+												>
+													<Copy className="size-3.5 mr-1" />
+													Copiar
+												</Button>
+											</div>
+										</div>
+									))
+								)}
+							</div>
+						</DialogContent>
+					</Dialog>
+				)}
 				<Tooltip>
-						<TooltipTrigger>
-							<Info className="size-4" />
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>
-								El maximo de metodos de pago son 4.
-							</p>
-						</TooltipContent>
-					</Tooltip>
+					<TooltipTrigger>
+						<Info className="size-4" />
+					</TooltipTrigger>
+					<TooltipContent>
+						<p>El maximo de metodos de pago son 4.</p>
+					</TooltipContent>
+				</Tooltip>
 			</CardHeader>
 			<CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
 				<div
@@ -185,7 +301,7 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 						'grid grid-cols-1 gap-3 sm:gap-4 items-start',
 						isSampleTypeCostsEnabled && sampleTypeCosts && sampleTypeCosts.length > 0
 							? 'md:grid-cols-[1fr_1fr_1fr_1fr]'
-							: 'md:grid-cols-[1fr_1fr_1fr]'
+							: 'md:grid-cols-[1fr_1fr_1fr]',
 					)}
 				>
 					{isSampleTypeCostsEnabled && sampleTypeCosts && sampleTypeCosts.length > 0 && (
@@ -195,16 +311,16 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 								name="priceType"
 								render={({ field }) => (
 									<FormItem className="w-full">
-										<FormLabel className="text-sm sm:text-base">Tipo de precio <span className="text-destructive">*</span></FormLabel>
+										<FormLabel className="text-sm sm:text-base">
+											Tipo de precio <span className="text-destructive">*</span>
+										</FormLabel>
 										<FormControl>
 											<FormDropdown
-												options={createDropdownOptions(
-													[
-														{ value: 'taquilla', label: 'Taquilla (Costo 1)' },
-														{ value: 'convenios', label: 'Convenios (Costo 2)', disabled: onlyTaquilla },
-														{ value: 'descuento', label: 'Descuento (Costo 3)', disabled: onlyTaquilla },
-													]
-												)}
+												options={createDropdownOptions([
+													{ value: 'taquilla', label: 'Taquilla (Costo 1)' },
+													{ value: 'convenios', label: 'Convenios (Costo 2)', disabled: onlyTaquilla },
+													{ value: 'descuento', label: 'Descuento (Costo 3)', disabled: onlyTaquilla },
+												])}
 												value={field.value || ''}
 												onChange={(value) => applyPriceOption(value as PriceTypeOption)}
 												placeholder="Seleccione tipo de precio"
@@ -291,7 +407,8 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 							/>
 							{creditApplied > 0 && (
 								<p className="text-xs text-emerald-700 dark:text-emerald-300">
-									Monto restante a pagar con métodos: ${(Math.max(0, totalAmount - (Number(creditApplied) || 0))).toFixed(2)} USD
+									Monto restante a pagar con métodos: $
+									{Math.max(0, totalAmount - (Number(creditApplied) || 0)).toFixed(2)} USD
 								</p>
 							)}
 							<p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">

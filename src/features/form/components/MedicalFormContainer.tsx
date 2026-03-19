@@ -385,7 +385,7 @@ export function MedicalFormContainer() {
 		});
 	}, [hasSampleTypeCosts, laboratory?.id]);
 
-	// Crédito del paciente (saldo a favor) para labs con hasPositiveBalance: buscar por cédula y sumar saldo_a_favor
+	// Resumen financiero del paciente: saldo a favor y deuda acumulada (remaining > 0)
 	const idType = useWatch({ control: form.control, name: 'idType' });
 	const idNumber = useWatch({ control: form.control, name: 'idNumber' });
 	const hasPositiveBalance = laboratory?.slug === 'lm' || laboratory?.features?.hasPositiveBalance;
@@ -393,19 +393,38 @@ export function MedicalFormContainer() {
 		idType && idNumber && idType !== 'S/C' && String(idNumber).trim().length > 0
 			? (formatCedulaCanonical(`${idType}-${idNumber}`) ?? `${idType}-${idNumber}`)
 			: '';
-	const { data: patientCredit = 0 } = useQuery({
-		queryKey: ['patient-credit', cedulaForCredit, laboratory?.id],
+	const { data: patientFinancialSummary = { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> } } = useQuery({
+		queryKey: ['patient-financial-summary', cedulaForCredit, laboratory?.id],
 		queryFn: async () => {
-			if (!cedulaForCredit || !hasPositiveBalance) return 0;
+			if (!cedulaForCredit) return { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> };
 			const patient = await findPatientByCedula(cedulaForCredit);
-			if (!patient?.id) return 0;
+			if (!patient?.id) return { credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> };
 			const cases = await getCasesByPatientIdWithInfo(patient.id);
-			const sum = (cases || []).reduce((s, c) => s + (Number((c as any).saldo_a_favor) || 0), 0);
-			return sum;
+			const summary = (cases || []).reduce(
+				(acc, c) => {
+					const credit = Number((c as any).saldo_a_favor) || 0;
+					const remaining = Number((c as any).remaining) || 0;
+					acc.credit += Math.max(0, credit);
+					acc.debt += Math.max(0, remaining);
+					if (remaining > 0) {
+						acc.debtCases.push({
+							code: String((c as any).code ?? 'SIN-CODIGO'),
+							date: String((c as any).date ?? (c as any).created_at ?? ''),
+							remaining,
+						});
+					}
+					return acc;
+				},
+				{ credit: 0, debt: 0, debtCases: [] as Array<{ code: string; date: string; remaining: number }> },
+			);
+			return summary;
 		},
-		enabled: !!cedulaForCredit && !!hasPositiveBalance,
+		enabled: !!cedulaForCredit,
 		staleTime: 1000 * 60 * 2,
 	});
+	const patientCredit = hasPositiveBalance ? patientFinancialSummary.credit : 0;
+	const patientTotalDebt = patientFinancialSummary.debt;
+	const patientDebtCases = patientFinancialSummary.debtCases ?? [];
 
 	return (
 		<>
@@ -466,6 +485,8 @@ export function MedicalFormContainer() {
 								convenioDiscountPercent={laboratory?.config?.convenioDiscountPercent ?? 5}
 								descuentoDiscountPercent={laboratory?.config?.descuentoDiscountPercent ?? 10}
 								patientCredit={patientCredit}
+								patientTotalDebt={patientTotalDebt}
+								patientDebtCases={patientDebtCases}
 								hasPositiveBalance={!!hasPositiveBalance}
 							/>
 						</FeatureGuard>
