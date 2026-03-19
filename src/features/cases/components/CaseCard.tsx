@@ -97,14 +97,23 @@ const CaseCard: React.FC<CaseCardProps> = ({
 			</div>
 
 			<div className="flex flex-wrap gap-1.5 mb-1.5 pr-8">
-				{/* Ocultar estado de pago para SPT */}
-				{!isSpt && (
-					<span
-						className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.payment_status)}`}
-					>
-						{case_.payment_status}
-					</span>
-				)}
+	{/* Ocultar estado de pago para SPT */}
+				{!isSpt && (() => {
+					// LM/Marihorgen: si remaining <= 0 y hay total, mostrar Pagado (evita inconsistencia BD)
+					const displayStatus =
+						isMarihorgen &&
+						Number((case_ as any).remaining) <= 0 &&
+						Number((case_ as any).total_amount) > 0
+							? 'Pagado'
+							: case_.payment_status
+					return (
+						<span
+							className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(displayStatus)}`}
+						>
+							{displayStatus}
+						</span>
+					)
+				})()}
 				<div className="flex items-center">
 					{showCodeBadge && (
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
@@ -178,14 +187,14 @@ const CaseCard: React.FC<CaseCardProps> = ({
 								{format(new Date(case_.created_at), 'dd/MM/yyyy')}
 							</span>
 						)}
-							<span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 ${!case_.fecha_entrega ? 'invisible' : 'visible'}`}>
-								{case_.fecha_entrega ? formatBadgeDate(case_.fecha_entrega) : 'Cargando...'}
-							</span>
+						<span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 ${!case_.fecha_entrega ? 'invisible' : 'visible'}`}>
+							{case_.fecha_entrega ? formatBadgeDate(case_.fecha_entrega) : 'Cargando...'}
+						</span>
 					</div>
 				</div>
 			</div>
 
-			<div className={`grid ${isSpt ? 'grid-cols-1' : 'grid-cols-2'} gap-1.5 mb-1.5`}>
+			<div className={`grid ${isSpt ? 'grid-cols-1' : 'grid-cols-3'} gap-1.5 mb-1.5`}>
 				<div>
 					<p className="text-xs text-gray-500 dark:text-gray-400">Sede</p>
 					<BranchBadge branch={case_.branch} className="text-xs" />
@@ -195,6 +204,15 @@ const CaseCard: React.FC<CaseCardProps> = ({
 					<div>
 						<p className="text-xs text-gray-500 dark:text-gray-400">Monto</p>
 						<p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(case_.total_amount)}</p>
+					</div>
+				)}
+				{/* Saldo a favor (labs con hasPositiveBalance / lm) */}
+				{!isSpt && isMarihorgen && (case_ as any).saldo_a_favor != null && Number((case_ as any).saldo_a_favor) > 0 && (
+					<div>
+						<p className="text-xs text-gray-500 dark:text-gray-400">SALDO</p>
+						<p className="text-sm font-medium text-green-600 dark:text-green-400">
+							+{formatCurrency((case_ as any).saldo_a_favor)}
+						</p>
 					</div>
 				)}
 			</div>

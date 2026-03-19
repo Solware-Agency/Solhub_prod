@@ -991,13 +991,17 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						}
 					}
 					if (paymentMethodsForRecalc.length > 0 && totalForCalc) {
-						const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
-							paymentMethodsForRecalc,
-							totalForCalc,
-							rateToUse,
-						)
-						financialChanges.remaining = Math.max(0, missingAmount ?? 0)
-						financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
+						const totalPaidRecalc = calculateTotalPaidUSD(paymentMethodsForRecalc, rateToUse)
+						const creditAppliedRecalc = Number((currentCase as any).credit_applied ?? 0) || 0
+						const totalCoveredRecalc = totalPaidRecalc + creditAppliedRecalc
+						const missingRecalc = Math.max(0, totalForCalc - totalCoveredRecalc)
+						const excessRecalc = totalCoveredRecalc > totalForCalc ? parseFloat((totalCoveredRecalc - totalForCalc).toFixed(2)) : 0
+						const isCompleteRecalc = totalCoveredRecalc >= totalForCalc
+						financialChanges.remaining = missingRecalc
+						financialChanges.payment_status = isCompleteRecalc ? 'Pagado' : 'Incompleto'
+						if (isMarihorgen) {
+							financialChanges.saldo_a_favor = excessRecalc > 0 ? excessRecalc : 0
+						}
 					}
 				}
 
@@ -1052,17 +1056,22 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						financialChanges[`payment_reference_${i}`] = pm.reference || null
 					})
 
-					// Calcular monto restante usando la lógica correcta (tasa del día)
+					// Calcular monto restante usando la lógica correcta (tasa del día); incluir crédito aplicado si existe
 					const totalAmount = editedCase.total_amount || currentCase.total_amount || 0
-					const { missingAmount, isPaymentComplete } = calculatePaymentDetails(
-						finalPaymentMethods,
-						totalAmount,
-						rateToUse,
-					)
-					financialChanges.remaining = Math.max(0, missingAmount || 0)
+					const creditAppliedCase = Number((currentCase as any).credit_applied ?? 0) || 0
+					const totalPaidFromMethods = calculateTotalPaidUSD(finalPaymentMethods, rateToUse)
+					const totalCovered = totalPaidFromMethods + creditAppliedCase
+					const missingAmount = Math.max(0, totalAmount - totalCovered)
+					const excessAmount = totalCovered > totalAmount ? parseFloat((totalCovered - totalAmount).toFixed(2)) : 0
+					const isPaymentComplete = totalAmount > 0 && totalCovered >= totalAmount
 
-					// Actualizar estado de pago usando la misma lógica que el registro
+					financialChanges.remaining = missingAmount
 					financialChanges.payment_status = isPaymentComplete ? 'Pagado' : 'Incompleto'
+
+					// Saldo a favor (labs con hasPositiveBalance): excedente por métodos de pago y/o crédito aplicado
+					if (isMarihorgen) {
+						financialChanges.saldo_a_favor = excessAmount > 0 ? excessAmount : 0
+					}
 
 					// Función helper para formatear métodos de pago con el símbolo correcto
 					const formatPaymentMethod = (method: string, amount: number) => {
@@ -1819,11 +1828,16 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		// Use current payment methods if not editing, otherwise use edited ones
 		const effectivePaymentMethods = isEditing ? paymentMethods : currentPaymentMethods
 		const totalPaidUSD = calculateTotalPaidUSD(effectivePaymentMethods, rateForCalculations)
-		const remainingUSD = Math.max(0, totalAmount - totalPaidUSD)
-		// Si el monto faltante en USD es 0 (redondeado), también mostrar 0 en bolívares (usa tasa del día)
-		const remainingVES = remainingUSD < 0.01 ? 0 : hasValidExchangeRate ? remainingUSD * rateForCalculations : 0
-		// Un pago está completo solo si: hay monto total > 0 Y el pago cubre el total
-		const isPaymentComplete = totalAmount > 0 && totalPaidUSD >= totalAmount
+		const creditAppliedCase = Number(caseData?.credit_applied ?? 0) || 0
+		// Lo cubierto = métodos de pago + crédito aplicado (todo en USD; pagos en Bs ya convertidos en totalPaidUSD)
+		const amountCoveredUSD = totalPaidUSD + creditAppliedCase
+		const remainingUSD = totalAmount - amountCoveredUSD
+		const missingUSD = remainingUSD > 0.01 ? remainingUSD : 0
+		const excessUSD = remainingUSD < -0.01 ? -remainingUSD : 0
+		const remainingVES = missingUSD < 0.01 ? 0 : hasValidExchangeRate ? missingUSD * rateForCalculations : 0
+		const excessVES = excessUSD > 0 && hasValidExchangeRate ? excessUSD * rateForCalculations : 0
+		// Pago completo si lo cubierto >= total (incluyendo crédito aplicado)
+		const isPaymentComplete = totalAmount > 0 && amountCoveredUSD >= totalAmount
 
 		const notShow = profile?.role === 'residente' || profile?.role === 'citotecno'
 		// const isResidente = profile?.role === 'residente'
@@ -1915,15 +1929,24 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</TooltipContent>
 								</Tooltip>
 							) : null}
-							{!notShow && !isSpt && (
-								<span
-									className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full shrink-0 ${getStatusColor(
-										caseData.payment_status,
-									)}`}
-								>
-									{caseData.payment_status}
-								</span>
-							)}
+							{!notShow && !isSpt && (() => {
+								// LM/Marihorgen: usar estado calculado (crédito + pagos) para evitar inconsistencia con BD
+								const displayStatus =
+									isMarihorgen && totalAmount > 0
+										? isPaymentComplete
+											? 'Pagado'
+											: 'Incompleto'
+										: caseData.payment_status
+								return (
+									<span
+										className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full shrink-0 ${getStatusColor(
+											displayStatus,
+										)}`}
+									>
+										{displayStatus}
+									</span>
+								)
+							})()}
 							{/* PDF download temporarily disabled in new structure */}
 						</div>
 						{/* Action Buttons */}
@@ -2898,7 +2921,51 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													</div>
 												</div>
 											</div>
-										) : remainingUSD > 0 ? (
+										) : null}
+										{/* Saldo a favor: usar valor guardado o excedente calculado (p. ej. crédito aplicado + pagos > total) */}
+										{isMarihorgen && (() => {
+											const saldoFavor = Math.max(Number(caseData?.saldo_a_favor ?? 0) || 0, excessUSD)
+											if (saldoFavor < 0.01) return null
+											return (
+												<div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 mt-2">
+													<p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Saldo a favor:</p>
+													<div className="grid grid-cols-2 gap-4 text-sm mt-1">
+														<div>
+															<span className="text-emerald-700 dark:text-emerald-400">En USD:</span>
+															<p className="font-medium text-emerald-800 dark:text-emerald-300">
+																+${saldoFavor.toFixed(2)}
+															</p>
+														</div>
+														<div>
+															<span className="text-emerald-700 dark:text-emerald-400">En Bs:</span>
+															<p className="font-medium text-emerald-800 dark:text-emerald-300">
+																Bs. {(saldoFavor * rateForCalculations).toFixed(2)}
+															</p>
+														</div>
+													</div>
+												</div>
+											)
+										})()}
+										{isMarihorgen && (caseData?.credit_applied ?? 0) > 0 ? (
+											<div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800 mt-2">
+												<p className="text-sm font-medium text-blue-800 dark:text-blue-300">Crédito aplicado a este caso:</p>
+												<div className="grid grid-cols-2 gap-4 text-sm mt-1">
+													<div>
+														<span className="text-blue-700 dark:text-blue-400">En USD:</span>
+														<p className="font-medium text-blue-800 dark:text-blue-300">
+															${Number(caseData?.credit_applied ?? 0).toFixed(2)}
+														</p>
+													</div>
+													<div>
+														<span className="text-blue-700 dark:text-blue-400">En Bs:</span>
+														<p className="font-medium text-blue-800 dark:text-blue-300">
+															Bs. {(Number(caseData?.credit_applied ?? 0) * rateForCalculations).toFixed(2)}
+														</p>
+													</div>
+												</div>
+											</div>
+										) : null}
+										{!isPaymentComplete && missingUSD > 0 ? (
 											<div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
 												<div className="flex items-center gap-2 mb-2">
 													<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -2908,7 +2975,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													<div>
 														<span className="text-orange-700 dark:text-orange-400">En USD:</span>
 														<p className="font-medium text-orange-800 dark:text-orange-300">
-															${remainingUSD.toFixed(2)}
+															${missingUSD.toFixed(2)}
 														</p>
 													</div>
 													<div>
@@ -3028,7 +3095,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 																					Monto
 																				</span>
 																				<span className="text-xs text-blue-800 dark:text-blue-300 font-medium">
-																					${payment.amount.toFixed(2)}
+																					{(payment.method && ['punto de venta', 'pago móvil', 'pago movil', 'bs en efectivo', 'transferencia'].includes(payment.method.toLowerCase().trim()))
+																						? `Bs. ${Number(payment.amount).toFixed(2)}`
+																						: `$${Number(payment.amount).toFixed(2)}`}
 																				</span>
 																			</div>
 																			<div className="flex flex-col">

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@shared/components/ui/button';
 import { Form } from '@shared/components/ui/form';
 import { useToast } from '@shared/hooks/use-toast';
@@ -21,6 +22,9 @@ import { useLaboratory } from '@/app/providers/LaboratoryContext';
 import { FeatureGuard } from '@shared/components/FeatureGuard';
 import { useModuleConfig } from '@shared/hooks/useModuleConfig';
 import { getSampleTypeCostsByLaboratory, type SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service';
+import { findPatientByCedula } from '@services/supabase/patients/patients-service';
+import { getCasesByPatientIdWithInfo } from '@services/supabase/cases/medical-cases-service';
+import { formatCedulaCanonical } from '@services/supabase/patients/identificaciones-service';
 
 const getInitialFormValues = (): FormValues => ({
   fullName: '',
@@ -47,6 +51,7 @@ const getInitialFormValues = (): FormValues => ({
   registrationDate: new Date(),
   totalAmount: 0, // Puede ser 0 si el módulo de pagos está deshabilitado
   payments: [{ method: '', amount: 0, reference: '' }],
+  creditApplied: 0,
   comments: '',
   priceType: '',
 });
@@ -380,6 +385,28 @@ export function MedicalFormContainer() {
 		});
 	}, [hasSampleTypeCosts, laboratory?.id]);
 
+	// Crédito del paciente (saldo a favor) para labs con hasPositiveBalance: buscar por cédula y sumar saldo_a_favor
+	const idType = useWatch({ control: form.control, name: 'idType' });
+	const idNumber = useWatch({ control: form.control, name: 'idNumber' });
+	const hasPositiveBalance = laboratory?.slug === 'lm' || laboratory?.features?.hasPositiveBalance;
+	const cedulaForCredit =
+		idType && idNumber && idType !== 'S/C' && String(idNumber).trim().length > 0
+			? (formatCedulaCanonical(`${idType}-${idNumber}`) ?? `${idType}-${idNumber}`)
+			: '';
+	const { data: patientCredit = 0 } = useQuery({
+		queryKey: ['patient-credit', cedulaForCredit, laboratory?.id],
+		queryFn: async () => {
+			if (!cedulaForCredit || !hasPositiveBalance) return 0;
+			const patient = await findPatientByCedula(cedulaForCredit);
+			if (!patient?.id) return 0;
+			const cases = await getCasesByPatientIdWithInfo(patient.id);
+			const sum = (cases || []).reduce((s, c) => s + (Number((c as any).saldo_a_favor) || 0), 0);
+			return sum;
+		},
+		enabled: !!cedulaForCredit && !!hasPositiveBalance,
+		staleTime: 1000 * 60 * 2,
+	});
+
 	return (
 		<>
 			{/* Boton sticky fuera del contenedor principal */}
@@ -438,6 +465,8 @@ export function MedicalFormContainer() {
 								sampleTypeCosts={sampleTypeCosts}
 								convenioDiscountPercent={laboratory?.config?.convenioDiscountPercent ?? 5}
 								descuentoDiscountPercent={laboratory?.config?.descuentoDiscountPercent ?? 10}
+								patientCredit={patientCredit}
+								hasPositiveBalance={!!hasPositiveBalance}
 							/>
 						</FeatureGuard>
 						<CommentsSection control={formControl} inputStyles={inputStyles} />

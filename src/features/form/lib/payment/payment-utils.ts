@@ -35,6 +35,7 @@ export const calculatePaymentDetails = (
 			paymentStatus: null,
 			isPaymentComplete: false,
 			missingAmount: 0,
+			excessAmount: 0,
 		}
 	}
 
@@ -59,6 +60,8 @@ export const calculatePaymentDetails = (
 	let isPaymentComplete = false
 	let missingAmount = 0
 
+	let excessAmount = 0
+
 	if (totalAmountValue > 0) {
 		// Round total paid to 2 decimals to avoid floating point issues
 		const finalTotalPaid = parseFloat(currentTotalPaid.toFixed(2))
@@ -69,6 +72,7 @@ export const calculatePaymentDetails = (
 
 		if (isPaymentComplete) {
 			paymentStatus = 'Pagado'
+			excessAmount = parseFloat((finalTotalPaid - totalAmountValue).toFixed(2))
 			missingAmount = 0
 		} else if (missingAmount > 0) {
 			// If missing less than 1 cent, don't show anything
@@ -76,7 +80,7 @@ export const calculatePaymentDetails = (
 		}
 	}
 
-	return { paymentStatus, isPaymentComplete, missingAmount }
+	return { paymentStatus, isPaymentComplete, missingAmount, excessAmount }
 }
 
 // Function to calculate payment details from medical record payment fields
@@ -96,13 +100,14 @@ export const calculatePaymentDetailsFromRecord = (record: {
 	const exchangeRate = record.exchange_rate || undefined
 
 	// If total amount is 0, consider payment complete
-    if (totalAmount === 0) {
-			return {
-				paymentStatus: 'Pagado',
-				isPaymentComplete: true,
-				missingAmount: 0,
-			}
+	if (totalAmount === 0) {
+		return {
+			paymentStatus: 'Pagado',
+			isPaymentComplete: true,
+			missingAmount: 0,
+			excessAmount: 0,
 		}
+	}
 
 	// Convert medical record payment fields to payments array format
 	const payments = []
@@ -120,7 +125,42 @@ export const calculatePaymentDetailsFromRecord = (record: {
 		}
 	}
 
-	return calculatePaymentDetails(payments, totalAmount, exchangeRate)
+	const result = calculatePaymentDetails(payments, totalAmount, exchangeRate)
+	return { ...result, excessAmount: result.excessAmount ?? 0 }
+}
+
+/**
+ * Calculates payment details considering optional credit applied (saldo a favor usado en nuevo caso).
+ * Monto a cubrir = totalAmount - creditApplied; pago completo si totalPaidUSD + creditApplied >= totalAmount.
+ */
+export const calculatePaymentDetailsWithCredit = (
+	payments: Payment[],
+	totalAmount: number | string | undefined,
+	exchangeRate: number | undefined,
+	creditApplied: number = 0,
+) => {
+	const base = calculatePaymentDetails(payments, totalAmount, exchangeRate)
+	const totalAmountValue = totalAmount ? parseDecimalNumber(totalAmount) : 0
+	if (totalAmountValue <= 0 || creditApplied <= 0) return { ...base, excessAmount: base.excessAmount ?? 0 }
+
+	const totalPaidUSD = payments.reduce((acc, p) => {
+		const amount = p.amount ? parseDecimalNumber(p.amount) : 0
+		if (!p.method || !amount) return acc
+		if (isBolivaresMethod(p.method)) {
+			if (exchangeRate && exchangeRate > 0) return acc + amount / exchangeRate
+			return acc
+		}
+		return acc + amount
+	}, 0)
+	const totalCovered = totalPaidUSD + creditApplied
+	const isPaymentComplete = totalCovered >= totalAmountValue
+	const missingAmount = Math.max(0, parseFloat((totalAmountValue - totalCovered).toFixed(2)))
+	return {
+		paymentStatus: isPaymentComplete ? ('Pagado' as const) : (missingAmount > 0 ? ('Incompleto' as const) : null),
+		isPaymentComplete,
+		missingAmount,
+		excessAmount: base.excessAmount ?? 0,
+	}
 }
 
 /**
@@ -174,16 +214,14 @@ export const calculateTotalPaidUSD = (payments: Payment[], exchangeRate: number 
 }
 
 /**
- * Validates form payments for registration (specific for form validation)
- * @param payments Array of payment objects from form
- * @param totalAmount Total amount in USD
- * @param exchangeRate Current exchange rate (VES/USD)
- * @returns Validation result with details
+ * Validates form payments for registration (specific for form validation).
+ * @param allowOverpayment If true (e.g. lab has hasPositiveBalance), overpayment is valid and becomes saldo a favor.
  */
 export const validateFormPayments = (
 	payments: Payment[],
 	totalAmount: number,
 	exchangeRate: number | undefined,
+	options?: { allowOverpayment?: boolean },
 ): { isValid: boolean; totalPaidUSD: number; errorMessage?: string } => {
 	// Filter out empty payments
 	const validPayments = payments.filter((payment) => payment.method && payment.amount && payment.amount > 0)
@@ -196,11 +234,10 @@ export const validateFormPayments = (
 	const totalPaidUSD = calculateTotalPaidUSD(validPayments, exchangeRate)
 
 	// Check if total paid exceeds total amount (with tolerance for floating point precision)
-	// Allow for small differences (less than 1 cent) due to currency conversion precision
-	const tolerance = 0.01 // Allow up to 1 cent difference for floating point precision
+	const tolerance = 0.01
 	const difference = totalPaidUSD - totalAmount
 
-	if (difference > tolerance) {
+	if (difference > tolerance && !options?.allowOverpayment) {
 		const errorMessage = `El total de pagos (${totalPaidUSD.toFixed(
 			2,
 		)} USD) excede el monto total del caso (${totalAmount.toFixed(2)} USD) por $${difference.toFixed(2)} USD`

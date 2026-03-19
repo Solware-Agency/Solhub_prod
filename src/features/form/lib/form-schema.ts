@@ -183,6 +183,8 @@ export const createFormSchema = (
 		consulta: consultaSchema,
 		totalAmount: totalAmountSchema,
 		payments: z.array(paymentSchema).optional().default([]),
+		/** Crédito del paciente a aplicar (saldo a favor) - solo labs con hasPositiveBalance */
+		creditApplied: z.coerce.number().min(0).optional().default(0),
 		comments: z.string().optional(),
 		// Marihorgen/LM: tipo de precio obligatorio; resto de laboratorios opcional
 		priceType: isMarihorgen

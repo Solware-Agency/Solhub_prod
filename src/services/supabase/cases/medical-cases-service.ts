@@ -63,6 +63,8 @@ export interface MedicalCase {
   total_amount: number | null;
   payment_status: 'Incompleto' | 'Pagado';
   remaining: number | null;
+  saldo_a_favor: number | null;
+  credit_applied: number | null;
   payment_method_1: string | null;
   payment_amount_1: number | null;
   payment_reference_1: string | null;
@@ -125,6 +127,8 @@ export interface MedicalCaseInsert {
   total_amount?: number | null;
   payment_status?: 'Incompleto' | 'Pagado';
   remaining?: number | null;
+  saldo_a_favor?: number | null;
+  credit_applied?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
   payment_reference_1?: string | null;
@@ -187,6 +191,8 @@ export interface MedicalCaseUpdate {
   total_amount?: number | null;
   payment_status?: 'Incompleto' | 'Pagado';
   remaining?: number | null;
+  saldo_a_favor?: number | null;
+  credit_applied?: number | null;
   payment_method_1?: string | null;
   payment_amount_1?: number | null;
   payment_reference_1?: string | null;
@@ -251,6 +257,8 @@ export interface MedicalCaseWithPatient {
   exchange_rate: number | null;
   payment_status: 'Incompleto' | 'Pagado';
   remaining: number | null;
+  saldo_a_favor: number | null;
+  credit_applied: number | null;
   payment_method_1: string | null;
   payment_amount_1: number | null;
   payment_reference_1: string | null;

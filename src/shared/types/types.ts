@@ -831,6 +831,8 @@ export interface LaboratoryFeatures {
   hasDoctorSignatures: boolean
   hasCallCenter: boolean
   hasWaitingRoom: boolean
+  /** Saldo a favor: permitir overpayment y aplicar crédito en nuevos casos (ej. lab lm). */
+  hasPositiveBalance?: boolean
 }
 
 export interface LaboratoryBranding {

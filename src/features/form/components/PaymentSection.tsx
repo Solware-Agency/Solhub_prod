@@ -15,8 +15,10 @@ import { PaymentHeader } from './payment/PaymentHeader'
 import { ConverterUSDtoVES } from './payment/ConverterUSDtoVES'
 import { PaymentMethodsList } from './payment/PaymentMethodsList'
 import { PaymentSectionSkeleton } from './payment/PaymentSectionSkeleton'
-import { calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+import { calculatePaymentDetails, calculatePaymentDetailsWithCredit } from '@features/form/lib/payment/payment-utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
+import { Input } from '@shared/components/ui/input'
+import { createCalculatorInputHandlerWithCurrency } from '@shared/utils/number-utils'
 import { Info } from 'lucide-react'
 import type { SampleTypeCost } from '@services/supabase/laboratories/sample-type-costs-service'
 import { cn } from '@shared/lib/cn'
@@ -46,6 +48,9 @@ interface PaymentSectionProps {
 	convenioDiscountPercent?: number
 	/** Porcentaje de descuento para precio descuento (ej. 10). Usado para calcular precio desde taquilla. */
 	descuentoDiscountPercent?: number
+	/** Crédito disponible del paciente (saldo a favor) para labs con hasPositiveBalance. */
+	patientCredit?: number
+	hasPositiveBalance?: boolean
 }
 
 export const PaymentSection = memo((props: PaymentSectionProps) => {
@@ -65,8 +70,11 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		sampleTypeCosts = null,
 		convenioDiscountPercent = 5,
 		descuentoDiscountPercent = 10,
+		patientCredit = 0,
+		hasPositiveBalance = false,
 	} = props
 	const { setValue } = useFormContext<FormValues>()
+	const creditApplied = useWatch({ control, name: 'creditApplied', defaultValue: 0 }) ?? 0
 	const factorConvenios = (100 - convenioDiscountPercent) / 100
 	const factorDescuento = (100 - descuentoDiscountPercent) / 100
 	const watchedPayments = useWatch({
@@ -143,10 +151,14 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		setUsdValue(String(total))
 	}, [numberOfSamples, priceType, selectedCost, isSampleTypeCostsEnabled, getMultiplier, round2, setValue, setUsdValue, factorConvenios, factorDescuento])
 
-	// Use useMemo to prevent recalculation on every render
+	// Use useMemo to prevent recalculation on every render (consider creditApplied when hasPositiveBalance)
 	const { paymentStatus, isPaymentComplete, missingAmount } = useMemo(() => {
+		const numCredit = Number(creditApplied) || 0
+		if (hasPositiveBalance && numCredit > 0) {
+			return calculatePaymentDetailsWithCredit(watchedPayments, totalAmount, exchangeRate, numCredit)
+		}
 		return calculatePaymentDetails(watchedPayments, totalAmount, exchangeRate)
-	}, [totalAmount, watchedPayments, exchangeRate])
+	}, [totalAmount, watchedPayments, exchangeRate, creditApplied, hasPositiveBalance])
 
 	if (isLoadingRate) {
 		return <PaymentSectionSkeleton />
@@ -229,6 +241,64 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 							inputStyles={inputStyles}
 						/>
 					</div>
+
+					{/* Aplicar saldo a favor - solo labs con hasPositiveBalance (misma lógica/UI que monto en métodos de pago) */}
+					{hasPositiveBalance && patientCredit > 0 && totalAmount > 0 && (
+						<div className="w-full space-y-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3">
+							<p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
+								Crédito disponible: ${patientCredit.toFixed(2)} USD
+							</p>
+							<FormField
+								control={control}
+								name="creditApplied"
+								render={({ field }) => {
+									const maxAllowed = Math.min(patientCredit, totalAmount)
+									const calculatorHandler = createCalculatorInputHandlerWithCurrency(
+										field.value ?? 0,
+										(newValue) => field.onChange(Math.min(maxAllowed, Math.max(0, newValue))),
+										'Zelle', // USD: sin conversión VES en método; igual mostramos conversión abajo si hay tasa
+										exchangeRate,
+									)
+									return (
+										<FormItem>
+											<FormLabel className="text-sm">Aplicar saldo a favor (USD)</FormLabel>
+											<FormControl>
+												<div className="flex flex-col gap-1 w-full">
+													<div className="w-full">
+														<Input
+															id="credit-applied-amount"
+															name="creditApplied"
+															type="text"
+															inputMode="decimal"
+															placeholder={calculatorHandler.placeholder}
+															value={calculatorHandler.displayValue}
+															onKeyDown={calculatorHandler.handleKeyDown}
+															onPaste={calculatorHandler.handlePaste}
+															onFocus={calculatorHandler.handleFocus}
+															onChange={calculatorHandler.handleChange}
+															className={cn(inputStyles, 'text-right font-mono')}
+															autoComplete="off"
+														/>
+													</div>
+													{calculatorHandler.conversionText && (
+														<p className="text-xs text-emerald-600 dark:text-emerald-400 text-right">
+															{calculatorHandler.conversionText}
+														</p>
+													)}
+												</div>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)
+								}}
+							/>
+							{creditApplied > 0 && (
+								<p className="text-xs text-emerald-700 dark:text-emerald-300">
+									Monto restante a pagar con métodos: ${(Math.max(0, totalAmount - (Number(creditApplied) || 0))).toFixed(2)} USD
+								</p>
+							)}
+						</div>
+					)}
 
 					{/* Estado de pago - aparece en la misma línea */}
 					<div className="flex items-start justify-center md:justify-start pt-6 w-full">

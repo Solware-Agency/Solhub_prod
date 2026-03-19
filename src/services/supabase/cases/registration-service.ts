@@ -12,7 +12,7 @@ import {
 } from '@services/supabase/patients/patients-service'
 import { createMedicalCase } from '@services/supabase/cases/medical-cases-service'
 import { supabase } from '@services/supabase/config/config'
-import { validateFormPayments, calculatePaymentDetails } from '@features/form/lib/payment/payment-utils'
+import { validateFormPayments, calculatePaymentDetails, calculatePaymentDetailsWithCredit, calculateTotalPaidUSD } from '@features/form/lib/payment/payment-utils'
 import { prepareDefaultValues, preparePaymentValues } from './registration-helpers'
 import type { ModuleConfig } from '@/shared/types/types'
 // Nuevo sistema: servicios de identificaciones (dual-write)
@@ -97,6 +97,8 @@ export interface MedicalCaseInsert {
 	payment_method_4?: string | null
 	payment_amount_4?: number | null
 	payment_reference_4?: string | null
+	saldo_a_favor?: number | null
+	credit_applied?: number | null
 	exchange_rate?: number | null
 	comments?: string | null
 	price_type?: string | null // taquilla | convenios | descuento (Marihorgen)
@@ -303,6 +305,22 @@ export const registerMedicalCase = async (
 			patient_id: patient.id,
 		})
 
+		// Descontar crédito del paciente (FIFO) si se aplicó saldo a favor en este caso
+		const creditApplied = Number((caseData as any).credit_applied) || 0
+		if (creditApplied > 0 && profileWithLab?.laboratory_id) {
+			try {
+				await (supabase as any).rpc('deduct_patient_credit', {
+					p_patient_id: patient.id,
+					p_laboratory_id: profileWithLab.laboratory_id,
+					p_amount_to_deduct: creditApplied,
+				})
+				console.log('✅ Crédito del paciente descontado (FIFO):', creditApplied)
+			} catch (err) {
+				console.error('❌ Error al descontar crédito del paciente:', err)
+				// No fallar el registro; el caso ya se creó. El saldo_a_favor en otros casos quedó sin descontar.
+			}
+		}
+
 		console.log('✅ Registro completado exitosamente')
 
 		return {
@@ -361,30 +379,60 @@ const prepareRegistrationData = (
 	// Preparar edad para el caso médico (mantener el formato original) - No se usa en nueva estructura
 	// const edadFormatted = formData.ageUnit === 'Años' ? `${formData.ageValue}` : `${formData.ageValue} ${formData.ageUnit.toLowerCase()}`
 
-	// Verificar si hay pagos
+	// Verificar si hay pagos y crédito aplicado (saldo a favor - labs con hasPositiveBalance)
 	const hasPayments = formData.payments?.some((payment) => (payment.amount || 0) > 0) || false
 	const hasTotalAmount = formData.totalAmount > 0
+	const creditApplied = Number((formData as any).creditApplied) || 0
+	const hasPositiveBalance = laboratorySlug === 'lm'
 
-	// Calcular remaining amount y estado de pago solo si hay pagos
+	// Calcular remaining amount y estado de pago (considerando crédito aplicado si aplica)
 	let missingAmount = 0
 	let isPaymentComplete = false
 	let remaining = 0
+	let excessAmount = 0
 
-	if (hasPayments && hasTotalAmount) {
+	if (creditApplied > 0 && hasTotalAmount) {
+		const withCredit = calculatePaymentDetailsWithCredit(
+			formData.payments || [],
+			formData.totalAmount,
+			exchangeRate,
+			creditApplied,
+		)
+		missingAmount = withCredit.missingAmount ?? 0
+		isPaymentComplete = withCredit.isPaymentComplete
+		remaining = Math.max(0, missingAmount)
+		// Excedente cuando crédito + pagos > total (guardar como saldo_a_favor en el nuevo caso)
+		const totalPaidUSD = calculateTotalPaidUSD(formData.payments || [], exchangeRate)
+		const totalCovered = totalPaidUSD + creditApplied
+		if (totalCovered > formData.totalAmount) {
+			excessAmount = parseFloat((totalCovered - formData.totalAmount).toFixed(2))
+		}
+	} else if (hasPayments && hasTotalAmount) {
 		const paymentDetails = calculatePaymentDetails(formData.payments || [], formData.totalAmount, exchangeRate)
 		missingAmount = paymentDetails.missingAmount || 0
+		excessAmount = paymentDetails.excessAmount ?? 0
 		isPaymentComplete = paymentDetails.isPaymentComplete
-		remaining = missingAmount
+		remaining = Math.max(0, missingAmount)
+	}
+
+	// Solo crédito aplicado sin métodos de pago: pago completo si creditApplied >= totalAmount
+	if (creditApplied > 0 && !hasPayments && hasTotalAmount) {
+		remaining = Math.max(0, formData.totalAmount - creditApplied)
+		isPaymentComplete = creditApplied >= formData.totalAmount
 	}
 
 	// Obtener valores por defecto basados en configuración del módulo
-	// Esto asegura que campos NOT NULL tengan valores válidos incluso si están deshabilitados
-	// Pasar userAssignedBranch para que se use como fallback si no hay branch en el formulario
-	// Pasar laboratorySlug para validar que SPT siempre tenga sede
 	const defaultValues = prepareDefaultValues(formData, moduleConfig, userAssignedBranch, laboratorySlug)
 
-	// Preparar valores de pago (maneja labs sin módulo de pagos)
-	const paymentValues = preparePaymentValues(formData, hasPayments, hasTotalAmount, isPaymentComplete, remaining)
+	// Preparar valores de pago (incluye saldo_a_favor y credit_applied para hasPositiveBalance)
+	const paymentValues = preparePaymentValues(
+		formData,
+		hasPayments,
+		hasTotalAmount,
+		isPaymentComplete,
+		remaining,
+		hasPositiveBalance ? { saldoAFavor: excessAmount, creditApplied } : undefined,
+	)
 
 	// Datos del caso médico (tabla medical_records_clean)
 	const caseData: MedicalCaseInsert = {
@@ -648,8 +696,15 @@ export const validateRegistrationData = (
 	}
 
 	// Validar pagos usando la función que convierte correctamente las monedas
+	// Labs con hasPositiveBalance (lm) pueden tener overpayment (saldo a favor)
+	const hasPositiveBalance = laboratorySlug === 'lm'
 	if (hasPayments) {
-		const paymentValidation = validateFormPayments(formData.payments || [], formData.totalAmount, exchangeRate)
+		const paymentValidation = validateFormPayments(
+			formData.payments || [],
+			formData.totalAmount,
+			exchangeRate,
+			{ allowOverpayment: hasPositiveBalance },
+		)
 
 		if (!paymentValidation.isValid) {
 			const errorMsg = paymentValidation.errorMessage || 'Error en la validación de pagos'

@@ -1197,6 +1197,21 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 												</div>
 											</div>
 
+											{/* Crédito disponible (saldo a favor) - solo labs con hasPositiveBalance / lm */}
+											{isMarihorgen && data && data.length > 0 && (() => {
+												const totalCredit = (data as MedicalCaseWithPatient[]).reduce(
+													(sum, c) => sum + (Number((c as any).saldo_a_favor) || 0),
+													0,
+												)
+												if (totalCredit <= 0) return null
+												return (
+													<div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
+														{/* <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Crédito disponible</p> */}
+														<p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">+${totalCredit.toFixed(2)}</p>
+													</div>
+												)
+											})()}
+
 											<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:ml-auto w-full sm:w-auto">
 												<div className="flex items-center gap-1 text-sm w-full sm:w-auto">
 													{patient.telefono && (

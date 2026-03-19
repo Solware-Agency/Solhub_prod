@@ -153,25 +153,25 @@ export function prepareDefaultValues(
 
 /**
  * Prepara valores de pago con valores por defecto seguros
- * Maneja el caso cuando el módulo de pagos está deshabilitado
- * 
- * @param formData - Datos del formulario
- * @param hasPayments - Si hay pagos en el formulario
- * @param hasTotalAmount - Si hay monto total
- * @param isPaymentComplete - Si el pago está completo
- * @param remaining - Monto restante
- * @returns Objeto con valores de pago (todos pueden ser null para labs sin módulo de pagos)
+ * Maneja el caso cuando el módulo de pagos está deshabilitado.
+ * Incluye saldo_a_favor (excedente) y credit_applied (crédito aplicado) para labs con hasPositiveBalance.
+ *
+ * @param saldoAFavor - Excedente cuando el paciente paga de más (solo si hasPositiveBalance)
+ * @param creditApplied - Crédito del paciente aplicado a este caso (del formulario)
  */
 export function preparePaymentValues(
 	formData: FormValues,
 	hasPayments: boolean,
 	hasTotalAmount: boolean,
 	isPaymentComplete: boolean,
-	remaining: number
+	remaining: number,
+	options?: { saldoAFavor?: number; creditApplied?: number },
 ): {
 	total_amount: number | null
 	payment_status: 'Incompleto' | 'Pagado'
 	remaining: number | null
+	saldo_a_favor?: number | null
+	credit_applied?: number | null
 	payment_method_1: string | null
 	payment_amount_1: number | null
 	payment_reference_1: string | null
@@ -185,54 +185,66 @@ export function preparePaymentValues(
 	payment_amount_4: number | null
 	payment_reference_4: string | null
 } {
+	const saldoAFavor = options?.saldoAFavor ?? 0
+	const creditApplied = options?.creditApplied ?? 0
+	const baseNulls = {
+		payment_method_1: null,
+		payment_amount_1: null,
+		payment_reference_1: null,
+		payment_method_2: null,
+		payment_amount_2: null,
+		payment_reference_2: null,
+		payment_method_3: null,
+		payment_amount_3: null,
+		payment_reference_3: null,
+		payment_method_4: null,
+		payment_amount_4: null,
+		payment_reference_4: null,
+	}
+
 	// Si no hay monto total, todos los valores de pago son null
-	// Esto permite que labs sin módulo de pagos funcionen correctamente
 	if (!hasTotalAmount) {
 		return {
 			total_amount: null,
-			payment_status: 'Incompleto', // NOT NULL, siempre debe tener valor
+			payment_status: 'Incompleto',
 			remaining: null,
-			payment_method_1: null,
-			payment_amount_1: null,
-			payment_reference_1: null,
-			payment_method_2: null,
-			payment_amount_2: null,
-			payment_reference_2: null,
-			payment_method_3: null,
-			payment_amount_3: null,
-			payment_reference_3: null,
-			payment_method_4: null,
-			payment_amount_4: null,
-			payment_reference_4: null,
+			saldo_a_favor: null,
+			credit_applied: null,
+			...baseNulls,
 		}
 	}
 
-	// Si hay monto total pero NO hay pagos, guardar el monto y marcar como incompleto
-	if (!hasPayments) {
+	// Si hay monto total pero NO hay pagos ni crédito aplicado, guardar el monto y marcar como incompleto
+	if (!hasPayments && creditApplied <= 0) {
 		return {
 			total_amount: formData.totalAmount,
 			payment_status: 'Incompleto',
-			remaining: formData.totalAmount, // El monto total queda pendiente
-			payment_method_1: null,
-			payment_amount_1: null,
-			payment_reference_1: null,
-			payment_method_2: null,
-			payment_amount_2: null,
-			payment_reference_2: null,
-			payment_method_3: null,
-			payment_amount_3: null,
-			payment_reference_3: null,
-			payment_method_4: null,
-			payment_amount_4: null,
-			payment_reference_4: null,
+			remaining: formData.totalAmount,
+			saldo_a_favor: null,
+			credit_applied: null,
+			...baseNulls,
 		}
 	}
 
-	// Si hay monto total Y hay pagos, usar los valores del formulario
+	// Solo crédito aplicado (sin métodos de pago): el caller pasa remaining ya calculado
+	if (!hasPayments && creditApplied > 0) {
+		return {
+			total_amount: formData.totalAmount,
+			payment_status: remaining <= 0 ? 'Pagado' : 'Incompleto',
+			remaining,
+			saldo_a_favor: null,
+			credit_applied: creditApplied,
+			...baseNulls,
+		}
+	}
+
+	// Si hay monto total Y (hay pagos o crédito aplicado), usar los valores del formulario
 	return {
 		total_amount: formData.totalAmount,
 		payment_status: isPaymentComplete ? 'Pagado' : 'Incompleto',
 		remaining: remaining,
+		saldo_a_favor: saldoAFavor > 0 ? saldoAFavor : null,
+		credit_applied: creditApplied > 0 ? creditApplied : null,
 		payment_method_1: formData.payments?.[0]?.method || null,
 		payment_amount_1: formData.payments?.[0]?.amount || null,
 		payment_reference_1: formData.payments?.[0]?.reference || null,
