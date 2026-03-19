@@ -174,6 +174,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 	useUserProfile()
 	const { laboratory } = useLaboratory()
 	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
+	const caseTypeLabel = isMarihorgen ? 'Tipo de muestra' : 'Tipo de consulta'
 	const getDisplayCode = (caseItem: MedicalCaseWithPatient) =>
 		isMarihorgen && caseItem.exam_type === 'Inmunohistoquímica'
 			? (caseItem.owner_display_code ?? '')
@@ -1514,10 +1515,12 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 																			</div>
 																			<div className="min-w-0">
 																				<p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-																					Tipo de consulta
+																					{caseTypeLabel}
 																				</p>
 																				<p className="text-sm font-medium flex items-center gap-1">
-																					{caseItem.consulta ? caseItem.consulta : 'No especificado'}
+																					{isMarihorgen
+																						? (caseItem.sample_type ?? 'No especificado')
+																						: (caseItem.consulta ?? 'No especificado')}
 																				</p>
 																			</div>
 																			<div className="min-w-0 flex flex-col justify-end">
