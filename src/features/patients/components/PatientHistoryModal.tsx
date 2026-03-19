@@ -1062,11 +1062,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 								<div className="flex-1 overflow-hidden flex flex-col min-h-0">
 									{/* Patient Info */}
 									<div className="p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] shrink-0">
-										<div className="flex flex-col sm:flex-row sm:items-center gap-4">
+										<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 											<div className="flex items-center gap-3">
-												<div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-													<User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-												</div>
 												<div>
 													<h3 className="flex items-center gap-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
 														{patient.nombre}{' '}
@@ -1198,21 +1195,33 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
 											</div>
 
 											{/* Crédito disponible (saldo a favor) - solo labs con hasPositiveBalance / lm */}
-											{isMarihorgen && data && data.length > 0 && (() => {
-												const totalCredit = (data as MedicalCaseWithPatient[]).reduce(
-													(sum, c) => sum + (Number((c as any).saldo_a_favor) || 0),
-													0,
-												)
-												if (totalCredit <= 0) return null
-												return (
-													<div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-														{/* <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Crédito disponible</p> */}
-														<p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">+${totalCredit.toFixed(2)}</p>
-													</div>
-												)
-											})()}
+											{isMarihorgen &&
+												data &&
+												data.length > 0 &&
+												(() => {
+													const totalCredit = (data as MedicalCaseWithPatient[]).reduce(
+														(sum, c) => sum + (Number((c as any).saldo_a_favor) || 0),
+														0,
+													)
+													const totalRemaining = (data as MedicalCaseWithPatient[]).reduce(
+														(sum, c) => sum + (Number((c as any).remaining) || 0),
+														0,
+													)
+													if (totalCredit <= 0 && totalRemaining <= 0) return null
+													return (
+														<div className="flex flex-col gap-1  px-3 py-2">
+															{/* <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Crédito disponible</p> */}
+															<p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+																+${totalCredit.toFixed(2)}
+															</p>
+															<p className="text-sm font-semibold text-red-800 dark:text-red-200">
+																-${totalRemaining.toFixed(2)}
+															</p>
+														</div>
+													)
+												})()}
 
-											<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:ml-auto w-full sm:w-auto">
+											<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
 												<div className="flex items-center gap-1 text-sm w-full sm:w-auto">
 													{patient.telefono && (
 														<button

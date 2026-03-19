@@ -215,6 +215,14 @@ const CaseCard: React.FC<CaseCardProps> = ({
 						</p>
 					</div>
 				)}
+				{!isSpt && (case_ as any).saldo_a_favor <= 0 && (case_ as any).remaining != null && Number((case_ as any).remaining) > 0 && (
+					<div>
+						<p className="text-xs text-gray-500 dark:text-gray-400">REMANENTE</p>
+						<p className="text-sm font-medium text-red-600 dark:text-red-400">
+							-{formatCurrency((case_ as any).remaining)}
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	)
