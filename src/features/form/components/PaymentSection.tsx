@@ -244,10 +244,7 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 
 					{/* Aplicar saldo a favor - solo labs con hasPositiveBalance (misma lógica/UI que monto en métodos de pago) */}
 					{hasPositiveBalance && patientCredit > 0 && totalAmount > 0 && (
-						<div className="w-full space-y-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3">
-							<p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-								Crédito disponible: ${patientCredit.toFixed(2)} USD
-							</p>
+						<div className="w-full space-y-2 ">
 							<FormField
 								control={control}
 								name="creditApplied"
@@ -261,7 +258,7 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 									)
 									return (
 										<FormItem>
-											<FormLabel className="text-sm">Aplicar saldo a favor (USD)</FormLabel>
+											<FormLabel className="text-sm sm:text-base">Aplicar saldo a favor (USD)</FormLabel>
 											<FormControl>
 												<div className="flex flex-col gap-1 w-full">
 													<div className="w-full">
@@ -297,6 +294,9 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 									Monto restante a pagar con métodos: ${(Math.max(0, totalAmount - (Number(creditApplied) || 0))).toFixed(2)} USD
 								</p>
 							)}
+							<p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
+								Crédito disponible: ${patientCredit.toFixed(2)} USD
+							</p>
 						</div>
 					)}
 
