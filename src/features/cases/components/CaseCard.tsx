@@ -1,6 +1,6 @@
 import React from 'react'
 import type { MedicalCaseWithPatient } from '@/services/supabase/cases/medical-cases-service'
-import { User, MailCheck, Baby, Dog } from 'lucide-react'
+import { User } from 'lucide-react'
 import { BranchBadge } from '@shared/components/ui/branch-badge'
 import CaseActionsPopover from './CaseActionsPopover'
 import { getStatusColor } from './status'
@@ -123,34 +123,30 @@ const CaseCard: React.FC<CaseCardProps> = ({
 				</div>
 				{/* Badge para menores */}
 				{isMenor && (
-					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-						<Baby className="w-3 h-3" />
+					<span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
 						Menor
 					</span>
 				)}
 				{/* Badge para animales */}
 				{isAnimal && (
-					<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-						<Dog className="w-3 h-3" />
+					<span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
 						Animal
 					</span>
 				)}
 				{case_.email_sent && (
 					<span
-						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+						className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
 						title="Email enviado"
 					>
-						<MailCheck className="w-3 h-3" />
 						Enviado
 					</span>
 				)}
 				{/* Ocultar estado "No enviado" para SPT */}
 				{!case_.email_sent && !isSpt && (
 					<span
-						className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-						title="Email enviado"
+						className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+						title="Email no enviado"
 					>
-						<MailCheck className="w-3 h-3" />
 						No enviado
 					</span>
 				)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Eye, X, Download } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
+import { cn } from '@shared/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,8 @@ interface PDFButtonProps {
   downloadFileName?: string; // Nombre del archivo al descargar (ej: código del caso)
   /** Si true, solo muestra el botón de previsualizar (no el de descargar). Útil cuando ya hay otro botón de descarga en la misma fila. */
   previewOnly?: boolean;
+  /** Botones e iconos más pequeños (p. ej. hasta 5 PDFs en una fila del modal de caso) */
+  compact?: boolean;
 }
 
 export function PDFButton({ 
@@ -30,6 +33,7 @@ export function PDFButton({
   isAttached = false,
   downloadFileName,
   previewOnly = false,
+  compact = false,
 }: PDFButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -65,29 +69,38 @@ export function PDFButton({
     );
   }
 
+  const btnClass = cn(
+    'shrink-0',
+    compact ? 'h-7 w-7 p-0' : 'p-2',
+    className,
+  )
+  const iconClass = compact ? 'w-3.5 h-3.5' : 'w-4 h-4'
+
   return (
     <>
-      <Button
-        size={size}
-        variant={variant}
-        onClick={() => setIsModalOpen(true)}
-        className={`p-2 ${className}`}
-        title={label || "Ver PDF"}
-      >
-        <Eye className='w-4 h-4' />
-      </Button>
-      {!previewOnly && (
+      <span className="inline-flex items-center gap-0.5 shrink-0">
         <Button
           size={size}
           variant={variant}
-          onClick={handleDownload}
-          disabled={isDownloading}
-          className={`p-2 ${className}`}
-          title={isAttached ? "Descargar PDF adjunto" : "Descargar PDF"}
+          onClick={() => setIsModalOpen(true)}
+          className={btnClass}
+          title={label || "Ver PDF"}
         >
-          <Download className="w-4 h-4" />
+          <Eye className={iconClass} />
         </Button>
-      )}
+        {!previewOnly && (
+          <Button
+            size={size}
+            variant={variant}
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className={btnClass}
+            title={isAttached ? "Descargar PDF adjunto" : "Descargar PDF"}
+          >
+            <Download className={iconClass} />
+          </Button>
+        )}
+      </span>
 
       <Dialog
         open={isModalOpen}

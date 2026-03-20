@@ -752,11 +752,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							return null
 						}
 						if (data) {
-							toast({
-								title: '✅ Video subido',
-								description: 'El video se subió correctamente. Guarda el caso para conservar los cambios.',
-								className: 'bg-green-100 border-green-400 text-green-800',
-							})
+							if (isEditing) {
+								toast({
+									title: '✅ Video subido',
+									description: 'El video se subió correctamente. Guarda el caso para conservar los cambios.',
+									className: 'bg-green-100 border-green-400 text-green-800',
+								})
+							}
 							return { type: 'video', url: data }
 						}
 						return null
@@ -785,11 +787,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							return null
 						}
 						if (data) {
-							toast({
-								title: '✅ Imagen subida',
-								description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
-								className: 'bg-green-100 border-green-400 text-green-800',
-							})
+							if (isEditing) {
+								toast({
+									title: '✅ Imagen subida',
+									description: 'La imagen se subió correctamente. Guarda el caso para conservar los cambios.',
+									className: 'bg-green-100 border-green-400 text-green-800',
+								})
+							}
 							return { type: 'image', url: data }
 						}
 						return null
@@ -798,7 +802,50 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					}
 				}
 			},
-			[currentCase?.id, profile?.laboratory_id, toast],
+			[currentCase?.id, profile?.laboratory_id, toast, isEditing],
+		)
+
+		const handleMediaItemsChange = useCallback(
+			async (newItems: MediaItem[]) => {
+				setMediaItems(newItems)
+
+				if (isEditing || !(isSpt || isConspat) || !currentCase?.id) return
+
+				const imageUrls = newItems.filter((m) => m.type === 'image').map((m) => m.url)
+				const videoUrls = newItems.filter((m) => m.type === 'video').map((m) => m.url)
+
+				try {
+					const { error: mediaUrlsError } = await supabase
+						.from('medical_records_clean')
+						.update({
+							images_urls: imageUrls.length > 0 ? imageUrls : null,
+							video_urls: videoUrls.length > 0 ? videoUrls : null,
+						})
+						.eq('id', currentCase.id)
+
+					if (mediaUrlsError) throw mediaUrlsError
+
+					await refetchCaseData()
+					if (onSave) onSave()
+
+					const totalMedia = newItems.length
+					toast({
+						title: '✅ Archivos guardados',
+						description: `Se ${totalMedia === 1 ? 'guardó' : 'guardaron'} ${totalMedia} ${totalMedia === 1 ? 'archivo' : 'archivos'} (${imageUrls.length} imagen${imageUrls.length !== 1 ? 'es' : ''}, ${videoUrls.length} video${videoUrls.length !== 1 ? 's' : ''}).`,
+						className: 'bg-green-100 border-green-400 text-green-800',
+					})
+				} catch (e) {
+					console.error('Error saving media URLs:', e)
+					await refetchCaseData()
+					toast({
+						title: '❌ Error al guardar archivos',
+						description:
+							e instanceof Error ? e.message : 'No se pudieron guardar las imágenes o videos. Intenta de nuevo.',
+						variant: 'destructive',
+					})
+				}
+			},
+			[isEditing, isSpt, isConspat, currentCase?.id, refetchCaseData, onSave, toast],
 		)
 
 		// Payment method handlers
@@ -2519,9 +2566,9 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								)}
 
 								{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
-								<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2 min-w-0">
-									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 shrink-0">PDF Adjuntos:</span>
-									<div className="sm:flex sm:justify-end sm:flex-1 min-w-0 w-full sm:w-auto">
+								<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2 min-w-0">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">PDF Adjuntos:</span>
+									<div className="w-full min-w-0">
 										{(() => {
 											const pdfUrls: string[] =
 												Array.isArray((caseData as any).uploaded_pdf_urls) &&
@@ -2544,6 +2591,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 													<CasePDFUpload
 														caseId={caseData.id}
 														currentPdfUrls={pdfUrls}
+														isEditing={isEditing}
 														onUploadingChange={setIsUploadingPdf}
 														onPdfUpdated={async () => {
 															if (refetchCaseData) await refetchCaseData()
@@ -2554,18 +2602,30 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 											}
 											if (pdfUrls.length > 0) {
 												return (
-													<div className="flex flex-wrap gap-1">
+													<div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-5">
 														{pdfUrls.map((url, i) => (
-															<PDFButton
+															<div
 																key={url}
-																pdfUrl={url}
-																size="sm"
-																variant="outline"
-																isAttached={true}
-																downloadFileName={
-																	case_?.code ? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf` : undefined
-																}
-															/>
+																className="flex min-w-0 max-w-full flex-col items-center gap-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/80 p-1.5 dark:border-gray-700 dark:bg-gray-800/40 sm:p-2"
+															>
+																<span className="w-full truncate text-center text-xs font-medium leading-tight text-gray-700 dark:text-gray-200">
+																	PDF {i + 1}
+																</span>
+																{!isEditing && (
+																	<PDFButton
+																		pdfUrl={url}
+																		size="sm"
+																		variant="outline"
+																		isAttached={true}
+																		compact
+																		downloadFileName={
+																			case_?.code
+																				? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf`
+																				: undefined
+																		}
+																	/>
+																)}
+															</div>
 														))}
 													</div>
 												)
@@ -2693,16 +2753,19 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								{/* Image URLs field - Visible for all roles if images exist; en SPT todos los roles pueden subir/editar */}
 								{/* Oculto para marihorgen */}
 								{!isMarihorgen && (
-									<div className="flex flex-col py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+									<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
 											Imágenes/Videos:
 										</span>
 										<div className="w-full">
 											<MultipleMediaUrls
 												media={mediaItems}
-												onChange={setMediaItems}
+												onChange={handleMediaItemsChange}
 												maxItems={10}
 												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
+												allowUploadWhenReadonly={
+													(isSpt || isConspat) && !!currentCase?.id && !!profile?.laboratory_id
+												}
 												onUploadFile={
 													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined) ||
 													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined)

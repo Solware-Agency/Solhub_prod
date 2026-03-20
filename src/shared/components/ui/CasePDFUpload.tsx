@@ -35,6 +35,8 @@ interface CasePDFUploadProps {
 	onPdfUpdated: () => void | Promise<void>
 	onUploadingChange?: (isUploading: boolean) => void
 	className?: string
+	/** En vista del caso: ver/descargar. En edición: solo eliminar (como imágenes en el modal). */
+	isEditing?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ interface CasePDFUploadProps {
  * Soporta selección múltiple de archivos.
  * SPT: roles laboratorio, coordinador, owner, prueba, imagenologia, call_center.
  * Conspat: todos los roles.
+ * Con isEditing=false: ver/descargar adjuntos. Con isEditing=true: solo eliminar (sin previsualizar ni descargar en las tarjetas).
  */
 export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	caseId,
@@ -49,6 +52,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 	onPdfUpdated,
 	onUploadingChange,
 	className = '',
+	isEditing = false,
 }) => {
 	const { toast } = useToast()
 	const { profile } = useUserProfile()
@@ -308,37 +312,41 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 			)}
 
 			{urls.length > 0 && (
-				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+				<div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-5">
 					{urls.map((url, index) => (
 						<div
 							key={url}
-							className="flex flex-col items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg min-w-0"
+							className="flex min-w-0 max-w-full flex-col items-center gap-1 overflow-hidden rounded-lg border border-green-200 bg-green-50 p-1.5 dark:border-green-800 dark:bg-green-900/20 sm:p-2"
 						>
-							<span className="text-sm font-medium text-green-800 dark:text-green-200">
+							<span className="w-full truncate text-center text-xs font-medium leading-tight text-green-800 dark:text-green-200">
 								PDF {index + 1}
 							</span>
-							<div className="flex items-center gap-1">
-								<PDFButton
-									pdfUrl={url}
-									size="sm"
-									variant="ghost"
-									className="h-6 px-2"
-									isAttached={true}
-								/>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => handleDelete(index)}
-									disabled={isDeletingIndex !== null}
-									className="h-6 px-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-									title="Eliminar PDF"
-								>
-									{isDeletingIndex === index ? (
-										<Loader2 className="h-3 w-3 animate-spin" />
-									) : (
-										<Trash2 className="h-3 w-3" />
-									)}
-								</Button>
+							<div className="flex w-full min-w-0 flex-col items-center gap-0.5">
+								{!isEditing && (
+									<PDFButton
+										pdfUrl={url}
+										size="sm"
+										variant="ghost"
+										isAttached={true}
+										compact
+									/>
+								)}
+								{isEditing && (
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => handleDelete(index)}
+										disabled={isDeletingIndex !== null}
+										className="h-7 w-7 shrink-0 p-0 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+										title="Eliminar PDF"
+									>
+										{isDeletingIndex === index ? (
+											<Loader2 className="h-3.5 w-3.5 animate-spin" />
+										) : (
+											<Trash2 className="h-3.5 w-3.5" />
+										)}
+									</Button>
+								)}
 							</div>
 						</div>
 					))}
