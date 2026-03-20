@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { AlertTriangle, Calendar, AlertCircle } from 'lucide-react'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
