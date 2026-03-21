@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { format, addMonths } from 'date-fns'
+import { addMonths, format, isValid, parse } from 'date-fns'
 import {
 	Dialog,
 	DialogContent,
@@ -12,10 +12,9 @@ import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
-import { Calendar } from '@shared/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
+import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
-import { CalendarIcon, ExternalLink, Paperclip, Upload, X } from 'lucide-react'
+import { ExternalLink, Paperclip, Upload, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { getAseguradoras } from '@services/supabase/aseguradoras/aseguradoras-service'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
@@ -458,97 +457,61 @@ export const EditPolizaModal: React.FC<EditPolizaModalProps> = ({ isOpen, onClos
 			case 2:
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
+						<div className="space-y-2 min-w-0">
 							<Label>
 								Fecha de emisión <span className="text-destructive">*</span>
 							</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.fecha_inicio && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.fecha_inicio ? format(parseIsoDate(form.fecha_inicio)!, 'dd/MM/yyyy') : 'Fecha'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={parseIsoDate(form.fecha_inicio)}
-										onSelect={(date) => {
-											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
-											const months =
-												form.modalidad_pago === 'Mensual'
-													? 1
-													: form.modalidad_pago === 'Trimestral'
-														? 3
-														: form.modalidad_pago === 'Semestral'
-															? 6
-															: 12
-											const proxStr = fechaStr && date ? format(addMonths(date, months), 'yyyy-MM-dd') : ''
-											setForm((prev) => ({
-												...prev,
-												fecha_inicio: fechaStr,
-												fecha_prox_vencimiento: proxStr,
-												dia_vencimiento: proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento,
-											}))
-										}}
-										allowFutureDates
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<DateField
+								value={form.fecha_inicio}
+								onChange={(fechaStr) => {
+									const months =
+										form.modalidad_pago === 'Mensual'
+											? 1
+											: form.modalidad_pago === 'Trimestral'
+												? 3
+												: form.modalidad_pago === 'Semestral'
+													? 6
+													: 12
+									const date = fechaStr ? parse(fechaStr, 'yyyy-MM-dd', new Date()) : null
+									const proxStr =
+										fechaStr && date && isValid(date) ? format(addMonths(date, months), 'yyyy-MM-dd') : ''
+									setForm((prev) => ({
+										...prev,
+										fecha_inicio: fechaStr,
+										fecha_prox_vencimiento: proxStr,
+										dia_vencimiento: proxStr ? String(new Date(proxStr + 'T12:00:00').getDate()) : prev.dia_vencimiento,
+									}))
+								}}
+								placeholder="DD/MM/AAAA"
+							/>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 min-w-0">
 							<Label>
 								Fecha vencimiento <span className="text-destructive">*</span>
 							</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.fecha_vencimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.fecha_vencimiento ? format(parseIsoDate(form.fecha_vencimiento)!, 'dd/MM/yyyy') : 'Fecha'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={parseIsoDate(form.fecha_vencimiento)}
-										onSelect={(date) => {
-											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
-											const baseDate = form.fecha_inicio ? new Date(form.fecha_inicio + 'T12:00:00') : date
-											const months =
-												form.modalidad_pago === 'Mensual'
-													? 1
-													: form.modalidad_pago === 'Trimestral'
-														? 3
-														: form.modalidad_pago === 'Semestral'
-															? 6
-															: 12
-											const proxDate = baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : date
-											const proxStr = proxDate ? format(proxDate, 'yyyy-MM-dd') : fechaStr
-											setForm((prev) => ({
-												...prev,
-												fecha_vencimiento: fechaStr,
-												dia_vencimiento: proxDate ? String(proxDate.getDate()) : '',
-												fecha_prox_vencimiento: proxStr,
-											}))
-										}}
-										allowFutureDates
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<DateField
+								value={form.fecha_vencimiento}
+								onChange={(fechaStr) => {
+									const baseDate = form.fecha_inicio ? new Date(form.fecha_inicio + 'T12:00:00') : (fechaStr ? new Date(fechaStr + 'T12:00:00') : null)
+									const months =
+										form.modalidad_pago === 'Mensual'
+											? 1
+											: form.modalidad_pago === 'Trimestral'
+												? 3
+												: form.modalidad_pago === 'Semestral'
+													? 6
+													: 12
+									const proxDate = baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : (fechaStr ? new Date(fechaStr + 'T12:00:00') : null)
+									const proxStr = proxDate && !isNaN(proxDate.getTime()) ? format(proxDate, 'yyyy-MM-dd') : fechaStr
+									setForm((prev) => ({
+										...prev,
+										fecha_vencimiento: fechaStr,
+										dia_vencimiento: proxDate && !isNaN(proxDate.getTime()) ? String(proxDate.getDate()) : '',
+										fecha_prox_vencimiento: proxStr,
+									}))
+								}}
+								placeholder="DD/MM/AAAA"
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label className="text-muted-foreground">Día de vencimiento</Label>

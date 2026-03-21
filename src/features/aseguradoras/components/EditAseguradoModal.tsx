@@ -1,15 +1,12 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeftFromLine, Save, User, CalendarIcon, Paperclip, Plus, X, ExternalLink } from 'lucide-react'
+import { ArrowLeftFromLine, Save, User, Paperclip, Plus, X, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Input } from '@shared/components/ui/input'
 import { Button } from '@shared/components/ui/button'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Calendar } from '@shared/components/ui/calendar'
+import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
-import { format } from 'date-fns'
-import { cn } from '@shared/lib/cn'
 import type { Asegurado, AseguradoAttachment } from '@services/supabase/aseguradoras/asegurados-service'
 import { updateAsegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import {
@@ -315,33 +312,12 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 											</div>
 											<div className="space-y-2">
 												<Label>Fecha de nacimiento</Label>
-												<Popover>
-													<PopoverTrigger asChild>
-														<Button
-															variant="outline"
-															className={cn(
-																'w-full justify-start text-left font-normal',
-																!form.fecha_nacimiento && 'text-muted-foreground',
-															)}
-														>
-															<CalendarIcon className="mr-2 h-4 w-4" />
-															{form.fecha_nacimiento
-																? format(new Date(form.fecha_nacimiento + 'T00:00:00'), 'dd/MM/yyyy')
-																: 'Fecha'}
-														</Button>
-													</PopoverTrigger>
-													<PopoverContent className="w-auto p-0">
-														<Calendar
-															mode="single"
-															selected={form.fecha_nacimiento ? new Date(form.fecha_nacimiento + 'T00:00:00') : undefined}
-															onSelect={(date) => {
-																const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
-																setForm((prev) => ({ ...prev, fecha_nacimiento: fechaStr }))
-															}}
-															initialFocus
-														/>
-													</PopoverContent>
-												</Popover>
+												<DateField
+													value={form.fecha_nacimiento}
+													onChange={(v) => setForm((prev) => ({ ...prev, fecha_nacimiento: v }))}
+													disallowFuture
+													placeholder="DD/MM/AAAA"
+												/>
 											</div>
 											<div className="space-y-4">
 												<div className="space-y-2">

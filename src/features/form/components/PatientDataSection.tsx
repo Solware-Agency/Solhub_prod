@@ -9,15 +9,10 @@ import { Loader2, CheckCircle } from 'lucide-react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { usePatientAutofill } from '@shared/hooks/usePatientAutofill'
 import { memo, useCallback, useEffect } from 'react'
-import { useState } from 'react'
 import { User, Phone, CreditCard, Mail } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Button } from '@shared/components/ui/button'
-import { Calendar } from '@shared/components/ui/calendar'
-import { CalendarIcon } from 'lucide-react'
+import { DateField } from '@shared/components/ui/date-field'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { useLaboratory } from '@/app/providers/LaboratoryContext'
 import { NewPatientDataSection } from './NewPatientDataSection'
 
@@ -34,7 +29,6 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 	// Llamar todos los hooks incondicionalmente (reglas de React)
 	const { setValue, clearErrors, setError } = useFormContext<FormValues>()
 	const { fillPatientData, isLoading: isLoadingPatient, lastFilledPatient } = usePatientAutofill(setValue)
-	const [isRegistrationDateCalendarOpen, setIsRegistrationDateCalendarOpen] = useState(false)
 	const idType = useWatch({ control, name: 'idType' })
 	const idNumber = useWatch({ control, name: 'idNumber' })
 	const isIdDisabled = idType === 'S/C'
@@ -312,49 +306,25 @@ export const PatientDataSection = memo(({ control, inputStyles }: PatientDataSec
 					)}
 				/>
 
-				{/* Fecha de Registro - CON CALENDARIO */}
+				{/* Fecha de Registro */}
 				<FormField
 					control={control}
 					name="registrationDate"
 					render={({ field, fieldState }) => (
 						<FormItem className="flex flex-col col-span-1">
 							<FormLabel>Fecha de Registro *</FormLabel>
-							<Popover open={isRegistrationDateCalendarOpen} onOpenChange={setIsRegistrationDateCalendarOpen}>
-								<PopoverTrigger asChild>
-									<FormControl>
-										<Button
-											variant={'outline'}
-											className={cn(
-												'w-full justify-start text-left font-normal',
-												!field.value && 'text-muted-foreground',
-												inputStyles + ' transition-none',
-												fieldState.error && 'border-red-500 focus:border-red-500',
-											)}
-										>
-											<CalendarIcon className="mr-2 h-4 w-4" />
-											{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Fecha</span>}
-										</Button>
-									</FormControl>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0 z-9999" align="start">
-									<Calendar
-										mode="single"
-										selected={field.value instanceof Date ? field.value : undefined}
-										onSelect={(date) => {
-											field.onChange(date instanceof Date ? date : null)
-											setIsRegistrationDateCalendarOpen(false)
-										}}
-										disabled={(date) => {
-											const today = new Date()
-											const maxPastDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
-											return date < maxPastDate || date > today
-										}}
-										initialFocus
-										locale={es}
-										defaultMonth={field.value instanceof Date ? field.value : new Date()}
-									/>
-								</PopoverContent>
-							</Popover>
+							<FormControl>
+								<DateField
+									value={field.value instanceof Date ? format(field.value, 'yyyy-MM-dd') : ''}
+									onChange={(iso) =>
+										field.onChange(iso ? new Date(iso + 'T12:00:00') : null)
+									}
+									disallowFuture
+									minDate={new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate())}
+									placeholder="DD/MM/AAAA"
+									className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
+								/>
+							</FormControl>
 							<FormMessage />
 						</FormItem>
 					)}

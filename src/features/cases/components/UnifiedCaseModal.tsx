@@ -20,7 +20,6 @@ import {
 	Copy,
 	ChevronDown,
 	ChevronUp,
-	CalendarIcon,
 	Download,
 	Phone,
 	ClipboardList,
@@ -34,8 +33,7 @@ import { supabase, SEND_EMAIL_FUNCTION_URL, getDownloadPdfHeaders } from '@/serv
 import { useToast } from '@shared/hooks/use-toast'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Calendar } from '@shared/components/ui/calendar'
+import { DateField } from '@shared/components/ui/date-field'
 import { Textarea } from '@shared/components/ui/textarea'
 import { logEmailSend } from '@/services/supabase/email-logs/email-logs-service'
 import { getDownloadUrl, isEdgeFunctionDownloadUrl } from '@/services/utils/download-utils'
@@ -283,8 +281,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 		const [showFullPatientInfo, setShowFullPatientInfo] = useState(false)
 		const [showResponsableHistoryModal, setShowResponsableHistoryModal] = useState(false)
 		const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
-		const [isFechaMuestraCalendarOpen, setIsFechaMuestraCalendarOpen] = useState(false)
-		const [isFechaEntregaCalendarOpen, setIsFechaEntregaCalendarOpen] = useState(false)
 
 		// Estados para rastrear subida de archivos
 		const [isUploadingPdf, setIsUploadingPdf] = useState(false)
@@ -2668,77 +2664,13 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de Muestra:</span>
 										{isEditing ? (
-											<div className="sm:w-1/2">
-												<Popover open={isFechaMuestraCalendarOpen} onOpenChange={setIsFechaMuestraCalendarOpen}>
-													<PopoverTrigger asChild>
-														<Button
-															variant="outline"
-															className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
-														>
-															<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
-															{(
-																editedCase.fecha_muestra !== undefined
-																	? editedCase.fecha_muestra
-																	: (caseData as any).fecha_muestra
-															)
-																? format(
-																		new Date(
-																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																		),
-																		'PPP',
-																		{ locale: es },
-																	)
-																: 'Seleccionar fecha'}
-														</Button>
-													</PopoverTrigger>
-													<PopoverContent className="w-auto p-0 z-9999" align="end">
-														<Calendar
-															mode="single"
-															selected={
-																(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
-																	? new Date(
-																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																		)
-																	: undefined
-															}
-															onSelect={(date) => {
-																handleInputChange('fecha_muestra', date ? format(date, 'yyyy-MM-dd') : null)
-																setIsFechaMuestraCalendarOpen(false)
-															}}
-															initialFocus
-															locale={es}
-															defaultMonth={
-																(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra)
-																	? new Date(
-																			(editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? '') + 'T12:00:00',
-																		)
-																	: new Date()
-															}
-														/>
-														<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
-															<Button
-																variant="ghost"
-																size="sm"
-																onClick={() => {
-																	handleInputChange('fecha_muestra', null)
-																	setIsFechaMuestraCalendarOpen(false)
-																}}
-															>
-																Borrar
-															</Button>
-															<Button
-																variant="ghost"
-																size="sm"
-																onClick={() => {
-																	handleInputChange('fecha_muestra', format(new Date(), 'yyyy-MM-dd'))
-																	setIsFechaMuestraCalendarOpen(false)
-																}}
-															>
-																Hoy
-															</Button>
-														</div>
-													</PopoverContent>
-												</Popover>
+											<div className="sm:w-1/2 min-w-0">
+												<DateField
+													value={editedCase.fecha_muestra ?? (caseData as any).fecha_muestra ?? ''}
+													onChange={(iso) => handleInputChange('fecha_muestra', iso || null)}
+													disallowFuture
+													placeholder="DD/MM/AAAA"
+												/>
 											</div>
 										) : (
 											<span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right font-medium">
@@ -3315,73 +3247,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 										<div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 											<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha de entrega</span>
 											{isEditing ? (
-												<div className="sm:w-1/2">
-													<Popover open={isFechaEntregaCalendarOpen} onOpenChange={setIsFechaEntregaCalendarOpen}>
-														<PopoverTrigger asChild>
-															<Button
-																variant="outline"
-																className="w-full justify-start text-left font-normal text-sm border-dashed h-9 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"
-															>
-																<CalendarIcon className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-400" />
-																{(
-																	editedCase.fecha_entrega !== undefined
-																		? editedCase.fecha_entrega
-																		: caseData.fecha_entrega
-																)
-																	? format(
-																			new Date(
-																				(editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00',
-																			),
-																			'PPP',
-																			{ locale: es },
-																		)
-																	: 'Seleccionar fecha'}
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent className="w-auto p-0 z-9999" align="end">
-															<Calendar
-																mode="single"
-																selected={
-																	(editedCase.fecha_entrega ?? caseData.fecha_entrega)
-																		? new Date((editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00')
-																		: undefined
-																}
-																onSelect={(date) => {
-																	handleInputChange('fecha_entrega', date ? format(date, 'yyyy-MM-dd') : null)
-																	setIsFechaEntregaCalendarOpen(false)
-																}}
-																initialFocus
-																locale={es}
-																defaultMonth={
-																	(editedCase.fecha_entrega ?? caseData.fecha_entrega)
-																		? new Date((editedCase.fecha_entrega ?? caseData.fecha_entrega ?? '') + 'T12:00:00')
-																		: new Date()
-																}
-															/>
-															<div className="flex justify-end gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
-																<Button
-																	variant="ghost"
-																	size="sm"
-																	onClick={() => {
-																		handleInputChange('fecha_entrega', null)
-																		setIsFechaEntregaCalendarOpen(false)
-																	}}
-																>
-																	Borrar
-																</Button>
-																<Button
-																	variant="ghost"
-																	size="sm"
-																	onClick={() => {
-																		handleInputChange('fecha_entrega', format(new Date(), 'yyyy-MM-dd'))
-																		setIsFechaEntregaCalendarOpen(false)
-																	}}
-																>
-																	Hoy
-																</Button>
-															</div>
-														</PopoverContent>
-													</Popover>
+												<div className="sm:w-1/2 min-w-0">
+													<DateField
+														value={editedCase.fecha_entrega ?? caseData.fecha_entrega ?? ''}
+														onChange={(iso) => handleInputChange('fecha_entrega', iso || null)}
+														placeholder="DD/MM/AAAA"
+													/>
 												</div>
 											) : (
 												<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">

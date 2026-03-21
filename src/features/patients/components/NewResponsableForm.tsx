@@ -17,9 +17,8 @@ import {
 	DialogTrigger,
 } from '@shared/components/ui/dialog'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
-import { Calendar } from '@shared/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { UserPlus, CalendarIcon } from 'lucide-react'
+import { DateField } from '@shared/components/ui/date-field'
+import { UserPlus } from 'lucide-react'
 import { format } from 'date-fns'
 import { createPatient, PatientError } from '@services/supabase/patients/patients-service'
 import { useToast } from '@shared/hooks/use-toast'
@@ -405,45 +404,17 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 
 					{/* Tercera línea: Fecha de Nacimiento o Edad */}
 					<div className="grid grid-cols-2 gap-4">
-						<div className="space-y-2">
+						<div className="space-y-2 min-w-0">
 							<Label>Fecha de Nacimiento{!isConspat && ' *'}</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal min-w-0',
-											!fechaNacimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-										<span className="truncate">
-											{fechaNacimiento ? format(fechaNacimiento, 'dd/MM/yyyy') : 'Fecha'}
-										</span>
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={fechaNacimiento}
-										onSelect={(date) => {
-											setFechaNacimiento(date)
-											// Limpiar edad manual si se selecciona fecha
-											if (date) {
-												setEdad('')
-											}
-										}}
-										initialFocus
-										disabled={(date) => {
-											const today = new Date()
-											today.setHours(0, 0, 0, 0)
-											const dateToCompare = new Date(date)
-											dateToCompare.setHours(0, 0, 0, 0)
-											return dateToCompare > today
-										}}
-									/>
-								</PopoverContent>
-							</Popover>
+							<DateField
+								value={fechaNacimiento ? format(fechaNacimiento, 'yyyy-MM-dd') : ''}
+								onChange={(iso) => {
+									setFechaNacimiento(iso ? new Date(iso + 'T12:00:00') : undefined)
+									if (iso) setEdad('')
+								}}
+								disallowFuture
+								placeholder="DD/MM/AAAA"
+							/>
 						</div>
 
 						<div className="space-y-2">

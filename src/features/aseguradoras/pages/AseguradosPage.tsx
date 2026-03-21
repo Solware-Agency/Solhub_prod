@@ -12,11 +12,9 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
-import { Calendar } from '@shared/components/ui/calendar'
+import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Paperclip, X } from 'lucide-react'
-import { format } from 'date-fns'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Paperclip, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
@@ -384,33 +382,12 @@ const AseguradosPage = () => {
 						</div>
 						<div className="space-y-2">
 							<Label>Fecha de nacimiento</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											'w-full justify-start text-left font-normal',
-											!form.fecha_nacimiento && 'text-muted-foreground',
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{form.fecha_nacimiento
-											? format(parseIsoDate(form.fecha_nacimiento)!, 'dd/MM/yyyy')
-											: 'Fecha'}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0">
-									<Calendar
-										mode="single"
-										selected={parseIsoDate(form.fecha_nacimiento)}
-										onSelect={(date) => {
-											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
-											setForm((prev) => ({ ...prev, fecha_nacimiento: fechaStr }))
-										}}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<DateField
+								value={form.fecha_nacimiento}
+								onChange={(v) => setForm((prev) => ({ ...prev, fecha_nacimiento: v }))}
+								disallowFuture
+								placeholder="DD/MM/AAAA"
+							/>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Dirección <span className="text-destructive">*</span></Label>
