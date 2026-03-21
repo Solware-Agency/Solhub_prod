@@ -1,38 +1,30 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@shared/components/ui/button'
-import { Card } from '@shared/components/ui/card'
-import { Input } from '@shared/components/ui/input'
+import { format, addMonths } from 'date-fns'
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from '@shared/components/ui/dialog'
+import { Button } from '@shared/components/ui/button'
+import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, Paperclip, ExternalLink } from 'lucide-react'
+import { CalendarIcon, ExternalLink, Paperclip, Upload, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { format, addMonths } from 'date-fns'
-import { exportRowsToExcel } from '@shared/utils/exportToExcel'
-import { getAseguradoras, type Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
-import { findAseguradoById, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
+import { getAseguradoras } from '@services/supabase/aseguradoras/aseguradoras-service'
+import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import {
-	createPoliza,
-	getPolizas,
+	getPolizaById,
 	updatePoliza,
 	type Poliza,
 	type DocumentoPoliza,
 } from '@services/supabase/aseguradoras/polizas-service'
-import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
-import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
-import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
-import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
-import PolizaCard from '@features/aseguradoras/components/PolizaCard'
 import {
 	uploadDocumentoPoliza,
 	validateReciboFile,
@@ -44,120 +36,116 @@ import {
 	buildPaymentColumnsFromForm,
 } from '@features/aseguradoras/lib/poliza-form-shared'
 
-const PolizasPage = () => {
+export interface EditPolizaModalProps {
+	isOpen: boolean
+	onClose: () => void
+	/** Póliza a editar; con el modal abierto debe estar definida */
+	poliza: Poliza | null
+	/** Tras guardar correctamente, con relaciones asegurado/aseguradora */
+	onSaved?: (updated: Poliza) => void
+}
+
+const defaultForm = () => ({
+	asegurado_id: '',
+	aseguradora_id: '',
+	agente_nombre: '',
+	numero_poliza: '',
+	ramo: '',
+	suma_asegurada: '',
+	modalidad_pago: 'Mensual' as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
+	estatus_poliza: 'Activa' as 'Activa' | 'Anulada',
+	estatus_pago: 'Pendiente' as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
+	fecha_inicio: '',
+	fecha_vencimiento: '',
+	dia_vencimiento: '',
+	fecha_prox_vencimiento: '',
+	notas: '',
+})
+
+function polizaToFormState(p: Poliza) {
+	return {
+		asegurado_id: p.asegurado_id,
+		aseguradora_id: p.aseguradora_id,
+		agente_nombre: p.agente_nombre ?? '',
+		numero_poliza: p.numero_poliza ?? '',
+		ramo: p.ramo ?? '',
+		suma_asegurada: p.suma_asegurada != null ? String(p.suma_asegurada) : '',
+		modalidad_pago: p.modalidad_pago,
+		estatus_poliza: (p.estatus_poliza === 'Anulada' ? 'Anulada' : 'Activa') as 'Activa' | 'Anulada',
+		estatus_pago: (p.estatus_pago ?? 'Pendiente') as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
+		fecha_inicio: p.fecha_inicio?.slice(0, 10) ?? '',
+		fecha_vencimiento: p.fecha_vencimiento?.slice(0, 10) ?? '',
+		dia_vencimiento: p.dia_vencimiento != null ? String(p.dia_vencimiento) : '',
+		fecha_prox_vencimiento: p.fecha_prox_vencimiento?.slice(0, 10) ?? '',
+		notas: p.notas ?? '',
+	}
+}
+
+export const EditPolizaModal: React.FC<EditPolizaModalProps> = ({ isOpen, onClose, poliza, onSaved }) => {
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
-	const [searchTerm, setSearchTerm] = useState('')
-	const [currentPage, setCurrentPage] = useState(1)
-	const [itemsPerPage, setItemsPerPage] = useState(24)
-	const [openModal, setOpenModal] = useState(false)
-	const [step, setStep] = useState(0)
+	const docFileInputRef = useRef<HTMLInputElement>(null)
+	const [step, setStep] = useState(1)
 	const [saving, setSaving] = useState(false)
-	const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null)
-	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
-	const [panelOpen, setPanelOpen] = useState(false)
-	const [aseguradoHistoryOpen, setAseguradoHistoryOpen] = useState(false)
-	const [selectedAseguradoForHistory, setSelectedAseguradoForHistory] = useState<Asegurado | null>(null)
-	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = useState(false)
-	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = useState<Aseguradora | null>(null)
-	const [editingPoliza, setEditingPoliza] = useState<Poliza | null>(null)
 	const [uploadingPdf, setUploadingPdf] = useState(false)
+	const [editingPoliza, setEditingPoliza] = useState<Poliza | null>(null)
+	const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null)
+	const [form, setForm] = useState(defaultForm)
 	const [documentFiles, setDocumentFiles] = useState<File[]>([])
 	const [existingDocumentos, setExistingDocumentos] = useState<DocumentoPoliza[]>([])
 	const [removedDocIndices, setRemovedDocIndices] = useState<Set<number>>(new Set())
-	const docFileInputRef = React.useRef<HTMLInputElement>(null)
-	const [form, setForm] = useState({
-		asegurado_id: '',
-		aseguradora_id: '',
-		agente_nombre: '',
-		numero_poliza: '',
-		ramo: '',
-		suma_asegurada: '',
-		modalidad_pago: 'Mensual' as 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual',
-		estatus_poliza: 'Activa' as 'Activa' | 'Anulada',
-		estatus_pago: 'Pendiente' as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
-		fecha_inicio: '',
-		fecha_vencimiento: '',
-		dia_vencimiento: '',
-		fecha_prox_vencimiento: '',
-		notas: '',
-	})
-
-	const parseIsoDate = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
-
-	const { data, isLoading, error } = useQuery({
-		queryKey: ['polizas', searchTerm, currentPage, itemsPerPage],
-		queryFn: () => getPolizas(currentPage, itemsPerPage, searchTerm),
-		staleTime: 1000 * 60 * 5,
-	})
 
 	const { data: aseguradorasData } = useQuery({
 		queryKey: ['aseguradoras-catalogo'],
 		queryFn: getAseguradoras,
 		staleTime: 1000 * 60 * 5,
+		enabled: isOpen,
 	})
 
-	const polizas = useMemo(() => data?.data ?? [], [data])
-	const totalPages = data?.totalPages ?? 1
+	const parseIsoDate = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
 
-	const handleSearch = useCallback((value: string) => {
-		setSearchTerm(value)
-		setCurrentPage(1)
-	}, [])
+	useLayoutEffect(() => {
+		if (!isOpen || !poliza) return
+		setEditingPoliza(poliza)
+		setForm(polizaToFormState(poliza))
+		setSelectedAsegurado(
+			poliza.asegurado
+				? ({
+						id: poliza.asegurado.id,
+						full_name: poliza.asegurado.full_name,
+						document_id: poliza.asegurado.document_id,
+					} as Asegurado)
+				: null,
+		)
+		setExistingDocumentos(poliza.documentos_poliza ?? [])
+		setRemovedDocIndices(new Set())
+		setDocumentFiles([])
+		if (docFileInputRef.current) docFileInputRef.current.value = ''
+		setStep(1)
+	}, [isOpen, poliza])
 
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page)
-	}, [])
-
-	const handleAseguradoClick = useCallback(async (aseguradoId: string) => {
-		const a = await findAseguradoById(aseguradoId)
-		if (a) {
-			setSelectedAseguradoForHistory(a)
-			setAseguradoHistoryOpen(true)
-		}
-	}, [])
-
-	const handleAseguradoraClick = useCallback(
-		(aseguradoraId: string) => {
-			const a = (aseguradorasData || []).find((r) => r.id === aseguradoraId)
-			if (a) {
-				setSelectedAseguradoraForHistory(a)
-				setAseguradoraHistoryOpen(true)
-			}
-		},
-		[aseguradorasData],
-	)
-
-	const resetForm = () => {
-		setForm({
-			asegurado_id: '',
-			aseguradora_id: '',
-			agente_nombre: '',
-			numero_poliza: '',
-			ramo: '',
-			suma_asegurada: '',
-			modalidad_pago: 'Mensual',
-			estatus_poliza: 'Activa',
-			estatus_pago: 'Pendiente',
-			fecha_inicio: '',
-			fecha_vencimiento: '',
-			dia_vencimiento: '',
-			fecha_prox_vencimiento: '',
-			notas: '',
-		})
+	const resetLocal = useCallback(() => {
+		setEditingPoliza(null)
+		setForm(defaultForm())
+		setSelectedAsegurado(null)
 		setDocumentFiles([])
 		setExistingDocumentos([])
 		setRemovedDocIndices(new Set())
 		if (docFileInputRef.current) docFileInputRef.current.value = ''
-		setStep(0)
-		setSelectedAsegurado(null)
-		setEditingPoliza(null)
-	}
+		setStep(1)
+		setSaving(false)
+		setUploadingPdf(false)
+	}, [])
 
-	const openNewModal = () => {
-		resetForm()
-		setOpenModal(true)
-	}
+	const handleOpenChange = useCallback(
+		(open: boolean) => {
+			if (!open) {
+				resetLocal()
+				onClose()
+			}
+		},
+		[onClose, resetLocal],
+	)
 
 	const keptExistingCount = existingDocumentos.length - removedDocIndices.size
 	const totalDocCount = keptExistingCount + documentFiles.length
@@ -188,52 +176,8 @@ const PolizasPage = () => {
 		setRemovedDocIndices((prev) => new Set([...prev, index]))
 	}
 
-	const openForEdit = useCallback((poliza: Poliza) => {
-		setForm({
-			asegurado_id: poliza.asegurado_id,
-			aseguradora_id: poliza.aseguradora_id,
-			agente_nombre: poliza.agente_nombre ?? '',
-			numero_poliza: poliza.numero_poliza ?? '',
-			ramo: poliza.ramo ?? '',
-			suma_asegurada: poliza.suma_asegurada != null ? String(poliza.suma_asegurada) : '',
-			modalidad_pago: poliza.modalidad_pago,
-			estatus_poliza: (poliza.estatus_poliza === 'Anulada' ? 'Anulada' : 'Activa') as 'Activa' | 'Anulada',
-			estatus_pago: (poliza.estatus_pago ?? 'Pendiente') as 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora',
-			fecha_inicio: poliza.fecha_inicio?.slice(0, 10) ?? '',
-			fecha_vencimiento: poliza.fecha_vencimiento?.slice(0, 10) ?? '',
-			dia_vencimiento: poliza.dia_vencimiento != null ? String(poliza.dia_vencimiento) : '',
-			fecha_prox_vencimiento: poliza.fecha_prox_vencimiento?.slice(0, 10) ?? '',
-			notas: poliza.notas ?? '',
-		})
-		setSelectedAsegurado(
-			poliza.asegurado
-				? ({ id: poliza.asegurado.id, full_name: poliza.asegurado.full_name, document_id: poliza.asegurado.document_id } as Asegurado)
-				: null,
-		)
-		setExistingDocumentos(poliza.documentos_poliza ?? [])
-		setRemovedDocIndices(new Set())
-		setDocumentFiles([])
-		setEditingPoliza(poliza)
-		setPanelOpen(false)
-		setOpenModal(true)
-		setStep(1)
-	}, [])
-
-	const openDetailPanel = (row: Poliza) => {
-		setSelectedPoliza(row)
-		setPanelOpen(true)
-	}
-
-	/** Validación unificada por paso. Devuelve los campos obligatorios faltantes agrupados por sección. */
 	const getValidationErrors = (): { step: string; fields: string[] }[] => {
 		const errors: { step: string; fields: string[] }[] = []
-
-		// Paso 1: Asegurado (solo al crear)
-		if (!editingPoliza && !form.asegurado_id?.trim()) {
-			errors.push({ step: 'Asegurado', fields: ['Seleccione un asegurado'] })
-		}
-
-		// Paso 2: Datos póliza
 		const part2: string[] = []
 		if (!form.aseguradora_id?.trim()) part2.push('Aseguradora')
 		if (!form.agente_nombre?.trim()) part2.push('Agente / Productor')
@@ -241,22 +185,15 @@ const PolizasPage = () => {
 		if (!form.ramo?.trim()) part2.push('Ramo')
 		if (!form.suma_asegurada?.trim()) part2.push('Suma asegurada')
 		if (part2.length > 0) errors.push({ step: 'Datos póliza', fields: part2 })
-
-		// Paso 3: Fechas (requeridos por backend)
 		const fechas: string[] = []
 		if (!form.fecha_inicio?.trim()) fechas.push('Fecha de emisión')
 		if (!form.fecha_vencimiento?.trim()) fechas.push('Fecha vencimiento')
 		if (fechas.length > 0) errors.push({ step: 'Fechas', fields: fechas })
-
 		return errors
 	}
 
-	/** Validación solo del paso actual (para botón Siguiente) */
 	const getValidationErrorsForStep = (stepIndex: number): string[] => {
-		if (stepIndex === 0) {
-			if (!editingPoliza && !form.asegurado_id?.trim()) return ['Seleccione un asegurado']
-			return []
-		}
+		if (stepIndex === 0) return []
 		if (stepIndex === 1) {
 			const err: string[] = []
 			if (!form.aseguradora_id?.trim()) err.push('Aseguradora')
@@ -285,57 +222,10 @@ const PolizasPage = () => {
 	}
 
 	const handleSave = async () => {
+		if (!editingPoliza?.id) return
 		const allErrors = getValidationErrors()
 		if (allErrors.length > 0) {
 			showValidationToast(allErrors)
-			return
-		}
-		if (!editingPoliza) {
-			setSaving(true)
-			try {
-				const paymentCols = buildPaymentColumnsFromForm(form)
-				const newPoliza = await createPoliza({
-					asegurado_id: form.asegurado_id,
-					aseguradora_id: form.aseguradora_id,
-					agente_nombre: form.agente_nombre,
-					numero_poliza: form.numero_poliza,
-					ramo: form.ramo,
-					suma_asegurada: form.suma_asegurada ? Number(form.suma_asegurada) : null,
-					modalidad_pago: form.modalidad_pago,
-					estatus_poliza: form.estatus_poliza,
-					estatus_pago: form.estatus_pago,
-					fecha_inicio: form.fecha_inicio,
-					fecha_vencimiento: form.fecha_vencimiento,
-					dia_vencimiento: form.dia_vencimiento ? Number(form.dia_vencimiento) : null,
-					fecha_prox_vencimiento: form.fecha_prox_vencimiento || null,
-					pdf_url: null,
-					notas: form.notas || null,
-					...paymentCols,
-				})
-				const documentos: DocumentoPoliza[] = []
-				for (const file of documentFiles.slice(0, MAX_DOCUMENTOS_POLIZA)) {
-					setUploadingPdf(true)
-					const { data, error } = await uploadDocumentoPoliza(file, newPoliza.id)
-					setUploadingPdf(false)
-					if (error) toast({ title: `Error al subir ${file.name}`, description: error.message, variant: 'destructive' })
-					else if (data) documentos.push({ url: data.url, name: data.name })
-				}
-				if (documentos.length > 0) {
-					await updatePoliza(newPoliza.id, {
-						documentos_poliza: documentos,
-						pdf_url: documentos[0]?.url ?? null,
-					})
-				}
-				queryClient.invalidateQueries({ queryKey: ['polizas'] })
-				setOpenModal(false)
-				toast({ title: 'Póliza creada' })
-			} catch (err) {
-				console.error(err)
-				toast({ title: 'Error al crear póliza', variant: 'destructive' })
-			} finally {
-				setSaving(false)
-				setUploadingPdf(false)
-			}
 			return
 		}
 		setSaving(true)
@@ -370,29 +260,32 @@ const PolizasPage = () => {
 				notas: form.notas || null,
 				...paymentCols,
 			})
-			queryClient.invalidateQueries({ queryKey: ['polizas'] })
-			queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
+			await queryClient.invalidateQueries({ queryKey: ['polizas'] })
+			await queryClient.invalidateQueries({ queryKey: ['aseguradoras-stats'] })
 			if (editingPoliza.asegurado_id) {
-				queryClient.invalidateQueries({ queryKey: ['polizas-by-asegurado', editingPoliza.asegurado_id] })
+				await queryClient.invalidateQueries({ queryKey: ['polizas-by-asegurado', editingPoliza.asegurado_id] })
 			}
 			if (editingPoliza.aseguradora_id) {
-				queryClient.invalidateQueries({ queryKey: ['polizas-by-aseguradora', editingPoliza.aseguradora_id] })
+				await queryClient.invalidateQueries({ queryKey: ['polizas-by-aseguradora', editingPoliza.aseguradora_id] })
 			}
-			setOpenModal(false)
-			setEditingPoliza(null)
+			const refreshed = await getPolizaById(editingPoliza.id)
 			toast({ title: 'Póliza actualizada' })
+			resetLocal()
+			onClose()
+			if (refreshed) onSaved?.(refreshed)
 		} catch (err) {
 			console.error(err)
 			toast({ title: 'Error al actualizar póliza', variant: 'destructive' })
 		} finally {
 			setSaving(false)
+			setUploadingPdf(false)
 		}
 	}
 
 	const stepContent = () => {
 		switch (step) {
 			case 0:
-				return editingPoliza ? (
+				return (
 					<div className="space-y-4">
 						<div className="space-y-2">
 							<Label>Asegurado</Label>
@@ -405,42 +298,14 @@ const PolizasPage = () => {
 							)}
 						</div>
 					</div>
-				) : (
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label>Buscar asegurado</Label>
-							<AseguradoSearchAutocomplete
-								onSelect={(asegurado) => {
-									setForm((prev) => ({ ...prev, asegurado_id: asegurado.id }))
-									setSelectedAsegurado(asegurado)
-								}}
-								onSearchChange={(value) => {
-									const label = selectedAsegurado
-										? `${selectedAsegurado.full_name} · ${selectedAsegurado.document_id}`
-										: ''
-									if (selectedAsegurado && value !== label) {
-										setSelectedAsegurado(null)
-										setForm((prev) => ({ ...prev, asegurado_id: '' }))
-									}
-								}}
-								placeholder="Buscar por documento o nombre"
-							/>
-						</div>
-						{selectedAsegurado && (
-							<div className="border rounded-md p-3 text-sm">
-								<p className="font-medium">{selectedAsegurado.full_name}</p>
-								<p className="text-xs text-gray-500">
-									{selectedAsegurado.document_id} · {selectedAsegurado.phone || 'Sin teléfono'}
-								</p>
-							</div>
-						)}
-					</div>
 				)
 			case 1:
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Aseguradora <span className="text-destructive">*</span></Label>
+							<Label>
+								Aseguradora <span className="text-destructive">*</span>
+							</Label>
 							<Select
 								value={form.aseguradora_id}
 								onValueChange={(value) => setForm((prev) => ({ ...prev, aseguradora_id: value }))}
@@ -458,7 +323,9 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Agente / Productor <span className="text-destructive">*</span></Label>
+							<Label>
+								Agente / Productor <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								placeholder="Ej. John Doe"
 								value={form.agente_nombre}
@@ -466,7 +333,9 @@ const PolizasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Número de póliza <span className="text-destructive">*</span></Label>
+							<Label>
+								Número de póliza <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								placeholder="Ej. POL-2024-001"
 								value={form.numero_poliza}
@@ -474,18 +343,14 @@ const PolizasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Ramo <span className="text-destructive">*</span></Label>
-							<Select
-								value={form.ramo}
-								onValueChange={(value) => setForm((prev) => ({ ...prev, ramo: value }))}
-							>
+							<Label>
+								Ramo <span className="text-destructive">*</span>
+							</Label>
+							<Select value={form.ramo} onValueChange={(value) => setForm((prev) => ({ ...prev, ramo: value }))}>
 								<SelectTrigger className="min-w-0">
 									<SelectValue placeholder="Seleccionar ramo" />
 								</SelectTrigger>
-								<SelectContent
-									className="max-h-60 max-w-(--radix-select-trigger-width)"
-									position="popper"
-								>
+								<SelectContent className="max-h-60 max-w-(--radix-select-trigger-width)" position="popper">
 									{RAMOS_OPCIONES.map((ramo) => (
 										<SelectItem key={ramo} value={ramo} className="min-w-0 [&>span:last-child]:truncate">
 											{ramo}
@@ -495,7 +360,9 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Suma asegurada <span className="text-destructive">*</span></Label>
+							<Label>
+								Suma asegurada <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								type="number"
 								placeholder="Ej. 100000"
@@ -504,7 +371,9 @@ const PolizasPage = () => {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Modalidad de pago <span className="text-destructive">*</span></Label>
+							<Label>
+								Modalidad de pago <span className="text-destructive">*</span>
+							</Label>
 							<Select
 								value={form.modalidad_pago}
 								onValueChange={(value) => {
@@ -539,7 +408,9 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus póliza <span className="text-destructive">*</span></Label>
+							<Label>
+								Estatus póliza <span className="text-destructive">*</span>
+							</Label>
 							<Select
 								value={form.estatus_poliza}
 								onValueChange={(value) =>
@@ -559,7 +430,9 @@ const PolizasPage = () => {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Estatus pago <span className="text-destructive">*</span></Label>
+							<Label>
+								Estatus pago <span className="text-destructive">*</span>
+							</Label>
 							<Select
 								value={form.estatus_pago}
 								onValueChange={(value) =>
@@ -575,6 +448,8 @@ const PolizasPage = () => {
 								<SelectContent>
 									<SelectItem value="Pendiente">Pendiente</SelectItem>
 									<SelectItem value="Pagado">Pagado</SelectItem>
+									<SelectItem value="Parcial">Parcial</SelectItem>
+									<SelectItem value="En mora">En mora</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -584,7 +459,9 @@ const PolizasPage = () => {
 				return (
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Fecha de emisión <span className="text-destructive">*</span></Label>
+							<Label>
+								Fecha de emisión <span className="text-destructive">*</span>
+							</Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -612,10 +489,7 @@ const PolizasPage = () => {
 														: form.modalidad_pago === 'Semestral'
 															? 6
 															: 12
-											const proxStr =
-												fechaStr && date
-													? format(addMonths(date, months), 'yyyy-MM-dd')
-													: ''
+											const proxStr = fechaStr && date ? format(addMonths(date, months), 'yyyy-MM-dd') : ''
 											setForm((prev) => ({
 												...prev,
 												fecha_inicio: fechaStr,
@@ -630,7 +504,9 @@ const PolizasPage = () => {
 							</Popover>
 						</div>
 						<div className="space-y-2">
-							<Label>Fecha vencimiento <span className="text-destructive">*</span></Label>
+							<Label>
+								Fecha vencimiento <span className="text-destructive">*</span>
+							</Label>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button
@@ -650,7 +526,6 @@ const PolizasPage = () => {
 										selected={parseIsoDate(form.fecha_vencimiento)}
 										onSelect={(date) => {
 											const fechaStr = date ? format(date, 'yyyy-MM-dd') : ''
-											// fecha_prox_vencimiento = fecha_emisión + periodo; si no hay emisión, usar vencimiento
 											const baseDate = form.fecha_inicio ? new Date(form.fecha_inicio + 'T12:00:00') : date
 											const months =
 												form.modalidad_pago === 'Mensual'
@@ -660,8 +535,7 @@ const PolizasPage = () => {
 														: form.modalidad_pago === 'Semestral'
 															? 6
 															: 12
-											const proxDate =
-												baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : date
+											const proxDate = baseDate && !isNaN(baseDate.getTime()) ? addMonths(baseDate, months) : date
 											const proxStr = proxDate ? format(proxDate, 'yyyy-MM-dd') : fechaStr
 											setForm((prev) => ({
 												...prev,
@@ -685,9 +559,7 @@ const PolizasPage = () => {
 						<div className="space-y-2">
 							<Label className="text-muted-foreground">Fecha próximo vencimiento</Label>
 							<div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
-								{form.fecha_prox_vencimiento
-									? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy')
-									: ''}
+								{form.fecha_prox_vencimiento ? format(parseIsoDate(form.fecha_prox_vencimiento)!, 'dd/MM/yyyy') : ''}
 							</div>
 						</div>
 					</div>
@@ -782,189 +654,73 @@ const PolizasPage = () => {
 	}
 
 	return (
-		<div>
-			<div className="mb-4 sm:mb-6">
-				<h1 className="text-2xl sm:text-3xl font-bold">Pólizas</h1>
-				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
-			</div>
-
-			<Card className="overflow-hidden">
-				<div className="bg-white dark:bg-black/80 backdrop-blur-[10px] border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-					<div className="flex flex-col lg:flex-row lg:items-center gap-3">
-						<div className="relative flex-1 min-w-0">
-							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-							<Input
-								className="pl-9"
-								placeholder="Buscar por número o ramo"
-								value={searchTerm}
-								onChange={(e) => handleSearch(e.target.value)}
-							/>
-						</div>
-						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() =>
-									exportRowsToExcel(
-										'polizas',
-										polizas.map((row) => ({
-											Código: row.codigo ?? '',
-											'Número de póliza': row.numero_poliza,
-											Asegurado: row.asegurado?.full_name || '',
-											Aseguradora: row.aseguradora?.nombre || '',
-											Ramo: row.ramo,
-											'Modalidad de pago': row.modalidad_pago,
-											'Estatus póliza': row.estatus_poliza,
-											'Estatus pago': row.estatus_pago || '',
-											'Fecha vencimiento': row.fecha_vencimiento,
-										})),
-									)
-								}
-								className="gap-1.5 sm:gap-2 shrink-0"
-								title="Exportar"
-							>
-								<Download className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">Exportar</span>
-							</Button>
-							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nueva póliza">
-								<Plus className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">Nueva póliza</span>
-							</Button>
-						</div>
-					</div>
+		<Dialog open={Boolean(isOpen && poliza)} onOpenChange={handleOpenChange}>
+			<DialogContent
+				className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90dvh] flex flex-col rounded-2xl sm:rounded-xl p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px] z-[999999999999999999]"
+				overlayClassName="bg-black/60"
+			>
+				<DialogHeader className="shrink-0">
+					<DialogTitle className="text-base sm:text-lg">Editar póliza</DialogTitle>
+				</DialogHeader>
+				<div className="flex md:hidden items-center justify-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 pb-1">
+					{STEPS.map((label, idx) => (
+						<span
+							key={label}
+							className={cn(
+								'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+								idx === step ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground',
+							)}
+							title={label}
+						>
+							{idx + 1}
+						</span>
+					))}
 				</div>
-
-				<div className="p-4 min-h-80">
-					{isLoading && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
-					{error && <p className="text-sm text-red-500">Error al cargar pólizas</p>}
-					{!isLoading && !error && polizas.length === 0 && (
-						<p className="text-sm text-gray-500">No hay pólizas registradas.</p>
+				<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-2 shrink-0">
+					{STEPS.map((label, idx) => (
+						<span key={label} className={idx === step ? 'text-primary font-medium' : ''}>
+							{label}
+							{idx < STEPS.length - 1 ? ' · ' : ''}
+						</span>
+					))}
+				</div>
+				<div className="overflow-y-auto min-h-0 py-1 flex-1">{stepContent()}</div>
+				<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-wrap justify-end gap-2">
+					{step > 0 && (
+						<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} size="sm" className="shrink-0">
+							Anterior
+						</Button>
 					)}
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-						{polizas.map((row: Poliza) => (
-							<PolizaCard key={row.id} poliza={row} onClick={() => openDetailPanel(row)} />
-						))}
-					</div>
-				</div>
-
-				<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-					<div className="text-sm text-gray-600 dark:text-gray-400">
-						Página {currentPage} de {totalPages}
-					</div>
-					<div className="flex gap-2">
+					<Button variant="outline" onClick={() => handleOpenChange(false)} size="sm" className="shrink-0">
+						Cancelar
+					</Button>
+					{step < STEPS.length - 1 ? (
 						<Button
-							variant="outline"
+							onClick={() => {
+								const stepErrors = getValidationErrorsForStep(step)
+								if (stepErrors.length > 0) {
+									const stepName = STEPS[step]
+									toast({
+										title: 'Campos obligatorios',
+										description: `En ${stepName}: ${stepErrors.join(', ')}`,
+										variant: 'destructive',
+									})
+									return
+								}
+								setStep((prev) => prev + 1)
+							}}
 							size="sm"
-							disabled={currentPage <= 1}
-							onClick={() => handlePageChange(currentPage - 1)}
+							className="shrink-0"
 						>
-							<ChevronLeft className="w-4 h-4" />
+							Siguiente
 						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={currentPage >= totalPages}
-							onClick={() => handlePageChange(currentPage + 1)}
-						>
-							<ChevronRight className="w-4 h-4" />
+					) : (
+						<Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
+							{saving ? 'Guardando...' : 'Actualizar póliza'}
 						</Button>
-					</div>
-				</div>
-			</Card>
-
-			<Dialog open={openModal} onOpenChange={setOpenModal}>
-				<DialogContent
-					className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90dvh] flex flex-col rounded-2xl sm:rounded-xl p-4 sm:p-6 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
-					overlayClassName="bg-black/60"
-				>
-					<DialogHeader className="shrink-0">
-						<DialogTitle className="text-base sm:text-lg">{editingPoliza ? 'Editar póliza' : 'Nueva póliza'}</DialogTitle>
-					</DialogHeader>
-					<div className="flex md:hidden items-center justify-center gap-1.5 text-xs text-gray-500 mb-2 shrink-0 pb-1">
-						{STEPS.map((label, idx) => (
-							<span
-								key={label}
-								className={cn(
-									'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
-									idx === step ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground',
-								)}
-								title={label}
-							>
-								{idx + 1}
-							</span>
-						))}
-					</div>
-					<div className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-2 shrink-0">
-						{STEPS.map((label, idx) => (
-							<span key={label} className={idx === step ? 'text-primary font-medium' : ''}>
-								{label}
-								{idx < STEPS.length - 1 ? ' · ' : ''}
-							</span>
-						))}
-					</div>
-					<div className="overflow-y-auto min-h-0 py-1 flex-1">
-						{stepContent()}
-					</div>
-					<DialogFooter className="shrink-0 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-wrap justify-end gap-2">
-						{step > 0 && (
-							<Button variant="outline" onClick={() => setStep((prev) => prev - 1)} size="sm" className="shrink-0">
-								Anterior
-							</Button>
-						)}
-						<Button variant="outline" onClick={() => setOpenModal(false)} size="sm" className="shrink-0">
-							Cancelar
-						</Button>
-						{step < STEPS.length - 1 ? (
-							<Button
-								onClick={() => {
-									const stepErrors = getValidationErrorsForStep(step)
-									if (stepErrors.length > 0) {
-										const stepName = STEPS[step]
-										toast({
-											title: 'Campos obligatorios',
-											description: `En ${stepName}: ${stepErrors.join(', ')}`,
-											variant: 'destructive',
-										})
-										return
-									}
-									setStep((prev) => prev + 1)
-								}}
-								size="sm"
-								className="shrink-0"
-							>
-								Siguiente
-							</Button>
-						) : (
-							<Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
-								{saving ? 'Guardando...' : editingPoliza ? 'Actualizar póliza' : 'Guardar póliza'}
-							</Button>
-						)}
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
-			<PolizaDetailPanel
-				poliza={selectedPoliza}
-				isOpen={panelOpen}
-				onClose={() => setPanelOpen(false)}
-				onAseguradoClick={handleAseguradoClick}
-				onAseguradoraClick={handleAseguradoraClick}
-				onEditClick={openForEdit}
-			/>
-
-			<AseguradoHistoryModal
-				isOpen={aseguradoHistoryOpen}
-				onClose={() => setAseguradoHistoryOpen(false)}
-				asegurado={selectedAseguradoForHistory}
-			/>
-
-			<AseguradoraHistoryModal
-				isOpen={aseguradoraHistoryOpen}
-				onClose={() => setAseguradoraHistoryOpen(false)}
-				aseguradora={selectedAseguradoraForHistory}
-			/>
-		</div>
+					)}
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
-
-export default PolizasPage

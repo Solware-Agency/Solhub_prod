@@ -4,7 +4,7 @@ import { X, Building2, FileText, MapPin, Phone, Edit, Send, Trash2 } from 'lucid
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { deactivateAseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
-import { getAseguradosByIds } from '@services/supabase/aseguradoras/asegurados-service'
+import { findAseguradoById, getAseguradosByIds } from '@services/supabase/aseguradoras/asegurados-service'
 import type { Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import { getPolizasByAseguradoraId, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
 import { useBodyScrollLock } from '@shared/hooks/useBodyScrollLock'
@@ -15,6 +15,7 @@ import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetai
 import { AseguradoHistoryModal } from '@features/aseguradoras/components/AseguradoHistoryModal'
 import WhatsAppIcon from '@shared/components/icons/WhatsAppIcon'
 import { EditAseguradoraModal } from '@features/aseguradoras/components/EditAseguradoraModal'
+import { EditPolizaModal } from '@features/aseguradoras/components/EditPolizaModal'
 import { useToast } from '@shared/hooks/use-toast'
 
 interface AseguradoraHistoryModalProps {
@@ -62,6 +63,8 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 	const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
 	const [selectedAsegurado, setSelectedAsegurado] = React.useState<Asegurado | null>(null)
 	const [aseguradoHistoryOpen, setAseguradoHistoryOpen] = React.useState(false)
+	const [polizaForEdit, setPolizaForEdit] = React.useState<Poliza | null>(null)
+	const [isEditPolizaOpen, setIsEditPolizaOpen] = React.useState(false)
 	const [isDeleting, setIsDeleting] = React.useState(false)
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
@@ -109,6 +112,30 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 		setAseguradoHistoryOpen(false)
 		setSelectedAsegurado(null)
 	}, [])
+
+	const handleEditPolizaFromPanel = useCallback((poliza: Poliza) => {
+		setPolizaForEdit(poliza)
+		setIsEditPolizaOpen(true)
+		setPolizaPanelOpen(false)
+	}, [])
+
+	const closeEditPolizaModal = useCallback(() => {
+		setIsEditPolizaOpen(false)
+		setPolizaForEdit(null)
+		setPolizaPanelOpen(true)
+	}, [])
+
+	const handleAseguradoClickFromPoliza = useCallback(async (aseguradoId: string) => {
+		let a = aseguradosFull.find((x) => x.id === aseguradoId)
+		if (!a) {
+			a = (await findAseguradoById(aseguradoId)) ?? undefined
+		}
+		if (a) {
+			setPolizaPanelOpen(false)
+			setSelectedAsegurado(a)
+			setAseguradoHistoryOpen(true)
+		}
+	}, [aseguradosFull])
 
 	const handleWhatsApp = useCallback(() => {
 		const raw = aseguradora?.telefono
@@ -330,7 +357,23 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 				</div>
 			)}
 
-			<PolizaDetailPanel key="poliza-detail-panel" poliza={selectedPoliza} isOpen={polizaPanelOpen} onClose={closePolizaDetail} />
+			<PolizaDetailPanel
+				key="poliza-detail-panel"
+				poliza={selectedPoliza}
+				isOpen={polizaPanelOpen}
+				onClose={closePolizaDetail}
+				onAseguradoClick={handleAseguradoClickFromPoliza}
+				onEditClick={handleEditPolizaFromPanel}
+			/>
+
+			<EditPolizaModal
+				isOpen={isEditPolizaOpen}
+				onClose={closeEditPolizaModal}
+				poliza={polizaForEdit}
+				onSaved={(updated) => {
+					setSelectedPoliza(updated)
+				}}
+			/>
 
 			<EditAseguradoraModal
 				key="edit-aseguradora-modal"

@@ -13,6 +13,7 @@ import PolizaCard from '@features/aseguradoras/components/PolizaCard'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import { EditAseguradoModal } from '@features/aseguradoras/components/EditAseguradoModal'
+import { EditPolizaModal } from '@features/aseguradoras/components/EditPolizaModal'
 import { useToast } from '@shared/hooks/use-toast'
 
 interface AseguradoHistoryModalProps {
@@ -61,6 +62,8 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 	const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
 	const [aseguradoraHistoryOpen, setAseguradoraHistoryOpen] = React.useState(false)
 	const [selectedAseguradoraForHistory, setSelectedAseguradoraForHistory] = React.useState<Aseguradora | null>(null)
+	const [polizaForEdit, setPolizaForEdit] = React.useState<Poliza | null>(null)
+	const [isEditPolizaOpen, setIsEditPolizaOpen] = React.useState(false)
 	const [isDeleting, setIsDeleting] = React.useState(false)
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
@@ -99,6 +102,18 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 			setPolizaPanelOpen(false)
 			setAseguradoraHistoryOpen(true)
 		}
+	}, [])
+
+	const handleEditPolizaFromPanel = useCallback((poliza: Poliza) => {
+		setPolizaForEdit(poliza)
+		setIsEditPolizaOpen(true)
+		setPolizaPanelOpen(false)
+	}, [])
+
+	const closeEditPolizaModal = useCallback(() => {
+		setIsEditPolizaOpen(false)
+		setPolizaForEdit(null)
+		setPolizaPanelOpen(true)
 	}, [])
 
 	const handleEliminarAsegurado = useCallback(async () => {
@@ -333,6 +348,16 @@ export const AseguradoHistoryModal: React.FC<AseguradoHistoryModalProps> = ({
 				onClose={closePolizaDetail}
 				onAseguradoClick={handleAseguradoClickFromPoliza}
 				onAseguradoraClick={handleAseguradoraClickFromPoliza}
+				onEditClick={handleEditPolizaFromPanel}
+			/>
+
+			<EditPolizaModal
+				isOpen={isEditPolizaOpen}
+				onClose={closeEditPolizaModal}
+				poliza={polizaForEdit}
+				onSaved={(updated) => {
+					setSelectedPoliza(updated)
+				}}
 			/>
 
 			<AseguradoraHistoryModal
