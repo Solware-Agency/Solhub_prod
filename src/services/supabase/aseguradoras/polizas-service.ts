@@ -125,6 +125,40 @@ export interface PolizaUpdate extends Partial<PolizaInsert> {
 	estatus_pago?: 'Pagado' | 'Parcial' | 'Pendiente' | 'En mora' | null
 }
 
+/** Filtros de listado (página Pólizas). Cadenas vacías = sin filtrar ese criterio. */
+export type PolizaActivoListFilter = 'all' | 'activas' | 'inactivas'
+
+export interface PolizaListFilters {
+	activo: PolizaActivoListFilter
+	estatus_poliza: string
+	estatus_pago: string
+	modalidad_pago: string
+	ramo: string
+	aseguradora_id: string
+}
+
+export const defaultPolizaListFilters = (): PolizaListFilters => ({
+	activo: 'activas',
+	estatus_poliza: '',
+	estatus_pago: '',
+	modalidad_pago: '',
+	ramo: '',
+	aseguradora_id: '',
+})
+
+/** Cuántos criterios difieren del listado por defecto (solo activas, resto sin filtrar). */
+export const countActivePolizaListFilters = (f: PolizaListFilters): number => {
+	const d = defaultPolizaListFilters()
+	let n = 0
+	if (f.activo !== d.activo) n++
+	if ((f.estatus_poliza || '') !== '') n++
+	if ((f.estatus_pago || '') !== '') n++
+	if ((f.modalidad_pago || '') !== '') n++
+	if ((f.ramo || '') !== '') n++
+	if ((f.aseguradora_id || '') !== '') n++
+	return n
+}
+
 /** RPC: devuelve la nueva next_payment_date al marcar como pagado (actual + 1 período). Opción A: llamar N veces para N periodos. */
 export const getNextPaymentDateOnMarkPaidPoliza = async (polizaId: string): Promise<string | null> => {
 	const { data, error } = await supabase.rpc('get_next_payment_date_on_mark_paid_poliza', {
@@ -142,8 +176,10 @@ export const getPolizas = async (
 	searchTerm?: string,
 	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' | 'next_payment_date' = 'created_at',
 	sortDirection: 'asc' | 'desc' = 'desc',
+	filters?: PolizaListFilters,
 ) => {
 	const laboratoryId = await getUserLaboratoryId()
+	const f = filters ?? defaultPolizaListFilters()
 
 	let query = supabase
 		.from('polizas')
@@ -152,12 +188,66 @@ export const getPolizas = async (
 			{ count: 'exact' },
 		)
 		.eq('laboratory_id', laboratoryId)
-		.eq('activo', true)
 
-	if (searchTerm) {
-		query = query.or(
-			`numero_poliza.ilike.%${searchTerm}%,ramo.ilike.%${searchTerm}%`,
-		)
+	if (f.activo === 'activas') {
+		query = query.eq('activo', true)
+	} else if (f.activo === 'inactivas') {
+		query = query.eq('activo', false)
+	}
+
+	if (f.estatus_poliza.trim()) {
+		query = query.eq('estatus_poliza', f.estatus_poliza.trim())
+	}
+
+	if (f.estatus_pago === 'Pendiente') {
+		query = query.or('estatus_pago.is.null,estatus_pago.eq.Pendiente')
+	} else if (f.estatus_pago.trim()) {
+		query = query.eq('estatus_pago', f.estatus_pago.trim())
+	}
+
+	if (f.modalidad_pago.trim()) {
+		query = query.eq('modalidad_pago', f.modalidad_pago.trim() as Poliza['modalidad_pago'])
+	}
+
+	if (f.ramo.trim()) {
+		query = query.eq('ramo', f.ramo.trim())
+	}
+
+	if (f.aseguradora_id.trim()) {
+		query = query.eq('aseguradora_id', f.aseguradora_id.trim())
+	}
+
+	const trimmedSearch = searchTerm?.trim()
+	if (trimmedSearch) {
+		const escaped = trimmedSearch.replace(/[%_\\]/g, '\\$&')
+		const [asegRes, aseguradoraRes] = await Promise.all([
+			supabase
+				.from('asegurados')
+				.select('id')
+				.eq('laboratory_id', laboratoryId)
+				.or(`full_name.ilike.%${escaped}%,document_id.ilike.%${escaped}%`)
+				.limit(400),
+			supabase
+				.from('aseguradoras')
+				.select('id')
+				.eq('laboratory_id', laboratoryId)
+				.ilike('nombre', `%${escaped}%`)
+				.limit(400),
+		])
+		if (asegRes.error) console.error('Búsqueda pólizas (asegurados):', asegRes.error)
+		if (aseguradoraRes.error) console.error('Búsqueda pólizas (aseguradoras):', aseguradoraRes.error)
+
+		const aseguradoIds = [...new Set((asegRes.data ?? []).map((r) => r.id))]
+		const aseguradoraIds = [...new Set((aseguradoraRes.data ?? []).map((r) => r.id))]
+
+		const orParts = [`numero_poliza.ilike.%${escaped}%`, `ramo.ilike.%${escaped}%`]
+		if (aseguradoIds.length > 0) {
+			orParts.push(`asegurado_id.in.(${aseguradoIds.join(',')})`)
+		}
+		if (aseguradoraIds.length > 0) {
+			orParts.push(`aseguradora_id.in.(${aseguradoraIds.join(',')})`)
+		}
+		query = query.or(orParts.join(','))
 	}
 
 	const orderOpts = sortField === 'next_payment_date'

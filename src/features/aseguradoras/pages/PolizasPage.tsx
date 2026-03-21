@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
+import { Badge } from '@shared/components/ui/badge'
 import { Input } from '@shared/components/ui/input'
 import {
 	Dialog,
@@ -15,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, Paperclip, ExternalLink } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, CalendarIcon, Upload, X, Paperclip, ExternalLink, Filter, XCircle } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { format, addMonths } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -25,8 +26,11 @@ import {
 	createPoliza,
 	getPolizas,
 	updatePoliza,
+	defaultPolizaListFilters,
+	countActivePolizaListFilters,
 	type Poliza,
 	type DocumentoPoliza,
+	type PolizaListFilters,
 } from '@services/supabase/aseguradoras/polizas-service'
 import { AseguradoSearchAutocomplete } from '@features/aseguradoras/components/AseguradoSearchAutocomplete'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
@@ -43,6 +47,7 @@ import {
 	RAMOS_OPCIONES,
 	buildPaymentColumnsFromForm,
 } from '@features/aseguradoras/lib/poliza-form-shared'
+import { PolizaFiltersModal } from '@features/aseguradoras/components/PolizaFiltersModal'
 
 const PolizasPage = () => {
 	const queryClient = useQueryClient()
@@ -50,6 +55,8 @@ const PolizasPage = () => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [currentPage, setCurrentPage] = useState(1)
 	const [itemsPerPage, setItemsPerPage] = useState(24)
+	const [listFilters, setListFilters] = useState<PolizaListFilters>(() => defaultPolizaListFilters())
+	const [filtersModalOpen, setFiltersModalOpen] = useState(false)
 	const [openModal, setOpenModal] = useState(false)
 	const [step, setStep] = useState(0)
 	const [saving, setSaving] = useState(false)
@@ -86,8 +93,19 @@ const PolizasPage = () => {
 	const parseIsoDate = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ['polizas', searchTerm, currentPage, itemsPerPage],
-		queryFn: () => getPolizas(currentPage, itemsPerPage, searchTerm),
+		queryKey: [
+			'polizas',
+			searchTerm,
+			currentPage,
+			itemsPerPage,
+			listFilters.activo,
+			listFilters.estatus_poliza,
+			listFilters.estatus_pago,
+			listFilters.modalidad_pago,
+			listFilters.ramo,
+			listFilters.aseguradora_id,
+		],
+		queryFn: () => getPolizas(currentPage, itemsPerPage, searchTerm, 'created_at', 'desc', listFilters),
 		staleTime: 1000 * 60 * 5,
 	})
 
@@ -99,6 +117,57 @@ const PolizasPage = () => {
 
 	const polizas = useMemo(() => data?.data ?? [], [data])
 	const totalPages = data?.totalPages ?? 1
+
+	const activeFilterCount = useMemo(() => countActivePolizaListFilters(listFilters), [listFilters])
+
+	const filterChipLabel = useCallback(
+		(f: PolizaListFilters): { key: string; label: string }[] => {
+			const chips: { key: string; label: string }[] = []
+			const def = defaultPolizaListFilters()
+			if (f.activo !== def.activo) {
+				chips.push({
+					key: 'activo',
+					label: f.activo === 'all' ? 'Registro: todas' : 'Registro: solo inactivas',
+				})
+			}
+			if (f.aseguradora_id) {
+				const nombre = (aseguradorasData || []).find((a) => a.id === f.aseguradora_id)?.nombre || 'Aseguradora'
+				chips.push({ key: 'aseguradora', label: `Compañía: ${nombre}` })
+			}
+			if (f.ramo) chips.push({ key: 'ramo', label: `Ramo: ${f.ramo}` })
+			if (f.estatus_poliza) chips.push({ key: 'estatus_poliza', label: `Estatus póliza: ${f.estatus_poliza}` })
+			if (f.estatus_pago) {
+				chips.push({
+					key: 'estatus_pago',
+					label: f.estatus_pago === 'Pendiente' ? 'Pago: pendiente' : `Pago: ${f.estatus_pago}`,
+				})
+			}
+			if (f.modalidad_pago) chips.push({ key: 'modalidad', label: `Modalidad: ${f.modalidad_pago}` })
+			return chips
+		},
+		[aseguradorasData],
+	)
+
+	const filterChips = useMemo(() => filterChipLabel(listFilters), [listFilters, filterChipLabel])
+
+	const clearFilterKey = useCallback((key: string) => {
+		setListFilters((prev) => {
+			const next = { ...prev }
+			if (key === 'activo') next.activo = 'activas'
+			if (key === 'aseguradora') next.aseguradora_id = ''
+			if (key === 'ramo') next.ramo = ''
+			if (key === 'estatus_poliza') next.estatus_poliza = ''
+			if (key === 'estatus_pago') next.estatus_pago = ''
+			if (key === 'modalidad') next.modalidad_pago = ''
+			return next
+		})
+		setCurrentPage(1)
+	}, [])
+
+	const clearAllListFilters = useCallback(() => {
+		setListFilters(defaultPolizaListFilters())
+		setCurrentPage(1)
+	}, [])
 
 	const handleSearch = useCallback((value: string) => {
 		setSearchTerm(value)
@@ -795,12 +864,28 @@ const PolizasPage = () => {
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 							<Input
 								className="pl-9"
-								placeholder="Buscar por número o ramo"
+								placeholder="Número, ramo, asegurado, documento o compañía"
 								value={searchTerm}
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
 						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="gap-1.5 sm:gap-2 shrink-0"
+								title="Filtros"
+								onClick={() => setFiltersModalOpen(true)}
+							>
+								<Filter className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Filtros</span>
+								{activeFilterCount > 0 && (
+									<Badge variant="secondary" className="h-5 min-w-5 px-1 tabular-nums text-[10px]">
+										{activeFilterCount}
+									</Badge>
+								)}
+							</Button>
 							<Button
 								variant="outline"
 								size="sm"
@@ -832,13 +917,36 @@ const PolizasPage = () => {
 							</Button>
 						</div>
 					</div>
+					{filterChips.length > 0 && (
+						<div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+							<span className="text-xs text-muted-foreground shrink-0">Filtros activos:</span>
+							{filterChips.map((c) => (
+								<button
+									key={c.key}
+									type="button"
+									onClick={() => clearFilterKey(c.key)}
+									className="inline-flex items-center gap-1 rounded-full border border-input bg-muted/50 pl-2.5 pr-1 py-0.5 text-xs font-medium text-foreground hover:bg-muted transition-colors max-w-full"
+								>
+									<span className="truncate">{c.label}</span>
+									<XCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+								</button>
+							))}
+							<Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAllListFilters}>
+								Quitar todos
+							</Button>
+						</div>
+					)}
 				</div>
 
 				<div className="p-4 min-h-80">
 					{isLoading && <p className="text-sm text-gray-500">Cargando pólizas...</p>}
 					{error && <p className="text-sm text-red-500">Error al cargar pólizas</p>}
 					{!isLoading && !error && polizas.length === 0 && (
-						<p className="text-sm text-gray-500">No hay pólizas registradas.</p>
+						<p className="text-sm text-gray-500">
+							{activeFilterCount > 0 || searchTerm.trim()
+								? 'No hay pólizas que coincidan con la búsqueda o los filtros.'
+								: 'No hay pólizas registradas.'}
+						</p>
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{polizas.map((row: Poliza) => (
@@ -962,6 +1070,17 @@ const PolizasPage = () => {
 				isOpen={aseguradoraHistoryOpen}
 				onClose={() => setAseguradoraHistoryOpen(false)}
 				aseguradora={selectedAseguradoraForHistory}
+			/>
+
+			<PolizaFiltersModal
+				isOpen={filtersModalOpen}
+				onOpenChange={setFiltersModalOpen}
+				appliedFilters={listFilters}
+				aseguradoras={aseguradorasData ?? []}
+				onApply={(f) => {
+					setListFilters(f)
+					setCurrentPage(1)
+				}}
 			/>
 		</div>
 	)
