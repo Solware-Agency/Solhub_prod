@@ -45,6 +45,97 @@ const getUserLaboratoryId = async (): Promise<string> => {
   }
 };
 
+/**
+ * Columnas de medical_records_clean para listados y export masivo (sin adjuntos pesados).
+ * Evita 500/timeouts en PostgREST cuando hay muchas fotos/PDFs por caso (ej. SPT tras subir medios).
+ * Detalle de un caso: usar findCaseByCode / getCaseByIdWithPatient con select completo.
+ */
+const MEDICAL_RECORD_LIST_COLUMNS = `
+  id,
+  exam_type,
+  origin,
+  treating_doctor,
+  sample_type,
+  number_of_samples,
+  relationship,
+  branch,
+  date,
+  total_amount,
+  exchange_rate,
+  payment_status,
+  remaining,
+  payment_method_1,
+  payment_amount_1,
+  payment_reference_1,
+  payment_method_2,
+  payment_amount_2,
+  payment_reference_2,
+  payment_method_3,
+  payment_amount_3,
+  payment_reference_3,
+  payment_method_4,
+  payment_amount_4,
+  payment_reference_4,
+  created_at,
+  updated_at,
+  code,
+  created_by,
+  created_by_display_name,
+  pdf_en_ready,
+  generated_by,
+  generated_by_display_name,
+  generated_at,
+  attachment_url,
+  ims,
+  googledocs_url,
+  informepdf_url,
+  token,
+  doc_aprobado,
+  patient_id,
+  cito_status,
+  email_sent,
+  laboratory_id,
+  consulta,
+  image_url,
+  estado_spt,
+  uploaded_pdf_url,
+  price_type,
+  owner_display_code,
+  bloques_biopsia,
+  fecha_entrega,
+  patologo_id,
+  fecha_muestra,
+  saldo_a_favor,
+  credit_applied
+`;
+
+const MEDICAL_CASE_LIST_WITH_PATIENT_INNER = `
+  ${MEDICAL_RECORD_LIST_COLUMNS.trim()},
+  patients!inner(
+    cedula,
+    nombre,
+    edad,
+    telefono,
+    email
+  )
+`;
+
+const MEDICAL_CASE_LIST_WITH_PATIENT_INNER_FN = `
+  ${MEDICAL_RECORD_LIST_COLUMNS.trim()},
+  patients!inner(
+    cedula,
+    nombre,
+    edad,
+    telefono,
+    email,
+    fecha_nacimiento
+  )
+`;
+
+/** Los tipos generados de Supabase no incluyen este select explícito; evita SelectQueryError en .select(). */
+const MEDICAL_CASE_LIST_SELECT = MEDICAL_CASE_LIST_WITH_PATIENT_INNER as any;
+const MEDICAL_CASE_LIST_SELECT_FN = MEDICAL_CASE_LIST_WITH_PATIENT_INNER_FN as any;
+
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
@@ -444,18 +535,7 @@ export const getCasesByPatientIdWithInfo = async (
   try {
     const { data, error } = await supabase
       .from('medical_records_clean')
-      .select(
-        `
-				*,
-				patients!inner(
-					cedula,
-					nombre,
-					edad,
-					telefono,
-					email
-				)
-			`,
-      )
+      .select(MEDICAL_CASE_LIST_SELECT)
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false });
 
@@ -684,19 +764,7 @@ export const getCasesWithPatientInfo = async (
       searchPromises.push(
         supabase
           .from('medical_records_clean')
-          .select(
-            `
-						*,
-						patients!inner(
-							cedula,
-							nombre,
-							edad,
-							telefono,
-							email
-						)
-					`,
-            { count: 'exact' },
-          )
+          .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
           .eq('laboratory_id', profile.laboratory_id)
           .eq('patients.is_active', true)
           .or(`code.ilike.%${escapedSearchTerm}%,treating_doctor.ilike.%${escapedSearchTerm}%`)
@@ -721,19 +789,7 @@ export const getCasesWithPatientInfo = async (
         const patientIds = matchingPatients.map((p) => p.id);
         return await supabase
           .from('medical_records_clean')
-          .select(
-            `
-						*,
-						patients!inner(
-							cedula,
-							nombre,
-							edad,
-							telefono,
-							email
-						)
-					`,
-            { count: 'exact' },
-          )
+          .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
           .eq('laboratory_id', profile.laboratory_id)
           .eq('patients.is_active', true)
           .in('patient_id', patientIds)
@@ -744,6 +800,21 @@ export const getCasesWithPatientInfo = async (
 
       // Ejecutar ambas búsquedas en paralelo
       const results = await Promise.allSettled(searchPromises);
+
+      // PostgREST resuelve la promesa aunque el HTTP sea 500: el fallo va en .error, no en reject.
+      const postgrestErrors: unknown[] = [];
+      for (const r of results) {
+        if (r.status !== 'fulfilled') continue;
+        const err = (r.value as { error?: unknown })?.error;
+        if (err) postgrestErrors.push(err);
+      }
+      if (postgrestErrors.length > 0) {
+        console.error(
+          'Error en búsqueda de casos (PostgREST / posible payload pesado o desfase de migración):',
+          postgrestErrors,
+        );
+        throw postgrestErrors[0];
+      }
 
       // Combinar resultados exitosos
       const allResults = results
@@ -962,19 +1033,9 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Sin término de búsqueda, consulta normal
-    let query = supabase.from('medical_records_clean').select(
-      `
-			*,
-			patients!inner(
-				cedula,
-				nombre,
-				edad,
-				telefono,
-				email
-			)
-		`,
-      { count: 'exact' },
-    );
+    let query = supabase
+      .from('medical_records_clean')
+      .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' });
 
     // Filtro multi-tenant crítico y solo casos cuyo paciente está activo (soft delete)
     query = query.eq('laboratory_id', profile.laboratory_id).eq('patients.is_active', true);
@@ -1356,19 +1417,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 						// Obtener los casos completos (solo pacientes activos; sin order para respetar relevancia después)
 						const { data: fullCases, error: fullCasesError } = await supabase
 							.from('medical_records_clean')
-							.select(
-								`
-                *,
-                patients!inner(
-                  cedula,
-                  nombre,
-                  edad,
-                  telefono,
-                  email,
-                  fecha_nacimiento
-                )
-              `,
-							)
+							.select(MEDICAL_CASE_LIST_SELECT_FN)
 							.eq('laboratory_id', laboratoryId)
 							.eq('patients.is_active', true)
 							.in('id', caseIds)
@@ -1517,18 +1566,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           // Búsqueda por nombre del paciente
           supabase
             .from('medical_records_clean')
-            .select(
-              `
-							*,
-							patients!inner(
-								cedula,
-								nombre,
-								edad,
-								telefono,
-								email
-							)
-						`,
-            )
+            .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
             .eq('patients.is_active', true)
             .ilike('patients.nombre', `%${escapedSearchTerm}%`)
@@ -1537,18 +1575,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           // Búsqueda por cédula del paciente
           supabase
             .from('medical_records_clean')
-            .select(
-              `
-							*,
-							patients!inner(
-								cedula,
-								nombre,
-								edad,
-								telefono,
-								email
-							)
-						`,
-            )
+            .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
             .eq('patients.is_active', true)
             .ilike('patients.cedula', `%${escapedSearchTerm}%`)
@@ -1557,18 +1584,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           // Búsqueda por médico tratante
           supabase
             .from('medical_records_clean')
-            .select(
-              `
-							*,
-							patients!inner(
-								cedula,
-								nombre,
-								edad,
-								telefono,
-								email
-							)
-						`,
-            )
+            .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
             .eq('patients.is_active', true)
             .ilike('treating_doctor', `%${escapedSearchTerm}%`)
@@ -1577,18 +1593,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           // Búsqueda por tipo de examen
           supabase
             .from('medical_records_clean')
-            .select(
-              `
-							*,
-							patients!inner(
-								cedula,
-								nombre,
-								edad,
-								telefono,
-								email
-							)
-						`,
-            )
+            .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
             .eq('patients.is_active', true)
             .ilike('exam_type', `%${escapedSearchTerm}%`)
@@ -1597,18 +1602,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
           // Búsqueda por código
           supabase
             .from('medical_records_clean')
-            .select(
-              `
-							*,
-							patients!inner(
-								cedula,
-								nombre,
-								edad,
-								telefono,
-								email
-							)
-						`,
-            )
+            .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
             .eq('patients.is_active', true)
             .ilike('code', `%${escapedSearchTerm}%`)
@@ -1626,7 +1620,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
         }
 
         // Combinar y deduplicar resultados
-        const allResults = results.flatMap((result) => result.data || []);
+        const allResults = results.flatMap((result) => result.data || []) as any[];
         const uniqueResults = new Map();
 
         for (const item of allResults) {
@@ -1817,19 +1811,9 @@ export const getAllCasesWithPatientInfo = async (filters?: {
     let totalCount = 0;
 
     while (hasMoreData) {
-      let query = supabase.from('medical_records_clean').select(
-        `
-					*,
-					patients!inner(
-						cedula,
-						nombre,
-						edad,
-						telefono,
-						email
-					)
-				`,
-        { count: 'exact' },
-      )
+      let query = supabase
+        .from('medical_records_clean')
+        .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
         .eq('laboratory_id', laboratoryIdAll)
         .eq('patients.is_active', true);
 
@@ -2244,7 +2228,7 @@ export const findCaseByCode = async (
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
       image_url: (data as any).image_url || null,
-    } as MedicalCaseWithPatient;
+    } as unknown as MedicalCaseWithPatient;
 
     return transformedData;
   } catch (error) {
@@ -2314,7 +2298,7 @@ export const getCaseByIdWithPatient = async (
       fecha_nacimiento: (data as any).patients?.fecha_nacimiento || null,
       consulta: (data as any).consulta || null,
       image_url: (data as any).image_url || null,
-    } as MedicalCaseWithPatient;
+    } as unknown as MedicalCaseWithPatient;
 
     return transformedData;
   } catch (error) {
