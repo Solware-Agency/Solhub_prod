@@ -108,6 +108,10 @@ export async function getCallCenterRegistros(
 export interface CallCenterStats {
   totalCalls: number
   topByAtendidoPor: Array<{ name: string; calls: number }>
+  /** Conteo por motivo_llamada */
+  byMotivo: Array<{ name: string; calls: number }>
+  /** Conteo por referido_sede */
+  bySede: Array<{ name: string; calls: number }>
 }
 
 export interface GetCallCenterStatsResult {
@@ -131,7 +135,7 @@ export async function getCallCenterStats(
 
     const { data, error } = await supabase
       .from('call_center_registros')
-      .select('atendido_por')
+      .select('atendido_por, motivo_llamada, referido_sede')
       .eq('laboratory_id', laboratoryId)
       .gte('created_at', fromStr)
       .lte('created_at', toStr)
@@ -141,23 +145,33 @@ export async function getCallCenterStats(
       return { success: false, error: error.message }
     }
 
-    const registros = (data ?? []) as { atendido_por: string | null }[]
+    const registros = (data ?? []) as Array<{
+      atendido_por: string | null
+      motivo_llamada: string | null
+      referido_sede: string | null
+    }>
     const totalCalls = registros.length
 
-    // Agrupar por atendido_por (quien atendió la llamada)
-    const counts: Record<string, number> = {}
-    registros.forEach((r) => {
-      const name = (r.atendido_por || '').trim() || 'Sin asignar'
-      counts[name] = (counts[name] || 0) + 1
-    })
+    const countByKey = (getKey: (r: (typeof registros)[0]) => string) => {
+      const counts: Record<string, number> = {}
+      registros.forEach((r) => {
+        const key = getKey(r)
+        counts[key] = (counts[key] || 0) + 1
+      })
+      return Object.entries(counts)
+        .map(([name, calls]) => ({ name, calls }))
+        .sort((a, b) => b.calls - a.calls)
+    }
 
-    const topByAtendidoPor = Object.entries(counts)
-      .map(([name, calls]) => ({ name, calls }))
-      .sort((a, b) => b.calls - a.calls)
+    // Agrupar por atendido_por (quien atendió la llamada)
+    const topByAtendidoPor = countByKey((r) => (r.atendido_por || '').trim() || 'Sin asignar')
+
+    const byMotivo = countByKey((r) => (r.motivo_llamada || '').trim() || 'Sin motivo')
+    const bySede = countByKey((r) => (r.referido_sede || '').trim() || 'Sin sede')
 
     return {
       success: true,
-      data: { totalCalls, topByAtendidoPor },
+      data: { totalCalls, topByAtendidoPor, byMotivo, bySede },
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error desconocido'

@@ -21,7 +21,7 @@ import {
 } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
-import { Loader2, Save, Plus, Trash2, Percent, Search, Download, FileText } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Percent, Search, Download, FileText, ArrowUpDown } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -60,15 +60,38 @@ const SampleCostsPage: React.FC = () => {
 	const [savingPercent, setSavingPercent] = useState(false)
 	const [searchTerm, setSearchTerm] = useState('')
 	const [openExportModal, setOpenExportModal] = useState(false)
+	const [priceOrder, setPriceOrder] = useState<'none' | 'asc' | 'desc'>('none')
+	const toggleOrder = (current: 'none' | 'asc' | 'desc'): 'none' | 'asc' | 'desc' => {
+		if (current === 'none') return 'asc'
+		if (current === 'asc') return 'desc'
+		return 'none'
+	}
 
 	const filteredCosts = useMemo(() => {
-		if (!searchTerm.trim()) return costs
 		const q = searchTerm.trim().toLowerCase()
-		return costs.filter(
-			(row) =>
-				(row.code?.toLowerCase() ?? '').includes(q) || (row.name?.toLowerCase() ?? '').includes(q),
-		)
-	}, [costs, searchTerm])
+		const base = q
+			? costs.filter(
+					(row) =>
+						(row.code?.toLowerCase() ?? '').includes(q) || (row.name?.toLowerCase() ?? '').includes(q),
+			  )
+			: costs
+
+		const next = [...base]
+		// Orden base fijo: alfabético
+		next.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'es', { sensitivity: 'base' }))
+
+		// Orden por precio (opcional), manteniendo desempate alfabético
+		if (priceOrder !== 'none') {
+			next.sort((a, b) => {
+				const pa = Number(a.price_taquilla ?? 0)
+				const pb = Number(b.price_taquilla ?? 0)
+				if (pa === pb) return (a.name ?? '').localeCompare(b.name ?? '', 'es', { sensitivity: 'base' })
+				return priceOrder === 'asc' ? pa - pb : pb - pa
+			})
+		}
+
+		return next
+	}, [costs, searchTerm, priceOrder])
 
 	const loadCosts = useCallback(() => {
 		if (!laboratory?.id) return
@@ -443,7 +466,28 @@ const SampleCostsPage: React.FC = () => {
 								<tr className="border-b">
 									<th className="text-left p-2 font-medium">Código</th>
 									<th className="text-left p-2 font-medium">Tipo de muestra</th>
-									<th className="text-left p-2 font-medium">Taquilla ($)</th>
+									<th className="text-left p-2 font-medium">
+										<div className="inline-flex items-center gap-1">
+											<span>Taquilla ($)</span>
+											<button
+												type="button"
+												onClick={() => setPriceOrder((prev) => toggleOrder(prev))}
+												className={`h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted ${
+													priceOrder !== 'none' ? 'text-primary' : 'text-muted-foreground'
+												}`}
+												aria-label="Alternar orden por precio"
+												title={
+													priceOrder === 'asc'
+														? 'Orden ascendente'
+														: priceOrder === 'desc'
+															? 'Orden descendente'
+															: 'Sin orden'
+												}
+											>
+												<ArrowUpDown className="h-3.5 w-3.5" />
+											</button>
+										</div>
+									</th>
 									<th className="text-left p-2 font-medium">Convenios ($)</th>
 									<th className="text-left p-2 font-medium">Descuento ($)</th>
 									{canEdit && <th className="p-2 w-20">Acción</th>}

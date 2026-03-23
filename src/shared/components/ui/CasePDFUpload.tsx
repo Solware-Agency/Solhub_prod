@@ -71,6 +71,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 
 	const isSpt = laboratory?.slug === 'spt'
 	const isConspat = laboratory?.slug === 'conspat'
+	const isMarihorgen = laboratory?.slug === 'marihorgen' || laboratory?.slug === 'lm'
 	const canUpload =
 		user &&
 		profile?.laboratory_id &&
@@ -81,6 +82,7 @@ export const CasePDFUpload: React.FC<CasePDFUploadProps> = ({
 				profile?.role === 'prueba' ||
 				profile?.role === 'imagenologia' ||
 				profile?.role === 'call_center')) ||
+			isMarihorgen ||
 			isConspat)
 
 	if (!canUpload) {

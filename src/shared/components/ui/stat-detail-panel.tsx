@@ -1305,25 +1305,17 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 
 			case 'callCenterStats': {
 				const cc = stats?.callCenterStats
-				const totalCalls = cc?.totalCalls ?? 0
 				const topData = cc?.topByAtendidoPor ?? []
+				const motivoData = cc?.byMotivo ?? []
+				const sedeData = cc?.bySede ?? []
 				const maxCalls = Math.max(...topData.map((item: any) => item.calls), 1)
+				const maxMotivo = Math.max(...motivoData.map((item: any) => item.calls), 1)
+				const maxSede = Math.max(...sedeData.map((item: any) => item.calls), 1)
 				return (
 					<div className="space-y-6">
 						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
-							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Resumen de Llamadas</h3>
-							<div className="grid grid-cols-1 gap-4">
-								<div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
-									<p className="text-sm text-gray-500 dark:text-gray-400">Total de Llamadas</p>
-									<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-										{formatNumber(totalCalls)}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
 							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-								Todos los operadores
+								Recepcionistas
 							</h3>
 							{topData.length === 0 ? (
 								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
@@ -1343,6 +1335,64 @@ const StatDetailPanel: React.FC<StatDetailPanelProps> = ({
 												<div
 													className="h-2 rounded-full bg-emerald-500"
 													style={{ width: `${(item.calls / maxCalls) * 100}%` }}
+												/>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Motivo de la llamada
+							</h3>
+							{motivoData.length === 0 ? (
+								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
+							) : (
+								<div className="max-h-72 overflow-auto space-y-3 pr-2">
+									{motivoData.map((item: any, index: number) => (
+										<div key={`${item.name}-${index}`} className="space-y-1">
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2" title={item.name}>
+													{item.name}
+												</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">
+													{formatNumber(item.calls)}
+												</span>
+											</div>
+											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+												<div
+													className="h-2 rounded-full bg-violet-500"
+													style={{ width: `${(item.calls / maxMotivo) * 100}%` }}
+												/>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-6 border border-input">
+							<h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+								Sedes referidas
+							</h3>
+							{sedeData.length === 0 ? (
+								<p className="text-sm text-gray-500 dark:text-gray-400">Sin datos en el período seleccionado.</p>
+							) : (
+								<div className="max-h-72 overflow-auto space-y-3 pr-2">
+									{sedeData.map((item: any, index: number) => (
+										<div key={`${item.name}-${index}`} className="space-y-1">
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2" title={item.name}>
+													{item.name}
+												</span>
+												<span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">
+													{formatNumber(item.calls)}
+												</span>
+											</div>
+											<div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+												<div
+													className="h-2 rounded-full bg-amber-500"
+													style={{ width: `${(item.calls / maxSede) * 100}%` }}
 												/>
 											</div>
 										</div>

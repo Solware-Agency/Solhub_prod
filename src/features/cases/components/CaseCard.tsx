@@ -205,7 +205,7 @@ const CaseCard: React.FC<CaseCardProps> = ({
 				{/* Saldo a favor (labs con hasPositiveBalance / lm) */}
 				{!isSpt && isMarihorgen && (case_ as any).saldo_a_favor != null && Number((case_ as any).saldo_a_favor) > 0 && (
 					<div>
-						<p className="text-xs text-gray-500 dark:text-gray-400">SALDO</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Saldo</p>
 						<p className="text-sm font-medium text-green-600 dark:text-green-400">
 							+{formatCurrency((case_ as any).saldo_a_favor)}
 						</p>
@@ -213,7 +213,7 @@ const CaseCard: React.FC<CaseCardProps> = ({
 				)}
 				{!isSpt && (case_ as any).saldo_a_favor <= 0 && (case_ as any).remaining != null && Number((case_ as any).remaining) > 0 && (
 					<div>
-						<p className="text-xs text-gray-500 dark:text-gray-400">REMANENTE</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Saldo</p>
 						<p className="text-sm font-medium text-red-600 dark:text-red-400">
 							-{formatCurrency((case_ as any).remaining)}
 						</p>

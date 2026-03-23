@@ -1560,6 +1560,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 							refetch()
 						}}
 						onCaseSelect={handleCaseSelect}
+						onTriaje={(case_) => {
+							setIsViewModalOpen(false)
+							handleTriaje(case_)
+						}}
 						isFullscreen={isFullscreen}
 					/>
 
@@ -1844,6 +1848,10 @@ const CasesTable: React.FC<CasesTableProps> = React.memo(
 						refetch()
 					}}
 					onCaseSelect={handleCaseSelect}
+					onTriaje={(case_) => {
+						setIsViewModalOpen(false)
+						handleTriaje(case_)
+					}}
 					isFullscreen={isFullscreen}
 				/>
 

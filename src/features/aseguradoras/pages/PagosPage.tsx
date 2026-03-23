@@ -1,54 +1,15 @@
 import React, { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from '@shared/components/ui/dialog'
-import { Label } from '@shared/components/ui/label'
-import { useToast } from '@shared/hooks/use-toast'
-import {
-	DollarSign,
-	Download,
-	Search,
-	ChevronLeft,
-	ChevronRight,
-	FileText,
-	CalendarDays,
-	Upload,
-	X,
-	Receipt,
-} from 'lucide-react'
-import {
-	getPolizas,
-	updatePoliza,
-	getNextPaymentDateOnMarkPaidPoliza,
-	type Poliza,
-} from '@services/supabase/aseguradoras/polizas-service'
-import {
-	createPagoPoliza,
-	getPagosPoliza,
-	type PagoPoliza,
-} from '@services/supabase/aseguradoras/pagos-poliza-service'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog'
+import { DollarSign, Download, Search, ChevronLeft, ChevronRight, FileText, CalendarDays, Receipt } from 'lucide-react'
+import { getPolizas, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
+import { getPagosPoliza, type PagoPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
 import { PolizaDetailPanel } from '@features/aseguradoras/components/PolizaDetailPanel'
-import { uploadReciboPago, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
+import { RegistrarPagoPolizaDialog } from '@features/aseguradoras/components/RegistrarPagoPolizaDialog'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
-
-const METODOS_PAGO = [
-	{ value: 'Zelle', label: 'Zelle' },
-	{ value: 'Zinli', label: 'Zinli' },
-	{ value: 'Transferencia internacional', label: 'Transferencia internacional' },
-	{ value: 'Transferencia nacional', label: 'Transferencia nacional' },
-	{ value: 'Efectivo', label: 'Efectivo' },
-] as const
-
-const PERIODOS_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 /** Diferencia en días entre hoy (local) y la fecha de vencimiento. La fecha se interpreta como día natural en hora local para evitar desfases por UTC. */
 const daysBetween = (dateStr: string | null) => {
@@ -72,8 +33,6 @@ const formatDateForDisplay = (dateStr: string) => {
 type PagoWithPoliza = PagoPoliza & { poliza?: { id: string; numero_poliza: string } }
 
 const PagosPage = () => {
-	const queryClient = useQueryClient()
-	const { toast } = useToast()
 	const [polizaSearch, setPolizaSearch] = useState('')
 	const [polizaPage, setPolizaPage] = useState(1)
 	const [polizaItemsPerPage, setPolizaItemsPerPage] = useState(8)
@@ -84,20 +43,6 @@ const PagosPage = () => {
 	const [selectedPoliza, setSelectedPoliza] = useState<Poliza | null>(null)
 	const [polizaPanelOpen, setPolizaPanelOpen] = useState(false)
 	const [selectedPolizaForPanel, setSelectedPolizaForPanel] = useState<Poliza | null>(null)
-	const [form, setForm] = useState({
-		fecha_pago: '',
-		monto: '',
-		metodo_pago: '',
-		referencia: '',
-		documento_pago_url: '',
-		notas: '',
-		periodosAPagar: 1,
-	})
-	const [saving, setSaving] = useState(false)
-	const [uploadingRecibo, setUploadingRecibo] = useState(false)
-	const [reciboFileName, setReciboFileName] = useState<string | null>(null)
-	const fileInputRef = React.useRef<HTMLInputElement>(null)
-	const [nextPaymentDateAlert, setNextPaymentDateAlert] = useState<string | null>(null)
 	const [detallePagoOpen, setDetallePagoOpen] = useState(false)
 	const [selectedPago, setSelectedPago] = useState<PagoWithPoliza | null>(null)
 
@@ -162,94 +107,7 @@ const PagosPage = () => {
 
 	const openPagoModal = (poliza: Poliza) => {
 		setSelectedPoliza(poliza)
-		setForm({
-			fecha_pago: new Date().toLocaleDateString('en-CA'),
-			monto: '',
-			metodo_pago: '',
-			referencia: '',
-			documento_pago_url: '',
-			notas: '',
-			periodosAPagar: 1,
-		})
-		setReciboFileName(null)
-		if (fileInputRef.current) fileInputRef.current.value = ''
 		setOpenModal(true)
-	}
-
-	const handleReciboFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		if (!file || !selectedPoliza) return
-		const validation = validateReciboFile(file)
-		if (!validation.valid) {
-			toast({ title: 'Archivo inválido', description: validation.error, variant: 'destructive' })
-			return
-		}
-		setUploadingRecibo(true)
-		try {
-			const { data, error } = await uploadReciboPago(file, selectedPoliza.id)
-			if (error) throw error
-			if (data) {
-				setForm((prev) => ({ ...prev, documento_pago_url: data }))
-				setReciboFileName(file.name)
-				toast({ title: 'Archivo adjuntado' })
-			}
-		} catch (err) {
-			console.error(err)
-			toast({ title: 'Error al subir archivo', variant: 'destructive' })
-		} finally {
-			setUploadingRecibo(false)
-			if (fileInputRef.current) fileInputRef.current.value = ''
-		}
-	}
-
-	const handleRemoveRecibo = () => {
-		setForm((prev) => ({ ...prev, documento_pago_url: '' }))
-		setReciboFileName(null)
-		if (fileInputRef.current) fileInputRef.current.value = ''
-	}
-
-	const handleSave = async () => {
-		if (!selectedPoliza) return
-		const periodos = Math.max(1, Math.min(12, Number(form.periodosAPagar) || 1))
-		if (!form.fecha_pago || !form.monto) {
-			toast({ title: 'Completa fecha y monto', variant: 'destructive' })
-			return
-		}
-		setSaving(true)
-		try {
-			await createPagoPoliza({
-				poliza_id: selectedPoliza.id,
-				fecha_pago: form.fecha_pago,
-				monto: Number(form.monto),
-				metodo_pago: form.metodo_pago || null,
-				referencia: form.referencia || null,
-				documento_pago_url: form.documento_pago_url || null,
-				notas: form.notas || null,
-			})
-
-			let nextDate: string | null = null
-			for (let i = 0; i < periodos; i++) {
-				nextDate = await getNextPaymentDateOnMarkPaidPoliza(selectedPoliza.id)
-				if (!nextDate) break
-				await updatePoliza(selectedPoliza.id, {
-					next_payment_date: nextDate,
-					payment_status: 'current',
-					fecha_prox_vencimiento: nextDate,
-					estatus_pago: 'Pagado',
-				})
-			}
-
-			queryClient.invalidateQueries({ queryKey: ['pagos-poliza'] })
-			queryClient.invalidateQueries({ queryKey: ['polizas-pagos'] })
-			toast({ title: 'Pago registrado' })
-			setOpenModal(false)
-			if (nextDate) setNextPaymentDateAlert(nextDate)
-		} catch (err) {
-			console.error(err)
-			toast({ title: 'Error al registrar pago', variant: 'destructive' })
-		} finally {
-			setSaving(false)
-		}
 	}
 
 	const openDetallePago = (pago: PagoWithPoliza) => {
@@ -482,142 +340,14 @@ const PagosPage = () => {
 				</div>
 			</Card>
 
-			{/* Modal Registrar pago */}
-			<Dialog open={openModal} onOpenChange={setOpenModal}>
-				<DialogContent
-					className="max-w-lg bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
-					overlayClassName="bg-black/60"
-				>
-					<DialogHeader>
-						<DialogTitle>Registrar pago</DialogTitle>
-					</DialogHeader>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label>Fecha</Label>
-							<Input type="date" value={form.fecha_pago} onChange={(e) => setForm((prev) => ({ ...prev, fecha_pago: e.target.value }))} />
-						</div>
-						<div className="space-y-2">
-							<Label>Monto</Label>
-							<Input
-								type="number"
-								placeholder="Ej. 150"
-								value={form.monto}
-								onChange={(e) => setForm((prev) => ({ ...prev, monto: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Periodos a pagar</Label>
-							<Select
-								value={String(form.periodosAPagar)}
-								onValueChange={(v) => setForm((prev) => ({ ...prev, periodosAPagar: Number(v) || 1 }))}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PERIODOS_OPCIONES.map((n) => (
-										<SelectItem key={n} value={String(n)}>
-											{n} {n === 1 ? 'período' : 'períodos'}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<p className="text-xs text-gray-500">Cada período avanza la próxima fecha (ej. 1 mes). Si eliges 2, se sumarán 2 períodos.</p>
-						</div>
-						<div className="space-y-2">
-							<Label>Método</Label>
-							<Select
-								value={form.metodo_pago || undefined}
-								onValueChange={(value) => setForm((prev) => ({ ...prev, metodo_pago: value }))}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Seleccione método" />
-								</SelectTrigger>
-								<SelectContent>
-									{METODOS_PAGO.map((m) => (
-										<SelectItem key={m.value} value={m.value}>
-											{m.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="space-y-2 sm:col-span-2">
-							<Label>Referencia</Label>
-							<Input
-								placeholder="Ej. REF-001"
-								value={form.referencia}
-								onChange={(e) => setForm((prev) => ({ ...prev, referencia: e.target.value }))}
-							/>
-						</div>
-						<div className="space-y-2 sm:col-span-2">
-							<Label>Adjuntar comprobante</Label>
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept=".pdf,.jpg,.jpeg,.png"
-								onChange={handleReciboFileChange}
-								className="hidden"
-							/>
-							{form.documento_pago_url ? (
-								<div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-									<FileText className="h-5 w-5 text-primary shrink-0" />
-									<span className="text-sm truncate flex-1">{reciboFileName || 'Archivo adjunto'}</span>
-									<Button type="button" variant="ghost" size="sm" onClick={handleRemoveRecibo} disabled={uploadingRecibo} className="shrink-0">
-										<X className="h-4 w-4" />
-									</Button>
-								</div>
-							) : (
-								<Button
-									type="button"
-									variant="outline"
-									className="w-full"
-									onClick={() => fileInputRef.current?.click()}
-									disabled={uploadingRecibo || !selectedPoliza}
-								>
-									{uploadingRecibo ? 'Subiendo...' : (
-										<>
-											<Upload className="h-4 w-4 mr-2" />
-											PDF, JPG o PNG
-										</>
-									)}
-								</Button>
-							)}
-						</div>
-						<div className="space-y-2 sm:col-span-2">
-							<Label>Notas</Label>
-							<Input placeholder="Opcional" value={form.notas} onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))} />
-						</div>
-					</div>
-					<DialogFooter className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-						<Button variant="outline" onClick={() => setOpenModal(false)}>
-							Cancelar
-						</Button>
-						<Button onClick={handleSave} disabled={saving}>
-							{saving ? 'Guardando...' : 'Guardar pago'}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
-			{/* Modal advertencia: próxima fecha de pago */}
-			<Dialog open={!!nextPaymentDateAlert} onOpenChange={(open) => !open && setNextPaymentDateAlert(null)}>
-				<DialogContent className="max-w-sm">
-					<DialogHeader>
-						<DialogTitle>Pago registrado</DialogTitle>
-					</DialogHeader>
-					<p className="text-sm text-gray-600 dark:text-gray-400">
-						La <strong>próxima fecha de pago</strong> de esta póliza será:{' '}
-						<strong className="text-primary">{nextPaymentDateAlert ? formatDateForDisplay(nextPaymentDateAlert) : ''}</strong>.
-					</p>
-					<p className="text-xs text-gray-500 mt-2">
-						Si marcas como pagado otra vez por error, se sumará otro período a la próxima fecha.
-					</p>
-					<DialogFooter>
-						<Button onClick={() => setNextPaymentDateAlert(null)}>Entendido</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<RegistrarPagoPolizaDialog
+				open={openModal}
+				onOpenChange={(o) => {
+					setOpenModal(o)
+					if (!o) setSelectedPoliza(null)
+				}}
+				poliza={selectedPoliza}
+			/>
 
 			{/* Modal detalle de pago (comprobante) */}
 			<Dialog open={detallePagoOpen} onOpenChange={setDetallePagoOpen}>
@@ -703,6 +433,19 @@ const PagosPage = () => {
 				onClose={() => {
 					setPolizaPanelOpen(false)
 					setSelectedPolizaForPanel(null)
+				}}
+				onPaymentRegistered={({ nextPaymentDate }) => {
+					setSelectedPolizaForPanel((p) =>
+						p && nextPaymentDate
+							? {
+									...p,
+									fecha_prox_vencimiento: nextPaymentDate,
+									next_payment_date: nextPaymentDate,
+									estatus_pago: 'Pagado',
+									payment_status: 'current',
+								}
+							: p,
+					)
 				}}
 			/>
 		</div>

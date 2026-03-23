@@ -111,7 +111,7 @@ interface CaseDetailPanelProps {
 	onSave?: () => void
 	onDelete?: () => void
 	onCaseSelect: (case_: MedicalCaseWithPatient) => void
-	/** Si se pasa, se muestra el botón "Historia" (triaje) en la barra de acciones (respetando FeatureGuard hasTriaje) */
+	/** Si se pasa, se muestra el botón de historia clínica (triaje) en la barra de acciones (respetando FeatureGuard hasTriaje) */
 	onTriaje?: (case_: MedicalCaseWithPatient) => void
 	isFullscreen?: boolean
 	modalTitle?: string
@@ -1180,8 +1180,8 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 					})
 				}
 
-				// Guardar URLs de medios (images_urls + video_urls) - SPT y Conspat: todos los roles pueden guardar
-				if (mediaChanged && (isSpt || isConspat)) {
+				// Guardar URLs de medios (images_urls + video_urls) - SPT, Conspat y Marihorgen
+				if (mediaChanged && (isSpt || isConspat || isMarihorgen)) {
 					const imageUrls = mediaItems.filter(m => m.type === 'image').map(m => m.url)
 					const videoUrls = mediaItems.filter(m => m.type === 'video').map(m => m.url)
 					
@@ -2048,11 +2048,10 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 												<button
 													onClick={() => onTriaje(caseData)}
 													title="Ver o editar historia clínica (triaje)"
-													className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors duration-200 shrink-0"
-													aria-label="Ver triaje"
+													className="inline-flex items-center justify-center gap-0 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors duration-200 shrink-0"
+													aria-label="Historia clínica (triaje)"
 												>
 													<ClipboardList className="w-4 h-4" />
-													Historia
 												</button>
 											</FeatureGuard>
 										)}
@@ -2561,76 +2560,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</div>
 								)}
 
-								{/* PDF Adjuntos - Hasta 5; solo SPT, roles: laboratorio, coordinador, owner, prueba, imagenologia, call_center */}
-								<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2 min-w-0">
-									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">PDF Adjuntos:</span>
-									<div className="w-full min-w-0">
-										{(() => {
-											const pdfUrls: string[] =
-												Array.isArray((caseData as any).uploaded_pdf_urls) &&
-												(caseData as any).uploaded_pdf_urls.length > 0
-													? (caseData as any).uploaded_pdf_urls
-													: (caseData as any).uploaded_pdf_url
-														? [(caseData as any).uploaded_pdf_url]
-														: []
-											const canEditPdf =
-												(isSpt &&
-													(profile?.role === 'laboratorio' ||
-														profile?.role === 'coordinador' ||
-														profile?.role === 'owner' ||
-														profile?.role === 'prueba' ||
-														profile?.role === 'imagenologia' ||
-														profile?.role === 'call_center')) ||
-												isConspat
-											if (canEditPdf) {
-												return (
-													<CasePDFUpload
-														caseId={caseData.id}
-														currentPdfUrls={pdfUrls}
-														isEditing={isEditing}
-														onUploadingChange={setIsUploadingPdf}
-														onPdfUpdated={async () => {
-															if (refetchCaseData) await refetchCaseData()
-															if (onSave) onSave()
-														}}
-													/>
-												)
-											}
-											if (pdfUrls.length > 0) {
-												return (
-													<div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-5">
-														{pdfUrls.map((url, i) => (
-															<div
-																key={url}
-																className="flex min-w-0 max-w-full flex-col items-center gap-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/80 p-1.5 dark:border-gray-700 dark:bg-gray-800/40 sm:p-2"
-															>
-																<span className="w-full truncate text-center text-xs font-medium leading-tight text-gray-700 dark:text-gray-200">
-																	PDF {i + 1}
-																</span>
-																{!isEditing && (
-																	<PDFButton
-																		pdfUrl={url}
-																		size="sm"
-																		variant="outline"
-																		isAttached={true}
-																		compact
-																		downloadFileName={
-																			case_?.code
-																				? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf`
-																				: undefined
-																		}
-																	/>
-																)}
-															</div>
-														))}
-													</div>
-												)
-											}
-											return <span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
-										})()}
-									</div>
-								</div>
-
 								{isMarihorgen && (
 									<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 										<span className="text-sm font-medium text-gray-600 dark:text-gray-400">Bloques:</span>
@@ -2682,31 +2611,100 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</div>
 								)}
 
-								{/* Image URLs field - Visible for all roles if images exist; en SPT todos los roles pueden subir/editar */}
-								{/* Oculto para marihorgen */}
-								{!isMarihorgen && (
-									<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
-										<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-											Imágenes/Videos:
-										</span>
-										<div className="w-full">
-											<MultipleMediaUrls
-												media={mediaItems}
-												onChange={handleMediaItemsChange}
-												maxItems={10}
-												isEditing={(isSpt && isEditing) || (isConspat && isEditing)}
-												allowUploadWhenReadonly={
-													(isSpt || isConspat) && !!currentCase?.id && !!profile?.laboratory_id
-												}
-												onUploadFile={
-													(isSpt && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined) ||
-													(isConspat && currentCase?.id && profile?.laboratory_id ? handleUploadMedia : undefined)
-												}
-												isUploading={isUploadingImages}
-											/>
-										</div>
+								{/* PDF Adjuntos - Hasta 5; habilitado para SPT, Conspat y Marihorgen */}
+								<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2 min-w-0">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">PDF Adjuntos:</span>
+									<div className="w-full min-w-0">
+										{(() => {
+											const pdfUrls: string[] =
+												Array.isArray((caseData as any).uploaded_pdf_urls) &&
+												(caseData as any).uploaded_pdf_urls.length > 0
+													? (caseData as any).uploaded_pdf_urls
+													: (caseData as any).uploaded_pdf_url
+														? [(caseData as any).uploaded_pdf_url]
+														: []
+											const canEditPdf =
+												(isSpt &&
+													(profile?.role === 'laboratorio' ||
+														profile?.role === 'coordinador' ||
+														profile?.role === 'owner' ||
+														profile?.role === 'prueba' ||
+														profile?.role === 'imagenologia' ||
+														profile?.role === 'call_center')) ||
+												isMarihorgen ||
+												isConspat
+											if (canEditPdf) {
+												return (
+													<CasePDFUpload
+														caseId={caseData.id}
+														currentPdfUrls={pdfUrls}
+														isEditing={isEditing}
+														onUploadingChange={setIsUploadingPdf}
+														onPdfUpdated={async () => {
+															if (refetchCaseData) await refetchCaseData()
+															if (onSave) onSave()
+														}}
+													/>
+												)
+											}
+											if (pdfUrls.length > 0) {
+												return (
+													<div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-5">
+														{pdfUrls.map((url, i) => (
+															<div
+																key={url}
+																className="flex min-w-0 max-w-full flex-col items-center gap-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/80 p-1.5 dark:border-gray-700 dark:bg-gray-800/40 sm:p-2"
+															>
+																<span className="w-full truncate text-center text-xs font-medium leading-tight text-gray-700 dark:text-gray-200">
+																	PDF {i + 1}
+																</span>
+																{!isEditing && (
+																	<PDFButton
+																		pdfUrl={url}
+																		size="sm"
+																		variant="outline"
+																		isAttached={true}
+																		compact
+																		downloadFileName={
+																			case_?.code
+																				? `${case_.code}${pdfUrls.length > 1 ? `_${i + 1}` : ''}.pdf`
+																				: undefined
+																		}
+																	/>
+																)}
+															</div>
+														))}
+													</div>
+												)
+											}
+											return <span className="text-sm text-gray-500 dark:text-gray-400">Sin PDF adjunto</span>
+										})()}
 									</div>
-								)}
+								</div>
+
+								{/* Image URLs field - Visible for all roles if images exist */}
+								<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
+									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+										Imágenes/Videos:
+									</span>
+									<div className="w-full">
+										<MultipleMediaUrls
+											media={mediaItems}
+											onChange={handleMediaItemsChange}
+											maxItems={10}
+											isEditing={(isSpt && isEditing) || (isConspat && isEditing) || (isMarihorgen && isEditing)}
+											allowUploadWhenReadonly={
+												(isSpt || isConspat || isMarihorgen) && !!currentCase?.id && !!profile?.laboratory_id
+											}
+											onUploadFile={
+												((isSpt || isConspat || isMarihorgen) && currentCase?.id && profile?.laboratory_id
+													? handleUploadMedia
+													: undefined)
+											}
+											isUploading={isUploadingImages}
+										/>
+									</div>
+								</div>
 
 								{/* Comentarios */}
 								<div className="py-2 pt-3">

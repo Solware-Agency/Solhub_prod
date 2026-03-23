@@ -1,11 +1,13 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button } from '@shared/components/ui/button'
 import { SideDetailPanel } from './SideDetailPanel'
+import { RegistrarPagoPolizaDialog } from './RegistrarPagoPolizaDialog'
 import { deactivatePoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
 import { getPagosByPoliza, type PagoPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
 import { useToast } from '@shared/hooks/use-toast'
-import { CalendarDays, Edit, FileText, ShieldCheck, Trash2, User, Paperclip, ExternalLink, DollarSign } from 'lucide-react'
+import { CalendarDays, Edit, FileText, ShieldCheck, Trash2, User, Paperclip, ExternalLink, DollarSign, PlusCircle } from 'lucide-react'
 
 interface PolizaDetailPanelProps {
 	poliza: Poliza | null
@@ -17,6 +19,8 @@ interface PolizaDetailPanelProps {
 	onAseguradoraClick?: (aseguradoraId: string) => void
 	/** Al hacer clic en Editar póliza (abre modal de edición en el padre) */
 	onEditClick?: (poliza: Poliza) => void
+	/** Tras registrar un pago (si el padre mantiene la póliza en estado local). */
+	onPaymentRegistered?: (payload: { nextPaymentDate: string | null }) => void
 }
 
 const formatDate = (value?: string | null) => {
@@ -25,10 +29,23 @@ const formatDate = (value?: string | null) => {
 	return Number.isNaN(parsed.getTime()) ? value : format(parsed, 'dd/MM/yyyy')
 }
 
-export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, onAseguradoraClick, onEditClick }: PolizaDetailPanelProps) => {
+export const PolizaDetailPanel = ({
+	poliza,
+	isOpen,
+	onClose,
+	onAseguradoClick,
+	onAseguradoraClick,
+	onEditClick,
+	onPaymentRegistered,
+}: PolizaDetailPanelProps) => {
 	const queryClient = useQueryClient()
 	const { toast } = useToast()
 	const [isDeleting, setIsDeleting] = useState(false)
+	const [pagoDialogOpen, setPagoDialogOpen] = useState(false)
+
+	useEffect(() => {
+		if (!isOpen) setPagoDialogOpen(false)
+	}, [isOpen])
 
 	const { data: pagos = [], isLoading: loadingPagos } = useQuery({
 		queryKey: ['pagos-by-poliza', poliza?.id],
@@ -73,15 +90,20 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 			title,
 			icon: Icon,
 			children,
+			actions,
 		}: {
 			title: string
 			icon: React.ComponentType<{ className?: string }>
 			children: React.ReactNode
+			actions?: React.ReactNode
 		}) => (
 			<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200">
-				<div className="flex items-center gap-2 mb-3">
-					<Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+				<div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+					<div className="flex items-center gap-2 min-w-0">
+						<Icon className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400" />
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title}</h3>
+					</div>
+					{actions}
 				</div>
 				{children}
 			</div>
@@ -92,6 +114,7 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 	if (!poliza) return null
 
 	return (
+		<>
 		<SideDetailPanel
 			isOpen={isOpen}
 			onClose={onClose}
@@ -117,7 +140,6 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 							aria-label="Editar póliza"
 						>
 							<Edit className="w-4 h-4" />
-							<span className="ml-1 hidden sm:inline">Editar</span>
 						</button>
 					)}
 					<div className="flex-1 min-w-8" />
@@ -227,7 +249,22 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 					)}
 				</InfoSection>
 
-				<InfoSection title="Pagos registrados" icon={DollarSign}>
+				<InfoSection
+					title="Pagos registrados"
+					icon={DollarSign}
+					actions={
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							className="shrink-0 gap-1.5 h-8 text-xs sm:text-sm"
+							onClick={() => setPagoDialogOpen(true)}
+						>
+							<PlusCircle className="w-4 h-4" />
+							Registrar pago
+						</Button>
+					}
+				>
 					{loadingPagos && <p className="text-sm text-muted-foreground">Cargando pagos...</p>}
 					{!loadingPagos && pagos.length === 0 && (
 						<p className="text-sm text-muted-foreground">No hay pagos registrados para esta póliza.</p>
@@ -273,5 +310,13 @@ export const PolizaDetailPanel = ({ poliza, isOpen, onClose, onAseguradoClick, o
 				</InfoSection>
 			</div>
 		</SideDetailPanel>
+
+		<RegistrarPagoPolizaDialog
+			open={pagoDialogOpen}
+			onOpenChange={setPagoDialogOpen}
+			poliza={poliza}
+			onRegistered={onPaymentRegistered}
+		/>
+		</>
 	)
 }

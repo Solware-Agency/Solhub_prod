@@ -364,6 +364,19 @@ export const AseguradoraHistoryModal: React.FC<AseguradoraHistoryModalProps> = (
 				onClose={closePolizaDetail}
 				onAseguradoClick={handleAseguradoClickFromPoliza}
 				onEditClick={handleEditPolizaFromPanel}
+				onPaymentRegistered={({ nextPaymentDate }) => {
+					setSelectedPoliza((p) =>
+						p && nextPaymentDate
+							? {
+									...p,
+									fecha_prox_vencimiento: nextPaymentDate,
+									next_payment_date: nextPaymentDate,
+									estatus_pago: 'Pagado',
+									payment_status: 'current',
+								}
+							: p,
+					)
+				}}
 			/>
 
 			<EditPolizaModal

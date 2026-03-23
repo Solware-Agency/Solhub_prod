@@ -82,7 +82,10 @@ export const PolizaFiltersModal: React.FC<PolizaFiltersModalProps> = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] flex flex-col p-4 sm:p-6 gap-0">
+			<DialogContent
+				className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] flex flex-col rounded-2xl sm:rounded-xl p-4 sm:p-6 gap-0 bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
+				overlayClassName="bg-black/60"
+			>
 				<DialogHeader className="shrink-0 pb-2">
 					<DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
 						<Filter className="h-5 w-5 shrink-0" />

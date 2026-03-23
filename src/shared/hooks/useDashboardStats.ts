@@ -91,7 +91,12 @@ export interface DashboardStats {
 	casesByPathologist: Array<{ id: string; name: string; cases: number; blocks: number }>
 	casesByCitotecno?: Array<{ id: string; name: string; cases: number }>
 	/** Estadísticas del call center (solo SPT con hasCallCenter) */
-	callCenterStats?: { totalCalls: number; topByAtendidoPor: Array<{ name: string; calls: number }> }
+	callCenterStats?: {
+		totalCalls: number
+		topByAtendidoPor: Array<{ name: string; calls: number }>
+		byMotivo: Array<{ name: string; calls: number }>
+		bySede: Array<{ name: string; calls: number }>
+	}
 	// Nuevas estadísticas por moneda
 	monthlyRevenueBolivares: number
 	monthlyRevenueDollars: number

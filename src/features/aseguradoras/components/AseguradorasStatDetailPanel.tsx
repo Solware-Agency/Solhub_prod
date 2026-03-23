@@ -28,6 +28,10 @@ interface AseguradorasStatDetailPanelProps {
 	onAseguradoraClick?: (id: string) => void
 }
 
+/** Duración fija: más estable en móvil que spring y combina bien sin backdrop-blur a pantalla completa. */
+const STAT_PANEL_OVERLAY_TRANSITION = { duration: 0.2, ease: 'easeOut' as const }
+const STAT_PANEL_SHEET_TRANSITION = { duration: 0.32, ease: [0.25, 0.1, 0.25, 1] as const }
+
 const AseguradorasStatDetailPanel: React.FC<AseguradorasStatDetailPanelProps> = ({
 	isOpen,
 	onClose,
@@ -162,27 +166,28 @@ const AseguradorasStatDetailPanel: React.FC<AseguradorasStatDetailPanelProps> = 
 		}
 	}
 
-	if (!isOpen) return null
-
 	return (
 		<AnimatePresence>
 			{isOpen && cardType && (
 				<>
 					<motion.div
+						key="aseguradoras-stat-scrim"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
+						transition={STAT_PANEL_OVERLAY_TRANSITION}
 						onClick={onClose}
 						className="fixed inset-0 bg-black/50 z-99999998"
 					/>
 					<motion.div
+						key="aseguradoras-stat-sheet"
 						initial={{ x: '100%' }}
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
-						transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] shadow-2xl z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col"
+						transition={STAT_PANEL_SHEET_TRANSITION}
+						className="fixed right-0 top-0 h-full w-full sm:w-2/3 lg:w-1/2 xl:w-2/5 z-99999999 overflow-y-auto rounded-lg border-l border-input flex flex-col shadow-2xl transform-gpu bg-white dark:bg-background sm:bg-white/90 sm:dark:bg-background/95 backdrop-blur-none sm:backdrop-blur-md"
 					>
-						<div className="sticky top-0 bg-white/80 dark:bg-background/50 backdrop-blur-[10px] border-b border-input p-3 sm:p-6 z-10">
+						<div className="sticky top-0 z-10 border-b border-input p-3 sm:p-6 bg-white dark:bg-background sm:bg-white/90 sm:dark:bg-background/95 backdrop-blur-none sm:backdrop-blur-md">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
 									{cardType === 'proximos_vencimientos' && <Calendar className="w-5 h-5 text-amber-500" />}

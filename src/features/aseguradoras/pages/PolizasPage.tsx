@@ -1018,6 +1018,19 @@ const PolizasPage = () => {
 				onAseguradoClick={handleAseguradoClick}
 				onAseguradoraClick={handleAseguradoraClick}
 				onEditClick={openForEdit}
+				onPaymentRegistered={({ nextPaymentDate }) => {
+					setSelectedPoliza((p) =>
+						p && nextPaymentDate
+							? {
+									...p,
+									fecha_prox_vencimiento: nextPaymentDate,
+									next_payment_date: nextPaymentDate,
+									estatus_pago: 'Pagado',
+									payment_status: 'current',
+								}
+							: p,
+					)
+				}}
 			/>
 
 			<AseguradoHistoryModal
