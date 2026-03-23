@@ -12,13 +12,7 @@ import { updateLaboratoryConfig } from '@services/supabase/laboratories/laborato
 import { Card, CardContent } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from '@shared/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog'
 import { Label } from '@shared/components/ui/label'
 import { useToast } from '@shared/hooks/use-toast'
 import { Loader2, Save, Plus, Trash2, Percent, Search, Download, FileText, ArrowUpDown } from 'lucide-react'
@@ -34,8 +28,7 @@ const SampleCostsPage: React.FC = () => {
 	const { profile } = useUserProfile()
 	const { toast } = useToast()
 	const hasSampleTypeCosts = !!laboratory?.features?.hasSampleTypeCosts
-	const canEdit =
-		(profile?.role === 'owner' || profile?.role === 'prueba') && hasSampleTypeCosts && !!laboratory?.id
+	const canEdit = (profile?.role === 'owner' || profile?.role === 'prueba') && hasSampleTypeCosts && !!laboratory?.id
 	const isOwner = profile?.role === 'owner'
 
 	const convenioDiscountPercent = laboratory?.config?.convenioDiscountPercent ?? DEFAULT_CONVENIO_PCT
@@ -71,9 +64,8 @@ const SampleCostsPage: React.FC = () => {
 		const q = searchTerm.trim().toLowerCase()
 		const base = q
 			? costs.filter(
-					(row) =>
-						(row.code?.toLowerCase() ?? '').includes(q) || (row.name?.toLowerCase() ?? '').includes(q),
-			  )
+					(row) => (row.code?.toLowerCase() ?? '').includes(q) || (row.name?.toLowerCase() ?? '').includes(q),
+				)
 			: costs
 
 		const next = [...base]
@@ -175,7 +167,10 @@ const SampleCostsPage: React.FC = () => {
 		}
 		setSavingAll(false)
 		if (ok > 0) {
-			toast({ title: 'Guardado', description: ok === 1 ? 'Costos actualizados.' : `${ok} tipos de muestra actualizados.` })
+			toast({
+				title: 'Guardado',
+				description: ok === 1 ? 'Costos actualizados.' : `${ok} tipos de muestra actualizados.`,
+			})
 			loadCosts()
 		}
 		if (!err && ok === 0 && hasAnyChanges) {
@@ -185,7 +180,8 @@ const SampleCostsPage: React.FC = () => {
 
 	const handleDeleteRow = async (row: SampleTypeCost) => {
 		if (!laboratory?.id) return
-		if (!window.confirm(`¿Eliminar el tipo de muestra "${row.name}" (${row.code})? Esta acción no se puede deshacer.`)) return
+		if (!window.confirm(`¿Eliminar el tipo de muestra "${row.name}" (${row.code})? Esta acción no se puede deshacer.`))
+			return
 		setDeletingCode(row.code)
 		const res = await deleteSampleTypeCost(laboratory.id, row.code)
 		setDeletingCode(null)
@@ -242,7 +238,11 @@ const SampleCostsPage: React.FC = () => {
 		const name = addName.trim()
 		const taquilla = parseFloat(addTaquilla)
 		if (!code || !name || isNaN(taquilla) || taquilla < 0) {
-			toast({ title: 'Datos incompletos', description: 'Complete código, nombre y precio taquilla.', variant: 'destructive' })
+			toast({
+				title: 'Datos incompletos',
+				description: 'Complete código, nombre y precio taquilla.',
+				variant: 'destructive',
+			})
 			return
 		}
 		setSavingNew(true)
@@ -269,7 +269,11 @@ const SampleCostsPage: React.FC = () => {
 		const convenio = parseFloat(editConvenioPct)
 		const descuento = parseFloat(editDescuentoPct)
 		if (isNaN(convenio) || convenio < 0 || convenio > 100 || isNaN(descuento) || descuento < 0 || descuento > 100) {
-			toast({ title: 'Datos inválidos', description: 'Los porcentajes deben ser números entre 0 y 100.', variant: 'destructive' })
+			toast({
+				title: 'Datos inválidos',
+				description: 'Los porcentajes deben ser números entre 0 y 100.',
+				variant: 'destructive',
+			})
 			return
 		}
 		setSavingPercent(true)
@@ -359,7 +363,11 @@ const SampleCostsPage: React.FC = () => {
 			doc.setFontSize(14)
 			doc.text('Estructura de costos', 14, 12)
 			doc.setFontSize(9)
-			doc.text(`Laboratorio: ${laboratory?.name ?? 'N/A'} · ${filteredCosts.length} fila(s) · ${new Date().toLocaleDateString('es-ES')}`, 14, 18)
+			doc.text(
+				`Laboratorio: ${laboratory?.name ?? 'N/A'} · ${filteredCosts.length} fila(s) · ${new Date().toLocaleDateString('es-ES')}`,
+				14,
+				18,
+			)
 			autoTable(doc, {
 				head,
 				body,
@@ -393,7 +401,7 @@ const SampleCostsPage: React.FC = () => {
 	}
 
 	return (
-		<div className="p-4 sm:p-6 space-y-4">
+		<div>
 			<div className="mb-4 sm:mb-6">
 				<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estructura de costos</h1>
 				<div className="w-16 sm:w-24 h-1 bg-primary mt-2 rounded-full" />
@@ -454,7 +462,13 @@ const SampleCostsPage: React.FC = () => {
 								</Button>
 							)}
 							{canEdit && (
-								<Button type="button" variant="outline" size="icon" onClick={() => setOpenAddModal(true)} aria-label="Agregar tipo de muestra">
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									onClick={() => setOpenAddModal(true)}
+									aria-label="Agregar tipo de muestra"
+								>
 									<Plus className="h-4 w-4" />
 								</Button>
 							)}
@@ -737,7 +751,13 @@ const SampleCostsPage: React.FC = () => {
 							}
 							onClick={handleSavePercent}
 						>
-							{savingPercent ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-1" /> Guardar</>}
+							{savingPercent ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<>
+									<Save className="h-4 w-4 mr-1" /> Guardar
+								</>
+							)}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
