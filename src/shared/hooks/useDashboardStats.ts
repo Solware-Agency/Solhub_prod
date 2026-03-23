@@ -208,7 +208,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
-					.eq('patients.is_active', true)
+					.eq('patient_is_active', true)
 					.gte('created_at', filterStart.toISOString())
 					.lte('created_at', filterEnd.toISOString())
 
@@ -330,7 +330,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					.from('medical_records_clean')
 					.select('total_amount, patient_id, created_at, patients!inner(id)')
 					.eq('laboratory_id', laboratoryId)
-					.eq('patients.is_active', true)
+					.eq('patient_is_active', true)
 					.not('created_at', 'is', null)
 
 				const allRecords = allRecordsForTotal || []
@@ -463,7 +463,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
-					.eq('patients.is_active', true)
+					.eq('patient_is_active', true)
 					.gte('created_at', previousPeriodStart.toISOString())
 					.lte('created_at', previousPeriodEnd.toISOString())
 
@@ -596,7 +596,7 @@ export const useDashboardStats = (startDate?: Date, endDate?: Date, selectedYear
 					`,
 					)
 					.eq('laboratory_id', laboratoryId)
-					.eq('patients.is_active', true)
+					.eq('patient_is_active', true)
 					.gte('created_at', yearStart.toISOString())
 					.lte('created_at', yearEnd.toISOString())
 					.not('created_at', 'is', null)

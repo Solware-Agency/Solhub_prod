@@ -92,6 +92,7 @@ const MEDICAL_RECORD_LIST_COLUMNS = `
   token,
   doc_aprobado,
   patient_id,
+  patient_is_active,
   cito_status,
   email_sent,
   laboratory_id,
@@ -136,11 +137,140 @@ const MEDICAL_CASE_LIST_WITH_PATIENT_INNER_FN = `
 const MEDICAL_CASE_LIST_SELECT = MEDICAL_CASE_LIST_WITH_PATIENT_INNER as any;
 const MEDICAL_CASE_LIST_SELECT_FN = MEDICAL_CASE_LIST_WITH_PATIENT_INNER_FN as any;
 
+/** Filtros reutilizables en medical_records_clean (usa patient_is_active; sin embed patients). */
+type MedicalCaseListFiltersInput = {
+  branch?: string;
+  branchFilter?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+  sampleDateFrom?: string;
+  sampleDateTo?: string;
+  sampleTypeFilter?: string;
+  examType?: string;
+  consulta?: string;
+  paymentStatus?: 'Incompleto' | 'Pagado';
+  documentStatus?: 'faltante' | 'pendiente' | 'aprobado' | 'rechazado';
+  pdfStatus?: 'pendientes' | 'faltantes';
+  citoStatus?: 'positivo' | 'negativo';
+  doctorFilter?: string[];
+  originFilter?: string[];
+  emailSentStatus?: boolean;
+  userRole?:
+    | 'owner'
+    | 'employee'
+    | 'residente'
+    | 'citotecno'
+    | 'patologo'
+    | 'medicowner';
+};
+
+function applyMedicalCaseListFilters(
+  query: any,
+  laboratoryId: string,
+  filters?: MedicalCaseListFiltersInput | null,
+): any {
+  let q = query.eq('laboratory_id', laboratoryId).eq('patient_is_active', true);
+
+  if (filters?.branchFilter && filters.branchFilter.length > 0) {
+    q = q.in('branch', filters.branchFilter);
+  } else if (filters?.branch) {
+    q = q.eq('branch', filters.branch);
+  }
+
+  if (filters?.dateFrom) {
+    q = q.filter('created_at', 'gte', filters.dateFrom);
+  }
+
+  if (filters?.dateTo) {
+    const nextDay = new Date(filters.dateTo);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDayStr = nextDay.toISOString().split('T')[0];
+    q = q.filter('created_at', 'lt', nextDayStr);
+  }
+
+  if (filters?.sampleDateFrom) {
+    q = q.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
+  }
+  if (filters?.sampleDateTo) {
+    const nextDay = new Date(filters.sampleDateTo);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDayStr = nextDay.toISOString().split('T')[0];
+    q = q.filter('fecha_muestra', 'lt', nextDayStr);
+  }
+
+  if (filters?.sampleTypeFilter) {
+    q = q.eq('sample_type', filters.sampleTypeFilter);
+  }
+
+  if (filters?.examType) {
+    let exactExamType = filters.examType;
+    if (filters.examType === 'inmunohistoquimica') {
+      exactExamType = 'Inmunohistoquímica';
+    } else if (filters.examType === 'citologia') {
+      exactExamType = 'Citología';
+    } else if (filters.examType === 'biopsia') {
+      exactExamType = 'Biopsia';
+    }
+    q = q.eq('exam_type', exactExamType);
+  }
+
+  if (filters?.consulta) {
+    q = q.eq('consulta', filters.consulta);
+  }
+
+  if (filters?.paymentStatus) {
+    q = q.eq('payment_status', filters.paymentStatus);
+  }
+
+  if (filters?.documentStatus) {
+    q = q.eq('doc_aprobado', filters.documentStatus);
+  }
+
+  if (filters?.pdfStatus) {
+    if (filters.pdfStatus === 'pendientes') {
+      q = q.eq('pdf_en_ready', false);
+    } else if (filters.pdfStatus === 'faltantes') {
+      q = q.eq('pdf_en_ready', true);
+    }
+  }
+
+  if (filters?.citoStatus) {
+    q = q.eq('cito_status', filters.citoStatus);
+  }
+
+  if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
+    q = q.in('treating_doctor', filters.doctorFilter);
+  }
+
+  if (filters?.originFilter && filters.originFilter.length > 0) {
+    q = q.in('origin', filters.originFilter);
+  }
+
+  if (filters?.emailSentStatus !== undefined) {
+    q = q.eq('email_sent', filters.emailSentStatus);
+  }
+
+  if (filters?.userRole === 'residente') {
+    q = q.eq('exam_type', 'Biopsia');
+  }
+
+  if (filters?.userRole === 'citotecno') {
+    q = q.eq('exam_type', 'Citología');
+  }
+
+  if (filters?.userRole === 'patologo') {
+    q = q.in('exam_type', ['Biopsia', 'Inmunohistoquímica']);
+  }
+
+  return q;
+}
+
 // Tipos específicos para casos médicos (simplificados para evitar problemas de importación)
 export interface MedicalCase {
   id: string;
   laboratory_id: string;
   patient_id: string | null;
+  patient_is_active?: boolean;
   exam_type: string;
   consulta: string | null;
   origin: string;
@@ -764,9 +894,9 @@ export const getCasesWithPatientInfo = async (
       searchPromises.push(
         supabase
           .from('medical_records_clean')
-          .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
+          .select(MEDICAL_CASE_LIST_SELECT)
           .eq('laboratory_id', profile.laboratory_id)
-          .eq('patients.is_active', true)
+          .eq('patient_is_active', true)
           .or(`code.ilike.%${escapedSearchTerm}%,treating_doctor.ilike.%${escapedSearchTerm}%`)
           .order('created_at', { ascending: false }),
       );
@@ -789,9 +919,9 @@ export const getCasesWithPatientInfo = async (
         const patientIds = matchingPatients.map((p) => p.id);
         return await supabase
           .from('medical_records_clean')
-          .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
+          .select(MEDICAL_CASE_LIST_SELECT)
           .eq('laboratory_id', profile.laboratory_id)
-          .eq('patients.is_active', true)
+          .eq('patient_is_active', true)
           .in('patient_id', patientIds)
           .order('created_at', { ascending: false });
       })();
@@ -1033,142 +1163,34 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Sin término de búsqueda, consulta normal
-    let query = supabase
-      .from('medical_records_clean')
-      .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' });
-
-    // Filtro multi-tenant crítico y solo casos cuyo paciente está activo (soft delete)
-    query = query.eq('laboratory_id', profile.laboratory_id).eq('patients.is_active', true);
-
-    // Aplicar filtros
-    if (filters?.branchFilter && filters.branchFilter.length > 0) {
-      query = query.in('branch', filters.branchFilter);
-    } else if (filters?.branch) {
-      query = query.eq('branch', filters.branch);
-    }
-
-    if (filters?.dateFrom) {
-      // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
-      query = query.filter('created_at', 'gte', filters.dateFrom);
-    }
-
-    if (filters?.dateTo) {
-      // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
-      const nextDay = new Date(filters.dateTo);
-      nextDay.setDate(nextDay.getDate() + 1);
-      const nextDayStr = nextDay.toISOString().split('T')[0];
-      query = query.filter('created_at', 'lt', nextDayStr);
-    }
-
-    if (filters?.sampleDateFrom) {
-      query = query.filter('fecha_muestra', 'gte', filters.sampleDateFrom);
-    }
-    if (filters?.sampleDateTo) {
-      const nextDay = new Date(filters.sampleDateTo);
-      nextDay.setDate(nextDay.getDate() + 1);
-      const nextDayStr = nextDay.toISOString().split('T')[0];
-      query = query.filter('fecha_muestra', 'lt', nextDayStr);
-    }
-
-    if (filters?.sampleTypeFilter) {
-      query = query.eq('sample_type', filters.sampleTypeFilter);
-    }
-
-    if (filters?.examType) {
-      // Mapear el valor del filtro al valor exacto en la base de datos
-      let exactExamType = filters.examType;
-      if (filters.examType === 'inmunohistoquimica') {
-        exactExamType = 'Inmunohistoquímica';
-      } else if (filters.examType === 'citologia') {
-        exactExamType = 'Citología';
-      } else if (filters.examType === 'biopsia') {
-        exactExamType = 'Biopsia';
-      }
-      query = query.eq('exam_type', exactExamType);
-    }
-
-    // Filtro por tipo de consulta (especialidad médica)
-    if (filters?.consulta) {
-      query = query.eq('consulta', filters.consulta);
-    }
-
-    if (filters?.paymentStatus) {
-      query = query.eq('payment_status', filters.paymentStatus);
-    }
-
-    // Filtro por estatus de documento
-    if (filters?.documentStatus) {
-      query = query.eq('doc_aprobado', filters.documentStatus);
-    }
-
-    // Filtro por estatus de PDF
-    if (filters?.pdfStatus) {
-      if (filters.pdfStatus === 'pendientes') {
-        query = query.eq('pdf_en_ready', false);
-      } else if (filters.pdfStatus === 'faltantes') {
-        query = query.eq('pdf_en_ready', true);
-      }
-    }
-
-    // Filtro por estatus de citología
-    if (filters?.citoStatus) {
-      query = query.eq('cito_status', filters.citoStatus);
-    }
-
-    // Filtro por médico tratante
-    if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
-      query = query.in('treating_doctor', filters.doctorFilter);
-    }
-
-    // Filtro por procedencia
-    if (filters?.originFilter && filters.originFilter.length > 0) {
-      query = query.in('origin', filters.originFilter);
-    }
-
-    // Filtro por email enviado
-    if (filters?.emailSentStatus !== undefined) {
-      query = query.eq('email_sent', filters.emailSentStatus);
-    }
-
-    // Filtrar por rol de usuario
-    if (filters?.userRole === 'residente') {
-      query = query.eq('exam_type', 'Biopsia');
-    }
-
-    if (filters?.userRole === 'citotecno') {
-      query = query.eq('exam_type', 'Citología');
-    }
-
-    if (filters?.userRole === 'patologo') {
-      query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica']);
-    }
-
-    // Aplicar ordenamiento dinámico
     const sortField = filters?.sortField || 'created_at';
     const sortDirection = filters?.sortDirection || 'desc';
     const ascending = sortDirection === 'asc';
 
-    // Campos que pertenecen a la tabla relacionada 'patients'
     const relatedFields = ['nombre', 'cedula'];
     const isRelatedField = relatedFields.includes(sortField);
+    const needsTriageClientFilter = !!filters?.triageStatus;
 
     let data: any[] = [];
     let count = 0;
     let error: any = null;
 
-    const needsClientSideProcessing = isRelatedField || !!filters?.triageStatus;
+    if (needsTriageClientFilter) {
+      // Triaje: aún requiere traer el conjunto filtrado en memoria (sin COUNT+JOIN pesado en PostgREST).
+      let triageQuery = supabase
+        .from('medical_records_clean')
+        .select(MEDICAL_CASE_LIST_SELECT);
+      triageQuery = applyMedicalCaseListFilters(
+        triageQuery,
+        profile.laboratory_id,
+        filters,
+      );
 
-    if (needsClientSideProcessing) {
-      // Si el campo de ordenamiento es de la tabla relacionada (nombre/cedula) o hay filtro de triaje,
-      // necesitamos traer todos los datos para ordenarlos en el cliente y luego paginar.
-      // La velocidad depende de los índices (idx_medical_records_lab_patient_id, etc.); sin límite
-      // para no ocultar registros cuando hay más de 10k casos.
-      const { data: allData, error: allError, count: totalCount } = await query;
+      const { data: allData, error: allError } = await triageQuery;
 
       if (allError) {
         error = allError;
       } else {
-        // Transformar los datos primero para tener acceso a los campos aplanados
         const transformedAll = (allData || []).map((item: any) => ({
           ...item,
           cedula: item.patients?.cedula || '',
@@ -1179,51 +1201,69 @@ export const getCasesWithPatientInfo = async (
           version: item.version || null,
         })) as MedicalCaseWithPatient[];
 
-        // Filtro por estatus de triaje (por case_id, no por patient_id)
-        let triageFilteredData = transformedAll;
-        if (filters?.triageStatus) {
-          triageFilteredData = await applyTriageStatusFilter(
-            transformedAll,
-            filters.triageStatus,
-          );
-        }
+        const triageFilteredData = await applyTriageStatusFilter(
+          transformedAll,
+          filters!.triageStatus!,
+        );
 
-        // Ordenar en el cliente
         triageFilteredData.sort((a: any, b: any) => {
           let aValue = a[sortField];
           let bValue = b[sortField];
-
-          // Manejar valores null/undefined
           if (aValue === null || aValue === undefined) aValue = '';
           if (bValue === null || bValue === undefined) bValue = '';
-
-          // Convertir a minúsculas si son strings
           if (typeof aValue === 'string') aValue = aValue.toLowerCase();
           if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
           if (ascending) {
             return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-          } else {
-            return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
           }
+          return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
         });
 
-        // Aplicar paginación después del ordenamiento
-        count = triageFilteredData.length || totalCount || 0;
+        count = triageFilteredData.length;
         const from = (page - 1) * limit;
         const to = from + limit;
         data = triageFilteredData.slice(from, to);
       }
     } else {
-      // Si el campo es de la tabla principal, ordenar en Supabase
+      // COUNT exacto solo sobre medical_records_clean (sin embed) + página de datos sin COUNT → evita statement timeout.
+      let countQuery = supabase
+        .from('medical_records_clean')
+        .select('id', { count: 'exact', head: true });
+      countQuery = applyMedicalCaseListFilters(
+        countQuery,
+        profile.laboratory_id,
+        filters,
+      );
+      const { count: exactCount, error: countError } = await countQuery;
+      if (countError) {
+        throw countError;
+      }
+      count = exactCount ?? 0;
+
+      let dataQuery = supabase
+        .from('medical_records_clean')
+        .select(MEDICAL_CASE_LIST_SELECT);
+      dataQuery = applyMedicalCaseListFilters(
+        dataQuery,
+        profile.laboratory_id,
+        filters,
+      );
+
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
-      const result = await query
-        .range(from, to)
-        .order(sortField, { ascending });
+      let pageBuilder = dataQuery.range(from, to);
+      if (isRelatedField) {
+        pageBuilder = pageBuilder.order(sortField, {
+          ascending,
+          referencedTable: 'patients',
+        });
+      } else {
+        pageBuilder = pageBuilder.order(sortField, { ascending });
+      }
+
+      const result = await pageBuilder;
       data = result.data || [];
-      count = result.count || 0;
       error = result.error;
     }
 
@@ -1232,7 +1272,7 @@ export const getCasesWithPatientInfo = async (
     }
 
     // Transformar los datos (solo si no se transformaron antes)
-    const transformedData = needsClientSideProcessing
+    const transformedData = needsTriageClientFilter
       ? (data as MedicalCaseWithPatient[])
       : ((data || []).map((item: any) => ({
           ...item,
@@ -1419,7 +1459,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
 							.from('medical_records_clean')
 							.select(MEDICAL_CASE_LIST_SELECT_FN)
 							.eq('laboratory_id', laboratoryId)
-							.eq('patients.is_active', true)
+							.eq('patient_is_active', true)
 							.in('id', caseIds)
 
 						if (!fullCasesError && fullCases) {
@@ -1568,7 +1608,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             .from('medical_records_clean')
             .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
-            .eq('patients.is_active', true)
+            .eq('patient_is_active', true)
             .ilike('patients.nombre', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1577,7 +1617,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             .from('medical_records_clean')
             .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
-            .eq('patients.is_active', true)
+            .eq('patient_is_active', true)
             .ilike('patients.cedula', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1586,7 +1626,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             .from('medical_records_clean')
             .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
-            .eq('patients.is_active', true)
+            .eq('patient_is_active', true)
             .ilike('treating_doctor', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1595,7 +1635,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             .from('medical_records_clean')
             .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
-            .eq('patients.is_active', true)
+            .eq('patient_is_active', true)
             .ilike('exam_type', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
 
@@ -1604,7 +1644,7 @@ export const getAllCasesWithPatientInfo = async (filters?: {
             .from('medical_records_clean')
             .select(MEDICAL_CASE_LIST_SELECT)
             .eq('laboratory_id', laboratoryId)
-            .eq('patients.is_active', true)
+            .eq('patient_is_active', true)
             .ilike('code', `%${escapedSearchTerm}%`)
             .order('created_at', { ascending: false }),
         ];
@@ -1808,140 +1848,57 @@ export const getAllCasesWithPatientInfo = async (filters?: {
     let page = 1;
     const pageSize = 1000;
     let hasMoreData = true;
-    let totalCount = 0;
+
+    let exportCountQuery = supabase
+      .from('medical_records_clean')
+      .select('id', { count: 'exact', head: true });
+    exportCountQuery = applyMedicalCaseListFilters(
+      exportCountQuery,
+      laboratoryIdAll,
+      filters as MedicalCaseListFiltersInput,
+    );
+    const { count: exportExactTotal, error: exportCountError } =
+      await exportCountQuery;
+    if (exportCountError) {
+      throw exportCountError;
+    }
+    const totalCount = exportExactTotal ?? 0;
+
+    const sortFieldExport = filters?.sortField || 'created_at';
+    const sortDirectionExport = filters?.sortDirection || 'desc';
+    const ascendingExport = sortDirectionExport === 'asc';
+    const relatedFieldsExport = ['nombre', 'cedula'];
+    const isRelatedFieldExport = relatedFieldsExport.includes(sortFieldExport);
 
     while (hasMoreData) {
       let query = supabase
         .from('medical_records_clean')
-        .select(MEDICAL_CASE_LIST_SELECT, { count: 'exact' })
-        .eq('laboratory_id', laboratoryIdAll)
-        .eq('patients.is_active', true);
+        .select(MEDICAL_CASE_LIST_SELECT);
+      query = applyMedicalCaseListFilters(
+        query,
+        laboratoryIdAll,
+        filters as MedicalCaseListFiltersInput,
+      );
 
-      // Aplicar otros filtros
-      if (filters?.branch) {
-        query = query.eq('branch', filters.branch);
-      }
-
-      // Si hay branchFilter (múltiples sedes), usar .in()
-      if (filters?.branchFilter && filters.branchFilter.length > 0) {
-        query = query.in('branch', filters.branchFilter);
-      }
-
-      if (filters?.dateFrom) {
-        // Cast a date para asegurar comparación correcta (evita problemas con timestamps)
-        query = query.filter('created_at', 'gte', filters.dateFrom);
-      }
-
-      if (filters?.dateTo) {
-        // Sumar un día para incluir todo el día seleccionado (usar < en lugar de <=)
-        const nextDay = new Date(filters.dateTo);
-        nextDay.setDate(nextDay.getDate() + 1);
-        const nextDayStr = nextDay.toISOString().split('T')[0];
-        query = query.filter('created_at', 'lt', nextDayStr);
-      }
-
-      if ((filters as any)?.sampleDateFrom) {
-        query = query.filter('fecha_muestra', 'gte', (filters as any).sampleDateFrom);
-      }
-      if ((filters as any)?.sampleDateTo) {
-        const nextDaySample = new Date((filters as any).sampleDateTo);
-        nextDaySample.setDate(nextDaySample.getDate() + 1);
-        const nextDaySampleStr = nextDaySample.toISOString().split('T')[0];
-        query = query.filter('fecha_muestra', 'lt', nextDaySampleStr);
-      }
-
-      if ((filters as any)?.sampleTypeFilter) {
-        query = query.eq('sample_type', (filters as any).sampleTypeFilter);
-      }
-
-      if (filters?.examType) {
-        // Mapear el valor del filtro al valor exacto en la base de datos
-        let exactExamType = filters.examType;
-        if (filters.examType === 'inmunohistoquimica') {
-          exactExamType = 'Inmunohistoquímica';
-        } else if (filters.examType === 'citologia') {
-          exactExamType = 'Citología';
-        } else if (filters.examType === 'biopsia') {
-          exactExamType = 'Biopsia';
-        }
-        query = query.eq('exam_type', exactExamType);
-      }
-
-      // Filtro por tipo de consulta (especialidad médica)
-      if (filters?.consulta) {
-        query = query.eq('consulta', filters.consulta);
-      }
-
-      if (filters?.paymentStatus) {
-        query = query.eq('payment_status', filters.paymentStatus);
-      }
-
-      // Filtro por estatus de documento
-      if (filters?.documentStatus) {
-        query = query.eq('doc_aprobado', filters.documentStatus);
-      }
-
-      // Filtro por estatus de PDF
-      if (filters?.pdfStatus) {
-        if (filters.pdfStatus === 'pendientes') {
-          query = query.eq('pdf_en_ready', false);
-        } else if (filters.pdfStatus === 'faltantes') {
-          query = query.eq('pdf_en_ready', true);
-        }
-      }
-
-      // Filtro por estatus de citología
-      if (filters?.citoStatus) {
-        query = query.eq('cito_status', filters.citoStatus);
-      }
-
-      // Filtro por médico tratante
-      if (filters?.doctorFilter && filters.doctorFilter.length > 0) {
-        query = query.in('treating_doctor', filters.doctorFilter);
-      }
-
-      // Filtro por procedencia
-      if (filters?.originFilter && filters.originFilter.length > 0) {
-        query = query.in('origin', filters.originFilter);
-      }
-
-      // Filtro por email enviado
-      if (filters?.emailSentStatus !== undefined) {
-        query = query.eq('email_sent', filters.emailSentStatus);
-      }
-
-      // Si el usuario es residente, solo mostrar casos de biopsia
-      if (filters?.userRole === 'residente') {
-        query = query.eq('exam_type', 'Biopsia');
-      }
-
-      if (filters?.userRole === 'citotecno') {
-        query = query.eq('exam_type', 'Citología');
-      }
-
-      if (filters?.userRole === 'patologo') {
-        query = query.in('exam_type', ['Biopsia', 'Inmunohistoquímica']);
-      }
-
-      // Paginación
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      // Aplicar ordenamiento dinámico
-      const sortField = filters?.sortField || 'created_at';
-      const sortDirection = filters?.sortDirection || 'desc';
-      const ascending = sortDirection === 'asc';
+      let pageBuilder = query.range(from, to);
+      if (isRelatedFieldExport) {
+        pageBuilder = pageBuilder.order(sortFieldExport, {
+          ascending: ascendingExport,
+          referencedTable: 'patients',
+        });
+      } else {
+        pageBuilder = pageBuilder.order(sortFieldExport, {
+          ascending: ascendingExport,
+        });
+      }
 
-      const { data, error, count } = await query
-        .range(from, to)
-        .order(sortField, { ascending });
+      const { data, error } = await pageBuilder;
 
       if (error) {
         throw error;
-      }
-
-      if (page === 1) {
-        totalCount = count || 0;
       }
 
       const transformedData = (data || []).map((item: any) => ({
