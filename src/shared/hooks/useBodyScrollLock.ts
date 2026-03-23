@@ -5,6 +5,30 @@ let lockCount = 0
 let originalScrollY = 0
 let isInitialized = false
 
+function getScrollbarWidthPx(): number {
+	return Math.max(0, window.innerWidth - document.documentElement.clientWidth)
+}
+
+/** Bloqueo de scroll sin tocar padding (el padding solo aplica en el primer lock global). */
+function applyFixedBodyLock(scrollY: number) {
+	document.body.style.position = 'fixed'
+	document.body.style.top = `-${scrollY}px`
+	document.body.style.left = '0'
+	document.body.style.right = '0'
+	document.body.style.width = '100%'
+	document.body.style.overflow = 'hidden'
+}
+
+function clearBodyScrollLockStyles() {
+	document.body.style.position = 'static'
+	document.body.style.top = 'auto'
+	document.body.style.left = 'auto'
+	document.body.style.right = 'auto'
+	document.body.style.width = 'auto'
+	document.body.style.overflow = 'auto'
+	document.body.style.paddingRight = ''
+}
+
 /**
  * Bloquea el scroll del body cuando `isLocked` es true.
  * Úsalo en sidebars, modals, menús, etc.
@@ -21,39 +45,28 @@ export function useBodyScrollLock(isLocked: boolean) {
 		}
 
 		if (isLocked && !hasLocked.current) {
+			const isFirstGlobalLock = lockCount === 0
+			// Medir solo con el scrollbar aún visible (primer lock)
+			const scrollbarPadPx = isFirstGlobalLock ? getScrollbarWidthPx() : 0
+
 			lockCount++
 			hasLocked.current = true
 
-			// Guardar la posición actual antes de bloquear
 			originalScrollY = window.scrollY
 
-			// Bloquear scroll usando position: fixed
-			document.body.style.position = 'fixed'
-			document.body.style.top = `-${originalScrollY}px`
-			document.body.style.left = '0'
-			document.body.style.right = '0'
-			document.body.style.width = '100%'
-			document.body.style.overflow = 'hidden'
+			applyFixedBodyLock(originalScrollY)
+			if (isFirstGlobalLock) {
+				document.body.style.paddingRight = scrollbarPadPx > 0 ? `${scrollbarPadPx}px` : ''
+			}
 		} else if (!isLocked && hasLocked.current) {
 			lockCount--
 			hasLocked.current = false
 
-			// Solo desbloquear si no hay otros locks activos
 			if (lockCount === 0) {
 				setTimeout(() => {
-					// Restaurar la posición y estilos con valores específicos
-					document.body.style.position = 'static'
-					document.body.style.top = 'auto'
-					document.body.style.left = 'auto'
-					document.body.style.right = 'auto'
-					document.body.style.width = 'auto'
-					document.body.style.overflow = 'auto'
-
-					// Restaurar la posición de scroll
+					clearBodyScrollLockStyles()
 					window.scrollTo(0, originalScrollY)
 				}, 0)
-			} else {
-				console.log('🔒 Other locks still active, lockCount:', lockCount)
 			}
 		}
 
@@ -66,12 +79,7 @@ export function useBodyScrollLock(isLocked: boolean) {
 				// Solo restaurar si no hay otros locks activos
 				if (lockCount === 0) {
 					setTimeout(() => {
-						document.body.style.position = 'static'
-						document.body.style.top = 'auto'
-						document.body.style.left = 'auto'
-						document.body.style.right = 'auto'
-						document.body.style.width = 'auto'
-						document.body.style.overflow = 'auto'
+						clearBodyScrollLockStyles()
 						window.scrollTo(0, originalScrollY)
 					}, 0)
 				}
@@ -88,12 +96,7 @@ export function useBodyScrollLock(isLocked: boolean) {
 
 				if (lockCount === 0) {
 					setTimeout(() => {
-						document.body.style.position = 'static'
-						document.body.style.top = 'auto'
-						document.body.style.left = 'auto'
-						document.body.style.right = 'auto'
-						document.body.style.width = 'auto'
-						document.body.style.overflow = 'auto'
+						clearBodyScrollLockStyles()
 						window.scrollTo(0, originalScrollY)
 					}, 0)
 				}
