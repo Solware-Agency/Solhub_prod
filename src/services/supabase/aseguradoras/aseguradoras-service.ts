@@ -48,6 +48,31 @@ export const getAseguradoras = async () => {
 	return (data || []) as Aseguradora[]
 }
 
+const ASEGURADORAS_EXPORT_PAGE_SIZE = 500
+
+/** Todas las aseguradoras activas del laboratorio (paginado en servidor por si hay más del límite por defecto de PostgREST). */
+export const getAllAseguradorasForExport = async (): Promise<Aseguradora[]> => {
+	const laboratoryId = await getUserLaboratoryId()
+	const out: Aseguradora[] = []
+	let from = 0
+	for (;;) {
+		const { data, error } = await supabase
+			.from('aseguradoras')
+			.select('*')
+			.eq('laboratory_id', laboratoryId)
+			.eq('activo', true)
+			.order('created_at', { ascending: false })
+			.range(from, from + ASEGURADORAS_EXPORT_PAGE_SIZE - 1)
+
+		if (error) throw error
+		const batch = (data || []) as Aseguradora[]
+		out.push(...batch)
+		if (batch.length < ASEGURADORAS_EXPORT_PAGE_SIZE) break
+		from += ASEGURADORAS_EXPORT_PAGE_SIZE
+	}
+	return out
+}
+
 /** Soft delete: marca aseguradora como inactiva; deja de mostrarse en listados pero se conserva en BD */
 export const deactivateAseguradora = async (id: string): Promise<Aseguradora> => {
 	return updateAseguradora(id, { activo: false })

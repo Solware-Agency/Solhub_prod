@@ -115,6 +115,23 @@ export const getAsegurados = async (
 	}
 }
 
+const EXPORT_PAGE_SIZE = 250
+
+/** Todas las filas que coinciden con búsqueda y orden (para exportar sin límite de página). */
+export const getAllAseguradosForExport = async (
+	searchTerm?: string,
+	sortField: 'full_name' | 'document_id' | 'phone' | 'email' | 'created_at' = 'created_at',
+	sortDirection: 'asc' | 'desc' = 'desc',
+): Promise<Asegurado[]> => {
+	const first = await getAsegurados(1, EXPORT_PAGE_SIZE, searchTerm, sortField, sortDirection)
+	const out = [...first.data]
+	for (let page = 2; page <= first.totalPages; page++) {
+		const batch = await getAsegurados(page, EXPORT_PAGE_SIZE, searchTerm, sortField, sortDirection)
+		out.push(...batch.data)
+	}
+	return out
+}
+
 export const findAseguradoById = async (id: string): Promise<Asegurado | null> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase

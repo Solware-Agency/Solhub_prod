@@ -14,13 +14,14 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Paperclip, X } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Paperclip, X, Loader2 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
 	createAsegurado,
 	getAsegurados,
+	getAllAseguradosForExport,
 	updateAsegurado,
 	type Asegurado,
 } from '@services/supabase/aseguradoras/asegurados-service'
@@ -53,6 +54,7 @@ const AseguradosPage = () => {
 	})
 	const [attachmentFiles, setAttachmentFiles] = useState<File[]>([])
 	const [saving, setSaving] = useState(false)
+	const [isExporting, setIsExporting] = useState(false)
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['asegurados', searchTerm, currentPage, itemsPerPage],
@@ -71,6 +73,45 @@ const AseguradosPage = () => {
 	const handlePageChange = useCallback((page: number) => {
 		setCurrentPage(page)
 	}, [])
+
+	const handleExportExcel = useCallback(async () => {
+		setIsExporting(true)
+		try {
+			const rows = await getAllAseguradosForExport(searchTerm, 'created_at', 'desc')
+			if (rows.length === 0) {
+				toast({
+					title: 'Sin datos para exportar',
+					description: 'No hay asegurados que coincidan con la búsqueda.',
+				})
+				return
+			}
+			exportRowsToExcel(
+				'asegurados',
+				rows.map((row) => ({
+					Código: row.codigo ?? '',
+					Nombre: row.full_name,
+					Documento: row.document_id,
+					Teléfono: row.phone,
+					Email: row.email ?? '',
+					'Fecha nac.': row.fecha_nacimiento ?? '',
+					Tipo: row.tipo_asegurado,
+				})),
+			)
+			toast({
+				title: 'Exportación lista',
+				description: `Se exportaron ${rows.length} asegurado${rows.length === 1 ? '' : 's'}.`,
+			})
+		} catch (e) {
+			console.error(e)
+			toast({
+				title: 'Error al exportar',
+				description: 'No se pudo generar el archivo. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsExporting(false)
+		}
+	}, [searchTerm, toast])
 
 	const resetForm = () => {
 		setForm({
@@ -228,25 +269,17 @@ const AseguradosPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() =>
-									exportRowsToExcel(
-										'asegurados',
-										asegurados.map((row) => ({
-											Código: row.codigo ?? '',
-											Nombre: row.full_name,
-											Documento: row.document_id,
-											Teléfono: row.phone,
-											Email: row.email ?? '',
-											'Fecha nac.': row.fecha_nacimiento ?? '',
-											Tipo: row.tipo_asegurado,
-										})),
-									)
-								}
+								onClick={() => void handleExportExcel()}
+								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
-								title="Exportar"
+								title="Exportar todos (según búsqueda)"
 							>
-								<Download className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">Exportar</span>
+								{isExporting ? (
+									<Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+								) : (
+									<Download className="w-4 h-4 shrink-0" />
+								)}
+								<span className="hidden sm:inline">{isExporting ? 'Exportando…' : 'Exportar'}</span>
 							</Button>
 							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nuevo asegurado">
 								<Plus className="w-4 h-4 shrink-0" />

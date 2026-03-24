@@ -292,6 +292,25 @@ export const getPolizas = async (
 	}
 }
 
+const POLIZAS_EXPORT_PAGE_SIZE = 200
+
+/** Todas las pólizas que coinciden con búsqueda, filtros y orden (para exportar sin límite de página). */
+export const getAllPolizasForExport = async (
+	searchTerm?: string,
+	sortField: 'fecha_vencimiento' | 'numero_poliza' | 'created_at' | 'next_payment_date' = 'created_at',
+	sortDirection: 'asc' | 'desc' = 'desc',
+	filters?: PolizaListFilters,
+): Promise<Poliza[]> => {
+	const f = filters ?? defaultPolizaListFilters()
+	const first = await getPolizas(1, POLIZAS_EXPORT_PAGE_SIZE, searchTerm, sortField, sortDirection, f)
+	const out = [...first.data]
+	for (let page = 2; page <= first.totalPages; page++) {
+		const batch = await getPolizas(page, POLIZAS_EXPORT_PAGE_SIZE, searchTerm, sortField, sortDirection, f)
+		out.push(...batch.data)
+	}
+	return out
+}
+
 export const getPolizasByAseguradoId = async (aseguradoId: string): Promise<Poliza[]> => {
 	const laboratoryId = await getUserLaboratoryId()
 

@@ -13,15 +13,28 @@ import {
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoraCard from '@features/aseguradoras/components/AseguradoraCard'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import {
 	createAseguradora,
 	getAseguradoras,
+	getAllAseguradorasForExport,
 	type Aseguradora,
 } from '@services/supabase/aseguradoras/aseguradoras-service'
+
+function filterAseguradorasCatalog(rows: Aseguradora[], term: string): Aseguradora[] {
+	if (!term.trim()) return rows
+	const q = term.trim().toLowerCase()
+	return rows.filter(
+		(row) =>
+			row.nombre.toLowerCase().includes(q) ||
+			(row.codigo_interno || '').toLowerCase().includes(q) ||
+			(row.email || '').toLowerCase().includes(q) ||
+			(row.rif || '').toLowerCase().includes(q),
+	)
+}
 
 const CompaniasPage = () => {
 	const queryClient = useQueryClient()
@@ -43,6 +56,7 @@ const CompaniasPage = () => {
 		estado: '' as '' | 'activo' | 'inactivo',
 	})
 	const [saving, setSaving] = useState(false)
+	const [isExporting, setIsExporting] = useState(false)
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['aseguradoras-catalogo'],
@@ -51,17 +65,7 @@ const CompaniasPage = () => {
 	})
 
 	const catalogo = useMemo(() => data ?? [], [data])
-	const filteredCatalogo = useMemo(() => {
-		if (!searchTerm.trim()) return catalogo
-		const q = searchTerm.trim().toLowerCase()
-		return catalogo.filter(
-			(row) =>
-				row.nombre.toLowerCase().includes(q) ||
-				(row.codigo_interno || '').toLowerCase().includes(q) ||
-				(row.email || '').toLowerCase().includes(q) ||
-				(row.rif || '').toLowerCase().includes(q),
-		)
-	}, [catalogo, searchTerm])
+	const filteredCatalogo = useMemo(() => filterAseguradorasCatalog(catalogo, searchTerm), [catalogo, searchTerm])
 	const totalPages = Math.max(1, Math.ceil(filteredCatalogo.length / itemsPerPage))
 	const pageData = useMemo(() => {
 		const from = (currentPage - 1) * itemsPerPage
@@ -76,6 +80,47 @@ const CompaniasPage = () => {
 	const handlePageChange = useCallback((page: number) => {
 		setCurrentPage(page)
 	}, [])
+
+	const handleExportExcel = useCallback(async () => {
+		setIsExporting(true)
+		try {
+			const all = await getAllAseguradorasForExport()
+			const rows = filterAseguradorasCatalog(all, searchTerm)
+			if (rows.length === 0) {
+				toast({
+					title: 'Sin datos para exportar',
+					description: 'No hay compañías que coincidan con la búsqueda.',
+				})
+				return
+			}
+			exportRowsToExcel(
+				'aseguradoras',
+				rows.map((row) => ({
+					Código: row.codigo ?? '',
+					Nombre: row.nombre,
+					'Código interno': row.codigo_interno || '',
+					RIF: row.rif || '',
+					Teléfono: row.telefono || '',
+					Email: row.email || '',
+					Web: row.web || '',
+					Activo: row.activo ? 'Activo' : 'Inactivo',
+				})),
+			)
+			toast({
+				title: 'Exportación lista',
+				description: `Se exportaron ${rows.length} compañía${rows.length === 1 ? '' : 's'}.`,
+			})
+		} catch (e) {
+			console.error(e)
+			toast({
+				title: 'Error al exportar',
+				description: 'No se pudo generar el archivo. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsExporting(false)
+		}
+	}, [searchTerm, toast])
 
 	const resetForm = () => {
 		setForm({
@@ -196,26 +241,17 @@ const CompaniasPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() =>
-									exportRowsToExcel(
-										'aseguradoras',
-										filteredCatalogo.map((row) => ({
-											Código: row.codigo ?? '',
-											Nombre: row.nombre,
-											'Código interno': row.codigo_interno || '',
-											RIF: row.rif || '',
-											Teléfono: row.telefono || '',
-											Email: row.email || '',
-											Web: row.web || '',
-											Activo: row.activo ? 'Activo' : 'Inactivo',
-										})),
-									)
-								}
+								onClick={() => void handleExportExcel()}
+								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
-								title="Exportar"
+								title="Exportar todas las compañías activas (según búsqueda)"
 							>
-								<Download className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">Exportar</span>
+								{isExporting ? (
+									<Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+								) : (
+									<Download className="w-4 h-4 shrink-0" />
+								)}
+								<span className="hidden sm:inline">{isExporting ? 'Exportando…' : 'Exportar'}</span>
 							</Button>
 							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nueva aseguradora">
 								<Plus className="w-4 h-4 shrink-0" />

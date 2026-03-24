@@ -15,7 +15,20 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Upload, X, Paperclip, ExternalLink, Filter, XCircle } from 'lucide-react'
+import {
+	Plus,
+	Download,
+	Search,
+	ChevronLeft,
+	ChevronRight,
+	Upload,
+	X,
+	Paperclip,
+	ExternalLink,
+	Filter,
+	XCircle,
+	Loader2,
+} from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { addMonths, format, isValid, parse } from 'date-fns'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
@@ -24,6 +37,7 @@ import { findAseguradoById, type Asegurado } from '@services/supabase/asegurador
 import {
 	createPoliza,
 	getPolizas,
+	getAllPolizasForExport,
 	updatePoliza,
 	defaultPolizaListFilters,
 	countActivePolizaListFilters,
@@ -71,6 +85,7 @@ const PolizasPage = () => {
 	const [documentFiles, setDocumentFiles] = useState<File[]>([])
 	const [existingDocumentos, setExistingDocumentos] = useState<DocumentoPoliza[]>([])
 	const [removedDocIndices, setRemovedDocIndices] = useState<Set<number>>(new Set())
+	const [isExporting, setIsExporting] = useState(false)
 	const docFileInputRef = React.useRef<HTMLInputElement>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
@@ -176,6 +191,47 @@ const PolizasPage = () => {
 	const handlePageChange = useCallback((page: number) => {
 		setCurrentPage(page)
 	}, [])
+
+	const handleExportExcel = useCallback(async () => {
+		setIsExporting(true)
+		try {
+			const rows = await getAllPolizasForExport(searchTerm, 'created_at', 'desc', listFilters)
+			if (rows.length === 0) {
+				toast({
+					title: 'Sin datos para exportar',
+					description: 'No hay pólizas que coincidan con la búsqueda y los filtros.',
+				})
+				return
+			}
+			exportRowsToExcel(
+				'polizas',
+				rows.map((row) => ({
+					Código: row.codigo ?? '',
+					'Número de póliza': row.numero_poliza,
+					Asegurado: row.asegurado?.full_name || '',
+					Aseguradora: row.aseguradora?.nombre || '',
+					Ramo: row.ramo,
+					'Modalidad de pago': row.modalidad_pago,
+					'Estatus póliza': row.estatus_poliza,
+					'Estatus pago': row.estatus_pago || '',
+					'Fecha vencimiento': row.fecha_vencimiento,
+				})),
+			)
+			toast({
+				title: 'Exportación lista',
+				description: `Se exportaron ${rows.length} póliza${rows.length === 1 ? '' : 's'}.`,
+			})
+		} catch (e) {
+			console.error(e)
+			toast({
+				title: 'Error al exportar',
+				description: 'No se pudo generar el archivo. Inténtalo de nuevo.',
+				variant: 'destructive',
+			})
+		} finally {
+			setIsExporting(false)
+		}
+	}, [searchTerm, listFilters, toast])
 
 	const handleAseguradoClick = useCallback(async (aseguradoId: string) => {
 		const a = await findAseguradoById(aseguradoId)
@@ -849,27 +905,17 @@ const PolizasPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() =>
-									exportRowsToExcel(
-										'polizas',
-										polizas.map((row) => ({
-											Código: row.codigo ?? '',
-											'Número de póliza': row.numero_poliza,
-											Asegurado: row.asegurado?.full_name || '',
-											Aseguradora: row.aseguradora?.nombre || '',
-											Ramo: row.ramo,
-											'Modalidad de pago': row.modalidad_pago,
-											'Estatus póliza': row.estatus_poliza,
-											'Estatus pago': row.estatus_pago || '',
-											'Fecha vencimiento': row.fecha_vencimiento,
-										})),
-									)
-								}
+								onClick={() => void handleExportExcel()}
+								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
-								title="Exportar"
+								title="Exportar todas (según búsqueda y filtros)"
 							>
-								<Download className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">Exportar</span>
+								{isExporting ? (
+									<Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+								) : (
+									<Download className="w-4 h-4 shrink-0" />
+								)}
+								<span className="hidden sm:inline">{isExporting ? 'Exportando…' : 'Exportar'}</span>
 							</Button>
 							<Button size="sm" onClick={openNewModal} className="gap-1.5 sm:gap-2 shrink-0" title="Nueva póliza">
 								<Plus className="w-4 h-4 shrink-0" />
