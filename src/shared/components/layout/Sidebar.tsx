@@ -415,8 +415,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Determinar color del logo
   const logoFillColor = isInntegras ? '#3b82f6' : (laboratory?.branding?.primaryColor || '#3b82f6');
-  
-  console.log('Logo Debug:', { isInntegras, logoFillColor, slug: laboratory?.slug, primaryColor: laboratory?.branding?.primaryColor });
 
   // Para coordinador: mismos permisos que employee + subir PDFs
   const isEmployeeOrCoordinador = isEmployee || isCoordinador;
@@ -508,6 +506,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                 />
               </div>
+              <FeatureGuard feature='hasUsers'>
+                <div className='py-1'>
+                  <NavItem
+                    to='/aseguradoras/users'
+                    icon={<User className='stroke-2 size-5 shrink-0' />}
+                    label='Usuarios'
+                    showFullContent={showFullContent}
+                    onClick={onClose}
+                  />
+                </div>
+              </FeatureGuard>
               <FeatureGuard feature='hasChangeHistory'>
                 <NavItem
                   to='/aseguradoras/changelog'
