@@ -2763,7 +2763,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 								{/* Image URLs field - Visible for all roles if images exist */}
 								<div className="flex flex-col py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-transform duration-150 rounded px-2 -mx-2">
 									<span className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-										Imágenes/Videos:
+										Adjuntos:
 									</span>
 									<div className="w-full">
 										<MultipleMediaUrls

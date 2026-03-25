@@ -162,7 +162,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 		const files = e.target.files;
 		if (!files || files.length === 0 || !onUploadFile) return;
 		
-		console.log(`🖼️ Imágenes/Videos seleccionados: ${files.length}`, files);
+		console.log(`� Adjuntos seleccionados: ${files.length}`, files);
 		
 		const availableSlots = maxItems - media.length;
 		if (availableSlots <= 0) {
@@ -213,7 +213,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 				type='button'
 				className='relative h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 border-gray-200 bg-gray-100 transition-colors hover:border-primary dark:border-gray-600 dark:bg-gray-800'
 				onClick={() => openPreviewAtSourceIndex(index)}
-				title={`Ver ${item.type === 'video' ? 'video' : 'imagen'} ${index + 1}`}
+				title={`Ver adjunto #${index + 1}`}
 			>
 				<div className='absolute left-0.5 top-0.5 z-10 flex items-center gap-0.5 rounded bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-white'>
 					{item.type === 'video' ? <Video className='h-2.5 w-2.5' /> : <ImageIcon className='h-2.5 w-2.5' />}
@@ -239,7 +239,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 			</button>
 			<div className='min-w-0 flex-1'>
 				<p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-					{item.type === 'video' ? 'Video' : 'Imagen'} #{index + 1}
+					Adjunto #{index + 1}
 				</p>
 			</div>
 			<Button
@@ -271,7 +271,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 					openPreviewAtSourceIndex(index);
 				}
 			}}
-			title={`Ver ${item.type === 'video' ? 'video' : 'imagen'} ${index + 1}`}
+			title={`Ver adjunto #${index + 1}`}
 		>
 			<div className='absolute top-1 left-1 z-10 bg-black/60 text-white text-xs font-semibold px-1.5 py-0.5 rounded flex items-center gap-1'>
 				{item.type === 'video' ? <Video className='w-3 h-3' /> : <ImageIcon className='w-3 h-3' />}
@@ -285,7 +285,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 			) : !mediaErrors.has(index) ? (
 				<img
 					src={item.url}
-					alt={`Imagen ${index + 1}`}
+					alt={`Adjunto #${index + 1}`}
 					className='w-full h-full object-cover'
 					onError={() => handleMediaError(index)}
 					loading='lazy'
@@ -383,7 +383,7 @@ export const MultipleMediaUrls: React.FC<MultipleMediaUrlsProps> = ({
 										<img
 											key={currentPreview.item.url}
 											src={currentPreview.item.url}
-											alt={`Imagen ${currentPreview.sourceIndex + 1}`}
+											alt={`Adjunto #${currentPreview.sourceIndex + 1}`}
 											className='max-h-[min(70vh,560px)] w-auto max-w-full object-contain'
 											onError={() => {
 												setPreviewImageFailed(true);

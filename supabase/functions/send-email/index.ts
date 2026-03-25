@@ -211,7 +211,7 @@ Deno.serve(async (req: Request) => {
       ? `
         <div style="margin: 30px 0;">
           <h3 style="color: #667eea; font-size: 18px; margin-bottom: 15px; text-align: center;">
-            📸 Imágenes del Caso (${imageUrls.length})
+            Adjuntos (${imageUrls.length})
           </h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
             ${imageUrls
@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
                 (url, index) => `
               <div style="text-align: center;">
                 <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none;">
-                  <img src="${url}" alt="Imagen ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e0e0e0;" />
+                  <img src="${url}" alt="Adjunto ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e0e0e0;" />
                   <p style="color: #667eea; font-size: 11px; margin: 6px 0 0 0; font-weight: bold;">Ver #${index + 1}</p>
                 </a>
               </div>

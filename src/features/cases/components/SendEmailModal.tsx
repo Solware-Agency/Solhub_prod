@@ -154,12 +154,12 @@ const SendEmailModal: React.FC<SendEmailModalProps> = ({
 
           ${imageUrls.length > 0 ? `
             <div style="margin-top: 30px;">
-              <h3 style="color: #667eea; font-size: 18px; margin-bottom: 15px;">📷 Imágenes adjuntas</h3>
+              <h3 style="color: #667eea; font-size: 18px; margin-bottom: 15px;">� Adjuntos</h3>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
                 ${imageUrls.map((url, index) => `
                   <div style="text-align: center;">
                     <a href="${url}" target="_blank" style="text-decoration: none;">
-                      <img src="${url}" alt="Imagen ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;" />
+                      <img src="${url}" alt="Adjunto ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;" />
                       <p style="color: #667eea; font-size: 14px; margin-top: 5px; font-weight: 600;">Ver #${index + 1}</p>
                     </a>
                   </div>
