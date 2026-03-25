@@ -47,6 +47,13 @@ type ExtendedDatabase = Database & {
           persona_quien_llama: string | null;
           alergias: string | null;
           observaciones: string | null;
+          diabetes: boolean | null;
+          diabetes_tipo: string | null;
+          diabetes_controlada: boolean | null;
+          diabetes_tratamiento: string | null;
+          hipertension: boolean | null;
+          hipertension_tratamiento: string | null;
+          vacunas: string | null;
           is_draft: boolean | null;
           created_by: string | null;
           created_at: string;
@@ -86,6 +93,13 @@ type ExtendedDatabase = Database & {
           persona_quien_llama?: string | null;
           alergias?: string | null;
           observaciones?: string | null;
+          diabetes?: boolean | null;
+          diabetes_tipo?: string | null;
+          diabetes_controlada?: boolean | null;
+          diabetes_tratamiento?: string | null;
+          hipertension?: boolean | null;
+          hipertension_tratamiento?: string | null;
+          vacunas?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -125,6 +139,13 @@ type ExtendedDatabase = Database & {
           persona_quien_llama?: string | null;
           alergias?: string | null;
           observaciones?: string | null;
+          diabetes?: boolean | null;
+          diabetes_tipo?: string | null;
+          diabetes_controlada?: boolean | null;
+          diabetes_tratamiento?: string | null;
+          hipertension?: boolean | null;
+          hipertension_tratamiento?: string | null;
+          vacunas?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -176,6 +197,13 @@ export interface TriageRecord {
   persona_quien_llama: string | null;
   alergias: string | null;
   observaciones: string | null;
+  diabetes: boolean | null;
+  diabetes_tipo: string | null;
+  diabetes_controlada: boolean | null;
+  diabetes_tratamiento: string | null;
+  hipertension: boolean | null;
+  hipertension_tratamiento: string | null;
+  vacunas: string | null;
   is_draft: boolean | null;
   created_by: string | null;
   created_at: string | null;
@@ -216,6 +244,13 @@ export interface TriageRecordInsert {
   persona_quien_llama?: string | null;
   alergias?: string | null;
   observaciones?: string | null;
+  diabetes?: boolean | null;
+  diabetes_tipo?: string | null;
+  diabetes_controlada?: boolean | null;
+  diabetes_tratamiento?: string | null;
+  hipertension?: boolean | null;
+  hipertension_tratamiento?: string | null;
+  vacunas?: string | null;
   is_draft?: boolean | null;
   created_by?: string | null;
 }
@@ -239,6 +274,14 @@ export interface TriageStatistics {
     bmi_change: number | null;
   };
 }
+
+const ALLOWED_DIABETES_TYPES = new Set([
+  'Tipo 1',
+  'Tipo 2',
+  'Gestacional',
+  'Prediabetes',
+  'Otro',
+]);
 
 // =====================================================================
 // FUNCIONES HELPER
@@ -516,6 +559,30 @@ const sanitizeTriageNumericFields = (
 const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'created_by'>): void => {
   if (data.is_draft) {
     return;
+  }
+
+  const hasText = (value: string | null | undefined): boolean =>
+    typeof value === 'string' && value.trim().length > 0;
+
+  if (data.diabetes === true) {
+    if (!hasText(data.diabetes_tipo)) {
+      throw new Error('Debe indicar el tipo de diabetes cuando marca diabetes = Sí.');
+    }
+    if (!ALLOWED_DIABETES_TYPES.has(data.diabetes_tipo!.trim())) {
+      throw new Error(
+        'El tipo de diabetes no es válido. Debe seleccionar una opción permitida.',
+      );
+    }
+    if (data.diabetes_controlada === null || data.diabetes_controlada === undefined) {
+      throw new Error('Debe indicar si la diabetes está controlada cuando marca diabetes = Sí.');
+    }
+    if (!hasText(data.diabetes_tratamiento)) {
+      throw new Error('Debe indicar el tratamiento de diabetes cuando marca diabetes = Sí.');
+    }
+  }
+
+  if (data.hipertension === true && !hasText(data.hipertension_tratamiento)) {
+    throw new Error('Debe indicar el tratamiento de hipertensión cuando marca hipertensión = Sí.');
   }
 
   // Signos vitales y antropométricos son opcionales en backend (la obligatoriedad por rol se aplica en frontend).
