@@ -1529,6 +1529,49 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						laboratory_id: case_.laboratory_id || laboratory?.id || '',
 						status: 'success',
 					})
+
+					// Registrar en el historial de acciones (change_logs)
+					try {
+						const { data: { user } } = await supabase.auth.getUser()
+						
+						// Solo registrar si hay un usuario válido
+						if (user?.id) {
+							const { data: profile } = await supabase
+								.from('profiles')
+								.select('display_name, email')
+								.eq('id', user.id)
+								.single()
+
+							const userEmail = profile?.email || user.email || 'unknown'
+							const userDisplayName = profile?.display_name || 'Usuario'
+
+							// Construir descripción de destinatarios
+							let recipients = `Para: ${emails.to}`
+							if (emails.cc && emails.cc.length > 0) {
+								recipients += `, CC: ${emails.cc.join(', ')}`
+							}
+							if (emails.bcc && emails.bcc.length > 0) {
+								recipients += `, BCC: ${emails.bcc.join(', ')}`
+							}
+
+							await supabase.from('change_logs').insert({
+								medical_record_id: case_.id,
+								entity_type: 'case',
+								field_name: 'email_sent',
+								field_label: 'Email Enviado',
+								old_value: null,
+								new_value: recipients,
+								user_id: user.id,
+								user_email: userEmail,
+								user_display_name: userDisplayName,
+								changed_at: new Date().toISOString(),
+								laboratory_id: case_.laboratory_id || laboratory?.id,
+							} as any) // Cast temporal: laboratory_id existe en DB pero no en tipos generados
+						}
+					} catch (logError) {
+						console.error('Error registrando en change_logs:', logError)
+						// No interrumpir el flujo si falla el log
+					}
 				}
 
 				const recipientCount = 1 + emails.cc.length + emails.bcc.length
@@ -1564,6 +1607,41 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 						status: 'failed',
 						error_message: error instanceof Error ? error.message : 'Error desconocido',
 					})
+
+					// Registrar en el historial de acciones (change_logs)
+					try {
+						const { data: { user } } = await supabase.auth.getUser()
+						
+						// Solo registrar si hay un usuario válido
+						if (user?.id) {
+							const { data: profile } = await supabase
+								.from('profiles')
+								.select('display_name, email')
+								.eq('id', user.id)
+								.single()
+
+							const userEmail = profile?.email || user.email || 'unknown'
+							const userDisplayName = profile?.display_name || 'Usuario'
+
+							await supabase.from('change_logs').insert({
+								medical_record_id: case_.id,
+								entity_type: 'case',
+								field_name: 'email_sent',
+								field_label: 'Email Enviado',
+								old_value: null,
+								new_value: null,
+								deleted_record_info: error instanceof Error ? error.message : 'Error desconocido',
+								user_id: user.id,
+								user_email: userEmail,
+								user_display_name: userDisplayName,
+								changed_at: new Date().toISOString(),
+								laboratory_id: case_.laboratory_id || laboratory?.id,
+							} as any) // Cast temporal: laboratory_id existe en DB pero no en tipos generados
+						}
+					} catch (logError) {
+						console.error('Error registrando en change_logs:', logError)
+						// No interrumpir el flujo si falla el log
+					}
 				}
 
 				toast({
