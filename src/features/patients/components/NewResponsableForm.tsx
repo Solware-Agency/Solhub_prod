@@ -108,6 +108,11 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 		return calculateAgeFromDate(fechaNacimiento)
 	}, [fechaNacimiento])
 
+	const isValidEmail = (value: string): boolean => {
+		if (!value || !value.trim()) return true
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+	}
+
 	// =====================================================================
 	// HANDLERS
 	// =====================================================================
@@ -173,6 +178,14 @@ export const NewResponsableForm = ({ onResponsableCreated, trigger, isConspat = 
 			toast({
 				title: 'Error',
 				description: 'La edad debe ser un número válido',
+				variant: 'destructive',
+			})
+			return
+		}
+		if (email.trim() && !isValidEmail(email)) {
+			toast({
+				title: 'Error',
+				description: 'El email debe tener un formato válido (ej: nombre@dominio.com)',
 				variant: 'destructive',
 			})
 			return

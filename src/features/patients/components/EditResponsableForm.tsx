@@ -54,6 +54,11 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 
 	const { toast } = useToast()
 
+	const isValidEmail = (value: string): boolean => {
+		if (!value || !value.trim()) return true
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+	}
+
 	// Cargar datos del responsable al abrir el modal
 	useEffect(() => {
 		const loadPatientData = async () => {
@@ -168,6 +173,14 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 			toast({
 				title: 'Error',
 				description: 'El número de cédula debe contener solo números',
+				variant: 'destructive',
+			})
+			return
+		}
+		if (email.trim() && !isValidEmail(email)) {
+			toast({
+				title: 'Error',
+				description: 'El email debe tener un formato válido (ej: nombre@dominio.com)',
 				variant: 'destructive',
 			})
 			return

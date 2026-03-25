@@ -6,12 +6,14 @@ import { Button } from '@shared/components/ui/button'
 import { CustomDropdown } from '@shared/components/ui/custom-dropdown'
 import { MultipleImageUrls } from '@shared/components/ui/MultipleImageUrls'
 import { createDropdownOptions } from '@shared/components/ui/form-dropdown'
+import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
 import { supabase } from '@/services/supabase/config/config'
 import type { Patient } from '@/services/supabase/patients/patients-service'
 import { updatePatient } from '@/services/supabase/patients/patients-service'
 import { cn } from '@shared/lib/cn'
 import { useUserProfile } from '@shared/hooks/useUserProfile'
+import { format } from 'date-fns'
 
 // Helper to parse edad string like "10 AÑOS" or "5 MESES"
 function parseEdad(edad: string | null | undefined): { value: number | ''; unit: 'Años' | 'Meses' | '' } {
@@ -23,6 +25,17 @@ function parseEdad(edad: string | null | undefined): { value: number | ''; unit:
 	const value = Number(match[1])
 	const unit = match[2].toUpperCase() === 'AÑOS' ? 'Años' : 'Meses'
 	return { value: Number.isNaN(value) ? '' : value, unit }
+}
+
+function parseFechaNacimiento(fechaNacimiento: string | null | undefined): Date | undefined {
+	if (!fechaNacimiento) return undefined
+	const fechaParts = fechaNacimiento.split('-')
+	if (fechaParts.length !== 3) return undefined
+	const year = parseInt(fechaParts[0], 10)
+	const month = parseInt(fechaParts[1], 10) - 1
+	const day = parseInt(fechaParts[2], 10)
+	const fecha = new Date(year, month, day)
+	return Number.isNaN(fecha.getTime()) ? undefined : fecha
 }
 
 interface EditPatientInfoModalProps {
@@ -74,6 +87,12 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 	const [edadValue, setEdadValue] = useState(initialEdad.value)
 	const [edadUnit, setEdadUnit] = useState<'Años' | 'Meses'>(initialEdad.unit || 'Años')
+	const [fechaNacimiento, setFechaNacimiento] = useState<Date | undefined>(parseFechaNacimiento(patient.fecha_nacimiento))
+
+	const isValidEmail = (value: string): boolean => {
+		if (!value || !value.trim()) return true
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+	}
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target
@@ -114,6 +133,13 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
+		if (formData.email.trim() && !isValidEmail(formData.email)) {
+			toast({
+				variant: 'destructive',
+				description: 'El email debe tener un formato válido (ej: nombre@dominio.com)',
+			})
+			return
+		}
 		setIsLoading(true)
 
 		try {
@@ -167,6 +193,16 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 					newValue: formData.edad.toString(),
 				})
 			}
+			const oldFechaNacimiento = patient.fecha_nacimiento || null
+			const newFechaNacimiento = fechaNacimiento ? format(fechaNacimiento, 'yyyy-MM-dd') : null
+			if (newFechaNacimiento !== oldFechaNacimiento) {
+				changes.push({
+					field: 'fecha_nacimiento',
+					fieldLabel: 'Fecha de nacimiento',
+					oldValue: oldFechaNacimiento,
+					newValue: newFechaNacimiento,
+				})
+			}
 
 			// Solo registrar cambio de images_urls si el usuario es imagenologia
 			const oldImages = (patient as any).images_urls || ((patient as any).image_url ? [(patient as any).image_url] : [])
@@ -196,6 +232,7 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 				telefono: formData.telefono || null,
 				email: formData.email || null,
 				edad: formData.edad,
+				fecha_nacimiento: fechaNacimiento ? format(fechaNacimiento, 'yyyy-MM-dd') : null,
 			}
 			if (isImagenologia) {
 				updatePayload.images_urls = imageUrls.length > 0 ? imageUrls : null
@@ -340,6 +377,18 @@ const EditPatientInfoModal = ({ isOpen, onClose, patient, onSave }: EditPatientI
 												<div className="space-y-2">
 													<label className="text-sm text-gray-500 dark:text-gray-400">Email</label>
 													<Input type="email" name="email" value={formData.email} onChange={handleChange} />
+												</div>
+
+												<div className="space-y-2">
+													<label className="text-sm text-gray-500 dark:text-gray-400">Fecha de Nacimiento</label>
+													<DateField
+														value={fechaNacimiento ? format(fechaNacimiento, 'yyyy-MM-dd') : ''}
+														onChange={(iso) => {
+															setFechaNacimiento(iso ? new Date(`${iso}T12:00:00`) : undefined)
+														}}
+														disallowFuture
+														placeholder="DD/MM/AAAA"
+													/>
 												</div>
 
 												<div className="space-y-2">

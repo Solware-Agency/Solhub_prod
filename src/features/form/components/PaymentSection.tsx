@@ -246,7 +246,19 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 		<>
 		<Card className="transition-transform duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/20">
 			<CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
-				<CardTitle className="text-lg sm:text-xl">Pago</CardTitle>
+				<div className="flex items-center gap-2">
+					<CardTitle className="text-lg sm:text-xl">Pago</CardTitle>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button type="button" aria-label="Información de métodos de pago" className="inline-flex items-center">
+								<Info className="size-4" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="left" align="center" sideOffset={8} avoidCollisions={false}>
+							<p>El maximo de metodos de pago son 4.</p>
+						</TooltipContent>
+					</Tooltip>
+				</div>
 				{!isSpt && patientTotalDebt > 0 && (
 					<Dialog open={isDebtModalOpen} onOpenChange={setIsDebtModalOpen}>
 						<DialogTrigger asChild>
@@ -315,14 +327,6 @@ export const PaymentSection = memo((props: PaymentSectionProps) => {
 						</DialogContent>
 					</Dialog>
 				)}
-				<Tooltip>
-					<TooltipTrigger>
-						<Info className="size-4" />
-					</TooltipTrigger>
-					<TooltipContent>
-						<p>El maximo de metodos de pago son 4.</p>
-					</TooltipContent>
-				</Tooltip>
 			</CardHeader>
 			<CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
 				<div

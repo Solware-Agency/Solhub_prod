@@ -196,12 +196,20 @@ export const PolizaDetailPanel = ({
 							<p className="text-sm font-medium">{poliza.ramo || 'Sin ramo'}</p>
 						</div>
 						<div>
+							<p className="text-xs text-gray-500">Agente / Productor</p>
+							<p className="text-sm font-medium">{poliza.agente_nombre || 'Sin agente'}</p>
+						</div>
+						<div>
 							<p className="text-xs text-gray-500">Suma asegurada</p>
 							<p className="text-sm font-medium">{poliza.suma_asegurada ?? 'Sin monto'}</p>
 						</div>
 						<div>
-							<p className="text-xs text-gray-500">Agente / Productor</p>
-							<p className="text-sm font-medium">{poliza.agente_nombre || 'Sin agente'}</p>
+							<p className="text-xs text-gray-500">Monto a pagar</p>
+							<p className="text-sm font-medium">
+								{typeof poliza.billing_amount === 'number'
+									? poliza.billing_amount.toLocaleString('es-VE')
+									: 'Sin monto'}
+							</p>
 						</div>
 					</div>
 				</InfoSection>
