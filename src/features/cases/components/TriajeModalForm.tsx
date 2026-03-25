@@ -93,6 +93,13 @@ interface TriajeFormData {
   personaQuienLlama: string;
   alergias: string;
   observaciones: string;
+  diabetes: string;
+  diabetesTipo: string;
+  diabetesControlada: string;
+  diabetesTratamiento: string;
+  hipertension: string;
+  hipertensionTratamiento: string;
+  vacunas: string;
 }
 
 interface TriajeModalFormProps {
@@ -106,6 +113,23 @@ interface TriajeModalFormProps {
   /** Solo lectura: cualquier rol puede ver la historia cuando está hecha; si no está hecha se muestra mensaje. */
   readOnly?: boolean;
 }
+
+const DIABETES_TYPE_OPTIONS = [
+  'Tipo 1',
+  'Tipo 2',
+  'Gestacional',
+  'Prediabetes',
+  'Otro',
+] as const;
+
+const normalizeDiabetesType = (value: string | null | undefined): string => {
+  if (!value) return '';
+  return DIABETES_TYPE_OPTIONS.includes(
+    value as (typeof DIABETES_TYPE_OPTIONS)[number],
+  )
+    ? value
+    : 'Otro';
+};
 
 // Componente para mostrar información de la historia clínica existente
 const TriageInfoDisplay: React.FC<{
@@ -412,7 +436,8 @@ const TriageInfoDisplay: React.FC<{
         record.family_history ||
         record.antecedentes_quirurgicos ||
         (record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales ||
-        (record as { alergias?: string | null }).alergias) && (
+        (record as { alergias?: string | null }).alergias ||
+        (record as { vacunas?: string | null }).vacunas) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
@@ -461,9 +486,93 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{(record as { alergias: string }).alergias}</p>
               </div>
             )}
+            {(record as { vacunas?: string | null }).vacunas && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Vacunas
+                </p>
+                <p className='text-sm'>{(record as { vacunas: string }).vacunas}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* Condiciones crónicas */}
+      {((record as any).diabetes !== null &&
+        (record as any).diabetes !== undefined) ||
+      ((record as any).hipertension !== null &&
+        (record as any).hipertension !== undefined) ? (
+        <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20'>
+          <CardHeader className='p-4 sm:p-6'>
+            <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-rose-700 dark:text-rose-300'>
+              <Heart className='h-5 w-5 text-rose-600 dark:text-rose-400' />
+              Condiciones crónicas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            {((record as any).diabetes !== null &&
+              (record as any).diabetes !== undefined) && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Diabetes
+                </p>
+                <p className='text-sm font-medium'>
+                  {(record as any).diabetes ? 'Sí' : 'No'}
+                </p>
+              </div>
+            )}
+            {(record as any).diabetes_tipo && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Tipo de diabetes
+                </p>
+                <p className='text-sm'>{(record as any).diabetes_tipo}</p>
+              </div>
+            )}
+            {((record as any).diabetes_controlada !== null &&
+              (record as any).diabetes_controlada !== undefined) && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Diabetes controlada
+                </p>
+                <p className='text-sm font-medium'>
+                  {(record as any).diabetes_controlada ? 'Sí' : 'No'}
+                </p>
+              </div>
+            )}
+            {(record as any).diabetes_tratamiento && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Tratamiento de diabetes
+                </p>
+                <p className='text-sm'>{(record as any).diabetes_tratamiento}</p>
+              </div>
+            )}
+            {((record as any).hipertension !== null &&
+              (record as any).hipertension !== undefined) && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Hipertensión
+                </p>
+                <p className='text-sm font-medium'>
+                  {(record as any).hipertension ? 'Sí' : 'No'}
+                </p>
+              </div>
+            )}
+            {(record as any).hipertension_tratamiento && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Tratamiento de hipertensión
+                </p>
+                <p className='text-sm'>
+                  {(record as any).hipertension_tratamiento}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Examen físico, Diagnóstico, Plan de acción, comentarios y observaciones */}
       {(record.examen_fisico ||
@@ -631,6 +740,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     personaQuienLlama: '',
     alergias: '',
     observaciones: '',
+    diabetes: '',
+    diabetesTipo: '',
+    diabetesControlada: '',
+    diabetesTratamiento: '',
+    hipertension: '',
+    hipertensionTratamiento: '',
+    vacunas: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -669,7 +785,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   });
 
   // Prellenar antecedentes e información adicional desde el último triaje del paciente (solo triaje nuevo).
-  // Campos recordados: antecedentes, lugar/contacto de emergencia, alergias y observaciones.
+  // Campos recordados: antecedentes (incl. alergias y vacunas), lugar/contacto de emergencia y observaciones.
   useEffect(() => {
     if (!existingTriage && latestTriageByPatient) {
       const prev = latestTriageByPatient;
@@ -685,6 +801,24 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         personaQuienLlama: (prev as { persona_quien_llama?: string | null }).persona_quien_llama || '',
         alergias: (prev as { alergias?: string | null }).alergias || '',
         observaciones: (prev as { observaciones?: string | null }).observaciones || '',
+        diabetes: prev.diabetes === true ? 'Si' : prev.diabetes === false ? 'No' : '',
+        diabetesTipo: normalizeDiabetesType(
+          (prev as { diabetes_tipo?: string | null }).diabetes_tipo,
+        ),
+        diabetesControlada:
+          prev.diabetes_controlada === true
+            ? 'Si'
+            : prev.diabetes_controlada === false
+            ? 'No'
+            : '',
+        diabetesTratamiento:
+          (prev as { diabetes_tratamiento?: string | null }).diabetes_tratamiento || '',
+        hipertension:
+          prev.hipertension === true ? 'Si' : prev.hipertension === false ? 'No' : '',
+        hipertensionTratamiento:
+          (prev as { hipertension_tratamiento?: string | null })
+            .hipertension_tratamiento || '',
+        vacunas: (prev as { vacunas?: string | null }).vacunas || '',
       }));
     }
   }, [existingTriage, latestTriageByPatient]);
@@ -865,6 +999,32 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
           alergias: (existingTriage as any).alergias || '',
           observaciones: (existingTriage as any).observaciones || '',
+          diabetes:
+            (existingTriage as any).diabetes === true
+              ? 'Si'
+              : (existingTriage as any).diabetes === false
+              ? 'No'
+              : '',
+          diabetesTipo: normalizeDiabetesType(
+            (existingTriage as any).diabetes_tipo,
+          ),
+          diabetesControlada:
+            (existingTriage as any).diabetes_controlada === true
+              ? 'Si'
+              : (existingTriage as any).diabetes_controlada === false
+              ? 'No'
+              : '',
+          diabetesTratamiento:
+            (existingTriage as any).diabetes_tratamiento || '',
+          hipertension:
+            (existingTriage as any).hipertension === true
+              ? 'Si'
+              : (existingTriage as any).hipertension === false
+              ? 'No'
+              : '',
+          hipertensionTratamiento:
+            (existingTriage as any).hipertension_tratamiento || '',
+          vacunas: (existingTriage as any).vacunas || '',
           cafe: existingTriage.cafe?.toString() || '',
           alcohol: existingTriage.alcohol || '',
           ...(existingTriage.tabaco !== null &&
@@ -905,10 +1065,24 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     field: keyof TriajeFormData,
     value: string | HabitLevel,
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [field]: value,
+      };
+
+      if (field === 'diabetes' && value === 'No') {
+        next.diabetesTipo = '';
+        next.diabetesControlada = '';
+        next.diabetesTratamiento = '';
+      }
+
+      if (field === 'hipertension' && value === 'No') {
+        next.hipertensionTratamiento = '';
+      }
+
+      return next;
+    });
     setError('');
   };
 
@@ -969,6 +1143,29 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       personaQuienLlama: (existingTriage as any).persona_quien_llama || '',
       alergias: (existingTriage as any).alergias || '',
       observaciones: (existingTriage as any).observaciones || '',
+      diabetes:
+        (existingTriage as any).diabetes === true
+          ? 'Si'
+          : (existingTriage as any).diabetes === false
+          ? 'No'
+          : '',
+      diabetesTipo: normalizeDiabetesType((existingTriage as any).diabetes_tipo),
+      diabetesControlada:
+        (existingTriage as any).diabetes_controlada === true
+          ? 'Si'
+          : (existingTriage as any).diabetes_controlada === false
+          ? 'No'
+          : '',
+      diabetesTratamiento: (existingTriage as any).diabetes_tratamiento || '',
+      hipertension:
+        (existingTriage as any).hipertension === true
+          ? 'Si'
+          : (existingTriage as any).hipertension === false
+          ? 'No'
+          : '',
+      hipertensionTratamiento:
+        (existingTriage as any).hipertension_tratamiento || '',
+      vacunas: (existingTriage as any).vacunas || '',
       cafe: existingTriage.cafe?.toString() || '',
       alcohol: existingTriage.alcohol || '',
       tabaco: existingTriage.tabaco !== null && existingTriage.tabaco !== undefined && existingTriage.tabaco > 0 ? 'Si' : 'No',
@@ -1118,6 +1315,41 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       hasValue(formData.talla) ||
       hasValue(formData.peso);
 
+    if (formData.diabetes === 'Si') {
+      if (!hasValue(formData.diabetesTipo)) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Si marca diabetes = Sí, debe indicar el tipo de diabetes.',
+        };
+      }
+      if (!hasValue(formData.diabetesControlada)) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Si marca diabetes = Sí, debe indicar si está controlada.',
+        };
+      }
+      if (!hasValue(formData.diabetesTratamiento)) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Si marca diabetes = Sí, debe indicar el tratamiento.',
+        };
+      }
+    }
+
+    if (
+      formData.hipertension === 'Si' &&
+      !hasValue(formData.hipertensionTratamiento)
+    ) {
+      return {
+        isValid: false,
+        errorMessage:
+          'Si marca hipertensión = Sí, debe indicar el tratamiento.',
+      };
+    }
+
     // Si es enfermero, solo necesita signos vitales
     if (isEnfermero) {
       if (!hasVitalSigns) {
@@ -1142,6 +1374,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasValue(formData.tabaco) ||
         hasValue(formData.cafe) ||
         hasValue(formData.alcohol) ||
+        hasValue(formData.diabetes) ||
+        hasValue(formData.diabetesTipo) ||
+        hasValue(formData.diabetesControlada) ||
+        hasValue(formData.diabetesTratamiento) ||
+        hasValue(formData.hipertension) ||
+        hasValue(formData.hipertensionTratamiento) ||
+        hasValue(formData.vacunas) ||
         hasValue(formData.alergias) ||
         hasValue(formData.observaciones);
 
@@ -1187,6 +1426,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     hasRealValue(formData.examenFisico) ||
     hasRealValue(formData.diagnostico) ||
     hasRealValue(formData.planDeAccion) ||
+    hasRealValue(formData.diabetes) ||
+    hasRealValue(formData.diabetesTipo) ||
+    hasRealValue(formData.diabetesControlada) ||
+    hasRealValue(formData.diabetesTratamiento) ||
+    hasRealValue(formData.hipertension) ||
+    hasRealValue(formData.hipertensionTratamiento) ||
+    hasRealValue(formData.vacunas) ||
     hasRealValue(formData.tabaco) ||
     hasRealValue(formData.cafe) ||
     hasRealValue(formData.alcohol) ||
@@ -1241,6 +1487,28 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     persona_quien_llama: formData.personaQuienLlama || null,
     alergias: formData.alergias || null,
     observaciones: formData.observaciones || null,
+    diabetes:
+      formData.diabetes === 'Si'
+        ? true
+        : formData.diabetes === 'No'
+        ? false
+        : null,
+    diabetes_tipo: formData.diabetesTipo || null,
+    diabetes_controlada:
+      formData.diabetesControlada === 'Si'
+        ? true
+        : formData.diabetesControlada === 'No'
+        ? false
+        : null,
+    diabetes_tratamiento: formData.diabetesTratamiento || null,
+    hipertension:
+      formData.hipertension === 'Si'
+        ? true
+        : formData.hipertension === 'No'
+        ? false
+        : null,
+    hipertension_tratamiento: formData.hipertensionTratamiento || null,
+    vacunas: formData.vacunas || null,
     ...buildVitalSignsData(),
   });
 
@@ -1424,6 +1692,32 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             personaQuienLlama: (updatedTriage as any).persona_quien_llama || '',
             alergias: (updatedTriage as any).alergias || '',
             observaciones: (updatedTriage as any).observaciones || '',
+            diabetes:
+              (updatedTriage as any).diabetes === true
+                ? 'Si'
+                : (updatedTriage as any).diabetes === false
+                ? 'No'
+                : '',
+            diabetesTipo: normalizeDiabetesType(
+              (updatedTriage as any).diabetes_tipo,
+            ),
+            diabetesControlada:
+              (updatedTriage as any).diabetes_controlada === true
+                ? 'Si'
+                : (updatedTriage as any).diabetes_controlada === false
+                ? 'No'
+                : '',
+            diabetesTratamiento:
+              (updatedTriage as any).diabetes_tratamiento || '',
+            hipertension:
+              (updatedTriage as any).hipertension === true
+                ? 'Si'
+                : (updatedTriage as any).hipertension === false
+                ? 'No'
+                : '',
+            hipertensionTratamiento:
+              (updatedTriage as any).hipertension_tratamiento || '',
+            vacunas: (updatedTriage as any).vacunas || '',
             cafe: updatedTriage.cafe?.toString() || '',
             alcohol: updatedTriage.alcohol || '',
             ...(updatedTriage.tabaco !== null &&
@@ -1478,6 +1772,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             personaQuienLlama: '',
             alergias: '',
             observaciones: '',
+            diabetes: '',
+            diabetesTipo: '',
+            diabetesControlada: '',
+            diabetesTratamiento: '',
+            hipertension: '',
+            hipertensionTratamiento: '',
+            vacunas: '',
           });
           setMessage('');
           if (onSave) {
@@ -1807,7 +2108,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 </div>
-                {/* Fila 2: antecedentes quirúrgicos, sexuales y alergias */}
+                {/* Fila 2: quirúrgicos, sexuales y alergias */}
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -1864,6 +2165,168 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 </div>
+                {/* Fila 3: vacunas en la línea siguiente, mismo ancho que una columna */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                      <FileText className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                      Vacunas
+                    </label>
+                    <Textarea
+                      placeholder='Esquema de vacunas o vacunas relevantes'
+                      value={formData.vacunas}
+                      onChange={(e) =>
+                        handleInputChange('vacunas', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sección: Condiciones crónicas */}
+          {!showOnlyVitalSigns && (
+            <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20'>
+              <CardHeader className='p-4 sm:p-6'>
+                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-rose-700 dark:text-rose-300'>
+                  <Heart className='h-5 w-5 text-rose-600 dark:text-rose-400' />
+                  Condiciones crónicas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                      Diabetes
+                    </label>
+                    <Select
+                      value={formData.diabetes || undefined}
+                      onValueChange={(value) =>
+                        handleInputChange('diabetes', value)
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger className={inputStyles}>
+                        <SelectValue placeholder='Seleccione...' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='No'>No</SelectItem>
+                        <SelectItem value='Si'>Sí</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                      Hipertensión
+                    </label>
+                    <Select
+                      value={formData.hipertension || undefined}
+                      onValueChange={(value) =>
+                        handleInputChange('hipertension', value)
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger className={inputStyles}>
+                        <SelectValue placeholder='Seleccione...' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='No'>No</SelectItem>
+                        <SelectItem value='Si'>Sí</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.diabetes === 'Si' && (
+                  <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                        Tipo de diabetes <span className='text-red-500'>*</span>
+                      </label>
+                      <Select
+                        value={formData.diabetesTipo || undefined}
+                        onValueChange={(value) =>
+                          handleInputChange('diabetesTipo', value)
+                        }
+                        disabled={loading}
+                      >
+                        <SelectTrigger className={inputStyles}>
+                          <SelectValue placeholder='Seleccione tipo de diabetes' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIABETES_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                        Diabetes controlada <span className='text-red-500'>*</span>
+                      </label>
+                      <Select
+                        value={formData.diabetesControlada || undefined}
+                        onValueChange={(value) =>
+                          handleInputChange('diabetesControlada', value)
+                        }
+                        disabled={loading}
+                      >
+                        <SelectTrigger className={inputStyles}>
+                          <SelectValue placeholder='Seleccione...' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='No'>No</SelectItem>
+                          <SelectItem value='Si'>Sí</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                        Tratamiento diabetes <span className='text-red-500'>*</span>
+                      </label>
+                      <Textarea
+                        placeholder='Tratamiento actual de diabetes'
+                        value={formData.diabetesTratamiento}
+                        onChange={(e) =>
+                          handleInputChange(
+                            'diabetesTratamiento',
+                            e.target.value,
+                          )
+                        }
+                        disabled={loading}
+                        rows={3}
+                        className={`${inputStyles} min-h-[80px]`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {formData.hipertension === 'Si' && (
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                      Tratamiento hipertensión <span className='text-red-500'>*</span>
+                    </label>
+                    <Textarea
+                      placeholder='Tratamiento actual para hipertensión'
+                      value={formData.hipertensionTratamiento}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'hipertensionTratamiento',
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                      rows={3}
+                      className={`${inputStyles} min-h-[80px]`}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
