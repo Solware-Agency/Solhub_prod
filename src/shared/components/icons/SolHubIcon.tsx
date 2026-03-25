@@ -19,7 +19,7 @@ export function SolHubIcon({
       <defs>
         <style>
           {`.cls-1 {
-        fill: ${fill};
+        fill: ${fill} !important;
         stroke-width: 0px;
       }`}
         </style>

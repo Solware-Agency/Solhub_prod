@@ -320,6 +320,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     reports: false,
   });
 
+  // Estado para controlar cuando el logo falla al cargar
+  const [logoError, setLogoError] = React.useState(false);
+
+  // Resetear el error cuando cambie el logo del laboratorio
+  React.useEffect(() => {
+    setLogoError(false);
+  }, [laboratory?.branding?.logo]);
+
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups((prev) => {
@@ -405,6 +413,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isLaboratorio = profile?.role === 'laboratorio';
   const isInntegras = laboratory?.slug === 'inntegras';
 
+  // Determinar color del logo
+  const logoFillColor = isInntegras ? '#3b82f6' : (laboratory?.branding?.primaryColor || '#3b82f6');
+  
+  console.log('Logo Debug:', { isInntegras, logoFillColor, slug: laboratory?.slug, primaryColor: laboratory?.branding?.primaryColor });
+
   // Para coordinador: mismos permisos que employee + subir PDFs
   const isEmployeeOrCoordinador = isEmployee || isCoordinador;
 
@@ -418,20 +431,21 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 flex flex-col items-start gap-4'>
         <div className='flex justify-between items-center w-full mb-2 sm:mb-4'>
           <div className='flex items-center gap-3 ml-1'>
-            {laboratory?.branding?.logo ? (
+            {laboratory?.branding?.logo && !logoError && !isInntegras ? (
               <img 
                 src={laboratory.branding.logo} 
                 alt={laboratory.branding.icon || 'Logo'}
                 className='h-8 w-auto shrink-0 -ml-1 object-contain rounded'
-                onError={(e) => {
+                onError={() => {
                   console.error('Error loading logo:', laboratory.branding.logo);
-                  e.currentTarget.style.display = 'none';
+                  setLogoError(true);
                 }}
               />
             ) : (
               <SolHubIcon
-                fill={laboratory?.branding?.primaryColor || '#3b82f6'}
+                fill={logoFillColor}
                 className={`size-8 shrink-0 -ml-1`}
+                style={{ color: logoFillColor }}
               />
             )}
             <p

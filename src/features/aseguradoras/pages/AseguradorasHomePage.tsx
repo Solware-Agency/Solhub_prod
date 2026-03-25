@@ -44,6 +44,9 @@ const AseguradorasHomePage = () => {
 	const { profile } = useUserProfile()
 	const { laboratory } = useLaboratory()
 
+	// Usar azul clarito para Inntegras en lugar del primaryColor oscuro
+	const displayColor = laboratory?.slug === 'inntegras' ? '#3b82f6' : (laboratory?.branding?.primaryColor || '#3b82f6')
+
 	return (
 		<div className="overflow-x-hidden">
 			<div className="mb-4 sm:mb-6">
@@ -63,7 +66,7 @@ const AseguradorasHomePage = () => {
 								</h1>
 								<div className="flex items-center justify-center sm:justify-start gap-2 mt-1 font-semibold">
 									{profile?.display_name && (
-										<span className="text-sm sm:text-md" style={{ color: laboratory?.branding?.primaryColor || undefined }}>
+										<span className="text-sm sm:text-md" style={{ color: displayColor }}>
 											{profile.display_name}
 										</span>
 									)}
