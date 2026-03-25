@@ -35,35 +35,72 @@ export interface AseguradoraInsert {
 
 export type AseguradoraUpdate = AseguradoraInsert
 
-export const getAseguradoras = async () => {
+export type AseguradoraActivoListFilter = 'all' | 'activas' | 'inactivas'
+
+export interface AseguradoraListFilters {
+	activo: AseguradoraActivoListFilter
+}
+
+export const defaultAseguradoraListFilters = (): AseguradoraListFilters => ({
+	activo: 'activas',
+})
+
+/** Cuántos criterios difieren del listado por defecto (solo activas). */
+export const countActiveAseguradoraListFilters = (f: AseguradoraListFilters): number => {
+	const d = defaultAseguradoraListFilters()
+	let n = 0
+	if (f.activo !== d.activo) n++
+	return n
+}
+
+export const getAseguradoras = async (filters?: AseguradoraListFilters) => {
 	const laboratoryId = await getUserLaboratoryId()
-	const { data, error } = await supabase
+	const f = filters ?? defaultAseguradoraListFilters()
+	
+	let query = supabase
 		.from('aseguradoras')
 		.select('*')
 		.eq('laboratory_id', laboratoryId)
-		.eq('activo', true)
-		.order('created_at', { ascending: false })
 
+	if (f.activo === 'activas') {
+		query = query.eq('activo', true)
+	} else if (f.activo === 'inactivas') {
+		query = query.eq('activo', false)
+	}
+	// 'all' no agrega filtro
+
+	query = query.order('created_at', { ascending: false })
+
+	const { data, error } = await query
 	if (error) throw error
 	return (data || []) as Aseguradora[]
 }
 
 const ASEGURADORAS_EXPORT_PAGE_SIZE = 500
 
-/** Todas las aseguradoras activas del laboratorio (paginado en servidor por si hay más del límite por defecto de PostgREST). */
-export const getAllAseguradorasForExport = async (): Promise<Aseguradora[]> => {
+/** Todas las aseguradoras del laboratorio respetando filtros (paginado en servidor por si hay más del límite por defecto de PostgREST). */
+export const getAllAseguradorasForExport = async (filters?: AseguradoraListFilters): Promise<Aseguradora[]> => {
 	const laboratoryId = await getUserLaboratoryId()
+	const f = filters ?? defaultAseguradoraListFilters()
 	const out: Aseguradora[] = []
 	let from = 0
 	for (;;) {
-		const { data, error } = await supabase
+		let query = supabase
 			.from('aseguradoras')
 			.select('*')
 			.eq('laboratory_id', laboratoryId)
-			.eq('activo', true)
-			.order('created_at', { ascending: false })
+
+		if (f.activo === 'activas') {
+			query = query.eq('activo', true)
+		} else if (f.activo === 'inactivas') {
+			query = query.eq('activo', false)
+		}
+		// 'all' no agrega filtro
+
+		query = query.order('created_at', { ascending: false })
 			.range(from, from + ASEGURADORAS_EXPORT_PAGE_SIZE - 1)
 
+		const { data, error } = await query
 		if (error) throw error
 		const batch = (data || []) as Aseguradora[]
 		out.push(...batch)

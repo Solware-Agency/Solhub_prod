@@ -13,15 +13,19 @@ import {
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useToast } from '@shared/hooks/use-toast'
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Loader2, Filter } from 'lucide-react'
 import { exportRowsToExcel } from '@shared/utils/exportToExcel'
 import AseguradoraCard from '@features/aseguradoras/components/AseguradoraCard'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
+import { AseguradoraFiltersModal } from '@features/aseguradoras/components/AseguradoraFiltersModal'
 import {
 	createAseguradora,
 	getAseguradoras,
 	getAllAseguradorasForExport,
+	defaultAseguradoraListFilters,
+	countActiveAseguradoraListFilters,
 	type Aseguradora,
+	type AseguradoraListFilters,
 } from '@services/supabase/aseguradoras/aseguradoras-service'
 
 function filterAseguradorasCatalog(rows: Aseguradora[], term: string): Aseguradora[] {
@@ -45,6 +49,8 @@ const CompaniasPage = () => {
 	const [openModal, setOpenModal] = useState(false)
 	const [selectedAseguradora, setSelectedAseguradora] = useState<Aseguradora | null>(null)
 	const [historyModalOpen, setHistoryModalOpen] = useState(false)
+	const [filtersModalOpen, setFiltersModalOpen] = useState(false)
+	const [filters, setFilters] = useState<AseguradoraListFilters>(defaultAseguradoraListFilters())
 	const [form, setForm] = useState({
 		nombre: '',
 		codigo_interno: '',
@@ -59,8 +65,8 @@ const CompaniasPage = () => {
 	const [isExporting, setIsExporting] = useState(false)
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ['aseguradoras-catalogo'],
-		queryFn: getAseguradoras,
+		queryKey: ['aseguradoras-catalogo', filters],
+		queryFn: () => getAseguradoras(filters),
 		staleTime: 1000 * 60 * 5,
 	})
 
@@ -84,7 +90,7 @@ const CompaniasPage = () => {
 	const handleExportExcel = useCallback(async () => {
 		setIsExporting(true)
 		try {
-			const all = await getAllAseguradorasForExport()
+			const all = await getAllAseguradorasForExport(filters)
 			const rows = filterAseguradorasCatalog(all, searchTerm)
 			if (rows.length === 0) {
 				toast({
@@ -120,7 +126,12 @@ const CompaniasPage = () => {
 		} finally {
 			setIsExporting(false)
 		}
-	}, [searchTerm, toast])
+	}, [searchTerm, filters, toast])
+
+	const handleApplyFilters = useCallback((newFilters: AseguradoraListFilters) => {
+		setFilters(newFilters)
+		setCurrentPage(1)
+	}, [])
 
 	const resetForm = () => {
 		setForm({
@@ -238,6 +249,21 @@ const CompaniasPage = () => {
 							/>
 						</div>
 						<div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setFiltersModalOpen(true)}
+								className="gap-1.5 sm:gap-2 shrink-0 relative"
+								title="Filtrar aseguradoras"
+							>
+								<Filter className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">Filtros</span>
+								{countActiveAseguradoraListFilters(filters) > 0 && (
+									<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+										{countActiveAseguradoraListFilters(filters)}
+									</span>
+								)}
+							</Button>
 							<Button
 								variant="outline"
 								size="sm"
@@ -410,6 +436,13 @@ const CompaniasPage = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			<AseguradoraFiltersModal
+				isOpen={filtersModalOpen}
+				onOpenChange={setFiltersModalOpen}
+				appliedFilters={filters}
+				onApply={handleApplyFilters}
+			/>
 
 			<AseguradoraHistoryModal
 				isOpen={historyModalOpen}
