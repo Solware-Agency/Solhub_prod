@@ -1,6 +1,10 @@
 {
 	"rewrites": [
 		{
+			"source": "/api/download-pdf",
+			"destination": "https://sbqepjsxnqtldyvlntqk.supabase.co/functions/v1/download-pdf"
+		},
+		{
 			"source": "/((?!site\\.webmanifest|favicon|apple-touch-icon|android-chrome|api/|assets/).*)",
 			"destination": "/index.html"
 		}
