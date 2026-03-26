@@ -79,13 +79,16 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const informepdfUrl = (data as { informepdf_url?: string }).informepdf_url;
-  if (!informepdfUrl) {
+  const rawInformepdfUrl = (data as { informepdf_url?: string }).informepdf_url;
+  if (!rawInformepdfUrl) {
     return new Response(
       JSON.stringify({ error: "Documento PDF no encontrado para este caso" }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  // Normaliza dobles slashes en la path (preserva https://)
+  const informepdfUrl = rawInformepdfUrl.replace(/([^:])\/\/+/g, "$1/");
 
   const pdfRes = await fetch(informepdfUrl);
   if (!pdfRes.ok) {
