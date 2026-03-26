@@ -528,7 +528,7 @@ export const NewPatientDataSection = ({ control }: NewPatientDataSectionProps) =
 									) : (
 										<div 
 											className={cn(
-												"grid grid-cols-2 gap-2 min-h-45",
+												"grid grid-cols-2 gap-2",
 												dependents.length > 6 
 													? "max-h-45 overflow-y-auto pr-1" 
 													: ""
