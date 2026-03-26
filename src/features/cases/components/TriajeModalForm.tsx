@@ -23,6 +23,8 @@ import {
   Brain,
   Stethoscope,
   MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -33,6 +35,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@shared/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@shared/components/ui/collapsible';
 import { Input } from '@shared/components/ui/input';
 import { DateField } from '@shared/components/ui/date-field';
 import { Textarea } from '@shared/components/ui/textarea';
@@ -1150,6 +1157,48 @@ const TriageInfoDisplay: React.FC<{
   );
 };
 
+type TriajeFormSectionId =
+  | 'examen'
+  | 'antecedentes'
+  | 'condiciones'
+  | 'habitos'
+  | 'signos'
+  | 'datosAdicionales';
+
+function defaultTriajeSectionOpen(
+  vitalOnly: boolean,
+): Record<TriajeFormSectionId, boolean> {
+  return {
+    examen: !vitalOnly,
+    antecedentes: false,
+    condiciones: false,
+    habitos: false,
+    signos: vitalOnly,
+    datosAdicionales: false,
+  };
+}
+
+const TriajeSectionCollapseFooter: React.FC<{
+  onCollapse: () => void;
+  disabled?: boolean;
+  /** p. ej. col-span-full cuando el footer va dentro de un grid de CardContent */
+  className?: string;
+}> = ({ onCollapse, disabled, className }) => (
+  <div className={cn('mt-3 flex justify-center', className)}>
+    <Button
+      type='button'
+      variant='ghost'
+      size='icon'
+      className='h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground [&_svg]:h-5 [&_svg]:w-5'
+      onClick={onCollapse}
+      disabled={disabled}
+      aria-label='Colapsar sección'
+    >
+      <ChevronUp className='h-5 w-5' aria-hidden />
+    </Button>
+  </div>
+);
+
 const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   case_,
   onClose,
@@ -1244,6 +1293,13 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [openTriajeSections, setOpenTriajeSections] = useState<
+    Record<TriajeFormSectionId, boolean>
+  >(() => defaultTriajeSectionOpen(showOnlyVitalSigns));
+
+  useEffect(() => {
+    setOpenTriajeSections(defaultTriajeSectionOpen(showOnlyVitalSigns));
+  }, [showOnlyVitalSigns]);
 
   // Verificar si existe historia clínica para este caso
   const {
@@ -2491,6 +2547,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const inputStyles =
     'transition-transform duration-300 focus:border-primary focus:ring-primary';
 
+  const triajeCollapsibleTriggerClass =
+    'flex w-full items-center justify-between gap-3 p-4 sm:p-6 text-left rounded-t-lg outline-none transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
   // Early returns DESPUÉS de todos los hooks
   if (!case_) {
     return null;
@@ -2581,12 +2640,27 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           {/* Sección 1: Examen Físico y Examen Funcional (grid 3 columnas en sm+) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
-                  <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
-                  Examen Físico y Examen Funcional
-                </CardTitle>
-              </CardHeader>
+              <Collapsible
+                open={openTriajeSections.examen}
+                onOpenChange={(open) =>
+                  setOpenTriajeSections((s) => ({ ...s, examen: open }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button type='button' className={triajeCollapsibleTriggerClass}>
+                    <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
+                      <Stethoscope className='h-5 w-5 text-violet-600 dark:text-violet-400' />
+                      Examen Físico y Examen Funcional
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                        openTriajeSections.examen && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -2776,19 +2850,42 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 </div>
+                <TriajeSectionCollapseFooter
+                  onCollapse={() =>
+                    setOpenTriajeSections((s) => ({ ...s, examen: false }))
+                  }
+                  disabled={loading}
+                />
               </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
           {/* Sección: Antecedentes (filas 3 + 2) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
-                  <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
-                  Antecedentes
-                </CardTitle>
-              </CardHeader>
+              <Collapsible
+                open={openTriajeSections.antecedentes}
+                onOpenChange={(open) =>
+                  setOpenTriajeSections((s) => ({ ...s, antecedentes: open }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button type='button' className={triajeCollapsibleTriggerClass}>
+                    <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
+                      <FileText className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+                      Antecedentes
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                        openTriajeSections.antecedentes && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
                 {/* Fila 1: 3 antecedentes */}
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
@@ -2985,19 +3082,45 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     </div>
                   )}
                 </div>
+                <TriajeSectionCollapseFooter
+                  onCollapse={() =>
+                    setOpenTriajeSections((s) => ({
+                      ...s,
+                      antecedentes: false,
+                    }))
+                  }
+                  disabled={loading}
+                />
               </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
           {/* Sección: Condiciones crónicas */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-rose-700 dark:text-rose-300'>
-                  <Heart className='h-5 w-5 text-rose-600 dark:text-rose-400' />
-                  Condiciones crónicas
-                </CardTitle>
-              </CardHeader>
+              <Collapsible
+                open={openTriajeSections.condiciones}
+                onOpenChange={(open) =>
+                  setOpenTriajeSections((s) => ({ ...s, condiciones: open }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button type='button' className={triajeCollapsibleTriggerClass}>
+                    <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-rose-700 dark:text-rose-300'>
+                      <Heart className='h-5 w-5 text-rose-600 dark:text-rose-400' />
+                      Condiciones crónicas
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                        openTriajeSections.condiciones && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -3106,19 +3229,45 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 )}
+                <TriajeSectionCollapseFooter
+                  onCollapse={() =>
+                    setOpenTriajeSections((s) => ({
+                      ...s,
+                      condiciones: false,
+                    }))
+                  }
+                  disabled={loading}
+                />
               </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
           {/* Sección: Hábitos (min-height para evitar salto al mostrar Índice tabáquico) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
-                  <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
-                  Hábitos
-                </CardTitle>
-              </CardHeader>
+              <Collapsible
+                open={openTriajeSections.habitos}
+                onOpenChange={(open) =>
+                  setOpenTriajeSections((s) => ({ ...s, habitos: open }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button type='button' className={triajeCollapsibleTriggerClass}>
+                    <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
+                      <Brain className='h-5 w-5 text-amber-600 dark:text-amber-400' />
+                      Hábitos
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                        openTriajeSections.habitos && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
               <CardContent className={`p-3 sm:p-4 pt-0 sm:pt-0 ${formData.tabaco === 'Si' ? 'min-h-[240px]' : ''}`}>
                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -3337,18 +3486,41 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       </div>
                     </div>
                   )}
+                <TriajeSectionCollapseFooter
+                  onCollapse={() =>
+                    setOpenTriajeSections((s) => ({ ...s, habitos: false }))
+                  }
+                  disabled={loading}
+                />
                 </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
               </Card>
           )}
 
           {/* Sección: Signos Vitales */}
           <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20'>
-            <CardHeader className='p-4 sm:p-6'>
-              <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-blue-700 dark:text-blue-300'>
-                <Activity className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-                Signos Vitales
-              </CardTitle>
-            </CardHeader>
+            <Collapsible
+              open={openTriajeSections.signos}
+              onOpenChange={(open) =>
+                setOpenTriajeSections((s) => ({ ...s, signos: open }))
+              }
+            >
+              <CollapsibleTrigger asChild>
+                <button type='button' className={triajeCollapsibleTriggerClass}>
+                  <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-blue-700 dark:text-blue-300'>
+                    <Activity className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                    Signos Vitales
+                  </CardTitle>
+                  <ChevronDown
+                    className={cn(
+                      'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                      openTriajeSections.signos && 'rotate-180',
+                    )}
+                  />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
             <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
               <div className='flex flex-wrap items-end gap-3'>
                 <div className='flex-1 min-w-30'>
@@ -3563,36 +3735,70 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   />
                 </div>
               </div>
+            <TriajeSectionCollapseFooter
+              onCollapse={() =>
+                setOpenTriajeSections((s) => ({ ...s, signos: false }))
+              }
+              disabled={loading}
+            />
             </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
 
           {/* Sección: Datos adicionales - al final */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
-              <CardHeader className='p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
-                  <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
-                  Datos adicionales
-                </CardTitle>
-                {case_?.created_at && (
-                  <div className='shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-muted/40 dark:bg-muted/15 px-3 py-2 sm:text-right'>
-                    <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5 flex items-center gap-1.5 sm:justify-end'>
-                      <Clock className='h-3.5 w-3.5 shrink-0' />
-                      Fecha y hora de ingreso
-                    </p>
-                    <p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                      {format(new Date(case_.created_at), 'dd/MM/yyyy', {
-                        locale: es,
-                      })}{' '}
-                      <span className='text-gray-500 dark:text-gray-400 font-medium'>
-                        {format(new Date(case_.created_at), 'HH:mm', {
-                          locale: es,
-                        })}
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </CardHeader>
+              <Collapsible
+                open={openTriajeSections.datosAdicionales}
+                onOpenChange={(open) =>
+                  setOpenTriajeSections((s) => ({
+                    ...s,
+                    datosAdicionales: open,
+                  }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    type='button'
+                    className={cn(
+                      'flex w-full gap-3 p-4 sm:p-6 text-left rounded-t-lg outline-none transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'flex-col items-stretch sm:flex-row sm:items-center sm:justify-between',
+                    )}
+                  >
+                    <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
+                      <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
+                      Datos adicionales
+                    </CardTitle>
+                    <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3'>
+                      {case_?.created_at && (
+                        <div className='shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-muted/40 dark:bg-muted/15 px-3 py-2 sm:text-right'>
+                          <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5 flex items-center gap-1.5 sm:justify-end'>
+                            <Clock className='h-3.5 w-3.5 shrink-0' />
+                            Fecha y hora de ingreso
+                          </p>
+                          <p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                            {format(new Date(case_.created_at), 'dd/MM/yyyy', {
+                              locale: es,
+                            })}{' '}
+                            <span className='text-gray-500 dark:text-gray-400 font-medium'>
+                              {format(new Date(case_.created_at), 'HH:mm', {
+                                locale: es,
+                              })}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                      <ChevronDown
+                        className={cn(
+                          'h-5 w-5 shrink-0 self-end text-muted-foreground transition-transform duration-200 sm:self-center',
+                          openTriajeSections.datosAdicionales && 'rotate-180',
+                        )}
+                      />
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
                 <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                   <p className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -3792,7 +3998,19 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     className={inputStyles}
                   />
                 </div>
+                <TriajeSectionCollapseFooter
+                  className='col-span-full'
+                  onCollapse={() =>
+                    setOpenTriajeSections((s) => ({
+                      ...s,
+                      datosAdicionales: false,
+                    }))
+                  }
+                  disabled={loading}
+                />
               </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
