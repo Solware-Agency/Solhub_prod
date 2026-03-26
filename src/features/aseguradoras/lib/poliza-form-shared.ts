@@ -47,6 +47,11 @@ export const RAMOS_OPCIONES = [
 	'RCV',
 ] as const
 
+/** Mismos valores que `RAMOS_OPCIONES`, en orden alfabético para selects y filtros. */
+export const RAMOS_OPCIONES_ALFABETICO = [...RAMOS_OPCIONES].sort((a, b) =>
+	a.localeCompare(b, 'es', { sensitivity: 'base' }),
+) as readonly (typeof RAMOS_OPCIONES)[number][]
+
 /** Construye las 5 columnas de cobro/recordatorios desde los valores del formulario. */
 export function buildPaymentColumnsFromForm(form: {
 	fecha_prox_vencimiento: string

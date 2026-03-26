@@ -14,6 +14,13 @@ import {
 	validateReciboFile,
 	MAX_ASEGURADO_ATTACHMENTS,
 } from '@services/supabase/storage/pagos-poliza-recibos-service'
+import {
+	ASEGURADO_DOCUMENT_TIPO_OPTIONS,
+	buildDocumentId,
+	normalizeDocumentNumeroForTipo,
+	parseDocumentId,
+	type AseguradoDocumentTipo,
+} from '@features/aseguradoras/lib/asegurado-document'
 
 interface EditAseguradoModalProps {
 	isOpen: boolean
@@ -40,30 +47,12 @@ const CardSection = ({
 	</div>
 )
 
-const parseDocumentId = (documentId: string): { tipo: 'V' | 'J'; numero: string } => {
-	const trimmed = (documentId ?? '').trim()
-	if (trimmed.startsWith('V-')) {
-		return { tipo: 'V', numero: trimmed.slice(2).replace(/\D/g, '') }
-	}
-	if (trimmed.startsWith('J-')) {
-		return { tipo: 'J', numero: trimmed.slice(2).replace(/\D/g, '') }
-	}
-	return { tipo: 'V', numero: trimmed.replace(/\D/g, '') }
-}
-
-const buildDocumentId = (tipo: 'V' | 'J', numero: string): string => {
-	const n = numero.replace(/\D/g, '')
-	if (!n) return ''
-	if (tipo === 'J' && n.length === 9) return `J-${n.slice(0, 8)}-${n.slice(8)}`
-	return `${tipo}-${n}`
-}
-
 export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditAseguradoModalProps) => {
 	const { toast } = useToast()
 	const [isLoading, setIsLoading] = useState(false)
 	const [form, setForm] = useState({
 		full_name: '',
-		document_tipo: 'V' as 'V' | 'J',
+		document_tipo: 'V' as AseguradoDocumentTipo,
 		document_numero: '',
 		phone: '',
 		email: '',
@@ -141,8 +130,8 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 			toast({ title: 'Email con formato inválido', variant: 'destructive' })
 			return
 		}
-		if (!form.document_numero?.trim()) {
-			toast({ title: 'Documento es obligatorio', variant: 'destructive' })
+		if (!buildDocumentId(form.document_tipo, form.document_numero)) {
+			toast({ title: 'Completa o corrige el documento', variant: 'destructive' })
 			return
 		}
 		setIsLoading(true)
@@ -264,27 +253,55 @@ export const EditAseguradoModal = ({ isOpen, onClose, asegurado, onSave }: EditA
 												<div className="flex gap-2">
 													<Select
 														value={form.document_tipo}
-														onValueChange={(value) => setForm((prev) => ({ ...prev, document_tipo: value as 'V' | 'J' }))}
+														onValueChange={(value) =>
+															setForm((prev) => {
+																const t = value as AseguradoDocumentTipo
+																return {
+																	...prev,
+																	document_tipo: t,
+																	document_numero: normalizeDocumentNumeroForTipo(t, prev.document_numero),
+																}
+															})
+														}
 													>
 														<SelectTrigger className="w-16 shrink-0">
 															<SelectValue />
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="V">V</SelectItem>
-															<SelectItem value="J">J</SelectItem>
+															{ASEGURADO_DOCUMENT_TIPO_OPTIONS.map((o) => (
+																<SelectItem key={o.value} value={o.value}>
+																	{o.label}
+																</SelectItem>
+															))}
 														</SelectContent>
 													</Select>
 													<Input
-														placeholder={form.document_tipo === 'J' ? '12345678-9' : '12345678'}
+														placeholder={
+															form.document_tipo === 'J'
+																? '12345678-9'
+																: form.document_tipo === 'P'
+																	? 'Ej. AB1234567'
+																	: form.document_tipo === 'S/C'
+																		? 'No aplica'
+																		: '12345678'
+														}
 														value={form.document_numero}
+														disabled={form.document_tipo === 'S/C'}
 														onChange={(e) => {
-															const onlyNumbers = e.target.value.replace(/\D/g, '')
-															setForm((prev) => ({ ...prev, document_numero: onlyNumbers }))
+															if (form.document_tipo === 'P') {
+																const alnum = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+																setForm((prev) => ({ ...prev, document_numero: alnum }))
+															} else {
+																const onlyNumbers = e.target.value.replace(/\D/g, '')
+																setForm((prev) => ({ ...prev, document_numero: onlyNumbers }))
+															}
 														}}
-														inputMode="numeric"
-														maxLength={form.document_tipo === 'J' ? 9 : 15}
+														inputMode={form.document_tipo === 'P' ? 'text' : 'numeric'}
+														maxLength={
+															form.document_tipo === 'J' ? 9 : form.document_tipo === 'P' ? 20 : 15
+														}
 														className="flex-1"
-														required
+														required={form.document_tipo !== 'S/C'}
 													/>
 												</div>
 											</div>

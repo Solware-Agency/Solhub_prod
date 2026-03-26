@@ -31,7 +31,7 @@ import {
 } from '@services/supabase/storage/pagos-poliza-recibos-service'
 import {
 	POLIZA_FORM_STEPS as STEPS,
-	RAMOS_OPCIONES,
+	RAMOS_OPCIONES_ALFABETICO,
 	buildPaymentColumnsFromForm,
 } from '@features/aseguradoras/lib/poliza-form-shared'
 
@@ -350,7 +350,7 @@ export const EditPolizaModal: React.FC<EditPolizaModalProps> = ({ isOpen, onClos
 									<SelectValue placeholder="Seleccionar ramo" />
 								</SelectTrigger>
 								<SelectContent className="max-h-60 max-w-(--radix-select-trigger-width)" position="popper">
-									{RAMOS_OPCIONES.map((ramo) => (
+									{RAMOS_OPCIONES_ALFABETICO.map((ramo) => (
 										<SelectItem key={ramo} value={ramo} className="min-w-0 [&>span:last-child]:truncate">
 											{ramo}
 										</SelectItem>

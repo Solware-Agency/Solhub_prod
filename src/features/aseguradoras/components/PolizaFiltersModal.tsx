@@ -15,7 +15,7 @@ import {
 	defaultPolizaListFilters,
 	type PolizaListFilters,
 } from '@services/supabase/aseguradoras/polizas-service'
-import { RAMOS_OPCIONES } from '@features/aseguradoras/lib/poliza-form-shared'
+import { RAMOS_OPCIONES_ALFABETICO } from '@features/aseguradoras/lib/poliza-form-shared'
 
 const ESTATUS_POLIZA_OPTIONS: { value: string; label: string }[] = [
 	{ value: '', label: 'Todos' },
@@ -149,7 +149,7 @@ export const PolizaFiltersModal: React.FC<PolizaFiltersModalProps> = ({
 								<SelectItem value="__all__" className="whitespace-normal break-words py-2 pr-2">
 									Todos
 								</SelectItem>
-								{RAMOS_OPCIONES.map((r) => (
+								{RAMOS_OPCIONES_ALFABETICO.map((r) => (
 									<SelectItem key={r} value={r} className="min-w-0 whitespace-normal break-words py-2 pr-2">
 										{r}
 									</SelectItem>
