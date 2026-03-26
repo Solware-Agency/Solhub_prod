@@ -8,19 +8,16 @@ import { useState, useEffect } from 'react'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@shared/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@shared/components/ui/dialog'
 import { FormDropdown, createDropdownOptions } from '@shared/components/ui/form-dropdown'
 import { DateField } from '@shared/components/ui/date-field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { format } from 'date-fns'
 import { updatePatient, findPatientById } from '@services/supabase/patients/patients-service'
-import { updateIdentification, getIdentificacionesByPatient } from '@services/supabase/patients/identificaciones-service'
+import {
+	updateIdentification,
+	getIdentificacionesByPatient,
+} from '@services/supabase/patients/identificaciones-service'
 import { useToast } from '@shared/hooks/use-toast'
 import { cn } from '@shared/lib/cn'
 import type { PatientProfile } from './PatientSearchAutocomplete'
@@ -66,7 +63,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 				try {
 					// Obtener datos completos del paciente desde la base de datos
 					const patientData = await findPatientById(responsable.id)
-					
+
 					if (!patientData) {
 						toast({
 							title: 'Error',
@@ -196,18 +193,15 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 			const edadFormatted = edad ? `${edad} ${edadUnidad}` : null
 
 			// 3. Actualizar paciente responsable (adulto)
-			const pacienteActualizado = await updatePatient(
-				responsable.id,
-				{
-					cedula: cedulaFormatted,
-					nombre: nombre.trim(),
-					edad: edadFormatted,
-					telefono: telefono || null,
-					email: email || null,
-					gender: gender && gender.trim() !== '' ? (gender.trim() as 'Masculino' | 'Femenino') : null,
-					fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
-				} as any,
-			)
+			const pacienteActualizado = await updatePatient(responsable.id, {
+				cedula: cedulaFormatted,
+				nombre: nombre.trim(),
+				edad: edadFormatted,
+				telefono: telefono || null,
+				email: email || null,
+				gender: gender && gender.trim() !== '' ? (gender.trim() as 'Masculino' | 'Femenino') : null,
+				fecha_nacimiento: fechaNacimiento?.toISOString().split('T')[0] || null,
+			} as any)
 
 			// 4. Actualizar identificación en la tabla identificaciones
 			const identificaciones = await getIdentificacionesByPatient(responsable.id)
@@ -267,7 +261,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent 
+			<DialogContent
 				className="max-w-2xl max-h-[90vh] overflow-visible bg-white/80 dark:bg-background/50 backdrop-blur-[2px] dark:backdrop-blur-[10px]"
 				onOpenAutoFocus={handleOpenAutoFocus}
 			>
@@ -276,7 +270,13 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 					<p className="text-sm text-muted-foreground font-normal mt-1">
 						Editando a: <strong>{nombre || responsable.nombre}</strong>
 						{cedulaTipo && cedulaNumero && (
-							<> — Cédula en ficha: <strong>{cedulaTipo}-{cedulaNumero}</strong></>
+							<>
+								{' '}
+								— Cédula en ficha:{' '}
+								<strong>
+									{cedulaTipo}-{cedulaNumero}
+								</strong>
+							</>
 						)}
 					</p>
 				</DialogHeader>
@@ -321,9 +321,7 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Cédula *</Label>
-							<p className="text-xs text-muted-foreground">
-								El tipo y número deben coincidir con la cédula de este paciente en su ficha.
-							</p>
+
 							<div className="grid grid-cols-6 sm:grid-cols-5 gap-2">
 								<div className="col-span-2 sm:col-span-1 min-w-15">
 									<FormDropdown
@@ -356,6 +354,9 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 									/>
 								</div>
 							</div>
+							<p className="text-xs text-muted-foreground">
+								El tipo y número deben coincidir con la cédula de este paciente en su ficha.
+							</p>
 						</div>
 
 						<div className="space-y-2">
@@ -449,4 +450,3 @@ export const EditResponsableForm = ({ responsable, isOpen, onClose, onUpdated }:
 		</Dialog>
 	)
 }
-
