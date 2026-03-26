@@ -915,15 +915,34 @@ export const getCasesWithPatientInfo = async (
           return { data: [], error: null };
         }
 
-        // Obtener casos de esos pacientes
+        // Obtener casos de esos pacientes en lotes para evitar URL demasiado largas en PostgREST.
         const patientIds = matchingPatients.map((p) => p.id);
-        return await supabase
-          .from('medical_records_clean')
-          .select(MEDICAL_CASE_LIST_SELECT)
-          .eq('laboratory_id', profile.laboratory_id)
-          .eq('patient_is_active', true)
-          .in('patient_id', patientIds)
-          .order('created_at', { ascending: false });
+        const CHUNK_SIZE = 80;
+        const patientIdChunks: string[][] = [];
+        for (let i = 0; i < patientIds.length; i += CHUNK_SIZE) {
+          patientIdChunks.push(patientIds.slice(i, i + CHUNK_SIZE));
+        }
+
+        const chunkResults = await Promise.all(
+          patientIdChunks.map((chunk) =>
+            supabase
+              .from('medical_records_clean')
+              .select(MEDICAL_CASE_LIST_SELECT)
+              .eq('laboratory_id', profile.laboratory_id)
+              .eq('patient_is_active', true)
+              .in('patient_id', chunk),
+          ),
+        );
+
+        const firstError = chunkResults.find((result) => result.error)?.error;
+        if (firstError) {
+          return { data: [], error: firstError };
+        }
+
+        return {
+          data: chunkResults.flatMap((result) => result.data || []),
+          error: null,
+        };
       })();
 
       searchPromises.push(patientSearchPromise);

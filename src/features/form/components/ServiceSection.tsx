@@ -240,6 +240,15 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 												field.onChange(e)
 											}
 										}}
+										onSuggestionSelect={(suggestion) => {
+											// Solo Marihorgen/LM: al seleccionar médico por código, autocompletar procedencia.
+											if (isLM && suggestion.meta?.location) {
+												setValue('origin', suggestion.meta.location, {
+													shouldValidate: true,
+													shouldDirty: true,
+												})
+											}
+										}}
 										className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
 									/>
 								</FormControl>

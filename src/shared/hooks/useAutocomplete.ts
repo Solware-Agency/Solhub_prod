@@ -4,6 +4,16 @@ import { supabase } from '@/services/supabase/config/config'
 interface AutocompleteOption {
 	value: string
 	count: number
+	label?: string
+	meta?: {
+		code?: string
+		location?: string
+	}
+}
+
+interface DoctorData {
+  name: string;
+  location: string;
 }
 
 const MARIHORGEN_TREATING_DOCTORS = [
@@ -45,58 +55,58 @@ const MARIHORGEN_TREATING_DOCTORS = [
 ]
 
 /** Mapeo código → médico. Solo Marihorgen, campo Médico Tratante (estructura de costos). */
-const MARIHORGEN_DOCTOR_CODES: Record<string, string> = {
-	A1: 'CARLOS MORA',
-	A2: 'CARLOS MORA',
-	A3: 'CARLOS MORA',
-	B1: 'JAQUELINE BELLO',
-	B2: 'JAQUELINE BELLO',
-	C1: 'DANIEL LORETO',
-	D1: 'MANUELIS LOPEZ',
-	E1: 'JESÚS CARRILLO',
-	E2: 'JESÚS CARRILLO',
-	E3: 'JESÚS CARRILLO',
-	F1: 'FERNANDO JIMÉNEZ',
-	F2: 'FERNANDO JIMÉNEZ',
-	G1: 'JESÚS VERA',
-	G2: 'JESÚS VERA',
-	H1: 'JOSÉ MIGUEL MARIN',
-	H2: 'JOSÉ MIGUEL MARIN',
-	J1: 'JENIREE CORONADO',
-	J2: 'JENIREE CORONADO',
-	K1: 'GARWIN CALLES',
-	L1: 'ISABEL GARCIA FLEURY',
-	M1: 'ELBA SERRANO',
-	M2: 'ELBA SERRANO',
-	N1: 'MARÍA JOSÉ TAPIA',
-	N2: 'MARÍA JOSÉ TAPIA',
-	N3: 'MARÍA JOSÉ TAPIA',
-	O1: 'JAYKEL BAJANCHI',
-	P1: 'NAELVI AZÓCAR',
-	P2: 'JESÚS CARRASCO',
-	P3: 'JESÚS CARRASCO',
-	Q1: 'RICHARD NODA',
-	Q2: 'RICHARD NODA',
-	Q3: 'RICHARD NODA',
-	Q4: 'NELSON DELLAN',
-	Q5: 'GABRIELA DELLAN',
-	T1: 'ANA LUTMARY CAMPOS',
-	T2: 'JOSÉ SUAREZ',
-	T3: 'VITELIO PATIÑO',
-	V1: 'GERKA TREMONT',
-	V2: 'GERKA TREMONT',
-	V3: 'MARGALIT MIZRACHI',
-	V4: 'ROBERTO PENOTT',
-	V5: 'MAYKOL TERAN',
-	V6: 'TERESA PIÑERO',
-	V7: 'MARIA EUGENIA PEREZ',
-	V8: 'GLORIA COLMENARES',
-	V9: 'TIBISAY SARAVIA',
-	V10: 'DEYSI MENDOZA',
-	V11: 'ANDRÉS RODRÍGUEZ',
-	V12: 'ANDRÉS RODRÍGUEZ',
-	W1: 'JUAN MANUITT',
-	W2: 'EVELYN RICHARDS',
+const MARIHORGEN_DOCTOR_CODES: Record<string, DoctorData> = {
+	A1: { name: 'CARLOS MORA', location: 'OPIOLID' },
+  A2: { name: 'CARLOS MORA', location: 'CLÍNICA VIRGEN DEL VALLE' },
+  A3: { name: 'CARLOS MORA', location: 'HOSP. MILITAR "DR. CARLOS ARVELO"' },
+  B1: { name: 'JAQUELINE BELLO', location: 'OPIOLID' },
+  B2: { name: 'JAQUELINE BELLO', location: 'CLÍNICA HERRERA LYNCH' },
+  C1: { name: 'DANIEL LORETO', location: 'HOSP. MILITAR "DR. CARLOS ARVELO"' },
+  D1: { name: 'MANUELIS LOPEZ', location: 'HOSP. MILITAR "DR. CARLOS ARVELO"' },
+  E1: { name: 'JESÚS CARRILLO', location: 'HOSP. "DR. JOSÉ IGNACIO BALDÓ"' },
+  E2: { name: 'JESÚS CARRILLO', location: 'INSTITUTO MÉDICO QUIRÚRGICO "DR. JIMÉNEZ ROJAS"' },
+  E3: { name: 'JESÚS CARRILLO', location: 'HOSP. MILITAR "DR. CARLOS ARVELO"' },
+  F1: { name: 'FERNANDO JIMÉNEZ', location: 'HOSP. GENERAL DEL ESTE "DR. DOMINGO LUCIANI"' },
+  F2: { name: 'FERNANDO JIMÉNEZ', location: 'POLICLÍNICA LA ARBOLEDA' },
+  G1: { name: 'JESÚS VERA', location: 'HOSP. "DR. MIGUEL PEREZ CARREÑO"' },
+  G2: { name: 'JESÚS VERA', location: 'CONSULTA PRIVADA' },
+  H1: { name: 'JOSÉ MIGUEL MARIN', location: 'HOSPITAL PERIFÉRICO "DR. MIGUEL ANGEL RANGEL"' },
+  H2: { name: 'JOSÉ MIGUEL MARIN', location: 'CONSULTA PRIVADA' },
+  J1: { name: 'JENIREE CORONADO', location: 'HOSPITAL PERIFÉRICO "DR. MIGUEL ANGEL RANGEL"' },
+  J2: { name: 'JENIREE CORONADO', location: 'CONSULTA PRIVADA' },
+  K1: { name: 'GARWIN CALLES', location: 'CONSULTA PRIVADA' },
+  L1: { name: 'ISABEL GARCIA FLEURY', location: 'CENTRO MÉDICO DE CARACAS' },
+  M1: { name: 'ELBA SERRANO', location: 'HOSP. MILITAR "DR. VICENTE SALIAS"' },
+  M2: { name: 'ELBA SERRANO', location: 'CONSULTA PRIVADA' },
+  N1: { name: 'MARÍA JOSÉ TAPIA', location: 'SERVICIO BOLIVARIANO DE INTELIGENCIA' },
+  N2: { name: 'MARÍA JOSÉ TAPIA', location: 'CLINICA NUEVA CARACAS' },
+  N3: { name: 'MARÍA JOSÉ TAPIA', location: 'HOSP. GENERAL DEL ESTE "DR. DOMINGO LUCIANI"' },
+  O1: { name: 'JAYKEL BAJANCHI', location: 'CONSULTA PRIVADA' },
+  P1: { name: 'NAELVI AZÓCAR', location: 'INSTITUTO MÉDICO QUIRÚRGICO "DR. JIMÉNEZ ROJAS"' },
+  P2: { name: 'JESÚS CARRASCO', location: 'CLÍNICA BRICEÑO ROSSI' },
+  P3: { name: 'JESÚS CARRASCO', location: 'INSTITUTO MÉDICO QUIRÚRGICO "DR. JIMÉNEZ ROJAS"' },
+  Q1: { name: 'RICHARD NODA', location: 'INSTITUTO ONCOLÓGICO "DR. LUIS RAZETTI"' },
+  Q2: { name: 'RICHARD NODA', location: 'CLÍNICA ATIAS' },
+  Q3: { name: 'RICHARD NODA', location: 'CONSULTA PRIVADA' },
+  Q4: { name: 'NELSON DELLAN', location: 'CLÍNICA ATIAS' },
+  Q5: { name: 'GABRIELA DELLAN', location: 'CLÍNICA ATIAS' },
+  T1: { name: 'ANA LUTMARY CAMPOS', location: 'CONSULTA PRIVADA' },
+  T2: { name: 'JOSÉ SUAREZ', location: 'CONSULTA PRIVADA' },
+  T3: { name: 'VITELIO PATIÑO', location: 'CONSULTA PRIVADA' },
+  V1: { name: 'GERKA TREMONT', location: 'UNIDAD DE CIRUGÍA CMB' },
+  V2: { name: 'GERKA TREMONT', location: 'CENTRO MÉDICO BUENAVENTURA' },
+  V3: { name: 'MARGALIT MIZRACHI', location: 'CENTRO MÉDICO BUENAVENTURA' },
+  V4: { name: 'ROBERTO PENOTT', location: 'UNIDAD DE CIRUGÍA CMB' },
+  V5: { name: 'MAYKOL TERAN', location: 'CENTRO MÉDICO REMBRANDT' },
+  V6: { name: 'TERESA PIÑERO', location: 'CONSULTA PRIVADA' },
+  V7: { name: 'MARIA EUGENIA PEREZ', location: 'CONSULTA PRIVADA' },
+  V8: { name: 'GLORIA COLMENARES', location: 'CENTRO MÉDICO BUENAVENTURA' },
+  V9: { name: 'TIBISAY SARAVIA', location: 'CENTRO MÉDICO BUENAVENTURA' },
+  V10: { name: 'DEYSI MENDOZA', location: 'UNIDAD DE CIRUGÍA CMB' },
+  V11: { name: 'ANDRÉS RODRÍGUEZ', location: 'CENTRO MÉDICO BUENAVENTURA' },
+  V12: { name: 'ANDRÉS RODRÍGUEZ', location: 'CLÍNICA LEOPOLDO AGUERREVERE' },
+  W1: { name: 'JUAN MANUITT', location: 'HOME CARE SOLUCIONES MÉDICAS' },
+  W2: { name: 'EVELYN RICHARDS', location: 'HOME CARE SOLUCIONES MÉDICAS' },
 }
 
 const MARIHORGEN_ORIGINS = [
@@ -476,25 +486,29 @@ export const useAutocomplete = (fieldName: string) => {
 			// Marihorgen + Médico Tratante: buscar por código (A1, V10, etc.) y mostrar nombre del médico
 			if (fieldName === 'treatingDoctor' && isMarihorgenLabRef.current && searchTerm.trim()) {
 				const normalizedSearch = normalizeForSearch(searchTerm.trim())
-				const seen = new Set<string>()
 				const codeMatches: AutocompleteOption[] = []
-				for (const [code, doctorName] of Object.entries(MARIHORGEN_DOCTOR_CODES)) {
+				for (const [code, doctorData] of Object.entries(MARIHORGEN_DOCTOR_CODES)) {
 					const normalizedCode = normalizeForSearch(code)
 					if (
 						normalizedCode.includes(normalizedSearch) ||
 						normalizedCode === normalizedSearch
 					) {
-						if (!seen.has(doctorName)) {
-							seen.add(doctorName)
-							codeMatches.push({ value: doctorName, count: 1 })
-						}
+						codeMatches.push({
+							value: doctorData.name,
+							count: 1,
+							label: `${code} - ${doctorData.name}`,
+							meta: {
+								code,
+								location: doctorData.location,
+							},
+						})
 					}
 				}
 				if (codeMatches.length > 0) {
 					return codeMatches
 						.sort((a, b) => {
-							const aCode = Object.entries(MARIHORGEN_DOCTOR_CODES).find(([, n]) => n === a.value)?.[0] ?? ''
-							const bCode = Object.entries(MARIHORGEN_DOCTOR_CODES).find(([, n]) => n === b.value)?.[0] ?? ''
+							const aCode = a.meta?.code ?? ''
+							const bCode = b.meta?.code ?? ''
 							const aExact = normalizeForSearch(aCode) === normalizedSearch
 							const bExact = normalizeForSearch(bCode) === normalizedSearch
 							if (aExact && !bExact) return -1
@@ -558,10 +572,10 @@ export const useAutocomplete = (fieldName: string) => {
 						if (fieldName === 'treatingDoctor' && isMarihorgenLabRef.current) {
 							const normalizedSearch = normalizeForSearch(searchTerm)
 							const aFromCode = Object.entries(MARIHORGEN_DOCTOR_CODES).some(
-								([code, name]) => name === a.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
+								([code, doctorData]) => doctorData.name === a.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
 							)
 							const bFromCode = Object.entries(MARIHORGEN_DOCTOR_CODES).some(
-								([code, name]) => name === b.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
+								([code, doctorData]) => doctorData.name === b.value && (normalizeForSearch(code) === normalizedSearch || normalizeForSearch(code).includes(normalizedSearch))
 							)
 							if (aFromCode && !bFromCode) return -1
 							if (!aFromCode && bFromCode) return 1

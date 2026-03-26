@@ -8,6 +8,7 @@ interface AutocompleteInputProps extends React.ComponentProps<typeof Input> {
   fieldName: string;
   onValueChange?: (value: string) => void;
   onPatientSelect?: (idNumber: string) => void;
+  onSuggestionSelect?: (suggestion: { value: string; label?: string; meta?: { code?: string; location?: string } }) => void;
   minSearchLength?: number;
   iconRight?: React.ReactNode;
   iconLeft?: React.ReactNode;
@@ -18,7 +19,7 @@ interface AutocompleteInputProps extends React.ComponentProps<typeof Input> {
 export const AutocompleteInput = React.memo(React.forwardRef<
   HTMLInputElement,
   AutocompleteInputProps
->(({ className, fieldName, onValueChange, onPatientSelect, minSearchLength = 0, iconRight, iconLeft, formatSuggestion, ...props }, ref) => {
+>(({ className, fieldName, onValueChange, onPatientSelect, onSuggestionSelect, minSearchLength = 0, iconRight, iconLeft, formatSuggestion, ...props }, ref) => {
   const [inputValue, setInputValue] = React.useState(String(props.value || ""));
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(-1);
@@ -133,33 +134,35 @@ export const AutocompleteInput = React.memo(React.forwardRef<
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo dependemos de los handlers que usamos
   }, [props.onChange, onValueChange]);
 
-  const handleSuggestionClick = React.useCallback((suggestion: string) => {
-    setInputValue(suggestion);
+  const handleSuggestionClick = React.useCallback((suggestion: { value: string; label?: string; meta?: { code?: string; location?: string } }) => {
+    const selectedValue = suggestion.value;
+    setInputValue(selectedValue);
     setShowSuggestions(false);
     setSelectedIndex(-1);
     setSearchTerminated(true);
     setIsAutofilled(false); // Not autofill, manual selection
-    lastSearchTermRef.current = suggestion; // Update last search term
-    onValueChange?.(suggestion);
+    lastSearchTermRef.current = selectedValue; // Update last search term
+    onValueChange?.(selectedValue);
+    onSuggestionSelect?.(suggestion);
     
     // If it's ID number field, trigger patient selection silently
     if (fieldName === 'idNumber' && onPatientSelect) {
       setTimeout(() => {
 				// Pass the full cedula (with prefix) to the autofill function
-				onPatientSelect(suggestion)
+				onPatientSelect(selectedValue)
 			}, 100);
     }
     
     // Create synthetic event for compatibility
     const syntheticEvent = {
-      target: { value: suggestion }
+      target: { value: selectedValue }
     } as React.ChangeEvent<HTMLInputElement>;
     props.onChange?.(syntheticEvent);
     
     // Focus input after selection
     inputRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- props.onChange ya incluido
-  }, [fieldName, onPatientSelect, onValueChange, props.onChange]);
+  }, [fieldName, onPatientSelect, onSuggestionSelect, onValueChange, props.onChange]);
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0 || searchTerminated || isAutofilled) {
@@ -181,7 +184,7 @@ export const AutocompleteInput = React.memo(React.forwardRef<
       case 'Enter':
         e.preventDefault();
         if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          handleSuggestionClick(suggestions[selectedIndex].value);
+          handleSuggestionClick(suggestions[selectedIndex]);
         }
         break;
       case 'Escape':
@@ -284,9 +287,11 @@ export const AutocompleteInput = React.memo(React.forwardRef<
                 "px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center transition-none",
                 selectedIndex === index && "bg-blue-100 dark:bg-blue-900/30"
               )}
-              onClick={() => handleSuggestionClick(suggestion.value)}
+              onClick={() => handleSuggestionClick(suggestion)}
             >
-              {formatSuggestion ? formatSuggestion(suggestion.value) : suggestion.value}
+              {formatSuggestion
+                ? formatSuggestion(suggestion.label ?? suggestion.value)
+                : suggestion.label ?? suggestion.value}
             </div>
           ))}
         </div>
