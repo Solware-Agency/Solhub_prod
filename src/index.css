@@ -705,6 +705,22 @@ html.dark body::-webkit-scrollbar-thumb:active {
   }
 }
 
+/* Capa dedicada para portales de Popover: el modal de historia usa body { position:fixed; overflow:hidden },
+   lo que puede recortar u ocultar hijos fixed portaleados directamente a body. */
+#popover-portal-root {
+  position: fixed;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2147483640;
+}
+
+/* Popper (Popover, DropdownMenu, etc.): el wrapper copia el z-index del hijo; asegurar stacking. */
+[data-radix-popper-content-wrapper] {
+  z-index: 2147483646 !important;
+  pointer-events: auto;
+}
+
 /* Tooltip z-index máximo para estar por encima de todos los modales */
 [data-slot="tooltip-content"] {
   z-index: 2147483647 !important;

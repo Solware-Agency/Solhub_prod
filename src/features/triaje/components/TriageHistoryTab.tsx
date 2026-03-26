@@ -340,6 +340,28 @@ const TriageHistoryTab: React.FC<TriageHistoryTabProps> = ({ patientId, isOpen }
           )}
         </div>
       )}
+
+      {(record.diagnostico_egreso || record.fecha_hora_salida) && (
+        <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2'>
+          {record.fecha_hora_salida && (
+            <div>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Fecha y hora de salida</p>
+              <p className='text-sm font-medium'>
+                {format(new Date(record.fecha_hora_salida), 'dd/MM/yyyy', { locale: es })}{' '}
+                <span className='text-gray-500 dark:text-gray-400'>
+                  {format(new Date(record.fecha_hora_salida), 'HH:mm', { locale: es })}
+                </span>
+              </p>
+            </div>
+          )}
+          {record.diagnostico_egreso && (
+            <div>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>Diagnóstico de egreso</p>
+              <p className='text-sm'>{record.diagnostico_egreso}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 

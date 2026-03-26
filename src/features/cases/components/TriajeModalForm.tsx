@@ -34,6 +34,7 @@ import {
   CardTitle,
 } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
+import { DateField } from '@shared/components/ui/date-field';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import {
@@ -50,6 +51,7 @@ import {
 } from '@shared/components/ui/tooltip';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { useToast } from '@shared/hooks/use-toast';
+import { cn } from '@shared/lib/utils';
 import {
   getTriageByCase,
   getLatestTriageRecord,
@@ -73,7 +75,7 @@ interface TriajeFormData {
   antecedentesFamiliares: string;
   antecedentesPersonales: string;
   habitosPsicobiologicos: string;
-  tabaco: string; // Dropdown temporal ("Si" / "No")
+  tabaco: string; // "Si" | "No" | ""
   cafe: string; // Número de tazas por día
   alcohol: HabitLevel;
   cigarrillosPorDia: string;
@@ -100,6 +102,121 @@ interface TriajeFormData {
   hipertension: string;
   hipertensionTratamiento: string;
   vacunas: string;
+  antProblemasTiroides: string;
+  antObesidad: string;
+  antCancer: string;
+  antAsma: string;
+  antBronquitisCronica: string;
+  antEnfisema: string;
+  antTbc: string;
+  antAnticoagulante: string;
+  antReaccionAnestesia: string;
+  antCardiopatia: string;
+  antNefropatia: string;
+  antCirugiaAbdominalAlta: string;
+  antDisnea: string;
+  antTos: string;
+  antExpectoracion: string;
+  intervenidoQuirurgico: string;
+  fechaIntervencionQuirurgica: string;
+  tipoIntervencionQuirurgica: string;
+  otraEnfermedadCronica: string;
+  tratamientoOtraCausa: string;
+  convulsiones: string;
+  acv: string;
+  estadoCivil: string;
+  alimentacion: string;
+  habitosIntestinales: string;
+  sueno: string;
+  neurologico: string;
+  sintomas: string;
+  direccionCompleta: string;
+  direccionCiudad: string;
+  direccionEstado: string;
+  fechaHoraSalida: string;
+  diagnosticoEgreso: string;
+  drogasHabito: string;
+  chimoHabito: string;
+}
+
+const ANT_SI_NO_GROUP_A: Array<[keyof TriajeFormData, string]> = [
+  ['antProblemasTiroides', 'Problemas de tiroides'],
+  ['antObesidad', 'Obesidad'],
+  ['antCancer', 'Cáncer'],
+  ['antAsma', 'Asma'],
+  ['antBronquitisCronica', 'Bronquitis crónica'],
+  ['antEnfisema', 'Enfisema'],
+  ['antTbc', 'TBC'],
+  ['antAnticoagulante', 'Anticoagulante'],
+  ['antReaccionAnestesia', 'Reacción a anestesia'],
+];
+
+const ANT_SI_NO_GROUP_B: Array<[keyof TriajeFormData, string]> = [
+  ['antCardiopatia', 'Cardiopatía'],
+  ['antNefropatia', 'Nefropatía'],
+  ['antCirugiaAbdominalAlta', 'Cirugía abdominal alta'],
+  ['antDisnea', 'Disnea'],
+  ['antTos', 'Tos'],
+  ['antExpectoracion', 'Expectoración'],
+];
+
+const ANT_SI_NO_BOOL_EXTRA: Array<[keyof TriajeFormData, string]> = [
+  ['intervenidoQuirurgico', 'Intervención quirúrgica previa'],
+  ['otraEnfermedadCronica', 'Otra enfermedad crónica'],
+  ['tratamientoOtraCausa', 'Tratamiento por otra causa'],
+  ['convulsiones', 'Convulsiones'],
+  ['acv', 'ACV'],
+];
+
+/** Todos los Sí/No de antecedentes en un solo orden para rejilla de 4 columnas */
+const ANT_SI_NO_ALL: Array<[keyof TriajeFormData, string]> = [
+  ...ANT_SI_NO_GROUP_A,
+  ...ANT_SI_NO_GROUP_B,
+  ...ANT_SI_NO_BOOL_EXTRA,
+];
+
+function triageRecordToClinicalFormFields(
+  r: TriageRecord,
+): Partial<TriajeFormData> {
+  return {
+    antProblemasTiroides: boolToSiNo(r.ant_problemas_tiroides),
+    antObesidad: boolToSiNo(r.ant_obesidad),
+    antCancer: boolToSiNo(r.ant_cancer),
+    antAsma: boolToSiNo(r.ant_asma),
+    antBronquitisCronica: boolToSiNo(r.ant_bronquitis_cronica),
+    antEnfisema: boolToSiNo(r.ant_enfisema),
+    antTbc: boolToSiNo(r.ant_tbc),
+    antAnticoagulante: boolToSiNo(r.ant_anticoagulante),
+    antReaccionAnestesia: boolToSiNo(r.ant_reaccion_anestesia),
+    antCardiopatia: boolToSiNo(r.ant_cardiopatia),
+    antNefropatia: boolToSiNo(r.ant_nefropatia),
+    antCirugiaAbdominalAlta: boolToSiNo(r.ant_cirugia_abdominal_alta),
+    antDisnea: boolToSiNo(r.ant_disnea),
+    antTos: boolToSiNo(r.ant_tos),
+    antExpectoracion: boolToSiNo(r.ant_expectoracion),
+    intervenidoQuirurgico: boolToSiNo(r.intervenido_quirurgico),
+    fechaIntervencionQuirurgica: r.fecha_intervencion_quirurgica
+      ? String(r.fecha_intervencion_quirurgica).slice(0, 10)
+      : '',
+    tipoIntervencionQuirurgica: r.tipo_intervencion_quirurgica || '',
+    otraEnfermedadCronica: boolToSiNo(r.otra_enfermedad_cronica),
+    tratamientoOtraCausa: boolToSiNo(r.tratamiento_otra_causa),
+    convulsiones: boolToSiNo(r.convulsiones),
+    acv: boolToSiNo(r.acv),
+    estadoCivil: r.estado_civil || '',
+    alimentacion: r.alimentacion || '',
+    habitosIntestinales: r.habitos_intestinales || '',
+    sueno: r.sueno || '',
+    neurologico: r.neurologico || '',
+    sintomas: r.sintomas || '',
+    direccionCompleta: r.direccion_completa || '',
+    direccionCiudad: r.direccion_ciudad || '',
+    direccionEstado: r.direccion_estado || '',
+    fechaHoraSalida: isoToDatetimeLocal(r.fecha_hora_salida),
+    diagnosticoEgreso: r.diagnostico_egreso || '',
+    drogasHabito: r.drogas_habito || '',
+    chimoHabito: r.chimo_habito || '',
+  };
 }
 
 interface TriajeModalFormProps {
@@ -131,11 +248,123 @@ const normalizeDiabetesType = (value: string | null | undefined): string => {
     : 'Otro';
 };
 
+const ESTADO_CIVIL_OPTIONS = [
+  'Soltero/a',
+  'Casado/a',
+  'Divorciado/a',
+  'Viudo/a',
+  'Unión libre',
+  'Separado/a',
+] as const;
+
+const boolToSiNo = (v: boolean | null | undefined): string =>
+  v === true ? 'Si' : v === false ? 'No' : '';
+
+const siNoToBool = (s: string): boolean | null =>
+  s === 'Si' ? true : s === 'No' ? false : null;
+
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function datetimeLocalToIso(local: string): string | null {
+  if (!local?.trim()) return null;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+/** Partes de `fechaHoraSalida` en formato `YYYY-MM-DDTHH:mm` (local). */
+function splitSalidaDateTime(local: string): { date: string; time: string } {
+  if (!local?.includes('T')) return { date: '', time: '' };
+  const [d, rest] = local.split('T');
+  const time = (rest ?? '').slice(0, 5);
+  return { date: d?.trim() ?? '', time: /^\d{2}:\d{2}$/.test(time) ? time : '' };
+}
+
+function mergeSalidaDateTime(dateIso: string, timeHm: string): string {
+  const d = dateIso?.trim() ?? '';
+  if (!d) return '';
+  const t = (timeHm?.trim() ?? '') || '00:00';
+  const normalized =
+    t.length === 5 && /^\d{2}:\d{2}$/.test(t) ? t : '00:00';
+  return `${d}T${normalized}`;
+}
+
+const formatSiNoDisplay = (v: boolean | null | undefined): string | null =>
+  v === true ? 'Sí' : v === false ? 'No' : null;
+
+/** Sí / No segmentado (mismo patrón que antecedentes). */
+function SiNoSegmentGroup({
+  label,
+  ariaLabel,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  label: React.ReactNode;
+  ariaLabel: string;
+  value: string;
+  onChange: (next: 'Si' | 'No') => void;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      <div className='text-sm font-medium mb-2 flex flex-wrap items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+        {label}
+      </div>
+      <div
+        role='group'
+        aria-label={ariaLabel}
+        className='flex gap-0.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/90 dark:bg-gray-950/40 p-0.5'
+      >
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          disabled={disabled}
+          aria-pressed={value === 'Si'}
+          className={cn(
+            'h-9 flex-1 rounded-md px-2 text-sm font-semibold transition-colors',
+            value === 'Si'
+              ? 'bg-teal-600 text-white shadow-sm hover:bg-teal-600 hover:text-white dark:bg-teal-600'
+              : 'text-gray-600 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:bg-gray-800',
+          )}
+          onClick={() => onChange('Si')}
+        >
+          Sí
+        </Button>
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          disabled={disabled}
+          aria-pressed={value === 'No'}
+          className={cn(
+            'h-9 flex-1 rounded-md px-2 text-sm font-semibold transition-colors',
+            value === 'No'
+              ? 'bg-slate-600 text-white shadow-sm hover:bg-slate-600 hover:text-white dark:bg-slate-600'
+              : 'text-gray-600 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:bg-gray-800',
+          )}
+          onClick={() => onChange('No')}
+        >
+          No
+        </Button>
+      </div>
+    </>
+  );
+}
+
 // Componente para mostrar información de la historia clínica existente
 const TriageInfoDisplay: React.FC<{
   record: TriageRecord;
   onClose: () => void;
-}> = ({ record, onClose }) => {
+  fechaIngresoCaso?: string | null;
+}> = ({ record, onClose, fechaIngresoCaso }) => {
   // Validar que el record existe
   if (!record) {
     return (
@@ -365,7 +594,9 @@ const TriageInfoDisplay: React.FC<{
       {(record.psychobiological_habits ||
         record.tabaco !== null ||
         record.cafe !== null ||
-        record.alcohol) && (
+        record.alcohol ||
+        record.drogas_habito ||
+        record.chimo_habito) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300'>
@@ -427,6 +658,22 @@ const TriageInfoDisplay: React.FC<{
                 </p>
               </div>
             )}
+            {record.drogas_habito && (
+              <div className='flex-1 min-w-37.5'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Drogas
+                </p>
+                <p className='text-sm'>{record.drogas_habito}</p>
+              </div>
+            )}
+            {record.chimo_habito && (
+              <div className='flex-1 min-w-37.5'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Chimó
+                </p>
+                <p className='text-sm'>{record.chimo_habito}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -437,7 +684,27 @@ const TriageInfoDisplay: React.FC<{
         record.antecedentes_quirurgicos ||
         (record as { antecedentes_sexuales?: string | null }).antecedentes_sexuales ||
         (record as { alergias?: string | null }).alergias ||
-        (record as { vacunas?: string | null }).vacunas) && (
+        (record as { vacunas?: string | null }).vacunas ||
+        record.ant_problemas_tiroides != null ||
+        record.ant_obesidad != null ||
+        record.ant_cancer != null ||
+        record.ant_asma != null ||
+        record.ant_bronquitis_cronica != null ||
+        record.ant_enfisema != null ||
+        record.ant_tbc != null ||
+        record.ant_anticoagulante != null ||
+        record.ant_reaccion_anestesia != null ||
+        record.ant_cardiopatia != null ||
+        record.ant_nefropatia != null ||
+        record.ant_cirugia_abdominal_alta != null ||
+        record.ant_disnea != null ||
+        record.ant_tos != null ||
+        record.ant_expectoracion != null ||
+        record.intervenido_quirurgico != null ||
+        record.otra_enfermedad_cronica != null ||
+        record.tratamiento_otra_causa != null ||
+        record.convulsiones != null ||
+        record.acv != null) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-teal-700 dark:text-teal-300'>
@@ -494,6 +761,74 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{(record as { vacunas: string }).vacunas}</p>
               </div>
             )}
+            <div className='col-span-full border-t border-teal-200/60 dark:border-teal-800/60 pt-3 mt-1'>
+              <p className='text-xs font-semibold text-teal-800 dark:text-teal-200 mb-2'>
+                Antecedentes (Sí/No)
+              </p>
+              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3'>
+                {[
+                  ['ant_problemas_tiroides', 'Problemas de tiroides'],
+                  ['ant_obesidad', 'Obesidad'],
+                  ['ant_cancer', 'Cáncer'],
+                  ['ant_asma', 'Asma'],
+                  ['ant_bronquitis_cronica', 'Bronquitis crónica'],
+                  ['ant_enfisema', 'Enfisema'],
+                  ['ant_tbc', 'TBC'],
+                  ['ant_anticoagulante', 'Anticoagulante'],
+                  ['ant_reaccion_anestesia', 'Reacción a anestesia'],
+                  ['ant_cardiopatia', 'Cardiopatía'],
+                  ['ant_nefropatia', 'Nefropatía'],
+                  ['ant_cirugia_abdominal_alta', 'Cirugía abdominal alta'],
+                  ['ant_disnea', 'Disnea'],
+                  ['ant_tos', 'Tos'],
+                  ['ant_expectoracion', 'Expectoración'],
+                  ['intervenido_quirurgico', 'Intervención quirúrgica previa'],
+                  ['otra_enfermedad_cronica', 'Otra enfermedad crónica'],
+                  ['tratamiento_otra_causa', 'Tratamiento por otra causa'],
+                  ['convulsiones', 'Convulsiones'],
+                  ['acv', 'ACV'],
+                ].map(([key, label]) => {
+                  const v = (record as Record<string, boolean | null | undefined>)[key];
+                  if (v === null || v === undefined) return null;
+                  const txt = formatSiNoDisplay(v);
+                  if (!txt) return null;
+                  return (
+                    <div key={key}>
+                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5'>
+                        {label}
+                      </p>
+                      <p className='text-sm font-medium'>{txt}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              {record.intervenido_quirurgico === true && (
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3'>
+                  {record.fecha_intervencion_quirurgica && (
+                    <div>
+                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5'>
+                        Fecha de operación
+                      </p>
+                      <p className='text-sm'>
+                        {format(
+                          new Date(record.fecha_intervencion_quirurgica),
+                          'dd/MM/yyyy',
+                          { locale: es },
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {record.tipo_intervencion_quirurgica && (
+                    <div>
+                      <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5'>
+                        Tipo de operación
+                      </p>
+                      <p className='text-sm'>{record.tipo_intervencion_quirurgica}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -579,7 +914,12 @@ const TriageInfoDisplay: React.FC<{
         record.comment ||
         record.diagnostico ||
         record.plan_de_accion ||
-        (record as { observaciones?: string | null }).observaciones) && (
+        (record as { observaciones?: string | null }).observaciones ||
+        record.sintomas ||
+        record.alimentacion ||
+        record.habitos_intestinales ||
+        record.sueno ||
+        record.neurologico) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
           <CardHeader className='p-4 sm:p-6'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-violet-700 dark:text-violet-300'>
@@ -587,7 +927,7 @@ const TriageInfoDisplay: React.FC<{
               Examen Físico y Examen Funcional
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+          <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-3 gap-4'>
             {record.examen_fisico && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1'>
@@ -629,20 +969,136 @@ const TriageInfoDisplay: React.FC<{
                 <p className='text-sm'>{(record as { observaciones: string }).observaciones}</p>
               </div>
             )}
+            {record.sintomas && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Síntomas
+                </p>
+                <p className='text-sm'>{record.sintomas}</p>
+              </div>
+            )}
+            {record.alimentacion && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Alimentación
+                </p>
+                <p className='text-sm'>{record.alimentacion}</p>
+              </div>
+            )}
+            {record.habitos_intestinales && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Hábitos intestinales
+                </p>
+                <p className='text-sm'>{record.habitos_intestinales}</p>
+              </div>
+            )}
+            {record.sueno && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Sueño
+                </p>
+                <p className='text-sm'>{record.sueno}</p>
+              </div>
+            )}
+            {record.neurologico && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Neurológico
+                </p>
+                <p className='text-sm'>{record.neurologico}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Datos adicionales - al final */}
-      {(record.lugar_de_nacimiento || record.telefono_emergencia || (record as any).parentesco || (record as any).persona_quien_llama) && (
+      {(record.lugar_de_nacimiento ||
+        record.telefono_emergencia ||
+        (record as any).parentesco ||
+        (record as any).persona_quien_llama ||
+        fechaIngresoCaso ||
+        record.estado_civil ||
+        record.direccion_completa ||
+        record.direccion_ciudad ||
+        record.direccion_estado ||
+        record.fecha_hora_salida ||
+        record.diagnostico_egreso) && (
         <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
-          <CardHeader className='p-4 sm:p-6'>
+          <CardHeader className='p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
             <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
               <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
               Datos adicionales
             </CardTitle>
+            {fechaIngresoCaso && (
+              <div className='shrink-0 sm:text-right'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5'>
+                  Fecha y hora de ingreso
+                </p>
+                <p className='text-sm font-medium text-slate-800 dark:text-slate-200'>
+                  {format(new Date(fechaIngresoCaso), 'dd/MM/yyyy', { locale: es })}{' '}
+                  <span className='text-gray-500 dark:text-gray-400'>
+                    {format(new Date(fechaIngresoCaso), 'HH:mm', { locale: es })}
+                  </span>
+                </p>
+              </div>
+            )}
           </CardHeader>
           <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            {record.fecha_hora_salida && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Fecha y hora de salida
+                </p>
+                <p className='text-sm font-medium'>
+                  {format(new Date(record.fecha_hora_salida), 'dd/MM/yyyy', {
+                    locale: es,
+                  })}{' '}
+                  <span className='text-gray-500 dark:text-gray-400'>
+                    {format(new Date(record.fecha_hora_salida), 'HH:mm', {
+                      locale: es,
+                    })}
+                  </span>
+                </p>
+              </div>
+            )}
+            {record.estado_civil && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Estado civil
+                </p>
+                <p className='text-sm'>{record.estado_civil}</p>
+              </div>
+            )}
+            {record.direccion_completa && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Dirección completa
+                </p>
+                <p className='text-sm'>{record.direccion_completa}</p>
+              </div>
+            )}
+            {(record.direccion_ciudad || record.direccion_estado) && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Ciudad / Estado
+                </p>
+                <p className='text-sm'>
+                  {[record.direccion_ciudad, record.direccion_estado]
+                    .filter(Boolean)
+                    .join(', ')}
+                </p>
+              </div>
+            )}
+            {record.diagnostico_egreso && (
+              <div>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  Diagnóstico de egreso
+                </p>
+                <p className='text-sm'>{record.diagnostico_egreso}</p>
+              </div>
+            )}
             {record.lugar_de_nacimiento && (
               <div>
                 <p className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
@@ -747,6 +1203,41 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     hipertension: '',
     hipertensionTratamiento: '',
     vacunas: '',
+    antProblemasTiroides: '',
+    antObesidad: '',
+    antCancer: '',
+    antAsma: '',
+    antBronquitisCronica: '',
+    antEnfisema: '',
+    antTbc: '',
+    antAnticoagulante: '',
+    antReaccionAnestesia: '',
+    antCardiopatia: '',
+    antNefropatia: '',
+    antCirugiaAbdominalAlta: '',
+    antDisnea: '',
+    antTos: '',
+    antExpectoracion: '',
+    intervenidoQuirurgico: '',
+    fechaIntervencionQuirurgica: '',
+    tipoIntervencionQuirurgica: '',
+    otraEnfermedadCronica: '',
+    tratamientoOtraCausa: '',
+    convulsiones: '',
+    acv: '',
+    estadoCivil: '',
+    alimentacion: '',
+    habitosIntestinales: '',
+    sueno: '',
+    neurologico: '',
+    sintomas: '',
+    direccionCompleta: '',
+    direccionCiudad: '',
+    direccionEstado: '',
+    fechaHoraSalida: '',
+    diagnosticoEgreso: '',
+    drogasHabito: '',
+    chimoHabito: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -819,6 +1310,9 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           (prev as { hipertension_tratamiento?: string | null })
             .hipertension_tratamiento || '',
         vacunas: (prev as { vacunas?: string | null }).vacunas || '',
+        ...triageRecordToClinicalFormFields(prev),
+        diagnosticoEgreso: '',
+        fechaHoraSalida: '',
       }));
     }
   }, [existingTriage, latestTriageByPatient]);
@@ -1039,6 +1533,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     : '',
               }
             : {}),
+          ...triageRecordToClinicalFormFields(existingTriage),
         }));
       }
     }
@@ -1079,6 +1574,11 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
 
       if (field === 'hipertension' && value === 'No') {
         next.hipertensionTratamiento = '';
+      }
+
+      if (field === 'intervenidoQuirurgico' && value === 'No') {
+        next.fechaIntervencionQuirurgica = '';
+        next.tipoIntervencionQuirurgica = '';
       }
 
       return next;
@@ -1174,6 +1674,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         : '',
       cigarrillosPorDia: '',
       anosFumando: '',
+      ...triageRecordToClinicalFormFields(existingTriage),
     });
 
     // Notificar al componente padre que se canceló la edición (para resetear forceEditMode)
@@ -1350,6 +1851,23 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       };
     }
 
+    if (formData.intervenidoQuirurgico === 'Si') {
+      if (!hasValue(formData.fechaIntervencionQuirurgica)) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Si indica intervención quirúrgica previa = Sí, debe ingresar la fecha de la operación.',
+        };
+      }
+      if (!hasValue(formData.tipoIntervencionQuirurgica)) {
+        return {
+          isValid: false,
+          errorMessage:
+            'Si indica intervención quirúrgica previa = Sí, debe ingresar el tipo de operación.',
+        };
+      }
+    }
+
     // Si es enfermero, solo necesita signos vitales
     if (isEnfermero) {
       if (!hasVitalSigns) {
@@ -1366,11 +1884,16 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     if (isMedico) {
       const hasClinicalData =
         hasValue(formData.motivoConsulta) ||
+        hasValue(formData.enfermedadActual) ||
         hasValue(formData.antecedentesPersonales) ||
         hasValue(formData.antecedentesFamiliares) ||
+        hasValue(formData.antecedentesQuirurgicos) ||
         hasValue(formData.antecedentesSexuales) ||
         hasValue(formData.habitosPsicobiologicos) ||
         hasValue(formData.examenFisico) ||
+        hasValue(formData.comentario) ||
+        hasValue(formData.diagnostico) ||
+        hasValue(formData.planDeAccion) ||
         hasValue(formData.tabaco) ||
         hasValue(formData.cafe) ||
         hasValue(formData.alcohol) ||
@@ -1382,7 +1905,40 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         hasValue(formData.hipertensionTratamiento) ||
         hasValue(formData.vacunas) ||
         hasValue(formData.alergias) ||
-        hasValue(formData.observaciones);
+        hasValue(formData.observaciones) ||
+        hasValue(formData.sintomas) ||
+        hasValue(formData.alimentacion) ||
+        hasValue(formData.habitosIntestinales) ||
+        hasValue(formData.sueno) ||
+        hasValue(formData.neurologico) ||
+        hasValue(formData.estadoCivil) ||
+        hasValue(formData.direccionCompleta) ||
+        hasValue(formData.direccionCiudad) ||
+        hasValue(formData.direccionEstado) ||
+        hasValue(formData.fechaHoraSalida) ||
+        hasValue(formData.diagnosticoEgreso) ||
+        hasValue(formData.drogasHabito) ||
+        hasValue(formData.chimoHabito) ||
+        hasValue(formData.antProblemasTiroides) ||
+        hasValue(formData.antObesidad) ||
+        hasValue(formData.antCancer) ||
+        hasValue(formData.antAsma) ||
+        hasValue(formData.antBronquitisCronica) ||
+        hasValue(formData.antEnfisema) ||
+        hasValue(formData.antTbc) ||
+        hasValue(formData.antAnticoagulante) ||
+        hasValue(formData.antReaccionAnestesia) ||
+        hasValue(formData.antCardiopatia) ||
+        hasValue(formData.antNefropatia) ||
+        hasValue(formData.antCirugiaAbdominalAlta) ||
+        hasValue(formData.antDisnea) ||
+        hasValue(formData.antTos) ||
+        hasValue(formData.antExpectoracion) ||
+        hasValue(formData.intervenidoQuirurgico) ||
+        hasValue(formData.otraEnfermedadCronica) ||
+        hasValue(formData.tratamientoOtraCausa) ||
+        hasValue(formData.convulsiones) ||
+        hasValue(formData.acv);
 
       if (!hasClinicalData) {
         return {
@@ -1436,7 +1992,43 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
     hasRealValue(formData.tabaco) ||
     hasRealValue(formData.cafe) ||
     hasRealValue(formData.alcohol) ||
-    hasRealValue(formData.comentario);
+    hasRealValue(formData.comentario) ||
+    hasRealValue(formData.observaciones) ||
+    hasRealValue(formData.sintomas) ||
+    hasRealValue(formData.alimentacion) ||
+    hasRealValue(formData.habitosIntestinales) ||
+    hasRealValue(formData.sueno) ||
+    hasRealValue(formData.neurologico) ||
+    hasRealValue(formData.estadoCivil) ||
+    hasRealValue(formData.direccionCompleta) ||
+    hasRealValue(formData.direccionCiudad) ||
+    hasRealValue(formData.direccionEstado) ||
+    hasRealValue(formData.fechaHoraSalida) ||
+    hasRealValue(formData.diagnosticoEgreso) ||
+    hasRealValue(formData.drogasHabito) ||
+    hasRealValue(formData.chimoHabito) ||
+    hasRealValue(formData.antProblemasTiroides) ||
+    hasRealValue(formData.antObesidad) ||
+    hasRealValue(formData.antCancer) ||
+    hasRealValue(formData.antAsma) ||
+    hasRealValue(formData.antBronquitisCronica) ||
+    hasRealValue(formData.antEnfisema) ||
+    hasRealValue(formData.antTbc) ||
+    hasRealValue(formData.antAnticoagulante) ||
+    hasRealValue(formData.antReaccionAnestesia) ||
+    hasRealValue(formData.antCardiopatia) ||
+    hasRealValue(formData.antNefropatia) ||
+    hasRealValue(formData.antCirugiaAbdominalAlta) ||
+    hasRealValue(formData.antDisnea) ||
+    hasRealValue(formData.antTos) ||
+    hasRealValue(formData.antExpectoracion) ||
+    hasRealValue(formData.intervenidoQuirurgico) ||
+    hasRealValue(formData.fechaIntervencionQuirurgica) ||
+    hasRealValue(formData.tipoIntervencionQuirurgica) ||
+    hasRealValue(formData.otraEnfermedadCronica) ||
+    hasRealValue(formData.tratamientoOtraCausa) ||
+    hasRealValue(formData.convulsiones) ||
+    hasRealValue(formData.acv);
 
   const buildVitalSignsData = () => ({
     heart_rate: formData.frecuenciaCardiaca
@@ -1509,6 +2101,43 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         : null,
     hipertension_tratamiento: formData.hipertensionTratamiento || null,
     vacunas: formData.vacunas || null,
+    ant_problemas_tiroides: siNoToBool(formData.antProblemasTiroides),
+    ant_obesidad: siNoToBool(formData.antObesidad),
+    ant_cancer: siNoToBool(formData.antCancer),
+    ant_asma: siNoToBool(formData.antAsma),
+    ant_bronquitis_cronica: siNoToBool(formData.antBronquitisCronica),
+    ant_enfisema: siNoToBool(formData.antEnfisema),
+    ant_tbc: siNoToBool(formData.antTbc),
+    ant_anticoagulante: siNoToBool(formData.antAnticoagulante),
+    ant_reaccion_anestesia: siNoToBool(formData.antReaccionAnestesia),
+    ant_cardiopatia: siNoToBool(formData.antCardiopatia),
+    ant_nefropatia: siNoToBool(formData.antNefropatia),
+    ant_cirugia_abdominal_alta: siNoToBool(formData.antCirugiaAbdominalAlta),
+    ant_disnea: siNoToBool(formData.antDisnea),
+    ant_tos: siNoToBool(formData.antTos),
+    ant_expectoracion: siNoToBool(formData.antExpectoracion),
+    intervenido_quirurgico: siNoToBool(formData.intervenidoQuirurgico),
+    fecha_intervencion_quirurgica:
+      formData.fechaIntervencionQuirurgica?.trim() || null,
+    tipo_intervencion_quirurgica:
+      formData.tipoIntervencionQuirurgica?.trim() || null,
+    otra_enfermedad_cronica: siNoToBool(formData.otraEnfermedadCronica),
+    tratamiento_otra_causa: siNoToBool(formData.tratamientoOtraCausa),
+    convulsiones: siNoToBool(formData.convulsiones),
+    acv: siNoToBool(formData.acv),
+    estado_civil: formData.estadoCivil?.trim() || null,
+    alimentacion: formData.alimentacion?.trim() || null,
+    habitos_intestinales: formData.habitosIntestinales?.trim() || null,
+    sueno: formData.sueno?.trim() || null,
+    neurologico: formData.neurologico?.trim() || null,
+    sintomas: formData.sintomas?.trim() || null,
+    direccion_completa: formData.direccionCompleta?.trim() || null,
+    direccion_ciudad: formData.direccionCiudad?.trim() || null,
+    direccion_estado: formData.direccionEstado?.trim() || null,
+    fecha_hora_salida: datetimeLocalToIso(formData.fechaHoraSalida),
+    diagnostico_egreso: formData.diagnosticoEgreso?.trim() || null,
+    drogas_habito: formData.drogasHabito?.trim() || null,
+    chimo_habito: formData.chimoHabito?.trim() || null,
     ...buildVitalSignsData(),
   });
 
@@ -1732,6 +2361,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       : '',
                 }
               : {}),
+            ...triageRecordToClinicalFormFields(updatedTriage),
           }));
         }
       }
@@ -1779,6 +2409,41 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             hipertension: '',
             hipertensionTratamiento: '',
             vacunas: '',
+            antProblemasTiroides: '',
+            antObesidad: '',
+            antCancer: '',
+            antAsma: '',
+            antBronquitisCronica: '',
+            antEnfisema: '',
+            antTbc: '',
+            antAnticoagulante: '',
+            antReaccionAnestesia: '',
+            antCardiopatia: '',
+            antNefropatia: '',
+            antCirugiaAbdominalAlta: '',
+            antDisnea: '',
+            antTos: '',
+            antExpectoracion: '',
+            intervenidoQuirurgico: '',
+            fechaIntervencionQuirurgica: '',
+            tipoIntervencionQuirurgica: '',
+            otraEnfermedadCronica: '',
+            tratamientoOtraCausa: '',
+            convulsiones: '',
+            acv: '',
+            estadoCivil: '',
+            alimentacion: '',
+            habitosIntestinales: '',
+            sueno: '',
+            neurologico: '',
+            sintomas: '',
+            direccionCompleta: '',
+            direccionCiudad: '',
+            direccionEstado: '',
+            fechaHoraSalida: '',
+            diagnosticoEgreso: '',
+            drogasHabito: '',
+            chimoHabito: '',
           });
           setMessage('');
           if (onSave) {
@@ -1853,6 +2518,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           <TriageInfoDisplay
             record={existingTriage}
             onClose={onClose}
+            fechaIngresoCaso={case_?.created_at ?? null}
           />
         </div>
       );
@@ -1884,6 +2550,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         <TriageInfoDisplay
           record={existingTriage}
           onClose={onClose}
+          fechaIngresoCaso={case_?.created_at ?? null}
         />
       </div>
     );
@@ -1911,7 +2578,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
             </div>
           </div>
 
-          {/* Sección 1: Examen Físico y Examen Funcional (6 campos en 2 filas de 3) */}
+          {/* Sección 1: Examen Físico y Examen Funcional (grid 3 columnas en sm+) */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20'>
               <CardHeader className='p-4 sm:p-6'>
@@ -2027,6 +2694,81 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                       value={formData.observaciones}
                       onChange={(e) =>
                         handleInputChange('observaciones', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Síntomas
+                    </label>
+                    <Textarea
+                      placeholder='Describa los síntomas'
+                      value={formData.sintomas}
+                      onChange={(e) =>
+                        handleInputChange('sintomas', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Alimentación
+                    </label>
+                    <Textarea
+                      placeholder='Alimentación'
+                      value={formData.alimentacion}
+                      onChange={(e) =>
+                        handleInputChange('alimentacion', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Hábitos intestinales
+                    </label>
+                    <Textarea
+                      placeholder='Hábitos intestinales'
+                      value={formData.habitosIntestinales}
+                      onChange={(e) =>
+                        handleInputChange('habitosIntestinales', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Sueño
+                    </label>
+                    <Textarea
+                      placeholder='Sueño'
+                      value={formData.sueno}
+                      onChange={(e) =>
+                        handleInputChange('sueno', e.target.value)
+                      }
+                      disabled={loading}
+                      rows={4}
+                      className={`${inputStyles} min-h-[80px] sm:min-h-[100px]`}
+                    />
+                  </div>
+                  <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                    <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
+                      Neurológico
+                    </label>
+                    <Textarea
+                      placeholder='Neurológico'
+                      value={formData.neurologico}
+                      onChange={(e) =>
+                        handleInputChange('neurologico', e.target.value)
                       }
                       disabled={loading}
                       rows={4}
@@ -2184,6 +2926,65 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                     />
                   </div>
                 </div>
+                <div className='border-t border-teal-200/60 dark:border-teal-800/60 pt-3 space-y-3'>
+                  <p className='text-sm font-semibold text-teal-800 dark:text-teal-200'>
+                    Antecedentes (Sí/No)
+                  </p>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3'>
+                    {ANT_SI_NO_ALL.map(([key, label]) => (
+                      <div
+                        key={key}
+                        className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'
+                      >
+                        <SiNoSegmentGroup
+                          label={label}
+                          ariaLabel={label}
+                          value={formData[key]}
+                          onChange={(v) => handleInputChange(key, v)}
+                          disabled={loading}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {formData.intervenidoQuirurgico === 'Si' && (
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                      <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                        <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                          Fecha de operación <span className='text-red-500'>*</span>
+                        </label>
+                        <Input
+                          type='date'
+                          value={formData.fechaIntervencionQuirurgica}
+                          onChange={(e) =>
+                            handleInputChange(
+                              'fechaIntervencionQuirurgica',
+                              e.target.value,
+                            )
+                          }
+                          disabled={loading}
+                          className={inputStyles}
+                        />
+                      </div>
+                      <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                        <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                          Tipo de operación <span className='text-red-500'>*</span>
+                        </label>
+                        <Input
+                          placeholder='Tipo de operación'
+                          value={formData.tipoIntervencionQuirurgica}
+                          onChange={(e) =>
+                            handleInputChange(
+                              'tipoIntervencionQuirurgica',
+                              e.target.value,
+                            )
+                          }
+                          disabled={loading}
+                          className={inputStyles}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -2200,44 +3001,22 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                    <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
-                      Diabetes
-                    </label>
-                    <Select
-                      value={formData.diabetes || undefined}
-                      onValueChange={(value) =>
-                        handleInputChange('diabetes', value)
-                      }
+                    <SiNoSegmentGroup
+                      label='Diabetes'
+                      ariaLabel='Diabetes'
+                      value={formData.diabetes}
+                      onChange={(v) => handleInputChange('diabetes', v)}
                       disabled={loading}
-                    >
-                      <SelectTrigger className={inputStyles}>
-                        <SelectValue placeholder='Seleccione...' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='No'>No</SelectItem>
-                        <SelectItem value='Si'>Sí</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                    <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
-                      Hipertensión
-                    </label>
-                    <Select
-                      value={formData.hipertension || undefined}
-                      onValueChange={(value) =>
-                        handleInputChange('hipertension', value)
-                      }
+                    <SiNoSegmentGroup
+                      label='Hipertensión'
+                      ariaLabel='Hipertensión'
+                      value={formData.hipertension}
+                      onChange={(v) => handleInputChange('hipertension', v)}
                       disabled={loading}
-                    >
-                      <SelectTrigger className={inputStyles}>
-                        <SelectValue placeholder='Seleccione...' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='No'>No</SelectItem>
-                        <SelectItem value='Si'>Sí</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                 </div>
 
@@ -2343,23 +3122,18 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
               <CardContent className={`p-3 sm:p-4 pt-0 sm:pt-0 ${formData.tabaco === 'Si' ? 'min-h-[240px]' : ''}`}>
                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
-                      <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
-                        <Cigarette className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-                        ¿Fuma?
-                      </label>
-                      <Select
-                        value={formData.tabaco || undefined}
-                        onValueChange={(value) => handleInputChange('tabaco', value)}
+                      <SiNoSegmentGroup
+                        label={
+                          <>
+                            <Cigarette className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                            ¿Fuma?
+                          </>
+                        }
+                        ariaLabel='¿Fuma?'
+                        value={formData.tabaco}
+                        onChange={(v) => handleInputChange('tabaco', v)}
                         disabled={loading}
-                      >
-                        <SelectTrigger className={inputStyles}>
-                          <SelectValue placeholder='Seleccione...' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='No'>No</SelectItem>
-                          <SelectItem value='Si'>Sí</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                       <label className='text-sm font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -2413,6 +3187,39 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                           <SelectItem value='muy baja'>Muy baja</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4'>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                        Drogas
+                      </label>
+                      <Textarea
+                        placeholder='Hábito / consumo de drogas'
+                        value={formData.drogasHabito}
+                        onChange={(e) =>
+                          handleInputChange('drogasHabito', e.target.value)
+                        }
+                        disabled={loading}
+                        rows={3}
+                        className={inputStyles}
+                      />
+                    </div>
+                    <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <label className='text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                        Chimó
+                      </label>
+                      <Textarea
+                        placeholder='Consumo de chimó'
+                        value={formData.chimoHabito}
+                        onChange={(e) =>
+                          handleInputChange('chimoHabito', e.target.value)
+                        }
+                        disabled={loading}
+                        rows={3}
+                        className={inputStyles}
+                      />
                     </div>
                   </div>
 
@@ -2762,13 +3569,169 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
           {/* Sección: Datos adicionales - al final */}
           {!showOnlyVitalSigns && (
             <Card className='hover:border-primary hover:shadow-lg hover:shadow-primary/20 border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20'>
-              <CardHeader className='p-4 sm:p-6'>
+              <CardHeader className='p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                 <CardTitle className='text-base sm:text-lg flex items-center gap-2 text-slate-700 dark:text-slate-300'>
                   <User className='h-5 w-5 text-slate-600 dark:text-slate-400' />
                   Datos adicionales
                 </CardTitle>
+                {case_?.created_at && (
+                  <div className='shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-muted/40 dark:bg-muted/15 px-3 py-2 sm:text-right'>
+                    <p className='text-xs text-gray-500 dark:text-gray-400 mb-0.5 flex items-center gap-1.5 sm:justify-end'>
+                      <Clock className='h-3.5 w-3.5 shrink-0' />
+                      Fecha y hora de ingreso
+                    </p>
+                    <p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                      {format(new Date(case_.created_at), 'dd/MM/yyyy', {
+                        locale: es,
+                      })}{' '}
+                      <span className='text-gray-500 dark:text-gray-400 font-medium'>
+                        {format(new Date(case_.created_at), 'HH:mm', {
+                          locale: es,
+                        })}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <p className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    <Clock className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+                    Fecha y hora de salida
+                  </p>
+                  <div className='flex flex-wrap items-end gap-2 sm:gap-3'>
+                    <div className='min-w-0 flex-1'>
+                      <label
+                        htmlFor='fecha-salida-triaje'
+                        className='text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block'
+                      >
+                        Fecha
+                      </label>
+                      <DateField
+                        id='fecha-salida-triaje'
+                        value={splitSalidaDateTime(formData.fechaHoraSalida).date}
+                        onChange={(iso) => {
+                          const { time } = splitSalidaDateTime(
+                            formData.fechaHoraSalida,
+                          );
+                          handleInputChange(
+                            'fechaHoraSalida',
+                            mergeSalidaDateTime(iso, time),
+                          );
+                        }}
+                        disabled={loading}
+                        className={inputStyles}
+                        containerClassName='flex-1 min-w-0'
+                      />
+                    </div>
+                    <div className='shrink-0 w-[6.75rem]'>
+                      <label
+                        htmlFor='hora-salida-triaje'
+                        className='text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block'
+                      >
+                        Hora
+                      </label>
+                      <Input
+                        id='hora-salida-triaje'
+                        type='time'
+                        step={60}
+                        value={splitSalidaDateTime(formData.fechaHoraSalida).time}
+                        onChange={(e) => {
+                          const { date } = splitSalidaDateTime(
+                            formData.fechaHoraSalida,
+                          );
+                          if (!date) return;
+                          handleInputChange(
+                            'fechaHoraSalida',
+                            mergeSalidaDateTime(date, e.target.value),
+                          );
+                        }}
+                        disabled={loading || !splitSalidaDateTime(formData.fechaHoraSalida).date}
+                        className={`${inputStyles} h-10 w-full px-2 tabular-nums`}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    Diagnóstico de egreso
+                  </label>
+                  <Textarea
+                    placeholder='Diagnóstico de egreso'
+                    value={formData.diagnosticoEgreso}
+                    onChange={(e) =>
+                      handleInputChange('diagnosticoEgreso', e.target.value)
+                    }
+                    disabled={loading}
+                    rows={3}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                    Estado civil
+                  </label>
+                  <Select
+                    value={formData.estadoCivil || undefined}
+                    onValueChange={(value) =>
+                      handleInputChange('estadoCivil', value)
+                    }
+                    disabled={loading}
+                  >
+                    <SelectTrigger className={inputStyles}>
+                      <SelectValue placeholder='Seleccione...' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ESTADO_CIVIL_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
+                    Dirección completa
+                  </label>
+                  <Input
+                    placeholder='Calle, urbanización, etc.'
+                    value={formData.direccionCompleta}
+                    onChange={(e) =>
+                      handleInputChange('direccionCompleta', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                    Ciudad
+                  </label>
+                  <Input
+                    placeholder='Ciudad'
+                    value={formData.direccionCiudad}
+                    onChange={(e) =>
+                      handleInputChange('direccionCiudad', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
+                  <label className='text-base font-medium mb-2 block text-gray-700 dark:text-gray-300'>
+                    Estado
+                  </label>
+                  <Input
+                    placeholder='Estado'
+                    value={formData.direccionEstado}
+                    onChange={(e) =>
+                      handleInputChange('direccionEstado', e.target.value)
+                    }
+                    disabled={loading}
+                    className={inputStyles}
+                  />
+                </div>
                 <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                   <label className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <User className='h-4 w-4 text-gray-600 dark:text-gray-400' />

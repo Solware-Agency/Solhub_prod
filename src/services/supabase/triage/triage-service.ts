@@ -54,6 +54,41 @@ type ExtendedDatabase = Database & {
           hipertension: boolean | null;
           hipertension_tratamiento: string | null;
           vacunas: string | null;
+          ant_problemas_tiroides: boolean | null;
+          ant_obesidad: boolean | null;
+          ant_cancer: boolean | null;
+          ant_asma: boolean | null;
+          ant_bronquitis_cronica: boolean | null;
+          ant_enfisema: boolean | null;
+          ant_tbc: boolean | null;
+          ant_anticoagulante: boolean | null;
+          ant_reaccion_anestesia: boolean | null;
+          ant_cardiopatia: boolean | null;
+          ant_nefropatia: boolean | null;
+          ant_cirugia_abdominal_alta: boolean | null;
+          ant_disnea: boolean | null;
+          ant_tos: boolean | null;
+          ant_expectoracion: boolean | null;
+          intervenido_quirurgico: boolean | null;
+          fecha_intervencion_quirurgica: string | null;
+          tipo_intervencion_quirurgica: string | null;
+          otra_enfermedad_cronica: boolean | null;
+          tratamiento_otra_causa: boolean | null;
+          convulsiones: boolean | null;
+          acv: boolean | null;
+          estado_civil: string | null;
+          alimentacion: string | null;
+          habitos_intestinales: string | null;
+          sueno: string | null;
+          neurologico: string | null;
+          sintomas: string | null;
+          direccion_completa: string | null;
+          direccion_ciudad: string | null;
+          direccion_estado: string | null;
+          fecha_hora_salida: string | null;
+          diagnostico_egreso: string | null;
+          drogas_habito: string | null;
+          chimo_habito: string | null;
           is_draft: boolean | null;
           created_by: string | null;
           created_at: string;
@@ -100,6 +135,41 @@ type ExtendedDatabase = Database & {
           hipertension?: boolean | null;
           hipertension_tratamiento?: string | null;
           vacunas?: string | null;
+          ant_problemas_tiroides?: boolean | null;
+          ant_obesidad?: boolean | null;
+          ant_cancer?: boolean | null;
+          ant_asma?: boolean | null;
+          ant_bronquitis_cronica?: boolean | null;
+          ant_enfisema?: boolean | null;
+          ant_tbc?: boolean | null;
+          ant_anticoagulante?: boolean | null;
+          ant_reaccion_anestesia?: boolean | null;
+          ant_cardiopatia?: boolean | null;
+          ant_nefropatia?: boolean | null;
+          ant_cirugia_abdominal_alta?: boolean | null;
+          ant_disnea?: boolean | null;
+          ant_tos?: boolean | null;
+          ant_expectoracion?: boolean | null;
+          intervenido_quirurgico?: boolean | null;
+          fecha_intervencion_quirurgica?: string | null;
+          tipo_intervencion_quirurgica?: string | null;
+          otra_enfermedad_cronica?: boolean | null;
+          tratamiento_otra_causa?: boolean | null;
+          convulsiones?: boolean | null;
+          acv?: boolean | null;
+          estado_civil?: string | null;
+          alimentacion?: string | null;
+          habitos_intestinales?: string | null;
+          sueno?: string | null;
+          neurologico?: string | null;
+          sintomas?: string | null;
+          direccion_completa?: string | null;
+          direccion_ciudad?: string | null;
+          direccion_estado?: string | null;
+          fecha_hora_salida?: string | null;
+          diagnostico_egreso?: string | null;
+          drogas_habito?: string | null;
+          chimo_habito?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -146,6 +216,41 @@ type ExtendedDatabase = Database & {
           hipertension?: boolean | null;
           hipertension_tratamiento?: string | null;
           vacunas?: string | null;
+          ant_problemas_tiroides?: boolean | null;
+          ant_obesidad?: boolean | null;
+          ant_cancer?: boolean | null;
+          ant_asma?: boolean | null;
+          ant_bronquitis_cronica?: boolean | null;
+          ant_enfisema?: boolean | null;
+          ant_tbc?: boolean | null;
+          ant_anticoagulante?: boolean | null;
+          ant_reaccion_anestesia?: boolean | null;
+          ant_cardiopatia?: boolean | null;
+          ant_nefropatia?: boolean | null;
+          ant_cirugia_abdominal_alta?: boolean | null;
+          ant_disnea?: boolean | null;
+          ant_tos?: boolean | null;
+          ant_expectoracion?: boolean | null;
+          intervenido_quirurgico?: boolean | null;
+          fecha_intervencion_quirurgica?: string | null;
+          tipo_intervencion_quirurgica?: string | null;
+          otra_enfermedad_cronica?: boolean | null;
+          tratamiento_otra_causa?: boolean | null;
+          convulsiones?: boolean | null;
+          acv?: boolean | null;
+          estado_civil?: string | null;
+          alimentacion?: string | null;
+          habitos_intestinales?: string | null;
+          sueno?: string | null;
+          neurologico?: string | null;
+          sintomas?: string | null;
+          direccion_completa?: string | null;
+          direccion_ciudad?: string | null;
+          direccion_estado?: string | null;
+          fecha_hora_salida?: string | null;
+          diagnostico_egreso?: string | null;
+          drogas_habito?: string | null;
+          chimo_habito?: string | null;
           is_draft?: boolean | null;
           created_by?: string | null;
           created_at?: string;
@@ -204,6 +309,41 @@ export interface TriageRecord {
   hipertension: boolean | null;
   hipertension_tratamiento: string | null;
   vacunas: string | null;
+  ant_problemas_tiroides: boolean | null;
+  ant_obesidad: boolean | null;
+  ant_cancer: boolean | null;
+  ant_asma: boolean | null;
+  ant_bronquitis_cronica: boolean | null;
+  ant_enfisema: boolean | null;
+  ant_tbc: boolean | null;
+  ant_anticoagulante: boolean | null;
+  ant_reaccion_anestesia: boolean | null;
+  ant_cardiopatia: boolean | null;
+  ant_nefropatia: boolean | null;
+  ant_cirugia_abdominal_alta: boolean | null;
+  ant_disnea: boolean | null;
+  ant_tos: boolean | null;
+  ant_expectoracion: boolean | null;
+  intervenido_quirurgico: boolean | null;
+  fecha_intervencion_quirurgica: string | null;
+  tipo_intervencion_quirurgica: string | null;
+  otra_enfermedad_cronica: boolean | null;
+  tratamiento_otra_causa: boolean | null;
+  convulsiones: boolean | null;
+  acv: boolean | null;
+  estado_civil: string | null;
+  alimentacion: string | null;
+  habitos_intestinales: string | null;
+  sueno: string | null;
+  neurologico: string | null;
+  sintomas: string | null;
+  direccion_completa: string | null;
+  direccion_ciudad: string | null;
+  direccion_estado: string | null;
+  fecha_hora_salida: string | null;
+  diagnostico_egreso: string | null;
+  drogas_habito: string | null;
+  chimo_habito: string | null;
   is_draft: boolean | null;
   created_by: string | null;
   created_at: string | null;
@@ -251,6 +391,41 @@ export interface TriageRecordInsert {
   hipertension?: boolean | null;
   hipertension_tratamiento?: string | null;
   vacunas?: string | null;
+  ant_problemas_tiroides?: boolean | null;
+  ant_obesidad?: boolean | null;
+  ant_cancer?: boolean | null;
+  ant_asma?: boolean | null;
+  ant_bronquitis_cronica?: boolean | null;
+  ant_enfisema?: boolean | null;
+  ant_tbc?: boolean | null;
+  ant_anticoagulante?: boolean | null;
+  ant_reaccion_anestesia?: boolean | null;
+  ant_cardiopatia?: boolean | null;
+  ant_nefropatia?: boolean | null;
+  ant_cirugia_abdominal_alta?: boolean | null;
+  ant_disnea?: boolean | null;
+  ant_tos?: boolean | null;
+  ant_expectoracion?: boolean | null;
+  intervenido_quirurgico?: boolean | null;
+  fecha_intervencion_quirurgica?: string | null;
+  tipo_intervencion_quirurgica?: string | null;
+  otra_enfermedad_cronica?: boolean | null;
+  tratamiento_otra_causa?: boolean | null;
+  convulsiones?: boolean | null;
+  acv?: boolean | null;
+  estado_civil?: string | null;
+  alimentacion?: string | null;
+  habitos_intestinales?: string | null;
+  sueno?: string | null;
+  neurologico?: string | null;
+  sintomas?: string | null;
+  direccion_completa?: string | null;
+  direccion_ciudad?: string | null;
+  direccion_estado?: string | null;
+  fecha_hora_salida?: string | null;
+  diagnostico_egreso?: string | null;
+  drogas_habito?: string | null;
+  chimo_habito?: string | null;
   is_draft?: boolean | null;
   created_by?: string | null;
 }
@@ -583,6 +758,19 @@ const validateTriageData = (data: Omit<TriageRecordInsert, 'laboratory_id' | 'cr
 
   if (data.hipertension === true && !hasText(data.hipertension_tratamiento)) {
     throw new Error('Debe indicar el tratamiento de hipertensión cuando marca hipertensión = Sí.');
+  }
+
+  if (data.intervenido_quirurgico === true) {
+    if (!data.fecha_intervencion_quirurgica) {
+      throw new Error(
+        'Debe indicar la fecha de la intervención cuando marca intervención quirúrgica previa = Sí.',
+      );
+    }
+    if (!hasText(data.tipo_intervencion_quirurgica)) {
+      throw new Error(
+        'Debe indicar el tipo de operación cuando marca intervención quirúrgica previa = Sí.',
+      );
+    }
   }
 
   // Signos vitales y antropométricos son opcionales en backend (la obligatoriedad por rol se aplica en frontend).
