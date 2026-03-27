@@ -8,6 +8,11 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 /** URL de la Edge Function send-email (Supabase). Usar en lugar de /api/send-email. */
 export const SEND_EMAIL_FUNCTION_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/send-email` : ''
 
+/** Comprobante de pago de póliza por correo (Resend + adjunto). Requiere JWT. */
+export const POLIZAS_PAYMENT_EMAIL_FUNCTION_URL = SUPABASE_URL
+	? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/polizas-payment-email`
+	: ''
+
 /** URLs de Edge Functions (Supabase). */
 const FUNCTIONS_BASE = SUPABASE_URL ? SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' : ''
 export const GENERATE_DOC_FUNCTION_URL = FUNCTIONS_BASE ? `${FUNCTIONS_BASE}/generate-doc` : ''

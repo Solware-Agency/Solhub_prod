@@ -3,25 +3,16 @@ import type { PostgrestError } from '@supabase/supabase-js'
 import { getUserLaboratoryId } from '../aseguradoras/aseguradoras-utils'
 
 const BUCKET_NAME = 'aseguradora-recibos'
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
+const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB (alineado con bucket aseguradora-recibos)
 
 /**
- * Valida el archivo de recibo (PDF o imagen)
+ * Valida tamaño del comprobante (cualquier tipo de archivo permitido en storage).
  */
 export function validateReciboFile(file: File): { valid: boolean; error?: string } {
 	if (file.size > MAX_FILE_SIZE) {
 		return {
 			valid: false,
 			error: `El archivo es demasiado grande. Tamaño máximo: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-		}
-	}
-
-	const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
-	if (!ALLOWED_EXTENSIONS.includes(ext)) {
-		return {
-			valid: false,
-			error: 'Formato no permitido. Solo PDF, JPG, JPEG o PNG.',
 		}
 	}
 
@@ -48,13 +39,14 @@ export async function uploadReciboPago(
 
 		const laboratoryId = await getUserLaboratoryId()
 
-		const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.')) || '.pdf'
+		const dot = file.name.lastIndexOf('.')
+		const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : ''
 		const baseName = file.name
 			.replace(/[^a-zA-Z0-9._\s-]/g, '_')
 			.replace(/_{2,}/g, '_')
 			.replace(/^_+|_+$/g, '')
 			.trim() || 'recibo'
-		const sanitizedName = baseName.endsWith(ext) ? baseName : `${baseName}${ext}`
+		const sanitizedName = !ext || baseName.toLowerCase().endsWith(ext) ? baseName : `${baseName}${ext}`
 		const timestamp = Date.now()
 		const fileName = `${timestamp}_${sanitizedName}`
 		const filePath = `${laboratoryId}/${polizaId}/${fileName}`

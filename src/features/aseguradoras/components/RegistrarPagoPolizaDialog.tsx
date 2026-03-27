@@ -10,6 +10,7 @@ import { FileText, Upload, X } from 'lucide-react'
 import { updatePoliza, getNextPaymentDateOnMarkPaidPoliza, type Poliza } from '@services/supabase/aseguradoras/polizas-service'
 import { createPagoPoliza } from '@services/supabase/aseguradoras/pagos-poliza-service'
 import { uploadReciboPago, validateReciboFile } from '@services/supabase/storage/pagos-poliza-recibos-service'
+import { sendPolizaPaymentEmail } from '@services/supabase/aseguradoras/polizas-payment-email-service'
 
 const METODOS_PAGO = [
 	{ value: 'Zelle', label: 'Zelle' },
@@ -151,7 +152,40 @@ export const RegistrarPagoPolizaDialog: React.FC<RegistrarPagoPolizaDialogProps>
 			}
 
 			await invalidatePolizaPaymentQueries(queryClient, poliza)
-			toast({ title: 'Pago registrado' })
+
+			const emailResult = await sendPolizaPaymentEmail({
+				poliza_id: poliza.id,
+				fecha_pago: form.fecha_pago,
+				monto: Number(form.monto),
+				metodo_pago: form.metodo_pago || null,
+				referencia: form.referencia || null,
+				notas: form.notas || null,
+				documento_pago_url: form.documento_pago_url || null,
+				attachment_filename: reciboFileName || null,
+			})
+
+			if (emailResult.success && !emailResult.emailSent && emailResult.reason === 'no_email') {
+				toast({
+					title: 'Pago registrado',
+					description: emailResult.message,
+					variant: 'destructive',
+				})
+			} else if (emailResult.success && emailResult.emailSent) {
+				const who =
+					emailResult.recipients && emailResult.recipients.length > 0
+						? ` Enviado a: ${emailResult.recipients.join(', ')}.`
+						: ''
+				toast({ title: 'Pago registrado', description: `Se envió el comprobante por correo.${who}` })
+			} else if (!emailResult.success) {
+				toast({
+					title: 'Pago registrado',
+					description: `El pago quedó guardado, pero el correo falló: ${emailResult.error}`,
+					variant: 'destructive',
+				})
+			} else {
+				toast({ title: 'Pago registrado' })
+			}
+
 			onOpenChange(false)
 			onRegistered?.({ nextPaymentDate: nextDate })
 			if (nextDate) setNextPaymentDateAlert(nextDate)
@@ -233,7 +267,7 @@ export const RegistrarPagoPolizaDialog: React.FC<RegistrarPagoPolizaDialogProps>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label>Adjuntar comprobante</Label>
-							<input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleReciboFileChange} className="hidden" />
+							<input ref={fileInputRef} type="file" onChange={handleReciboFileChange} className="hidden" />
 							{form.documento_pago_url ? (
 								<div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
 									<FileText className="h-5 w-5 text-primary shrink-0" />
@@ -249,7 +283,7 @@ export const RegistrarPagoPolizaDialog: React.FC<RegistrarPagoPolizaDialogProps>
 									) : (
 										<>
 											<Upload className="h-4 w-4 mr-2" />
-											PDF, JPG o PNG
+											Cualquier archivo (máx. 25 MB)
 										</>
 									)}
 								</Button>

@@ -83,8 +83,8 @@ export interface Poliza {
 	billing_amount?: number | null
 	/** current = al día; overdue = vencida. */
 	payment_status?: 'current' | 'overdue' | null
-	asegurado?: { id: string; full_name: string; document_id: string } | null
-	aseguradora?: { id: string; nombre: string } | null
+	asegurado?: { id: string; full_name: string; document_id: string; email?: string | null } | null
+	aseguradora?: { id: string; nombre: string; email?: string | null } | null
 }
 
 export interface PolizaInsert {
@@ -184,7 +184,7 @@ export const getPolizas = async (
 	let query = supabase
 		.from('polizas')
 		.select(
-			'*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)',
+			'*, asegurado:asegurados(id, full_name, document_id, email), aseguradora:aseguradoras(id, nombre, email)',
 			{ count: 'exact' },
 		)
 		.eq('laboratory_id', laboratoryId)
@@ -316,7 +316,7 @@ export const getPolizasByAseguradoId = async (aseguradoId: string): Promise<Poli
 
 	const { data, error } = await supabase
 		.from('polizas')
-		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.select('*, asegurado:asegurados(id, full_name, document_id, email), aseguradora:aseguradoras(id, nombre, email)')
 		.eq('laboratory_id', laboratoryId)
 		.eq('activo', true)
 		.eq('asegurado_id', aseguradoId)
@@ -349,7 +349,7 @@ export const getPolizasByAseguradoraId = async (aseguradoraId: string): Promise<
 
 	const { data, error } = await supabase
 		.from('polizas')
-		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.select('*, asegurado:asegurados(id, full_name, document_id, email), aseguradora:aseguradoras(id, nombre, email)')
 		.eq('laboratory_id', laboratoryId)
 		.eq('activo', true)
 		.eq('aseguradora_id', aseguradoraId)
@@ -390,7 +390,7 @@ export const getPolizasByEstado = async (estado: PolizaEstadoFilter): Promise<Po
 
 	let query = supabase
 		.from('polizas')
-		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.select('*, asegurado:asegurados(id, full_name, document_id, email), aseguradora:aseguradoras(id, nombre, email)')
 		.eq('laboratory_id', laboratoryId)
 		.eq('activo', true)
 		.order('fecha_prox_vencimiento', { ascending: true })
@@ -426,7 +426,7 @@ export const getPolizaById = async (id: string): Promise<Poliza | null> => {
 	const laboratoryId = await getUserLaboratoryId()
 	const { data, error } = await supabase
 		.from('polizas')
-		.select('*, asegurado:asegurados(id, full_name, document_id), aseguradora:aseguradoras(id, nombre)')
+		.select('*, asegurado:asegurados(id, full_name, document_id, email), aseguradora:aseguradoras(id, nombre, email)')
 		.eq('id', id)
 		.eq('laboratory_id', laboratoryId)
 		.single()
