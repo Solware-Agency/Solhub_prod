@@ -455,7 +455,20 @@ const PolizasPage = () => {
 				toast({ title: 'Póliza creada' })
 			} catch (err) {
 				console.error(err)
-				toast({ title: 'Error al crear póliza', variant: 'destructive' })
+				const code = err && typeof err === 'object' && 'code' in err ? String((err as { code?: string }).code) : ''
+				const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : ''
+				let description: string | undefined
+				if (code === '23505' && msg.includes('polizas_codigo_unique')) {
+					description =
+						'Código interno duplicado: suele deberse a contador desincronizado (migración sync_aseguradoras_code_counters) o al bug del LPAD de 3 dígitos (migración fix_get_next_aseguradoras_code_no_truncating_lpad). Aplica ambas en Supabase y reintenta.'
+				} else if (code === '23505') {
+					description = 'Ya existe otro registro con el mismo dato único (código o número de póliza).'
+				}
+				toast({
+					title: 'Error al crear póliza',
+					...(description ? { description } : {}),
+					variant: 'destructive',
+				})
 			} finally {
 				setSaving(false)
 				setUploadingPdf(false)
