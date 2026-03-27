@@ -16,7 +16,11 @@ import { DateField } from '@shared/components/ui/date-field'
 import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight, Paperclip, X, Loader2 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { exportRowsToExcel } from '@shared/utils/exportToExcel'
+import { exportRowsToExcelOrdered } from '@shared/utils/exportToExcel'
+import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal'
+import { ExportColumnsModal } from '@shared/components/ui/ExportColumnsModal'
+import { ASEGURADO_EXPORT_COLUMN_OPTIONS } from '@shared/constants/aseguradorasExportColumns'
+import { useExportWithColumnPicker } from '@shared/hooks/useExportWithColumnPicker'
 import AseguradoCard from '@features/aseguradoras/components/AseguradoCard'
 import {
 	createAsegurado,
@@ -61,6 +65,19 @@ const AseguradosPage = () => {
 	const [attachmentFiles, setAttachmentFiles] = useState<File[]>([])
 	const [saving, setSaving] = useState(false)
 	const [isExporting, setIsExporting] = useState(false)
+	const {
+		exportColumnOptions,
+		widthByKey,
+		getKeysToExport,
+		isConfirmOpen,
+		setIsConfirmOpen,
+		isColumnsOpen,
+		setIsColumnsOpen,
+		selectedColumnKeys,
+		pendingCount,
+		openConfirm,
+		handleApplyColumnSelection,
+	} = useExportWithColumnPicker(ASEGURADO_EXPORT_COLUMN_OPTIONS)
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['asegurados', searchTerm, currentPage, itemsPerPage],
@@ -80,7 +97,20 @@ const AseguradosPage = () => {
 		setCurrentPage(page)
 	}, [])
 
-	const handleExportExcel = useCallback(async () => {
+	const handleExportClick = useCallback(() => {
+		const count = data?.count ?? 0
+		if (count === 0) {
+			toast({
+				title: 'Sin datos para exportar',
+				description: 'No hay asegurados que coincidan con la búsqueda.',
+				variant: 'destructive',
+			})
+			return
+		}
+		openConfirm(count)
+	}, [data?.count, openConfirm, toast])
+
+	const handleConfirmExport = useCallback(async () => {
 		setIsExporting(true)
 		try {
 			const rows = await getAllAseguradosForExport(searchTerm, 'created_at', 'desc')
@@ -88,21 +118,21 @@ const AseguradosPage = () => {
 				toast({
 					title: 'Sin datos para exportar',
 					description: 'No hay asegurados que coincidan con la búsqueda.',
+					variant: 'destructive',
 				})
 				return
 			}
-			exportRowsToExcel(
-				'asegurados',
-				rows.map((row) => ({
-					Código: row.codigo ?? '',
-					Nombre: row.full_name,
-					Documento: row.document_id,
-					Teléfono: row.phone,
-					Email: row.email ?? '',
-					'Fecha nac.': row.fecha_nacimiento ?? '',
-					Tipo: row.tipo_asegurado,
-				})),
-			)
+			const keys = getKeysToExport()
+			const mapped = rows.map((row) => ({
+				Código: row.codigo ?? '',
+				Nombre: row.full_name,
+				Documento: row.document_id,
+				Teléfono: row.phone,
+				Email: row.email ?? '',
+				'Fecha nac.': row.fecha_nacimiento ?? '',
+				Tipo: row.tipo_asegurado,
+			}))
+			exportRowsToExcelOrdered('asegurados', mapped, keys, widthByKey)
 			toast({
 				title: 'Exportación lista',
 				description: `Se exportaron ${rows.length} asegurado${rows.length === 1 ? '' : 's'}.`,
@@ -117,7 +147,7 @@ const AseguradosPage = () => {
 		} finally {
 			setIsExporting(false)
 		}
-	}, [searchTerm, toast])
+	}, [searchTerm, toast, getKeysToExport, widthByKey])
 
 	const resetForm = () => {
 		setForm({
@@ -266,7 +296,7 @@ const AseguradosPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => void handleExportExcel()}
+								onClick={() => void handleExportClick()}
 								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
 								title="Exportar todos (según búsqueda)"
@@ -520,6 +550,26 @@ const AseguradosPage = () => {
 					setSelectedAsegurado(updated)
 					queryClient.invalidateQueries({ queryKey: ['asegurados'] })
 				}}
+			/>
+
+			<ExportConfirmationModal
+				isOpen={isConfirmOpen}
+				onOpenChange={setIsConfirmOpen}
+				onConfirm={() => void handleConfirmExport()}
+				onCancel={() => {}}
+				casesCount={pendingCount}
+				isLoading={isExporting}
+				onPersonalize={() => setIsColumnsOpen(true)}
+				selectedColumnCount={selectedColumnKeys === null ? undefined : selectedColumnKeys.length}
+				recordsNoun={{ singular: 'asegurado', plural: 'asegurados' }}
+				summaryBullets={['Asegurados activos según el término de búsqueda actual.', 'Puedes elegir columnas en Personalizar.']}
+			/>
+			<ExportColumnsModal
+				open={isColumnsOpen}
+				onOpenChange={setIsColumnsOpen}
+				columnOptions={exportColumnOptions}
+				selectedKeys={selectedColumnKeys}
+				onApply={handleApplyColumnSelection}
 			/>
 		</div>
 	)

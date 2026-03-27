@@ -31,7 +31,11 @@ import {
 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { addMonths, format, isValid, parse } from 'date-fns'
-import { exportRowsToExcel } from '@shared/utils/exportToExcel'
+import { exportRowsToExcelOrdered } from '@shared/utils/exportToExcel'
+import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal'
+import { ExportColumnsModal } from '@shared/components/ui/ExportColumnsModal'
+import { POLIZA_EXPORT_COLUMN_OPTIONS } from '@shared/constants/aseguradorasExportColumns'
+import { useExportWithColumnPicker } from '@shared/hooks/useExportWithColumnPicker'
 import { getAseguradoras, type Aseguradora } from '@services/supabase/aseguradoras/aseguradoras-service'
 import { findAseguradoById, type Asegurado } from '@services/supabase/aseguradoras/asegurados-service'
 import {
@@ -86,6 +90,19 @@ const PolizasPage = () => {
 	const [existingDocumentos, setExistingDocumentos] = useState<DocumentoPoliza[]>([])
 	const [removedDocIndices, setRemovedDocIndices] = useState<Set<number>>(new Set())
 	const [isExporting, setIsExporting] = useState(false)
+	const {
+		exportColumnOptions,
+		widthByKey,
+		getKeysToExport,
+		isConfirmOpen,
+		setIsConfirmOpen,
+		isColumnsOpen: isExportColumnsOpen,
+		setIsColumnsOpen: setExportColumnsOpen,
+		selectedColumnKeys,
+		pendingCount,
+		openConfirm,
+		handleApplyColumnSelection,
+	} = useExportWithColumnPicker(POLIZA_EXPORT_COLUMN_OPTIONS)
 	const docFileInputRef = React.useRef<HTMLInputElement>(null)
 	const [form, setForm] = useState({
 		asegurado_id: '',
@@ -192,7 +209,20 @@ const PolizasPage = () => {
 		setCurrentPage(page)
 	}, [])
 
-	const handleExportExcel = useCallback(async () => {
+	const handleExportClick = useCallback(() => {
+		const count = data?.count ?? 0
+		if (count === 0) {
+			toast({
+				title: 'Sin datos para exportar',
+				description: 'No hay pólizas que coincidan con la búsqueda y los filtros.',
+				variant: 'destructive',
+			})
+			return
+		}
+		openConfirm(count)
+	}, [data?.count, openConfirm, toast])
+
+	const handleConfirmExport = useCallback(async () => {
 		setIsExporting(true)
 		try {
 			const rows = await getAllPolizasForExport(searchTerm, 'created_at', 'desc', listFilters)
@@ -200,23 +230,23 @@ const PolizasPage = () => {
 				toast({
 					title: 'Sin datos para exportar',
 					description: 'No hay pólizas que coincidan con la búsqueda y los filtros.',
+					variant: 'destructive',
 				})
 				return
 			}
-			exportRowsToExcel(
-				'polizas',
-				rows.map((row) => ({
-					Código: row.codigo ?? '',
-					'Número de póliza': row.numero_poliza,
-					Asegurado: row.asegurado?.full_name || '',
-					Aseguradora: row.aseguradora?.nombre || '',
-					Ramo: row.ramo,
-					'Modalidad de pago': row.modalidad_pago,
-					'Estatus póliza': row.estatus_poliza,
-					'Estatus pago': row.estatus_pago || '',
-					'Fecha vencimiento': row.fecha_vencimiento,
-				})),
-			)
+			const keys = getKeysToExport()
+			const mapped = rows.map((row) => ({
+				Código: row.codigo ?? '',
+				'Número de póliza': row.numero_poliza,
+				Asegurado: row.asegurado?.full_name || '',
+				Aseguradora: row.aseguradora?.nombre || '',
+				Ramo: row.ramo,
+				'Modalidad de pago': row.modalidad_pago,
+				'Estatus póliza': row.estatus_poliza,
+				'Estatus pago': row.estatus_pago || '',
+				'Fecha vencimiento': row.fecha_vencimiento,
+			}))
+			exportRowsToExcelOrdered('polizas', mapped, keys, widthByKey)
 			toast({
 				title: 'Exportación lista',
 				description: `Se exportaron ${rows.length} póliza${rows.length === 1 ? '' : 's'}.`,
@@ -231,7 +261,7 @@ const PolizasPage = () => {
 		} finally {
 			setIsExporting(false)
 		}
-	}, [searchTerm, listFilters, toast])
+	}, [searchTerm, listFilters, toast, getKeysToExport, widthByKey])
 
 	const handleAseguradoClick = useCallback(async (aseguradoId: string) => {
 		const a = await findAseguradoById(aseguradoId)
@@ -918,7 +948,7 @@ const PolizasPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => void handleExportExcel()}
+								onClick={() => void handleExportClick()}
 								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
 								title="Exportar todas (según búsqueda y filtros)"
@@ -1113,6 +1143,29 @@ const PolizasPage = () => {
 					setListFilters(f)
 					setCurrentPage(1)
 				}}
+			/>
+
+			<ExportConfirmationModal
+				isOpen={isConfirmOpen}
+				onOpenChange={setIsConfirmOpen}
+				onConfirm={() => void handleConfirmExport()}
+				onCancel={() => {}}
+				casesCount={pendingCount}
+				isLoading={isExporting}
+				onPersonalize={() => setExportColumnsOpen(true)}
+				selectedColumnCount={selectedColumnKeys === null ? undefined : selectedColumnKeys.length}
+				recordsNoun={{ singular: 'póliza', plural: 'pólizas' }}
+				summaryBullets={[
+					'Pólizas según búsqueda y filtros del listado.',
+					'Puedes elegir columnas en Personalizar.',
+				]}
+			/>
+			<ExportColumnsModal
+				open={isExportColumnsOpen}
+				onOpenChange={setExportColumnsOpen}
+				columnOptions={exportColumnOptions}
+				selectedKeys={selectedColumnKeys}
+				onApply={handleApplyColumnSelection}
 			/>
 		</div>
 	)

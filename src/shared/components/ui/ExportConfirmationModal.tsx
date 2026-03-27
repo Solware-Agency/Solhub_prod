@@ -13,7 +13,20 @@ interface ExportConfirmationModalProps {
 	isLoading?: boolean
 	onPersonalize?: () => void
 	selectedColumnCount?: number | null
+	/** Texto después del número: singular (1) / plural (≠1). Por defecto caso(s) filtrado(s). */
+	recordsNoun?: { singular: string; plural: string }
+	/** Líneas del recuadro azul. `undefined` = bullets por defecto (casos médicos); `[]` = ocultar lista. */
+	summaryBullets?: string[] | undefined
 }
+
+const DEFAULT_RECORDS_NOUN = { singular: 'caso filtrado', plural: 'casos filtrados' }
+
+const DEFAULT_SUMMARY_BULLETS = [
+	'Información del paciente y caso médico',
+	'Estado de pagos y montos',
+	'Datos de citología y EXCEL',
+	'Filtros aplicados en el nombre del archivo',
+]
 
 export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
 	isOpen,
@@ -24,6 +37,8 @@ export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = (
 	isLoading = false,
 	onPersonalize,
 	selectedColumnCount,
+	recordsNoun = DEFAULT_RECORDS_NOUN,
+	summaryBullets,
 }) => {
 	const handleConfirm = () => {
 		onConfirm()
@@ -37,9 +52,10 @@ export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = (
 
 	const getMessage = () => {
 		if (casesCount === 0) {
-			return 'No hay casos que coincidan con los filtros actuales para exportar.'
+			return `No hay ${recordsNoun.plural} que coincidan con los filtros actuales para exportar.`
 		}
-		return `¿Confirmar exportación de ${casesCount} casos filtrados?`
+		const noun = casesCount === 1 ? recordsNoun.singular : recordsNoun.plural
+		return `¿Confirmar exportación de ${casesCount} ${noun}?`
 	}
 
 	const getIcon = () => {
@@ -90,12 +106,15 @@ export const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = (
 										: 'El archivo incluirá:'}
 								</span>
 							</div>
-							{selectedColumnCount == null && (
+							{selectedColumnCount == null &&
+								(summaryBullets === undefined ? DEFAULT_SUMMARY_BULLETS : summaryBullets).length >
+									0 && (
 								<ul className="mt-2 text-xs text-blue-700 dark:text-blue-400 space-y-1 ml-6">
-									<li>• Información del paciente y caso médico</li>
-									<li>• Estado de pagos y montos</li>
-									<li>• Datos de citología y EXCEL</li>
-									<li>• Filtros aplicados en el nombre del archivo</li>
+									{(summaryBullets === undefined ? DEFAULT_SUMMARY_BULLETS : summaryBullets).map(
+										(line) => (
+											<li key={line}>• {line}</li>
+										),
+									)}
 								</ul>
 							)}
 						</div>

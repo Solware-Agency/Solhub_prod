@@ -14,7 +14,11 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useToast } from '@shared/hooks/use-toast'
 import { Plus, Download, Search, ChevronLeft, ChevronRight, Loader2, Filter } from 'lucide-react'
-import { exportRowsToExcel } from '@shared/utils/exportToExcel'
+import { exportRowsToExcelOrdered } from '@shared/utils/exportToExcel'
+import { ExportConfirmationModal } from '@shared/components/ui/ExportConfirmationModal'
+import { ExportColumnsModal } from '@shared/components/ui/ExportColumnsModal'
+import { ASEGURADORA_EXPORT_COLUMN_OPTIONS } from '@shared/constants/aseguradorasExportColumns'
+import { useExportWithColumnPicker } from '@shared/hooks/useExportWithColumnPicker'
 import AseguradoraCard from '@features/aseguradoras/components/AseguradoraCard'
 import { AseguradoraHistoryModal } from '@features/aseguradoras/components/AseguradoraHistoryModal'
 import { AseguradoraFiltersModal } from '@features/aseguradoras/components/AseguradoraFiltersModal'
@@ -63,6 +67,19 @@ const CompaniasPage = () => {
 	})
 	const [saving, setSaving] = useState(false)
 	const [isExporting, setIsExporting] = useState(false)
+	const {
+		exportColumnOptions,
+		widthByKey,
+		getKeysToExport,
+		isConfirmOpen,
+		setIsConfirmOpen,
+		isColumnsOpen,
+		setIsColumnsOpen,
+		selectedColumnKeys,
+		pendingCount,
+		openConfirm,
+		handleApplyColumnSelection,
+	} = useExportWithColumnPicker(ASEGURADORA_EXPORT_COLUMN_OPTIONS)
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['aseguradoras-catalogo', filters],
@@ -87,7 +104,20 @@ const CompaniasPage = () => {
 		setCurrentPage(page)
 	}, [])
 
-	const handleExportExcel = useCallback(async () => {
+	const handleExportClick = useCallback(() => {
+		const count = filteredCatalogo.length
+		if (count === 0) {
+			toast({
+				title: 'Sin datos para exportar',
+				description: 'No hay compañías que coincidan con la búsqueda.',
+				variant: 'destructive',
+			})
+			return
+		}
+		openConfirm(count)
+	}, [filteredCatalogo.length, openConfirm, toast])
+
+	const handleConfirmExport = useCallback(async () => {
 		setIsExporting(true)
 		try {
 			const all = await getAllAseguradorasForExport(filters)
@@ -96,22 +126,22 @@ const CompaniasPage = () => {
 				toast({
 					title: 'Sin datos para exportar',
 					description: 'No hay compañías que coincidan con la búsqueda.',
+					variant: 'destructive',
 				})
 				return
 			}
-			exportRowsToExcel(
-				'aseguradoras',
-				rows.map((row) => ({
-					Código: row.codigo ?? '',
-					Nombre: row.nombre,
-					'Código interno': row.codigo_interno || '',
-					RIF: row.rif || '',
-					Teléfono: row.telefono || '',
-					Email: row.email || '',
-					Web: row.web || '',
-					Activo: row.activo ? 'Activo' : 'Inactivo',
-				})),
-			)
+			const keys = getKeysToExport()
+			const mapped = rows.map((row) => ({
+				Código: row.codigo ?? '',
+				Nombre: row.nombre,
+				'Código interno': row.codigo_interno || '',
+				RIF: row.rif || '',
+				Teléfono: row.telefono || '',
+				Email: row.email || '',
+				Web: row.web || '',
+				Activo: row.activo ? 'Activo' : 'Inactivo',
+			}))
+			exportRowsToExcelOrdered('aseguradoras', mapped, keys, widthByKey)
 			toast({
 				title: 'Exportación lista',
 				description: `Se exportaron ${rows.length} compañía${rows.length === 1 ? '' : 's'}.`,
@@ -126,7 +156,7 @@ const CompaniasPage = () => {
 		} finally {
 			setIsExporting(false)
 		}
-	}, [searchTerm, filters, toast])
+	}, [searchTerm, filters, toast, getKeysToExport, widthByKey])
 
 	const handleApplyFilters = useCallback((newFilters: AseguradoraListFilters) => {
 		setFilters(newFilters)
@@ -267,7 +297,7 @@ const CompaniasPage = () => {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => void handleExportExcel()}
+								onClick={() => void handleExportClick()}
 								disabled={isExporting}
 								className="gap-1.5 sm:gap-2 shrink-0"
 								title="Exportar todas las compañías activas (según búsqueda)"
@@ -449,6 +479,29 @@ const CompaniasPage = () => {
 				onClose={() => setHistoryModalOpen(false)}
 				aseguradora={selectedAseguradora}
 				onAseguradoraUpdated={handleAseguradoraUpdated}
+			/>
+
+			<ExportConfirmationModal
+				isOpen={isConfirmOpen}
+				onOpenChange={setIsConfirmOpen}
+				onConfirm={() => void handleConfirmExport()}
+				onCancel={() => {}}
+				casesCount={pendingCount}
+				isLoading={isExporting}
+				onPersonalize={() => setIsColumnsOpen(true)}
+				selectedColumnCount={selectedColumnKeys === null ? undefined : selectedColumnKeys.length}
+				recordsNoun={{ singular: 'compañía', plural: 'compañías' }}
+				summaryBullets={[
+					'Catálogo según filtros del modal y búsqueda en pantalla.',
+					'Puedes elegir columnas en Personalizar.',
+				]}
+			/>
+			<ExportColumnsModal
+				open={isColumnsOpen}
+				onOpenChange={setIsColumnsOpen}
+				columnOptions={exportColumnOptions}
+				selectedKeys={selectedColumnKeys}
+				onApply={handleApplyColumnSelection}
 			/>
 		</div>
 	)
