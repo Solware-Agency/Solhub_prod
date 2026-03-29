@@ -640,6 +640,12 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 			}
 		}, [isOpen])
 
+		// Colapsar "Ver más" al cerrar el modal o al abrir otro caso (evita estado colgado entre casos)
+		useEffect(() => {
+			setShowFullPatientInfo(false)
+			setShowAdditionalInfo(false)
+		}, [isOpen, case_?.id])
+
 		const handleCloseComplete = () => {
 			if (exitingRef.current) {
 				exitingRef.current = false
@@ -1998,11 +2004,45 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							isFullscreen ? 'z-[99999999999999999]' : 'z-[9999999999999999]'
 						} overflow-x-hidden max-w-full`}
 					>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-								<div className="flex-1 min-w-0">
-									<h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{modalTitle}</h2>
-								</div>
+						<div className="flex items-center justify-between gap-2 sm:gap-3">
+							<div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 flex-1 min-w-0">
+								<h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight shrink-0">
+									{modalTitle}
+								</h2>
+								{isMarihorgen && caseData.exam_type === 'Inmunohistoquímica' ? (
+									isEditing && isOwner ? (
+										<Input
+											type="text"
+											inputMode="numeric"
+											maxLength={5}
+											placeholder="Código"
+											value={String(editedCase.owner_display_code ?? (caseData as any).owner_display_code ?? '').slice(
+												0,
+												5,
+											)}
+											onChange={(e) => {
+												const v = e.target.value.replace(/\D/g, '').slice(0, 5)
+												handleInputChange('owner_display_code', v)
+											}}
+											className="inline-flex h-8 sm:h-9 w-[4.75rem] sm:w-[5.5rem] px-2 sm:px-2.5 text-base sm:text-lg font-semibold leading-tight rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700 shrink-0"
+										/>
+									) : (
+										<span className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 min-w-8 text-base sm:text-lg font-semibold leading-tight rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 shrink-0">
+											{(caseData as any).owner_display_code ?? ''}
+										</span>
+									)
+								) : caseData.code ? (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 text-base sm:text-lg font-semibold leading-tight rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help shrink-0">
+												{caseData.code}
+											</span>
+										</TooltipTrigger>
+										<TooltipContent style={{ zIndex: 2147483647 }}>
+											{getCodeLegend(caseData.code, laboratory)}
+										</TooltipContent>
+									</Tooltip>
+								) : null}
 							</div>
 							{/* Botón X (derecha) */}
 							<div className="flex items-center gap-2 shrink-0">
@@ -2016,40 +2056,6 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							</div>
 						</div>
 						<div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 max-w-full overflow-x-hidden">
-							{isMarihorgen && caseData.exam_type === 'Inmunohistoquímica' ? (
-								isEditing && isOwner ? (
-									<Input
-										type="text"
-										inputMode="numeric"
-										maxLength={5}
-										placeholder="Código"
-										value={String(editedCase.owner_display_code ?? (caseData as any).owner_display_code ?? '').slice(
-											0,
-											5,
-										)}
-										onChange={(e) => {
-											const v = e.target.value.replace(/\D/g, '').slice(0, 5)
-											handleInputChange('owner_display_code', v)
-										}}
-										className="inline-flex h-7 w-20 px-1.5 sm:px-2 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700 shrink-0"
-									/>
-								) : (
-									<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-8 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 shrink-0">
-										{(caseData as any).owner_display_code ?? ''}
-									</span>
-								)
-							) : caseData.code ? (
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 cursor-help shrink-0">
-											{caseData.code}
-										</span>
-									</TooltipTrigger>
-									<TooltipContent style={{ zIndex: 2147483647 }}>
-										{getCodeLegend(caseData.code, laboratory)}
-									</TooltipContent>
-								</Tooltip>
-							) : null}
 							{!notShow && !isSpt && (() => {
 								// LM/Marihorgen: usar estado calculado (crédito + pagos) para evitar inconsistencia con BD
 								const displayStatus =
@@ -2291,8 +2297,35 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 							</InfoSection>
 						)}
 
-						{/* Patient Information */}
-						<InfoSection title="Información del Paciente" icon={User}>
+						{/* Patient Information — cabecera como Información Adicional; nombre con InfoRow como antes */}
+						<div className="bg-white/60 dark:bg-background/30 backdrop-blur-[5px] rounded-lg p-4 border border-input shadow-sm hover:shadow-md transition-shadow duration-200">
+							<div className="flex items-center justify-between mb-3">
+								<div className="flex items-center gap-2">
+									<User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+									<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+										Información del Paciente
+									</h3>
+								</div>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
+									className="text-sm text-primary hover:text-primary/80"
+								>
+									{showFullPatientInfo ? (
+										<>
+											Ver menos
+											<ChevronUp className="ml-1 h-4 w-4" />
+										</>
+									) : (
+										<>
+											Ver más
+											<ChevronDown className="ml-1 h-4 w-4" />
+										</>
+									)}
+								</Button>
+							</div>
 							<div className="space-y-1">
 								<InfoRow
 									label="Nombre completo"
@@ -2319,30 +2352,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 									</div>
 								)}
 
-								{/* Botón Ver más/Ver menos */}
-								<div className="flex justify-center pt-2">
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onClick={() => setShowFullPatientInfo(!showFullPatientInfo)}
-										className="text-sm text-primary hover:text-primary/80"
-									>
-										{showFullPatientInfo ? (
-											<>
-												Ver menos
-												<ChevronUp className="ml-1 h-4 w-4" />
-											</>
-										) : (
-											<>
-												Ver más
-												<ChevronDown className="ml-1 h-4 w-4" />
-											</>
-										)}
-									</Button>
-								</div>
-
-								{/* Información adicional - Solo visible cuando showFullPatientInfo es true */}
+								{/* Detalle (cédula, edad, teléfono, email) — solo con Ver más */}
 								{showFullPatientInfo && (
 									<>
 										{/* Cédula - Solo mostrar si NO es representado */}
@@ -2398,7 +2408,7 @@ const UnifiedCaseModal: React.FC<CaseDetailPanelProps> = React.memo(
 
 								{/* Note: relationship field not in new structure, could be added if needed */}
 							</div>
-						</InfoSection>
+						</div>
 
 						{/* Medical Information */}
 						<InfoSection title="Información Médica" icon={Stethoscope}>

@@ -366,12 +366,76 @@ function SiNoSegmentGroup({
   );
 }
 
+/** Etiqueta y Sí/No segmentado en la misma línea (adecuado para historia clínica). */
+function SiNoInlineSegmentRow({
+  fieldId,
+  label,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  fieldId: string;
+  label: React.ReactNode;
+  value: string;
+  onChange: (next: 'Si' | 'No') => void;
+  disabled?: boolean;
+}) {
+  const labelId = `${fieldId}-legend`;
+  return (
+    <div className='flex items-center justify-between gap-2 w-full min-h-9'>
+      <span
+        id={labelId}
+        className='text-sm font-medium text-gray-700 dark:text-gray-300 flex-1 min-w-0 leading-snug pr-2'
+      >
+        {label}
+      </span>
+      <div
+        role='group'
+        aria-labelledby={labelId}
+        className='flex shrink-0 gap-0.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/90 dark:bg-gray-950/40 p-0.5'
+      >
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          disabled={disabled}
+          aria-pressed={value === 'Si'}
+          className={cn(
+            'h-8 min-w-[3rem] rounded-md px-2 text-xs sm:text-sm font-semibold transition-colors',
+            value === 'Si'
+              ? 'bg-teal-600 text-white shadow-sm hover:bg-teal-600 hover:text-white dark:bg-teal-600'
+              : 'text-gray-600 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:bg-gray-800',
+          )}
+          onClick={() => onChange('Si')}
+        >
+          Sí
+        </Button>
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          disabled={disabled}
+          aria-pressed={value === 'No'}
+          className={cn(
+            'h-8 min-w-[3rem] rounded-md px-2 text-xs sm:text-sm font-semibold transition-colors',
+            value === 'No'
+              ? 'bg-slate-600 text-white shadow-sm hover:bg-slate-600 hover:text-white dark:bg-slate-600'
+              : 'text-gray-600 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:bg-gray-800',
+          )}
+          onClick={() => onChange('No')}
+        >
+          No
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Componente para mostrar información de la historia clínica existente
 const TriageInfoDisplay: React.FC<{
   record: TriageRecord;
-  onClose: () => void;
   fechaIngresoCaso?: string | null;
-}> = ({ record, onClose, fechaIngresoCaso }) => {
+}> = ({ record, fechaIngresoCaso }) => {
   // Validar que el record existe
   if (!record) {
     return (
@@ -1141,18 +1205,6 @@ const TriageInfoDisplay: React.FC<{
           </CardContent>
         </Card>
       )}
-
-      {/* Botón Cerrar */}
-      <div className='flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700'>
-        <Button
-          type='button'
-          onClick={onClose}
-          variant='outline'
-          className='px-6'
-        >
-          Cerrar
-        </Button>
-      </div>
     </div>
   );
 };
@@ -2550,6 +2602,10 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
   const triajeCollapsibleTriggerClass =
     'flex w-full items-center justify-between gap-3 p-4 sm:p-6 text-left rounded-t-lg outline-none transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
+  /** Aire y línea suave entre el trigger y el cuerpo (evita que el hover del header choque con las cards). */
+  const triajeCollapsibleBodyClass =
+    'p-3 sm:p-4 pt-3 sm:pt-4 border-t border-gray-200/60 dark:border-gray-700/50';
+
   // Early returns DESPUÉS de todos los hooks
   if (!case_) {
     return null;
@@ -2576,7 +2632,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
         <div className='p-4'>
           <TriageInfoDisplay
             record={existingTriage}
-            onClose={onClose}
             fechaIngresoCaso={case_?.created_at ?? null}
           />
         </div>
@@ -2608,7 +2663,6 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
       <div className='p-4'>
         <TriageInfoDisplay
           record={existingTriage}
-          onClose={onClose}
           fechaIngresoCaso={case_?.created_at ?? null}
         />
       </div>
@@ -2661,7 +2715,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+              <CardContent className={triajeCollapsibleBodyClass}>
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <label className='text-sm font-medium mb-1.5 block text-gray-700 dark:text-gray-300'>
@@ -2886,7 +2940,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
+              <CardContent className={cn(triajeCollapsibleBodyClass, 'space-y-3')}>
                 {/* Fila 1: 3 antecedentes */}
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -3025,17 +3079,17 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 </div>
                 <div className='border-t border-teal-200/60 dark:border-teal-800/60 pt-3 space-y-3'>
                   <p className='text-sm font-semibold text-teal-800 dark:text-teal-200'>
-                    Antecedentes (Sí/No)
+                    Antecedentes
                   </p>
                   <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3'>
                     {ANT_SI_NO_ALL.map(([key, label]) => (
                       <div
                         key={key}
-                        className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'
+                        className='bg-gray-100 dark:bg-gray-800 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center'
                       >
-                        <SiNoSegmentGroup
+                        <SiNoInlineSegmentRow
+                          fieldId={`triaje-ant-${String(key)}`}
                           label={label}
-                          ariaLabel={label}
                           value={formData[key]}
                           onChange={(v) => handleInputChange(key, v)}
                           disabled={loading}
@@ -3121,7 +3175,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 space-y-3'>
+              <CardContent className={cn(triajeCollapsibleBodyClass, 'space-y-3')}>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
                   <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                     <SiNoSegmentGroup
@@ -3268,7 +3322,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-              <CardContent className={`p-3 sm:p-4 pt-0 sm:pt-0 ${formData.tabaco === 'Si' ? 'min-h-[240px]' : ''}`}>
+              <CardContent
+                className={cn(
+                  triajeCollapsibleBodyClass,
+                  formData.tabaco === 'Si' && 'min-h-[240px]',
+                )}
+              >
                   <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4'>
                     <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                       <SiNoSegmentGroup
@@ -3521,7 +3580,7 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-            <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0'>
+            <CardContent className={triajeCollapsibleBodyClass}>
               <div className='flex flex-wrap items-end gap-3'>
                 <div className='flex-1 min-w-30'>
                   <label className='text-sm font-medium mb-1.5 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
@@ -3799,7 +3858,12 @@ const TriajeModalForm: React.FC<TriajeModalFormProps> = ({
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-              <CardContent className='p-3 sm:p-4 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
+              <CardContent
+                className={cn(
+                  triajeCollapsibleBodyClass,
+                  'grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3',
+                )}
+              >
                 <div className='bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700'>
                   <p className='text-base font-medium mb-2 flex items-center gap-1.5 text-gray-700 dark:text-gray-300'>
                     <Clock className='h-4 w-4 text-gray-600 dark:text-gray-400' />
