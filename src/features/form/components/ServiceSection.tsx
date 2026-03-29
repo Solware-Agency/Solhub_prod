@@ -157,27 +157,36 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 						</FormItem>
 					)}
 				/>
-				{/* Procedencia - CON AUTOCOMPLETADO */}
-				{(procedenciaConfig?.enabled || isLM) && (
+				{/* Médico Tratante - CON AUTOCOMPLETADO - Solo visible si está habilitado en la configuración o es LM/Marihorgen */}
+				{(medicoTratanteConfig?.enabled || isLM) && (
 					<FormField
 						control={control}
-						name="origin"
+						name="treatingDoctor"
 						render={({ field, fieldState }) => (
 							<FormItem className="min-w-45 flex-1">
-								<FormLabel>Procedencia *</FormLabel>
+								<FormLabel>Médico Tratante {medicoTratanteConfig?.required && '*'}</FormLabel>
 								<FormControl>
 									<AutocompleteInput
-										fieldName="origin"
-										placeholder="Hospital o Clínica"
-										iconRight={<MapPin className="h-4 w-4 text-muted-foreground" />}
+										fieldName="treatingDoctor"
+										placeholder={isLM ? 'Código o nombre del médico' : 'Nombre del Médico'}
+										iconRight={<Stethoscope className="h-4 w-4 text-muted-foreground" />}
 										formatSuggestion={isLM ? formatTitleCase : undefined}
 										{...field}
-										onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+										onChange={(e) => {
 											const { value } = e.target
-											// Marihorgen/LM: permitir caracteres de nombres de hospitales (comillas, puntos, guiones, paréntesis)
-											const allowed = isLM ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9."\-()]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/
-											if (allowed.test(value)) {
+											// Marihorgen: permitir números para buscar por código (A1, V10, etc.)
+											const re = isLM ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/
+											if (re.test(value)) {
 												field.onChange(e)
+											}
+										}}
+										onSuggestionSelect={(suggestion) => {
+											// Solo Marihorgen/LM: al seleccionar médico por código, autocompletar procedencia.
+											if (isLM && suggestion.meta?.location) {
+												setValue('origin', suggestion.meta.location, {
+													shouldValidate: true,
+													shouldDirty: true,
+												})
 											}
 										}}
 										className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
@@ -216,37 +225,27 @@ export const ServiceSection = memo(({ control, inputStyles, sampleTypeCosts }: S
 						</FormItem>
 					)}
 				/>
-
-				{/* Médico Tratante - CON AUTOCOMPLETADO - Solo visible si está habilitado en la configuración o es LM/Marihorgen */}
-				{(medicoTratanteConfig?.enabled || isLM) && (
+				{/* Procedencia - CON AUTOCOMPLETADO */}
+				{(procedenciaConfig?.enabled || isLM) && (
 					<FormField
 						control={control}
-						name="treatingDoctor"
+						name="origin"
 						render={({ field, fieldState }) => (
 							<FormItem className="min-w-45 flex-1">
-								<FormLabel>Médico Tratante {medicoTratanteConfig?.required && '*'}</FormLabel>
+								<FormLabel>Procedencia *</FormLabel>
 								<FormControl>
 									<AutocompleteInput
-										fieldName="treatingDoctor"
-										placeholder={isLM ? 'Código o nombre del médico' : 'Nombre del Médico'}
-										iconRight={<Stethoscope className="h-4 w-4 text-muted-foreground" />}
+										fieldName="origin"
+										placeholder="Hospital o Clínica"
+										iconRight={<MapPin className="h-4 w-4 text-muted-foreground" />}
 										formatSuggestion={isLM ? formatTitleCase : undefined}
 										{...field}
-										onChange={(e) => {
+										onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
 											const { value } = e.target
-											// Marihorgen: permitir números para buscar por código (A1, V10, etc.)
-											const re = isLM ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü0-9\s]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s]*$/
-											if (re.test(value)) {
+											// Marihorgen/LM: permitir caracteres de nombres de hospitales (comillas, puntos, guiones, paréntesis)
+											const allowed = isLM ? /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9."\-()]*$/ : /^[A-Za-zÑñÁáÉéÍíÓóÚúÜü\s0-9]*$/
+											if (allowed.test(value)) {
 												field.onChange(e)
-											}
-										}}
-										onSuggestionSelect={(suggestion) => {
-											// Solo Marihorgen/LM: al seleccionar médico por código, autocompletar procedencia.
-											if (isLM && suggestion.meta?.location) {
-												setValue('origin', suggestion.meta.location, {
-													shouldValidate: true,
-													shouldDirty: true,
-												})
 											}
 										}}
 										className={cn(inputStyles, fieldState.error && 'border-red-500 focus:border-red-500')}
